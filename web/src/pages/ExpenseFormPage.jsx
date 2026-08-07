@@ -44,6 +44,7 @@ export default function ExpenseFormPage() {
   const [currencies, setCurrencies] = useState([])
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -120,6 +121,10 @@ export default function ExpenseFormPage() {
 
   const handleSubmit = async e => {
     e.preventDefault()
+    // Creating an expense is two round trips (POST /expenses, then POST /shares
+    // per participant). Without this guard a second click before the first
+    // finishes creates a whole second expense.
+    if (saving) return
     setError('')
     if (!form.amount || form.amount === 0) {
       setError('Amount must be greater than 0.')
@@ -138,6 +143,7 @@ export default function ExpenseFormPage() {
     const payload = {
       ...form
     }
+    setSaving(true)
     try {
       let expenseId = id
       if (isEdit) {
@@ -169,6 +175,8 @@ export default function ExpenseFormPage() {
     } catch (err) {
       console.error('Save expense failed:', err)
       setError(err?.response?.data?.error || 'Failed to save expense.')
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -330,8 +338,8 @@ export default function ExpenseFormPage() {
 
           <div className="panel-actions" style={{ marginTop: '0.5rem' }}>
             <Link to={backPath} className="btn btn-ghost">Cancel</Link>
-            <button type="submit" className="btn btn-secondary">
-              {isEdit ? 'Save changes' : 'Add expense'}
+            <button type="submit" className="btn btn-secondary" disabled={saving}>
+              {saving ? 'Saving…' : (isEdit ? 'Save changes' : 'Add expense')}
             </button>
           </div>
         </form>
