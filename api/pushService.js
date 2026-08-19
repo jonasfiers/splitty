@@ -41,7 +41,10 @@ const pushService = {
             const results = await Promise.allSettled(
                 records.map(r => {
                     const sub = { endpoint: r.get('endpoint'), keys: JSON.parse(r.get('keys')) }
-                    return webpush.sendNotification(sub, body)
+                    return webpush.sendNotification(sub, body, {
+                        urgency: 'high',
+                        TTL: 3600
+                    })
                 })
             )
 
