@@ -1,10 +1,12 @@
 const nodemailer = require('nodemailer');
 const { passwordResetTemplate, emailVerificationTemplate, emailChangeTemplate, groupInviteTemplate, settlementTemplate } = require('./emailTemplates');
 
+const SMTP_PORT = parseInt(process.env.SMTP_PORT) || 587;
+
 const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST || 'smtp.proton.me',
-    port: parseInt(process.env.SMTP_PORT) || 587,
-    secure: false,
+    host: process.env.SMTP_HOST || 'smtp.migadu.com',
+    port: SMTP_PORT,
+    secure: SMTP_PORT === 465,
     auth: {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS,
