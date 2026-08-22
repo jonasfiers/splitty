@@ -254,7 +254,7 @@ export default function GroupDetailPage() {
           <AvatarStack members={members} />
           <span className="group-info-count">
             {members.length} member{members.length !== 1 ? 's' : ''}
-            {totalAmount > 0 && ` · ${formatCurrency(totalAmount)} total`}
+            {totalAmount > 0 && ` · ${formatCurrency(totalAmount, group.iso)} total`}
           </span>
         </div>
       </div>

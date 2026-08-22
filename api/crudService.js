@@ -987,7 +987,7 @@ const expenseService = {
                 WITH c, e, collect(iconAncestor)[0] AS nearestIcon
                 OPTIONAL MATCH path = (c)-[:CHILD_OF*]->(root:Category)
                 WHERE NOT (root)-[:CHILD_OF]->(:Category)
-                WITH c, nearestIcon, sum(e.amount) AS total,
+                WITH c, nearestIcon, sum(e.amountBase) AS total,
                     CASE WHEN c IS NULL THEN 'Uncategorized'
                          WHEN path IS NULL THEN c.name
                          ELSE apoc.text.join([node IN reverse(nodes(path)) | node.name], ' - ')
