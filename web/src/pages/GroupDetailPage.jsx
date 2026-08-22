@@ -457,7 +457,7 @@ export default function GroupDetailPage() {
                   </div>
                 </div>
                 <div className="expense-amounts">
-                  <div className="expense-share">{formatCurrency(e.amount)}</div>
+                  <div className="expense-share">{formatCurrency(e.amount, e.currencyIso)}</div>
                   {e.isSettlement ? (
                     e.paidByUserId === currentUser.id
                       ? <div className="expense-total">you settled up</div>
