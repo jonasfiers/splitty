@@ -219,7 +219,7 @@ export default function GroupDetailPage() {
   // Expense icon: use emoji field if present, otherwise first letter of description
   const expenseIcon = e => e.isTransfer ? '⇄' : e.isSettlement ? '✓' : (e.categoryIcon || (e.description?.[0]?.toUpperCase() ?? '?'))
 
-  const totalAmount = expenses.reduce((s, e) => s + Number(e.amount || 0), 0)
+  const totalAmount = categoryTotals.reduce((s, c) => s + Number(c.total || 0), 0)
   const DONUT_MAX = 6
   const donutData = categoryTotals.length > DONUT_MAX
     ? [...categoryTotals.slice(0, DONUT_MAX), {
