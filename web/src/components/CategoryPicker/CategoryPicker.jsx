@@ -4,8 +4,11 @@ export default function CategoryPicker({ value, onChange, categories, nullable =
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
 
+  const parentIds = new Set(categories.map(c => c.parentId).filter(Boolean))
+  const leafCategories = categories.filter(c => !parentIds.has(c.id))
+
   const selected = categories.find(c => c.id === value) ?? null
-  const filtered = categories.filter(c => (c.full_name ?? '').toLowerCase().includes(search.toLowerCase()))
+  const filtered = leafCategories.filter(c => (c.full_name ?? '').toLowerCase().includes(search.toLowerCase()))
 
   const pick = id => {
     onChange(id)
