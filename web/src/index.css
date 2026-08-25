@@ -234,7 +234,7 @@ body {
   .app-login-logo-desktop {
     display: grid;
     height: 30vmax;
-    margin-right: 5vmax;
+    margin: auto 5vmax auto 0;
   }
 
   .app-header  { display: none; }
@@ -359,10 +359,18 @@ body {
 /* ══════════════════════════════════════════
    AUTH
 ══════════════════════════════════════════ */
+/* height (not min-height) so overflow-y below actually has a bounded box to scroll
+   within -- body has overflow:hidden, so this is the only scroll region available.
+   justify-content:center is fine (horizontal, groups the desktop cat + card as a
+   pair) -- the scroll-clipping bug was specifically align-items:center on the
+   *vertical* axis: with content taller than the box, centering pushes half the
+   overflow above the natural top edge, which becomes unreachable even though the
+   box scrolls. Each child gets its own margin:auto on the vertical axis instead
+   (below, and on .app-login-logo-desktop) -- centers when there's room, safely
+   collapses to top-aligned when it doesn't fit. */
 .auth-page {
-  min-height: 100dvh;
+  height: 100dvh;
   display: flex;
-  align-items: center;
   justify-content: center;
   background: var(--bg);
   padding: 20px;
@@ -372,6 +380,7 @@ body {
 .auth-card {
   width: 100%;
   max-width: 400px;
+  margin: auto 0;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--r-xl);
