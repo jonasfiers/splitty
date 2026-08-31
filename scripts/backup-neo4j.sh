@@ -58,9 +58,15 @@ systemctl start neo4j
 NEO4J_USER=$(grep -E '^NEO4J_USER=' /opt/splitty/.env | cut -d= -f2-)
 NEO4J_PASSWORD=$(grep -E '^NEO4J_PASSWORD=' /opt/splitty/.env | cut -d= -f2-)
 
+# Pass the password through the environment, never as `-p <secret>`: command-line
+# arguments are readable via `ps` by any local user for the lifetime of the
+# process, so the old form briefly published this password on every backup run.
+# cypher-shell reads NEO4J_PASSWORD natively. The assignment is a command prefix
+# so the value lives only in that one child process's environment, and is never
+# exported into this script's own environment or inherited by anything else.
 cypher() {
-  "$NEO4J_HOME/bin/cypher-shell" \
-    -u "$NEO4J_USER" -p "$NEO4J_PASSWORD" "$1" >/dev/null 2>&1
+  NEO4J_PASSWORD="$NEO4J_PASSWORD" "$NEO4J_HOME/bin/cypher-shell" \
+    -u "$NEO4J_USER" "$1" >/dev/null 2>&1
 }
 
 # --- wait until Neo4j can actually answer Cypher -------------------------------
