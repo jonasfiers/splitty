@@ -17,6 +17,9 @@ export default function ExpenseDetailPage() {
   const [members, setMembers] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [showMove, setShowMove] = useState(false)
+  const [moveGroups, setMoveGroups] = useState([])
+  const [moveGroupId, setMoveGroupId] = useState('')
 
   const handleDelete = async () => {
     if (!window.confirm('Delete this expense?')) return
@@ -25,6 +28,30 @@ export default function ExpenseDetailPage() {
       navigate(`/groups/${groupId}`, { state: { notice: `"${expense.description}" was deleted.` } })
     } catch {
       setError('Failed to delete expense.')
+    }
+  }
+
+  const openMove = async () => {
+    try {
+      const res = await client.get('/groups')
+      const others = (res.data.groups || []).filter(g => g.id !== groupId)
+      setMoveGroups(others)
+      setMoveGroupId(others[0]?.id || '')
+      setShowMove(true)
+    } catch {
+      setError('Could not load groups.')
+    }
+  }
+
+  const handleMove = async e => {
+    e.preventDefault()
+    setError('')
+    try {
+      await client.put(`/expenses/${id}/group`, { groupId: moveGroupId })
+      const target = moveGroups.find(g => g.id === moveGroupId)
+      navigate(`/groups/${moveGroupId}`, { state: { notice: `"${expense.description}" was moved to ${target?.title ?? 'the group'}.` } })
+    } catch {
+      setError('Failed to move expense.')
     }
   }
 
@@ -66,6 +93,11 @@ export default function ExpenseDetailPage() {
               onClick={() => navigate(`/groups/${groupId}/expenses/${id}/edit`)}
             >
               Edit
+            </button>
+          )}
+          {!expense.isSettlement && !expense.isTransfer && (
+            <button className="sub-header-del" style={{ color: 'var(--accent)' }} onClick={openMove}>
+              Move
             </button>
           )}
           <button className="sub-header-del" onClick={handleDelete}>
@@ -179,6 +211,40 @@ export default function ExpenseDetailPage() {
             </div>
           </div>
         </>
+      )}
+
+      {/* Move expense sheet */}
+      {showMove && (
+        <div className="sheet-overlay" onClick={e => { if (e.target === e.currentTarget) setShowMove(false) }}>
+          <div className="sheet">
+            <div className="sheet-handle" />
+            <p className="sheet-title">Move expense</p>
+            {moveGroups.length === 0 ? (
+              <>
+                <p style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 16 }}>
+                  You don't have any other groups to move this expense to.
+                </p>
+                <button className="btn btn-ghost" style={{ width: '100%' }} onClick={() => setShowMove(false)}>Close</button>
+              </>
+            ) : (
+              <form onSubmit={handleMove}>
+                <p style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 16 }}>
+                  Move "{expense.description}" to:
+                </p>
+                <div className="form-group">
+                  <label>Destination group</label>
+                  <select value={moveGroupId} onChange={e => setMoveGroupId(e.target.value)} required>
+                    {moveGroups.map(g => (
+                      <option key={g.id} value={g.id}>{g.icon} {g.title}</option>
+                    ))}
+                  </select>
+                </div>
+                <button type="submit" className="btn btn-primary" style={{ width: '100%' }}>Move expense</button>
+                <button type="button" className="btn btn-ghost" style={{ width: '100%', marginTop: 8 }} onClick={() => setShowMove(false)}>Cancel</button>
+              </form>
+            )}
+          </div>
+        </div>
       )}
     </>
   )

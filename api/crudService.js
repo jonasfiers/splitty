@@ -1120,6 +1120,55 @@ const expenseService = {
         }
     },
 
+    // MOVE TO ANOTHER GROUP
+    moveExpenseToGroup: async (id, targetGroupId, currUserId) => {
+        try {
+            // Check access (member of both groups) and pull what's needed to reprice the expense
+            const { records: infoRecords } = await driver.executeQuery(
+                `MATCH (e:Expense {id: $id})-[:BALANCE_IN]->(sg:Group)<-[:MEMBER_OF]-(cu:User {id: $currUserId})
+                MATCH (tg:Group {id: $targetGroupId})<-[:MEMBER_OF]-(cu)
+                OPTIONAL MATCH (e)-[:EXPRESSED_IN]->(cur:Currency)
+                OPTIONAL MATCH (tg)-[:EXPRESSED_IN]->(tc:Currency)
+                RETURN e.amount AS amount, e.date AS date, cur.iso AS currencyIso, tc.iso AS targetIso`,
+                { id, targetGroupId, currUserId }
+            );
+            if (infoRecords.length === 0) return { success: false, message: 'Expense not found or access denied' };
+
+            const amount = infoRecords[0].get('amount');
+            const date = infoRecords[0].get('date');
+            const currencyIso = infoRecords[0].get('currencyIso');
+            const targetIso = infoRecords[0].get('targetIso') ?? currencyIso;
+
+            const rawRate = await rateService.getRateForDate(currencyIso, targetIso, date);
+            const rateSnapshot = rawRate * (10 ** getDecimals(targetIso)) / (10 ** getDecimals(currencyIso));
+            const amountBase = Math.round(amount * rateSnapshot);
+
+            const { summary } = await driver.executeQuery(
+                `MATCH (e:Expense {id: $id})-[r:BALANCE_IN]->(:Group)
+                MATCH (tg:Group {id: $targetGroupId})
+                SET e.amountBase = $amountBase, e.rateSnapshot = $rateSnapshot
+                DELETE r
+                CREATE (e)-[:BALANCE_IN]->(tg)
+                WITH e
+                OPTIONAL MATCH (e)-[oldRate:USED_RATE]->(:DailyRate)
+                DELETE oldRate
+                WITH e
+                OPTIONAL MATCH (newRate:DailyRate {date: $date, from: $currencyIso, to: $targetIso})
+                FOREACH (_ IN CASE WHEN newRate IS NOT NULL THEN [1] ELSE [] END |
+                  CREATE (e)-[:USED_RATE]->(newRate)
+                )`,
+                { id, targetGroupId, amountBase, rateSnapshot, date, currencyIso, targetIso }
+            );
+            if (summary.counters.updates().relationshipsDeleted >= 1 && summary.counters.updates().relationshipsCreated >= 1) {
+                return { success: true, message: 'Expense moved to the new group' };
+            }
+            return { success: false, message: 'Expense not found or access denied' };
+        }
+        catch (err) {
+            throw new Error(`Failed to move expense: ${err.message}`);
+        }
+    },
+
     // DELETE
     deleteExpenseById: async (id, currUserId) => {
         try {
