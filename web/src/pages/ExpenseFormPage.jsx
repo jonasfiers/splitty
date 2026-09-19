@@ -46,6 +46,9 @@ export default function ExpenseFormPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [showMove, setShowMove] = useState(false)
+  const [moveGroups, setMoveGroups] = useState([])
+  const [moveGroupId, setMoveGroupId] = useState('')
 
   useEffect(() => {
     const fetches = [
@@ -177,6 +180,30 @@ export default function ExpenseFormPage() {
       setError(err?.response?.data?.error || 'Failed to save expense.')
     } finally {
       setSaving(false)
+    }
+  }
+
+  const openMove = async () => {
+    try {
+      const res = await client.get('/groups')
+      const others = (res.data.groups || []).filter(g => g.id !== form.groupId)
+      setMoveGroups(others)
+      setMoveGroupId(others[0]?.id || '')
+      setShowMove(true)
+    } catch {
+      setError('Could not load groups.')
+    }
+  }
+
+  const handleMove = async e => {
+    e.preventDefault()
+    setError('')
+    try {
+      await client.put(`/expenses/${id}/group`, { groupId: moveGroupId })
+      const target = moveGroups.find(g => g.id === moveGroupId)
+      navigate(`/groups/${moveGroupId}`, { state: { notice: `"${form.description}" was moved to ${target?.title ?? 'the group'}.` } })
+    } catch {
+      setError('Failed to move expense.')
     }
   }
 
@@ -338,12 +365,51 @@ export default function ExpenseFormPage() {
 
           <div className="panel-actions" style={{ marginTop: '0.5rem' }}>
             <Link to={backPath} className="btn btn-ghost">Cancel</Link>
+            {isEdit && (
+              <button type="button" className="btn btn-outline-amber" onClick={openMove}>
+                Move to another group
+              </button>
+            )}
             <button type="submit" className="btn btn-secondary" disabled={saving}>
               {saving ? 'Saving…' : (isEdit ? 'Save changes' : 'Add expense')}
             </button>
           </div>
         </form>
       </div>
+
+      {/* Move expense sheet */}
+      {showMove && (
+        <div className="sheet-overlay" onClick={e => { if (e.target === e.currentTarget) setShowMove(false) }}>
+          <div className="sheet">
+            <div className="sheet-handle" />
+            <p className="sheet-title">Move expense</p>
+            {moveGroups.length === 0 ? (
+              <>
+                <p style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 16 }}>
+                  You don't have any other groups to move this expense to.
+                </p>
+                <button className="btn btn-ghost" style={{ width: '100%' }} onClick={() => setShowMove(false)}>Close</button>
+              </>
+            ) : (
+              <form onSubmit={handleMove}>
+                <p style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 16 }}>
+                  Move "{form.description}" to:
+                </p>
+                <div className="form-group">
+                  <label>Destination group</label>
+                  <select value={moveGroupId} onChange={e => setMoveGroupId(e.target.value)} required>
+                    {moveGroups.map(g => (
+                      <option key={g.id} value={g.id}>{g.icon} {g.title}</option>
+                    ))}
+                  </select>
+                </div>
+                <button type="submit" className="btn btn-primary" style={{ width: '100%' }}>Move expense</button>
+                <button type="button" className="btn btn-ghost" style={{ width: '100%', marginTop: 8 }} onClick={() => setShowMove(false)}>Cancel</button>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
     </>
   )
 }

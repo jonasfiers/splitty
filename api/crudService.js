@@ -1129,15 +1129,23 @@ const expenseService = {
                 MATCH (tg:Group {id: $targetGroupId})<-[:MEMBER_OF]-(cu)
                 OPTIONAL MATCH (e)-[:EXPRESSED_IN]->(cur:Currency)
                 OPTIONAL MATCH (tg)-[:EXPRESSED_IN]->(tc:Currency)
-                RETURN e.amount AS amount, e.date AS date, cur.iso AS currencyIso, tc.iso AS targetIso`,
+                RETURN e.amount AS amount, e.date AS date, e.description AS description,
+                       cur.iso AS currencyIso, tc.iso AS targetIso,
+                       sg.id AS sourceGroupId, sg.title AS sourceTitle, tg.title AS targetTitle,
+                       cu.name AS moverName`,
                 { id, targetGroupId, currUserId }
             );
             if (infoRecords.length === 0) return { success: false, message: 'Expense not found or access denied' };
 
             const amount = infoRecords[0].get('amount');
             const date = infoRecords[0].get('date');
+            const description = infoRecords[0].get('description');
             const currencyIso = infoRecords[0].get('currencyIso');
             const targetIso = infoRecords[0].get('targetIso') ?? currencyIso;
+            const sourceGroupId = infoRecords[0].get('sourceGroupId');
+            const sourceTitle = infoRecords[0].get('sourceTitle');
+            const targetTitle = infoRecords[0].get('targetTitle');
+            const moverName = infoRecords[0].get('moverName');
 
             const rawRate = await rateService.getRateForDate(currencyIso, targetIso, date);
             const rateSnapshot = rawRate * (10 ** getDecimals(targetIso)) / (10 ** getDecimals(currencyIso));
@@ -1160,6 +1168,16 @@ const expenseService = {
                 { id, targetGroupId, amountBase, rateSnapshot, date, currencyIso, targetIso }
             );
             if (summary.counters.updates().relationshipsDeleted >= 1 && summary.counters.updates().relationshipsCreated >= 1) {
+                pushService.notifyGroupMembers(sourceGroupId, currUserId, {
+                    title: `${moverName} moved "${description}" out`,
+                    body: `${formatAmount(amount, currencyIso)} → ${targetTitle}`,
+                    url: `/groups/${sourceGroupId}`
+                });
+                pushService.notifyGroupMembers(targetGroupId, currUserId, {
+                    title: `${moverName} moved "${description}" in`,
+                    body: `${formatAmount(amount, currencyIso)} from ${sourceTitle}`,
+                    url: `/groups/${targetGroupId}/expenses/${id}`
+                });
                 return { success: true, message: 'Expense moved to the new group' };
             }
             return { success: false, message: 'Expense not found or access denied' };
