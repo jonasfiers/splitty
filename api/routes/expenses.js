@@ -43,19 +43,6 @@ router.put('/:id', async (req, res) => {
     }
 });
 
-// MOVE TO ANOTHER GROUP
-router.put('/:id/group', async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { groupId } = req.body;
-        const result = await expenseService.moveExpenseToGroup(id, groupId, req.user.id);
-        if (!result.success) return res.status(404).json(result);
-        res.json(result);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
 // DELETE
 router.delete('/:id', async (req, res) => {
     try {

@@ -1057,13 +1057,17 @@ const expenseService = {
         }
     },
 
-    // UPDATE
+    // UPDATE (groupId may name a different group than the expense is currently
+    // in, which moves it there — same access rule as everywhere else: the
+    // current user must be a member of both the expense's current group and
+    // the target group)
     updateExpense: async (id, groupId, description, categoryId, amount, currencyIso, date, paidByUserId, currUserId) => {
         try {
-            // Check membership first
             const { records: memberRecords } = await driver.executeQuery(
-                'MATCH (u:User {id: $currUserId})-[:MEMBER_OF]->(g:Group {id: $groupId}) RETURN g',
-                { currUserId, groupId }
+                `MATCH (e:Expense {id: $id})-[:BALANCE_IN]->(:Group)<-[:MEMBER_OF]-(:User {id: $currUserId})
+                MATCH (:User {id: $currUserId})-[:MEMBER_OF]->(g:Group {id: $groupId})
+                RETURN g`,
+                { id, groupId, currUserId }
             );
             if (memberRecords.length === 0) throw new Error('Access denied: You are not a member of this group');
 
@@ -1077,8 +1081,11 @@ const expenseService = {
             const amountBase = Math.round(amount * rateSnapshot);
 
             const { records, summary } = await driver.executeQuery(
-                `MATCH (e:Expense {id: $id})-[:BALANCE_IN]->(g:Group {id: $groupId})
+                `MATCH (e:Expense {id: $id})-[oldBal:BALANCE_IN]->(:Group)
+                MATCH (g:Group {id: $groupId})
                 SET e.description = $description, e.amount = $amount, e.amountBase = $amountBase, e.rateSnapshot = $rateSnapshot, e.date = $date
+                DELETE oldBal
+                CREATE (e)-[:BALANCE_IN]->(g)
                 WITH e, g
                 MATCH (c:Category) WHERE c.id = $categoryId
                 MATCH (cur:Currency) WHERE cur.iso = $currencyIso
@@ -1117,73 +1124,6 @@ const expenseService = {
         }
         catch (err) {
             throw new Error(`Failed to update expense: ${err.message}`);
-        }
-    },
-
-    // MOVE TO ANOTHER GROUP
-    moveExpenseToGroup: async (id, targetGroupId, currUserId) => {
-        try {
-            // Check access (member of both groups) and pull what's needed to reprice the expense
-            const { records: infoRecords } = await driver.executeQuery(
-                `MATCH (e:Expense {id: $id})-[:BALANCE_IN]->(sg:Group)<-[:MEMBER_OF]-(cu:User {id: $currUserId})
-                MATCH (tg:Group {id: $targetGroupId})<-[:MEMBER_OF]-(cu)
-                OPTIONAL MATCH (e)-[:EXPRESSED_IN]->(cur:Currency)
-                OPTIONAL MATCH (tg)-[:EXPRESSED_IN]->(tc:Currency)
-                RETURN e.amount AS amount, e.date AS date, e.description AS description,
-                       cur.iso AS currencyIso, tc.iso AS targetIso,
-                       sg.id AS sourceGroupId, sg.title AS sourceTitle, tg.title AS targetTitle,
-                       cu.name AS moverName`,
-                { id, targetGroupId, currUserId }
-            );
-            if (infoRecords.length === 0) return { success: false, message: 'Expense not found or access denied' };
-
-            const amount = infoRecords[0].get('amount');
-            const date = infoRecords[0].get('date');
-            const description = infoRecords[0].get('description');
-            const currencyIso = infoRecords[0].get('currencyIso');
-            const targetIso = infoRecords[0].get('targetIso') ?? currencyIso;
-            const sourceGroupId = infoRecords[0].get('sourceGroupId');
-            const sourceTitle = infoRecords[0].get('sourceTitle');
-            const targetTitle = infoRecords[0].get('targetTitle');
-            const moverName = infoRecords[0].get('moverName');
-
-            const rawRate = await rateService.getRateForDate(currencyIso, targetIso, date);
-            const rateSnapshot = rawRate * (10 ** getDecimals(targetIso)) / (10 ** getDecimals(currencyIso));
-            const amountBase = Math.round(amount * rateSnapshot);
-
-            const { summary } = await driver.executeQuery(
-                `MATCH (e:Expense {id: $id})-[r:BALANCE_IN]->(:Group)
-                MATCH (tg:Group {id: $targetGroupId})
-                SET e.amountBase = $amountBase, e.rateSnapshot = $rateSnapshot
-                DELETE r
-                CREATE (e)-[:BALANCE_IN]->(tg)
-                WITH e
-                OPTIONAL MATCH (e)-[oldRate:USED_RATE]->(:DailyRate)
-                DELETE oldRate
-                WITH e
-                OPTIONAL MATCH (newRate:DailyRate {date: $date, from: $currencyIso, to: $targetIso})
-                FOREACH (_ IN CASE WHEN newRate IS NOT NULL THEN [1] ELSE [] END |
-                  CREATE (e)-[:USED_RATE]->(newRate)
-                )`,
-                { id, targetGroupId, amountBase, rateSnapshot, date, currencyIso, targetIso }
-            );
-            if (summary.counters.updates().relationshipsDeleted >= 1 && summary.counters.updates().relationshipsCreated >= 1) {
-                pushService.notifyGroupMembers(sourceGroupId, currUserId, {
-                    title: `${moverName} moved "${description}" out`,
-                    body: `${formatAmount(amount, currencyIso)} → ${targetTitle}`,
-                    url: `/groups/${sourceGroupId}`
-                });
-                pushService.notifyGroupMembers(targetGroupId, currUserId, {
-                    title: `${moverName} moved "${description}" in`,
-                    body: `${formatAmount(amount, currencyIso)} from ${sourceTitle}`,
-                    url: `/groups/${targetGroupId}/expenses/${id}`
-                });
-                return { success: true, message: 'Expense moved to the new group' };
-            }
-            return { success: false, message: 'Expense not found or access denied' };
-        }
-        catch (err) {
-            throw new Error(`Failed to move expense: ${err.message}`);
         }
     },
 
