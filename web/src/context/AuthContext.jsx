@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useCallback } from 'react'
 import { startAuthentication } from '@simplewebauthn/browser'
 import client from '../api/client'
+import { reactivatePushIfKnown } from '../utils/push.js'
 
 const AuthContext = createContext(null)
 
@@ -17,6 +18,7 @@ export function AuthProvider({ children }) {
     const { data } = await client.post('/auth/login', { email, password })
     localStorage.setItem('token', data.token)
     setToken(data.token)
+    reactivatePushIfKnown().catch(() => {})
   }, [])
 
   const register = useCallback(async (name, email, password) => {
@@ -29,6 +31,7 @@ export function AuthProvider({ children }) {
     const { data } = await client.post('/auth/passkey/login/verify', { nonce, assertionResponse })
     localStorage.setItem('token', data.token)
     setToken(data.token)
+    reactivatePushIfKnown().catch(() => {})
   }, [])
 
   const updateToken = useCallback((newToken) => {

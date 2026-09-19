@@ -12,7 +12,7 @@ const pushService = {
         await driver.executeQuery(
             `MATCH (u:User {id: $userId})
              MERGE (u)-[:HAS_SUBSCRIPTION]->(s:PushSubscription {endpoint: $endpoint})
-             SET s.keys = $keys`,
+             SET s.keys = $keys, s.active = true`,
             { userId, endpoint: subscription.endpoint, keys: JSON.stringify(subscription.keys) }
         )
     },
@@ -25,12 +25,35 @@ const pushService = {
         )
     },
 
+    // Logout: keep the subscription (and the browser's own push registration)
+    // around, just stop notifying it, so logging back in on the same device
+    // can cheaply turn it back on instead of re-requesting permission.
+    disableSubscription: async (userId, endpoint) => {
+        await driver.executeQuery(
+            `MATCH (:User {id: $userId})-[:HAS_SUBSCRIPTION]->(s:PushSubscription {endpoint: $endpoint})
+             SET s.active = false`,
+            { userId, endpoint }
+        )
+    },
+
+    // Login: only re-enables a subscription this user already had — never
+    // creates a new link, so a device shared with someone else can't get
+    // silently subscribed to a different account this way.
+    reactivateSubscription: async (userId, endpoint) => {
+        const { summary } = await driver.executeQuery(
+            `MATCH (:User {id: $userId})-[:HAS_SUBSCRIPTION]->(s:PushSubscription {endpoint: $endpoint})
+             SET s.active = true`,
+            { userId, endpoint }
+        )
+        return summary.counters.updates().propertiesSet > 0
+    },
+
     notifyGroupMembers: async (groupId, excludeUserId, payload) => {
         try {
             const { records } = await driver.executeQuery(
                 `MATCH (g:Group {id: $groupId})<-[:MEMBER_OF]-(u:User)
                  WHERE u.id <> $excludeUserId
-                 MATCH (u)-[:HAS_SUBSCRIPTION]->(s:PushSubscription)
+                 MATCH (u)-[:HAS_SUBSCRIPTION]->(s:PushSubscription {active: true})
                  RETURN u.id AS userId, s.endpoint AS endpoint, s.keys AS keys`,
                 { groupId, excludeUserId }
             )

@@ -8,7 +8,7 @@ import client from '../api/client'
 import { formatCurrency } from '../utils/currency.js'
 import { Avatar, PALETTE } from '../components/Avatar.jsx'
 import EmojiPicker from '../components/EmojiPicker/EmojiPicker.jsx'
-import { subscribeToPush, unsubscribeFromPush, isPushSubscribed } from '../utils/push.js'
+import { subscribeToPush, unsubscribeFromPush, isPushSubscribed, disablePushForLogout } from '../utils/push.js'
 
 export default function ProfilePage() {
   const { currentUser, logout, updateToken } = useAuth()
@@ -151,7 +151,7 @@ export default function ProfilePage() {
   }
 
   const handleSignOut = async () => {
-    await unsubscribeFromPush().catch(() => {})
+    await disablePushForLogout().catch(() => {})
     logout()
     navigate('/login')
   }

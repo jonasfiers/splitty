@@ -82,6 +82,30 @@ export const unsubscribeFromPush = async () => {
     ])
 }
 
+// Logout: mark the subscription disabled server-side, but deliberately leave
+// the browser's own push registration alone so the same device can be
+// reactivated cheaply on the next login instead of asking for permission again.
+export const disablePushForLogout = async () => {
+    if (!('serviceWorker' in navigator)) return
+    const reg = await navigator.serviceWorker.getRegistration('/')
+    if (!reg) return
+    const subscription = await reg.pushManager.getSubscription()
+    if (!subscription) return
+    await client.post('/notifications/disable', { endpoint: subscription.endpoint })
+}
+
+// Login: if this browser already has a push registration (e.g. from before a
+// logout), tell the server to turn it back on for whoever just logged in.
+// No-op if this device was never subscribed under this account.
+export const reactivatePushIfKnown = async () => {
+    if (!('serviceWorker' in navigator)) return
+    const reg = await navigator.serviceWorker.getRegistration('/')
+    if (!reg) return
+    const subscription = await reg.pushManager.getSubscription()
+    if (!subscription) return
+    await client.post('/notifications/reactivate', { endpoint: subscription.endpoint })
+}
+
 export const isPushSubscribed = async () => {
     if (!('serviceWorker' in navigator)) return false
     const reg = await navigator.serviceWorker.getRegistration('/')
