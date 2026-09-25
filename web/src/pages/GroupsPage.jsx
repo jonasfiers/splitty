@@ -45,6 +45,10 @@ export default function GroupsPage() {
   const handleCreate = async e => {
     e.preventDefault()
     setError('')
+    if (!form.icon) {
+      setError('Pick an icon for the group — tap the + next to the name.')
+      return
+    }
     try {
       const { data } = await client.post('/groups', form)
       setGroups(gs => [...gs, { id: data.id, title: form.title }])

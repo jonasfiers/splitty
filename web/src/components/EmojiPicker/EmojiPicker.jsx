@@ -10,9 +10,10 @@ function EmojiPicker({ value, onChange }) {
             <button
                 type="button"
                 onClick={() => setOpen(s => !s)}
-                style={{ fontSize: 22, width: 44, height: 44, border: '1px solid var(--border)', borderRadius: 'var(--r-md)', background: 'var(--surface)' }}
+                aria-label={value ? `Icon: ${value}` : 'Pick an icon'}
+                style={{ fontSize: 22, width: 44, height: 44, border: `1px ${value ? 'solid' : 'dashed'} var(--border)`, borderRadius: 'var(--r-md)', background: 'var(--surface)', color: 'var(--text-2)' }}
             >
-                {value || '🏷️'}
+                {value || '+'}
             </button>
             {open && (
                 <div style={{ position: 'absolute', zIndex: 50, top: '100%', left: 0 }}>
