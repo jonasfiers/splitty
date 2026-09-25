@@ -109,7 +109,7 @@ After the swaps, four checks must return 200:
 | `127.0.0.1:3000/health`            | CT104    | the API process itself |
 | `192.168.0.244:3000/health`        | CT101    | the path nginx actually proxies over |
 | `https://splitty.jonasfiers.eu/`   | devbox   | a genuine outside-in view |
-| `https://neo4j.home.jonasfiers.eu` | CT101    | Tailscale-only name; devbox is not on Tailscale |
+| `https://neo4j.home.jonasfiers.eu` | CT115    | Tailscale-only name served by CT115; devbox is not on Tailscale, CT101 is public-only |
 
 If any check fails, **every tier this run touched is rolled back
 automatically** (previous directory restored, service restarted), the checks

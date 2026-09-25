@@ -71,6 +71,7 @@ set -Eeuo pipefail
 PVE="root@192.168.0.240"
 CT_WEB=101
 CT_API=104
+CT_HOME=115
 API_HOST="192.168.0.244"
 BRANCH="main"
 PUBLIC_URL="https://splitty.jonasfiers.eu/"
@@ -151,8 +152,8 @@ ship() {
 # ------------------------------------------------------------ health gate ---
 # Each check names where it runs. splitty.jonasfiers.eu is checked from devbox
 # because that is a genuine outside-in view. neo4j.home.jonasfiers.eu is a
-# Tailscale name (100.80.37.123) and devbox is not on Tailscale, so that one is
-# checked from CT101, which is.
+# Tailscale-only name served by CT115 (homeproxy); devbox is not on Tailscale and
+# CT101 is public-only, so that one is checked from CT115.
 http_code_local() {
   local c; c="$(curl -s -o /dev/null -w '%{http_code}' --max-time 15 "$1" 2>/dev/null || true)"
   printf '%s' "${c:-000}"
@@ -204,8 +205,8 @@ run_health_checks() { # -> 0 all good, 1 something failed
   check "devbox ${PUBLIC_URL}" 200 "$code" || failures=$((failures + 1))
 
   if simulated neo4j; then code=000; warn "SIMULATED FAILURE: neo4j"; else
-    code="$(http_code_in_ct "$CT_WEB" "$NEO4J_URL")"; fi
-  check "CT101  ${NEO4J_URL}" 200 "$code" || failures=$((failures + 1))
+    code="$(http_code_in_ct "$CT_HOME" "$NEO4J_URL")"; fi
+  check "CT115  ${NEO4J_URL}" 200 "$code" || failures=$((failures + 1))
 
   [ "$failures" -eq 0 ]
 }
