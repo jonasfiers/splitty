@@ -68,6 +68,11 @@ router.post('/register', authLimiter, async (req, res) => {
 router.post('/login', authLimiter, async (req, res) => {
     try {
         const { email, password } = req.body;
+
+        if (typeof email !== 'string' || typeof password !== 'string' || !email || !password) {
+            return res.status(400).json({ error: 'Missing required fields' });
+        }
+
         const user = await userServiceNeo4j.getUserByEmail(email);
         if (!user || !user.id) return res.status(401).json({ error: 'Invalid credentials' });
 
