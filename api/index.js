@@ -6,7 +6,7 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const app = express();
-app.set('trust proxy', 2); // Cloudflare + Nginx. Adjust this value based on your actual proxy chain depth.
+app.set('trust proxy', 1); // Nginx only. Must equal the real proxy chain depth: any higher and a client-sent X-Forwarded-For becomes req.ip, which the rate limiters key on.
 const { apiLimiter } = require('./middleware/rateLimiter');
 const PORT = process.env.API_PORT || process.env.PORT || 3000;
 const auth = require('./middleware/auth');
