@@ -516,7 +516,7 @@ body {
   border-radius: var(--r-md);
   font-size: 14px;
   font-weight: 600;
-  transition: background .15s, box-shadow .15s, opacity .15s;
+  transition: background .15s, box-shadow .15s;
   cursor: pointer;
   border: none;
   white-space: nowrap;
