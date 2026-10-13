@@ -175,3 +175,13 @@ root lockfile is ever missing, the script falls back to `npm install
   `index.html`. The HTML you get from `https://splitty.jonasfiers.eu/` will
   therefore not hash-match the built file; fetch from CT101 with a `Host:`
   header to compare bytes against `web/dist`.
+
+## Trip attachments need three things outside the repo
+
+Uploaded tickets are files on CT104, not data in Neo4j, and none of what they need is something `deploy.sh` sets up:
+
+- **A directory outside the app dir.** A deploy swaps `/opt/splitty-api-node24` for a fresh copy, so anything stored inside it would vanish with the previous release. The API reads the location from `UPLOAD_DIR` in `/etc/splitty-api.env`; without it, it falls back to `../uploads` next to the app dir, which the service may not write to.
+- **Write access under `ProtectSystem=strict`.** The unit makes the whole filesystem read-only except `ReadWritePaths`. Either add the upload directory there or let systemd own it with `StateDirectory=`; otherwise every upload fails with `EROFS` while everything else works.
+- **A larger body limit on CT101.** nginx rejects request bodies over 1 MB by default, long before the API's own 10 MB limit is reached. `location /api/` needs `client_max_body_size` raised to a little over 10 MB, or uploads of real PDFs fail with a 413 that never reaches CT104.
+
+The files are covered by the nightly `vzdump` of CT104, not by `scripts/backup-neo4j.sh`: a Neo4j tarball restored on its own brings back `Attachment` nodes whose files are missing.

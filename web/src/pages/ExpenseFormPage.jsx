@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useParams, useNavigate, useLocation, Link } from 'react-router-dom'
 import client from '../api/client'
 import CurrencyInput from '../components/CurrencyInput/CurrencyInput.jsx'
 import { formatCurrency } from '../utils/currency.js'
@@ -29,12 +29,15 @@ export default function ExpenseFormPage() {
   const { currentUser } = useAuth()
   const isEdit = Boolean(id)
   const navigate = useNavigate()
+  // Set when the form is opened from a trip item: the expense starts from the
+  // item's details and is linked back to it once saved.
+  const { tripItem, prefill } = useLocation().state ?? {}
 
   const [form, setForm] = useState({
     groupId: groupId || '',
-    description: '',
+    description: (!isEdit && prefill?.description) || '',
     categoryId: '',
-    amount: '',
+    amount: (!isEdit && prefill?.amount) || '',
     currencyIso: '',
     date: new Date().toISOString().slice(0, 10),
     paidByUserId: '',
@@ -87,7 +90,7 @@ export default function ExpenseFormPage() {
       } else {
         setForm(f => ({
           ...f,
-          currencyIso: groupIso || curs[0]?.iso || '',
+          currencyIso: prefill?.currencyIso || groupIso || curs[0]?.iso || '',
           paidByUserId: currentUser?.id || '',
         }))
       }
@@ -100,7 +103,9 @@ export default function ExpenseFormPage() {
         ))
       } else {
         const initial = usrs.map(u => ({ userId: u.id, amount: 0, included: true }))
-        setShares(recalculate(initial, 0, ''))
+        // Split a prefilled amount here: the effect below only re-splits when
+        // the amount or the payer changes, and neither does after this.
+        setShares(recalculate(initial, Number(prefill?.amount) || 0, currentUser?.id || ''))
       }
     }).finally(() => setLoading(false))
   }, [id, groupId, isEdit])
@@ -174,6 +179,12 @@ export default function ExpenseFormPage() {
           )
       )
 
+      if (tripItem && !isEdit) {
+        await client.post(`/trips/items/${tripItem.id}/expenses`, { expenseId })
+        navigate(`/trips/${tripItem.tripId}/items/${tripItem.id}`, { replace: true })
+        return
+      }
+
       navigate(form.groupId ? `/groups/${form.groupId}` : '/groups')
     } catch (err) {
       console.error('Save expense failed:', err)
@@ -183,7 +194,9 @@ export default function ExpenseFormPage() {
     }
   }
 
-  const backPath = groupId ? `/groups/${groupId}` : '/groups'
+  const backPath = tripItem && !isEdit
+    ? `/trips/${tripItem.tripId}/items/${tripItem.id}`
+    : groupId ? `/groups/${groupId}` : '/groups'
 
   if (loading) return <Loading />
 
@@ -194,6 +207,10 @@ export default function ExpenseFormPage() {
       <div className="page-header">
         <h1>{isEdit ? 'Edit expense' : 'New expense'}</h1>
       </div>
+
+      {tripItem && !isEdit && (
+        <p style={{ fontSize: 13, color: 'var(--text-3)', margin: '-8px 0 12px' }}>For “{tripItem.title}”</p>
+      )}
 
       <div className="card" style={{ maxWidth: 560 }}>
         <form onSubmit={handleSubmit}>

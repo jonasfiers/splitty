@@ -1,6 +1,7 @@
 // CREATE
 const router = require('express').Router();
 const { expenseService } = require('../crudService');
+const tripService = require('../tripService');
 
 // CREATE
 router.post('/', async (req, res) => {
@@ -21,6 +22,7 @@ router.get('/:id', async (req, res) => {
     try {
         const { id } = req.params;
         const result = await expenseService.getExpensesById(id, req.user.id);
+        if (result.success) result.expense.tripItem = await tripService.getItemForExpense(id, req.user.id);
         res.status(200).json(result);
     } catch (error) {
         console.error(error);

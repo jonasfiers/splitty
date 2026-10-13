@@ -26,11 +26,31 @@ You paid €96 for the cabin weekend; Mila owes €32, Theo owes €40. That's o
 
 **Settlements aren't a separate concept.** Paying someone back is just another `Expense` node (`isSettlement: true`) — the same traversal that computes balances handles them for free.
 
+## Trips
+
+A group can plan a holiday. The same rule applies as for balances: store the facts, derive the rest.
+
+```cypher
+MATCH (g:Group)<-[:PLANNED_IN]-(t:Trip)<-[:PART_OF]-(i:TripItem)
+OPTIONAL MATCH (i)-[:AT|DEPARTS_FROM|ARRIVES_AT]->(p:Place)
+OPTIONAL MATCH (e:Expense)-[:PAYS_FOR]->(i)
+RETURN t, i, p, e
+```
+
+Every item carries `:TripItem` plus what it is — `:Transport`, `:Stay` or `:Activity` — so the timeline, the attachments and the expense link each need one query rather than three. A `Place` is a node of the trip, not fields on an item: the airport you land at and the one you fly home from are the same node, so it is entered once, corrected once, and gets one pin.
+
+The itinerary is the items ordered by `start`; the map is the trip's places that have coordinates; what an item has cost so far is the sum of the `Expense` nodes pointing at it with `PAYS_FOR`. None of the three is stored. Creating an expense from an item is an ordinary expense with one extra relationship, so balances neither know nor care that trips exist.
+
+Times are local wall-clock strings, as printed on the ticket, with no timezone. That is a deliberate limit: it is always right to read, and only wrong to *sort* on a day that crosses timezones.
+
+Uploaded tickets live on disk, outside the API's directory (`UPLOAD_DIR`); the graph holds an `Attachment` node with the name, type and size. Place search uses OpenStreetMap's Nominatim, proxied and rate-limited by the API, and map tiles come from OpenStreetMap.
+
 ## Features
 
 - Groups with multi-currency support and daily exchange-rate snapshots
 - Expenses with hierarchical categories, arbitrary per-person shares, and settlements
 - Balance transfers between groups
+- Trips planned per group: transport, stays and activities on a day-by-day timeline and a map, with booking details and attached tickets, each able to create the expense that pays for it
 - Passkey (WebAuthn) and password login
 - Push notifications for group activity
 - Installable PWA with an offline-friendly service worker

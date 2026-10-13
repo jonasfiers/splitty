@@ -12,6 +12,8 @@ import BackLink from '../components/BackLink.jsx'
 import ChartTooltip from '../components/ChartTooltip.jsx'
 import { COLOURS, STROKES } from '../utils/chartColors.js'
 import CategoryPicker from '../components/CategoryPicker/CategoryPicker.jsx'
+import TripList from '../components/TripForm/TripList.jsx'
+import TripFormSheet from '../components/TripForm/TripFormSheet.jsx'
 
 const FILTERS = ['All', 'You paid', 'You owe']
 
@@ -41,6 +43,8 @@ export default function GroupDetailPage() {
   const [transferGroupId, setTransferGroupId] = useState('')
   const [categories, setCategories] = useState([])
   const [categoryTotals, setCategoryTotals] = useState([])
+  const [trips, setTrips] = useState([])
+  const [showNewTrip, setShowNewTrip] = useState(false)
   const [filters, setFilters] = useState({ keyword: '', categoryId: null, paidByUserId: '', startDate: '', endDate: '' })
   const [debouncedKeyword, setDebouncedKeyword] = useState('')
   const [showFilters, setShowFilters] = useState(false)
@@ -70,12 +74,13 @@ export default function GroupDetailPage() {
 
   const load = useCallback(async () => {
     const activeFilters = { ...filters, keyword: debouncedKeyword }
-    const [groupRes, expensesRes, membersRes, catRes, catsRes] = await Promise.all([
+    const [groupRes, expensesRes, membersRes, catRes, catsRes, tripsRes] = await Promise.all([
       client.get(`/groups/${id}`),
       client.get(`/groups/${id}/expenses?${buildQuery(0, activeFilters)}`),
       client.get(`/groups/${id}/members`),
       client.get(`/groups/${id}/category-totals`),
       client.get('/categories'),
+      client.get(`/trips?groupId=${id}`),
     ])
     const g = groupRes.data.groups?.[0] ?? null
     setGroup(g)
@@ -87,6 +92,7 @@ export default function GroupDetailPage() {
     setBalance(g ? { amount: me?.balance ?? 0, iso: g.iso } : null)
     setCategoryTotals(catRes.data.categories || [])
     setCategories(catsRes.data.categories || [])
+    setTrips(tripsRes.data.trips || [])
   }, [id, filters, debouncedKeyword, buildQuery])
 
   const loadMore = async () => {
@@ -118,7 +124,8 @@ export default function GroupDetailPage() {
   }
 
   const handleDeleteGroup = async () => {
-    if (!window.confirm(`Delete "${group?.title}"? This cannot be undone.`)) return
+    const withTrips = trips.length > 0 ? ` and its ${trips.length} trip${trips.length !== 1 ? 's' : ''}` : ''
+    if (!window.confirm(`Delete "${group?.title}"${withTrips}? This cannot be undone.`)) return
     try {
       await client.delete(`/groups/${id}`)
       navigate('/groups')
@@ -296,6 +303,9 @@ export default function GroupDetailPage() {
         <button className={`chip${tab === 'expenses' ? ' active' : ''}`} onClick={() => setTab('expenses')}>Expenses</button>
         <button className={`chip${tab === 'members' ? ' active' : ''}`} onClick={() => setTab('members')}>
           Members {members.length > 0 && `· ${members.length}`}
+        </button>
+        <button className={`chip${tab === 'trips' ? ' active' : ''}`} onClick={() => setTab('trips')}>
+          Trips {trips.length > 0 && `· ${trips.length}`}
         </button>
       </div>
 
@@ -526,7 +536,28 @@ export default function GroupDetailPage() {
         </div>
       </>}
 
-      <FabButton onClick={handleNewExpense} label="Add expense" />
+      {tab === 'trips' && (
+        trips.length === 0 ? (
+          <div className="empty-state" style={{ padding: '32px 24px' }}>
+            <img src="/cat-empty.svg" alt="" style={{ width: 80, height: 80 }} />
+            <p style={{ color: 'var(--text-3)', fontSize: 14 }}>No trips planned with this group yet.</p>
+          </div>
+        ) : (
+          <TripList trips={trips} />
+        )
+      )}
+
+      {tab === 'trips'
+        ? <FabButton onClick={() => setShowNewTrip(true)} label="New trip" />
+        : <FabButton onClick={handleNewExpense} label="Add expense" />}
+
+      {showNewTrip && (
+        <TripFormSheet
+          groupId={id}
+          onClose={() => setShowNewTrip(false)}
+          onSaved={tripId => navigate(`/trips/${tripId}`)}
+        />
+      )}
 
       {/* Invite sheet */}
       {inviteLink && (

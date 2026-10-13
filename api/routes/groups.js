@@ -1,6 +1,8 @@
 // CREATE
 const router = require('express').Router();
 const { groupServiceNeo4j, expenseService } = require('../crudService');
+const tripService = require('../tripService');
+const uploadStore = require('../uploadStore');
 
 // CREATE
 router.post('/', async (req, res) => {
@@ -59,6 +61,9 @@ router.put('/:id', async (req, res) => {
 router.delete('/:id', async (req, res) => {
     try {
         const { id } = req.params;
+        // A group's trips (and their uploaded files) must not outlive it.
+        const storedNames = await tripService.deleteTripsOfGroup(id, req.user.id);
+        await uploadStore.remove(storedNames);
         const result = await groupServiceNeo4j.deleteGroup(id, req.user.id);
         if (!result.success) return res.status(404).json(result);
         res.json(result);

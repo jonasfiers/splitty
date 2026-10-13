@@ -17,6 +17,10 @@ const ProfilePage           = lazy(() => import('./pages/ProfilePage'))
 const ActivityPage          = lazy(() => import('./pages/ActivityPage'))
 const FriendsPage           = lazy(() => import('./pages/FriendsPage'))
 const InsightsPage          = lazy(() => import('./pages/InsightsPage'))
+const TripsPage             = lazy(() => import('./pages/TripsPage'))
+const TripDetailPage        = lazy(() => import('./pages/TripDetailPage'))
+const TripItemFormPage      = lazy(() => import('./pages/TripItemFormPage'))
+const TripItemDetailPage    = lazy(() => import('./pages/TripItemDetailPage'))
 const InvitePage            = lazy(() => import('./pages/InvitePage'))
 const ForgotPasswordPage    = lazy(() => import('./pages/ForgotPasswordPage'))
 const ResetPasswordPage     = lazy(() => import('./pages/ResetPasswordPage'))
@@ -45,6 +49,11 @@ export default function App() {
               <Route path="/groups/:groupId/expenses/:id" element={<ExpenseDetailPage />} />
               <Route path="/groups/:groupId/expenses/new" element={<ExpenseFormPage />} />
               <Route path="/groups/:groupId/expenses/:id/edit" element={<ExpenseFormPage />} />
+              <Route path="/trips" element={<TripsPage />} />
+              <Route path="/trips/:id" element={<TripDetailPage />} />
+              <Route path="/trips/:tripId/items/new" element={<TripItemFormPage />} />
+              <Route path="/trips/:tripId/items/:itemId" element={<TripItemDetailPage />} />
+              <Route path="/trips/:tripId/items/:itemId/edit" element={<TripItemFormPage />} />
               <Route path="/activity" element={<ActivityPage />} />
               <Route path="/insights" element={<InsightsPage />} />
               <Route path="/friends" element={<FriendsPage />} />

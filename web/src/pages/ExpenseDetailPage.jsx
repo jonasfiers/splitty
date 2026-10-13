@@ -126,6 +126,14 @@ export default function ExpenseDetailPage() {
               </div>
             )
           )}
+          {expense.tripItem && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+              <span style={{ fontSize: 13, color: 'var(--text-3)' }}>Trip</span>
+              <Link to={`/trips/${expense.tripItem.tripId}/items/${expense.tripItem.id}`} style={{ fontSize: 13, fontWeight: 600, color: 'var(--accent)', textAlign: 'right' }}>
+                {expense.tripItem.title} · {expense.tripItem.tripTitle}
+              </Link>
+            </div>
+          )}
         </div>
       </div>
 
