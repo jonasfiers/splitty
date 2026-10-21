@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { addDays, daysBetween, dayOf, timeOf, formatDay, itemIcon, today } from '../../utils/trip.js'
 import './TripGantt.css'
 
@@ -21,6 +21,14 @@ const DEFAULT_CHECK_OUT = 11
 const MIN_BAR = 0.12 // of a day, so short or instant items stay clickable
 const LABEL_W = 64
 const MIN_DAY_W = 96 // narrower than this and bar titles stop being readable
+// Zoom range: ~100 px an hour at the wide end; at the narrow end the whole trip
+// just fills the card (never below ZOOM_MIN_W a day), so short trips stop at "Fit".
+const ZOOM_MIN_W = 24
+const ZOOM_MAX_W = 2400
+const ZOOM_STEP = 1.5
+// Hour marks and drag snapping follow the zoom.
+const tickHours = dayWidth => (dayWidth >= 960 ? 1 : dayWidth >= 480 ? 3 : dayWidth >= 240 ? 6 : null)
+const snapMinutes = dayWidth => (dayWidth >= 480 ? 15 : 30)
 const CAPTION_BELOW = 48 // px: a bar narrower than this shows its title beside it
 
 const hourOf = moment => {
@@ -70,24 +78,25 @@ function pack(bars) {
 // Rough rendered width of a bar's text at 12px, icon and padding included.
 const textWidth = text => 30 + text.length * 6.6
 
-const SNAP = 1 / 48 // half an hour, for travel and activities; stays snap to days
 const DRAG_THRESHOLD = 6 // px a mouse must move before a press counts as a drag
 
 const pad = n => String(n).padStart(2, '0')
-// Position (days from the first column) -> 'YYYY-MM-DDTHH:mm', snapped.
-function momentAt(first, pos) {
-  const slots = Math.round(pos / SNAP)
-  const day = Math.floor(slots / 48)
-  const minutes = (slots - day * 48) * 30
+// Position (days from the first column) -> 'YYYY-MM-DDTHH:mm', snapped to `step` minutes.
+// Travel and activities snap like this; stays snap to whole days.
+function momentAt(first, pos, step) {
+  const perDay = 1440 / step
+  const slots = Math.round(pos * perDay)
+  const day = Math.floor(slots / perDay)
+  const minutes = (slots - day * perDay) * step
   return `${addDays(first, day)}T${pad(Math.floor(minutes / 60))}:${pad(minutes % 60)}`
 }
 
-// A moment moved by `delta` days: a timed one snaps to half hours, a date-only
-// one moves by whole days and stays date-only.
-function shifted(first, moment, delta) {
+// A moment moved by `delta` days: a timed one snaps to `step` minutes, a
+// date-only one moves by whole days and stays date-only.
+function shifted(first, moment, delta, step) {
   if (!moment) return moment
   if (!timeOf(moment)) return addDays(dayOf(moment), Math.round(delta))
-  return momentAt(first, daysBetween(first, dayOf(moment)) + hourOf(moment) / 24 + delta)
+  return momentAt(first, daysBetween(first, dayOf(moment)) + hourOf(moment) / 24 + delta, step)
 }
 
 // The same ordering rules as the server: the end may not come before the
@@ -101,22 +110,22 @@ function inOrder(kind, start, end) {
 
 // New start and end for an item dragged by `delta` days, by its body ('move')
 // or by one of its ends; null when the result would be out of order.
-function rescheduled(first, item, mode, delta) {
+function rescheduled(first, item, mode, delta, step) {
   let { start, end } = item
   if (mode === 'move') {
-    start = shifted(first, start, delta)
-    end = shifted(first, end, delta)
+    start = shifted(first, start, delta, step)
+    end = shifted(first, end, delta, step)
   } else if (mode === 'start') {
-    start = shifted(first, start, delta)
+    start = shifted(first, start, delta, step)
   } else {
     // An item without an end gets one by dragging its right edge.
-    end = end ? shifted(first, end, delta) : timeOf(start) ? shifted(first, start, delta) : addDays(dayOf(start), Math.round(delta))
+    end = end ? shifted(first, end, delta, step) : timeOf(start) ? shifted(first, start, delta, step) : addDays(dayOf(start), Math.round(delta))
   }
   return inOrder(item.kind, start, end) ? { start, end } : null
 }
 
 // The item a press-and-drag (or a tap) on a lane describes.
-function rangeFor(kind, first, from, to, tapped) {
+function rangeFor(kind, first, from, to, tapped, step) {
   const lo = Math.min(from, to), hi = Math.max(from, to)
   if (kind === 'stay') {
     const checkIn = Math.floor(lo)
@@ -125,9 +134,10 @@ function rangeFor(kind, first, from, to, tapped) {
   }
   // A tap only picks the day; the times are for the form.
   if (tapped) return { start: addDays(first, Math.floor(lo)), end: null }
-  const start = momentAt(first, lo)
-  const end = momentAt(first, Math.max(hi, lo + SNAP))
-  return { start, end: end === start ? momentAt(first, lo + SNAP) : end }
+  const min = step / 1440
+  const start = momentAt(first, lo, step)
+  const end = momentAt(first, Math.max(hi, lo + min), step)
+  return { start, end: end === start ? momentAt(first, lo + min, step) : end }
 }
 
 // `onCreate({ kind, start, end })`, when given, lets a drag across a lane (or a
@@ -161,7 +171,54 @@ export default function TripGantt({ trip, items: allItems, placeName, onOpenItem
   const last = days[days.length - 1]
   const dayCount = daysBetween(first, last) + 1
   const columns = Array.from({ length: dayCount }, (_, i) => addDays(first, i))
-  const dayWidth = Math.max(MIN_DAY_W, Math.floor((boxWidth - LABEL_W) / dayCount) || MIN_DAY_W)
+  // "Fit": the trip fills the card, but days never get too narrow to read.
+  const fillWidth = Math.floor((boxWidth - LABEL_W) / dayCount) || MIN_DAY_W
+  const fitWidth = Math.max(MIN_DAY_W, fillWidth)
+  const minWidth = Math.max(ZOOM_MIN_W, Math.min(fitWidth, fillWidth))
+  const [zoomWidth, setZoomWidth] = useState(null) // null = fit
+  const dayWidth = zoomWidth ?? fitWidth
+  const step = snapMinutes(dayWidth)
+  const ticks = tickHours(dayWidth)
+
+  // Zooming keeps the moment under the pointer (or the middle of the view)
+  // in place: work out its position now, scroll to it once the new width is drawn.
+  const pendingScroll = useRef(null)
+  const widthRef = useRef(dayWidth)
+  widthRef.current = dayWidth
+  const minWidthRef = useRef(minWidth)
+  minWidthRef.current = minWidth
+  const zoomTo = (width, clientX) => {
+    const el = scroller.current
+    if (!el) return
+    const next = Math.min(ZOOM_MAX_W, Math.max(minWidthRef.current, width))
+    const rect = el.getBoundingClientRect()
+    const x = (clientX ?? rect.left + (rect.width + LABEL_W) / 2) - rect.left - LABEL_W
+    pendingScroll.current = ((el.scrollLeft + x) / widthRef.current) * next - x
+    setZoomWidth(next)
+  }
+  useLayoutEffect(() => {
+    if (pendingScroll.current == null || !scroller.current) return
+    scroller.current.scrollLeft = Math.max(0, pendingScroll.current)
+    pendingScroll.current = null
+  }, [dayWidth])
+
+  // Ctrl/⌘ + scroll wheel, and trackpad pinch (which browsers report the same
+  // way). Plain scrolling is left alone. Needs a non-passive listener to stop
+  // the page itself from zooming.
+  const zoomRef = useRef(zoomTo)
+  zoomRef.current = zoomTo
+  useEffect(() => {
+    const el = scroller.current
+    if (!el) return
+    const onWheel = e => {
+      if (!e.ctrlKey && !e.metaKey) return
+      e.preventDefault()
+      const factor = Math.exp(-e.deltaY * (e.deltaMode === 1 ? 0.05 : 0.0025))
+      zoomRef.current(widthRef.current * factor, e.clientX)
+    }
+    el.addEventListener('wheel', onWheel, { passive: false })
+    return () => el.removeEventListener('wheel', onWheel)
+  }, [])
 
   const label = item => {
     if (item.kind !== 'transport') return item.title
@@ -188,13 +245,16 @@ export default function TripGantt({ trip, items: allItems, placeName, onOpenItem
     return { ...lane, bars, rows: pack(bars) }
   })
 
-  // Open on today when the trip is under way, otherwise at its start.
+  // Open on today when the trip is under way, otherwise at its start; once the
+  // card has a width, and not again on every zoom.
+  const opened = useRef(false)
   useEffect(() => {
     const el = scroller.current
-    if (!el) return
+    if (!el || !boxWidth || opened.current) return
+    opened.current = true
     const offset = now > first && now <= last ? daysBetween(first, now) - 0.5 : 0
     el.scrollLeft = Math.max(0, offset * dayWidth)
-  }, [first, last, now, dayWidth])
+  }, [first, last, now, dayWidth, boxWidth])
 
   const tooltip = item => {
     const when = [item.start, item.end].filter(Boolean)
@@ -229,7 +289,7 @@ export default function TripGantt({ trip, items: allItems, placeName, onOpenItem
     const to = p.dragging ? posOf(e, p.track) : p.from
     // A mouse click without a drag does nothing: on desktop, creating is a drag.
     if (!p.dragging && !p.touch) return
-    onCreate({ kind: p.kind, ...rangeFor(p.kind, first, p.from, to, !p.dragging) })
+    onCreate({ kind: p.kind, ...rangeFor(p.kind, first, p.from, to, !p.dragging, step) })
   }
   const cancelPress = () => { press.current = null; setGhost(null) }
 
@@ -244,7 +304,7 @@ export default function TripGantt({ trip, items: allItems, placeName, onOpenItem
     if (!d) return
     if (!d.dragging && Math.abs(e.clientX - d.x) < DRAG_THRESHOLD) return
     d.dragging = true
-    const when = rescheduled(first, d.item, d.mode, (e.clientX - d.x) / dayWidth)
+    const when = rescheduled(first, d.item, d.mode, (e.clientX - d.x) / dayWidth, step)
     if (when) { d.when = when; setPreview({ id: d.item.id, ...when }) }
   }
   const endBarDrag = () => {
@@ -259,12 +319,20 @@ export default function TripGantt({ trip, items: allItems, placeName, onOpenItem
   const lit = highlight?.length ? new Set(highlight) : null
   const todayIndex = daysBetween(first, now)
 
+  const hours = ticks ? Array.from({ length: 24 / ticks - 1 }, (_, i) => (i + 1) * ticks) : []
+
   return (
+    <div className="gantt-wrap">
+    <div className="gantt-zoom" role="group" aria-label="Zoom">
+      <button type="button" onClick={() => zoomTo(dayWidth / ZOOM_STEP)} disabled={dayWidth <= minWidth} title="Zoom out" aria-label="Zoom timeline out">−</button>
+      <button type="button" className={zoomWidth == null ? 'active' : ''} onClick={() => setZoomWidth(null)} title="Fit the whole trip" aria-label="Fit the whole trip">Fit</button>
+      <button type="button" onClick={() => zoomTo(dayWidth * ZOOM_STEP)} disabled={dayWidth >= ZOOM_MAX_W} title="Zoom in (or Ctrl/⌘ + scroll, or pinch)" aria-label="Zoom timeline in">+</button>
+    </div>
     <div className="gantt" ref={scroller}>
       <div className="gantt-inner" style={{ width: width + LABEL_W }}>
         <div className="gantt-head">
           <div className="gantt-label" />
-          <div className="gantt-days" style={{ width }}>
+          <div className={`gantt-days${hours.length ? ' ticked' : ''}`} style={{ width }}>
             {columns.map(day => {
               const weekday = new Date(`${day}T00:00:00Z`).getUTCDay()
               return (
@@ -273,8 +341,11 @@ export default function TripGantt({ trip, items: allItems, placeName, onOpenItem
                   className={`gantt-day${day === now ? ' today' : ''}${day < trip.startDate || day > trip.endDate ? ' outside' : ''}${weekday === 0 || weekday === 6 ? ' weekend' : ''}`}
                   style={{ width: dayWidth }}
                 >
-                  {formatDay(day, { weekday: 'short', day: 'numeric' })}
-                  <span className="gantt-month">{day.endsWith('-01') || day === first ? formatDay(day, { month: 'short' }) : ''}</span>
+                  {dayWidth >= 60 ? formatDay(day, { weekday: 'short', day: 'numeric' }) : formatDay(day, { day: 'numeric' })}
+                  {dayWidth >= 60 && <span className="gantt-month">{day.endsWith('-01') || day === first ? formatDay(day, { month: 'short' }) : ''}</span>}
+                  {hours.map(h => (
+                    <span key={h} className="gantt-tick-label" style={{ left: (h / 24) * dayWidth }}>{pad(h)}</span>
+                  ))}
                 </div>
               )
             })}
@@ -297,13 +368,15 @@ export default function TripGantt({ trip, items: allItems, placeName, onOpenItem
                   key={day}
                   className={`gantt-cell${day < trip.startDate || day > trip.endDate ? ' outside' : ''}`}
                   style={{ left: i * dayWidth, width: dayWidth }}
-                />
+                >
+                  {hours.map(h => <span key={h} className="gantt-tick" style={{ left: (h / 24) * dayWidth }} />)}
+                </div>
               ))}
               {todayIndex >= 0 && todayIndex < dayCount && (
                 <div className="gantt-now" style={{ left: (todayIndex + (new Date().getHours() + new Date().getMinutes() / 60) / 24) * dayWidth }} />
               )}
               {ghost?.kind === lane.kind && (() => {
-                const r = rangeFor(lane.kind, first, ghost.from, ghost.to, false)
+                const r = rangeFor(lane.kind, first, ghost.from, ghost.to, false, step)
                 const s = daysBetween(first, dayOf(r.start)) + (lane.kind === 'stay' ? DEFAULT_CHECK_IN / 24 : (hourOf(r.start) ?? 0) / 24)
                 const e = daysBetween(first, dayOf(r.end)) + (lane.kind === 'stay' ? DEFAULT_CHECK_OUT / 24 : (hourOf(r.end) ?? 24) / 24)
                 const nights = daysBetween(dayOf(r.start), dayOf(r.end))
@@ -355,11 +428,12 @@ export default function TripGantt({ trip, items: allItems, placeName, onOpenItem
       {onCreate && (
         <div className="gantt-hint">
           <span className="gantt-hint-pointer">
-            Drag across a lane to add something there{onReschedule && ' · drag a bar, or its ends, to change when it happens'}
+            Drag across a lane to add something there{onReschedule && ' · drag a bar, or its ends, to change when it happens'} · Ctrl/⌘ + scroll or pinch to zoom
           </span>
           <span className="gantt-hint-touch">Tap an empty spot in a lane to add something on that day</span>
         </div>
       )}
+    </div>
     </div>
   )
 }

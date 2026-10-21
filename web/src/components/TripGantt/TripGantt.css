@@ -1,12 +1,12 @@
 /* Trip timeline (TripGantt.jsx). Scrolls sideways when the trip is wider than
    the page; the lane names stay pinned on the left. */
+.gantt-wrap { position: relative; margin-bottom: 20px; }
 .gantt {
     overflow-x: auto;
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--r-lg);
     box-shadow: var(--shadow-sm);
-    margin-bottom: 20px;
 }
 .gantt-inner { position: relative; padding-bottom: 6px; }
 .gantt-head, .gantt-lane { display: flex; }
@@ -205,3 +205,48 @@
 .trip-toast span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .trip-toast button { color: var(--accent); font-weight: 700; flex-shrink: 0; }
 @media (min-width: 768px) { .trip-toast { bottom: 28px; } }
+
+/* Zoom: − / Fit / + beside the full-screen button, hour marks once days are wide enough. */
+.gantt-zoom {
+    position: absolute;
+    top: 8px;
+    right: 48px;
+    z-index: 6;
+    display: flex;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+}
+.gantt-zoom button {
+    min-width: 30px;
+    height: 30px;
+    padding: 0 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-2);
+    border-left: 1px solid var(--border);
+}
+.gantt-zoom button:first-child { border-left: none; font-size: 16px; }
+.gantt-zoom button:last-child { font-size: 16px; }
+.gantt-zoom button:hover:not(:disabled) { color: var(--accent); }
+.gantt-zoom button:disabled { opacity: .35; cursor: default; }
+.gantt-zoom button.active { color: var(--accent); }
+.gantt-day { position: relative; }
+.gantt-days.ticked .gantt-day { padding-bottom: 18px; }
+.gantt-tick-label {
+    position: absolute;
+    bottom: 3px;
+    transform: translateX(-50%);
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--text-3);
+}
+.gantt-tick {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    border-left: 1px dashed var(--border);
+    opacity: .7;
+}
