@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import client from '../../api/client'
 import PlacePicker from '../PlacePicker/PlacePicker.jsx'
 import { KINDS, TRANSPORT_MODES, dayOf, timeOf } from '../../utils/trip.js'
@@ -27,6 +27,12 @@ function QuickAddSheet({ tripId, kind, start, end, places, onClose, onSaved, onM
   const [error, setError] = useState('')
   const set = patch => setForm(f => ({ ...f, ...patch }))
   const labels = LABELS[kind]
+
+  useEffect(() => {
+    const onKey = e => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose])
 
   const nameOf = ref => (ref?.id ? places.find(p => p.id === ref.id)?.name : ref?.name)
   const route = [nameOf(form.from), nameOf(form.to)].filter(Boolean).join(' → ')

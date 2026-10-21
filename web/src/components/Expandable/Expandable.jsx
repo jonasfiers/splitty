@@ -20,7 +20,8 @@ export default function Expandable({ label, children, extra = null }) {
 
   useEffect(() => {
     if (!open) return
-    const onKey = e => { if (e.key === 'Escape') setOpen(false) }
+    // A pop-up (sheet) over the view takes Escape first; full screen closes on the next one.
+    const onKey = e => { if (e.key === 'Escape' && !document.querySelector('.sheet-overlay')) setOpen(false) }
     const scroll = document.body.style.overflow
     document.body.style.overflow = 'hidden'
     window.addEventListener('keydown', onKey)
