@@ -126,7 +126,11 @@ function TripMap({ places, items, onOpenItem, highlight = null, onHover = () => 
     if (located.length === 1) map.setView(bounds.getCenter(), 13)
     else map.fitBounds(bounds, { padding: [36, 36], maxZoom: 14 })
 
-    return () => map.remove()
+    // Leaflet only measures its box once; going full screen and back resizes it.
+    const resized = new ResizeObserver(() => map.invalidateSize())
+    resized.observe(el.current)
+
+    return () => { resized.disconnect(); map.remove() }
   }, [places, items, onOpenItem])
 
   useEffect(() => {

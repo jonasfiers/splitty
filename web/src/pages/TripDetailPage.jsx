@@ -8,6 +8,7 @@ import TripFormSheet from '../components/TripForm/TripFormSheet.jsx'
 import { formatCurrency } from '../utils/currency.js'
 import { KINDS, TRANSPORT_MODES, itemIcon, buildTimeline, formatDay, formatDateRange, daysBetween, today } from '../utils/trip.js'
 import TripGantt from '../components/TripGantt/TripGantt.jsx'
+import Expandable from '../components/Expandable/Expandable.jsx'
 import { useMediaQuery } from '../utils/useMediaQuery.js'
 
 // Leaflet is only worth downloading once someone opens the map.
@@ -126,7 +127,9 @@ export default function TripDetailPage() {
 
   const mapView = (
     <Suspense fallback={<Loading />}>
-      <TripMap places={places} items={items} onOpenItem={openItem} highlight={highlight} onHover={setHighlight} />
+      <Expandable label={`${trip.title} · Map`}>
+        <TripMap places={places} items={items} onOpenItem={openItem} highlight={highlight} onHover={setHighlight} />
+      </Expandable>
       {places.some(p => p.lat == null) && (
         <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 8 }}>
           Not on the map: {places.filter(p => p.lat == null).map(p => p.name).join(', ')}
@@ -184,7 +187,9 @@ export default function TripDetailPage() {
           <p style={{ color: 'var(--text-3)', fontSize: 14 }}>Nothing planned yet. Add a flight, a stay or something to do.</p>
         </div>
       ) : (
-        <TripGantt trip={trip} items={items} placeName={placeName} onOpenItem={openItem} highlight={highlight} onHover={setHighlight} />
+        <Expandable label={`${trip.title} · Timeline`}>
+          <TripGantt trip={trip} items={items} placeName={placeName} onOpenItem={openItem} highlight={highlight} onHover={setHighlight} />
+        </Expandable>
       )}
 
       {wide ? (

@@ -1,0 +1,62 @@
+.expandable { position: relative; }
+.expandable-toggle {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 500; /* above Leaflet's panes and controls */
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    box-shadow: var(--shadow-sm);
+    color: var(--text-2);
+    cursor: pointer;
+}
+.expandable-toggle:hover { color: var(--accent); border-color: var(--accent); }
+.expandable-toggle svg {
+    width: 16px;
+    height: 16px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2.2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+/* Full screen: the view fills the window, above the sidebar, nav and FAB. */
+.expandable.expanded {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    padding: 56px 16px 16px;
+    padding-top: calc(56px + env(safe-area-inset-top));
+    padding-bottom: calc(16px + env(safe-area-inset-bottom));
+    background: var(--bg);
+}
+.expandable.expanded .expandable-toggle {
+    top: calc(12px + env(safe-area-inset-top));
+    right: 16px;
+}
+.expandable-title {
+    position: absolute;
+    top: calc(18px + env(safe-area-inset-top));
+    left: 20px;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text);
+}
+.expandable.expanded .expandable-body {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+/* What each view does with the room. */
+.expandable.expanded .gantt { flex: 0 1 auto; min-height: 0; overflow: auto; margin-bottom: 0; }
+.expandable.expanded .trip-map { flex: 1; height: auto; }
