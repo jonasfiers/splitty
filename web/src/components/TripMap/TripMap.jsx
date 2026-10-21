@@ -52,12 +52,38 @@ function TripMap({ places, items, onOpenItem }) {
       marker.bindPopup(popup)
     }
 
-    for (const item of items) {
+    // Each journey is a gentle arc bending to the right of its direction, so a
+    // trip out and back draws two separate lines, with an arrow at the middle.
+    // The arc is computed in Leaflet's zoom-0 pixel space; Web Mercator keeps
+    // angles, so the arrow's rotation is right at every zoom level.
+    const legs = items
+      .filter(i => i.kind === 'transport' && byId.get(i.fromPlaceId) && byId.get(i.toPlaceId) && i.fromPlaceId !== i.toPlaceId)
+      .sort((a, b) => (a.start || '').localeCompare(b.start || ''))
+    legs.forEach((item, n) => {
       const from = byId.get(item.fromPlaceId), to = byId.get(item.toPlaceId)
-      if (item.kind === 'transport' && from && to) {
-        L.polyline([[from.lat, from.lon], [to.lat, to.lon]], { color: '#E8603A', weight: 2.5, opacity: .8, dashArray: '6 7' }).addTo(map)
-      }
-    }
+      const a = map.project([from.lat, from.lon], 0), b = map.project([to.lat, to.lon], 0)
+      const d = b.subtract(a)
+      const length = Math.hypot(d.x, d.y)
+      // Screen y points down, so (-dy, dx) is the right-hand side of travel.
+      const control = a.add(b).divideBy(2).add(L.point(-d.y, d.x).multiplyBy(0.18))
+      const at = t => a.multiplyBy((1 - t) ** 2).add(control.multiplyBy(2 * (1 - t) * t)).add(b.multiplyBy(t ** 2))
+      const curve = Array.from({ length: 33 }, (_, i) => map.unproject(at(i / 32), 0))
+      L.polyline(curve, { color: '#E8603A', weight: 2.5, opacity: .8, dashArray: '6 7' }).addTo(map)
+
+      // At t = 0.5 the curve's tangent is parallel to b - a.
+      const angle = length ? (Math.atan2(d.y, d.x) * 180) / Math.PI : 0
+      const arrow = L.marker(map.unproject(at(0.5), 0), {
+        icon: L.divIcon({
+          className: '',
+          html: `<div class="trip-leg"><svg viewBox="0 0 24 24" style="transform: rotate(${angle}deg)"><path d="M5 12h13M13 6l6 6-6 6" /></svg></div>`,
+          iconSize: [24, 24],
+          iconAnchor: [12, 12],
+        }),
+        title: `${legs.length > 1 ? `${n + 1}. ` : ''}${itemIcon(item)} ${item.title}: ${from.name} → ${to.name}`,
+        zIndexOffset: -100,
+      }).addTo(map)
+      arrow.on('click', () => onOpenItem(item))
+    })
 
     const bounds = L.latLngBounds(located.map(p => [p.lat, p.lon]))
     if (located.length === 1) map.setView(bounds.getCenter(), 13)
