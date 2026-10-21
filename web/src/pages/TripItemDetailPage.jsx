@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router'
 import client from '../api/client'
 import Loading from '../components/Loading.jsx'
 import BackLink from '../components/BackLink.jsx'
+import LinkExpenseSheet from '../components/TripForm/LinkExpenseSheet.jsx'
 import { formatCurrency, formatDate } from '../utils/currency.js'
 import { KINDS, TRANSPORT_MODES, itemIcon, dayOf, formatMoment, mapsUrl, formatBytes } from '../utils/trip.js'
 
@@ -37,6 +38,7 @@ export default function TripItemDetailPage() {
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [linking, setLinking] = useState(false)
   const [error, setError] = useState('')
 
   const load = useCallback(async () => {
@@ -208,9 +210,21 @@ export default function TripItemDetailPage() {
           {formatCurrency(paid, item.groupIso)} paid in total
         </p>
       )}
-      <button className="btn-pill-outline" style={{ width: '100%', padding: '10px' }} onClick={handleCreateExpense}>
-        {item.expenses.length > 0 ? 'Add another expense' : 'Create expense'}
-      </button>
+      <div className="trip-expense-actions">
+        <button className="btn-pill-outline" onClick={handleCreateExpense}>
+          {item.expenses.length > 0 ? 'Add another expense' : 'Create expense'}
+        </button>
+        <button className="btn-pill-outline" onClick={() => setLinking(true)}>Link existing expense</button>
+      </div>
+      {linking && (
+        <LinkExpenseSheet
+          itemId={itemId}
+          groupId={item.groupId}
+          linkedIds={item.expenses.map(e => e.id)}
+          onClose={() => setLinking(false)}
+          onLinked={async () => { setLinking(false); await load() }}
+        />
+      )}
 
       <div className="section-label">Tickets and documents</div>
       {item.attachments.length > 0 && (

@@ -1796,6 +1796,35 @@ body {
   color: var(--text);
 }
 
+/* Trip item: create or link an expense, and the picker for linking one. */
+.trip-expense-actions { display: flex; gap: 8px; }
+.trip-expense-actions .btn-pill-outline { flex: 1; padding: 10px; }
+.link-expense-list {
+  max-height: min(50vh, 420px);
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+}
+.link-expense-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  text-align: left;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+}
+.link-expense-row:first-child { border-top: none; }
+.link-expense-row:hover:not(:disabled) { background: var(--surface-2); }
+.link-expense-row:disabled { cursor: default; opacity: .55; }
+.link-expense-info { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.link-expense-name { font-size: 14px; font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.link-expense-meta { font-size: 12px; color: var(--text-3); margin-top: 2px; }
+.link-expense-amount { flex-shrink: 0; text-align: right; font-family: var(--font-mono); font-size: 13px; font-weight: 600; color: var(--text); display: flex; flex-direction: column; align-items: flex-end; }
+.link-expense-tag { font-family: var(--font-body); font-size: 11px; font-weight: 500; color: var(--text-3); }
+.link-expense-empty { padding: 20px; text-align: center; font-size: 13px; color: var(--text-3); }
+
 /* Insights: period / group / scope controls, a row of key figures, and from
    1180px the category and member charts side by side. */
 .insights-controls { margin-bottom: 16px; }
