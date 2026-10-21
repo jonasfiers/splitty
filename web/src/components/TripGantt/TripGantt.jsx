@@ -171,12 +171,15 @@ export default function TripGantt({ trip, items: allItems, placeName, onOpenItem
   const last = days[days.length - 1]
   const dayCount = daysBetween(first, last) + 1
   const columns = Array.from({ length: dayCount }, (_, i) => addDays(first, i))
-  // "Fit": the trip fills the card, but days never get too narrow to read.
+  // Opening view: the trip fills the card, but days never get too narrow to
+  // read, so a long trip scrolls. "Fit" (and the furthest zoom-out) shows the
+  // whole trip without scrolling instead; for short trips the two are the same.
   const fillWidth = Math.floor((boxWidth - LABEL_W) / dayCount) || MIN_DAY_W
-  const fitWidth = Math.max(MIN_DAY_W, fillWidth)
-  const minWidth = Math.max(ZOOM_MIN_W, Math.min(fitWidth, fillWidth))
-  const [zoomWidth, setZoomWidth] = useState(null) // null = fit
-  const dayWidth = zoomWidth ?? fitWidth
+  const openWidth = Math.max(MIN_DAY_W, fillWidth)
+  const minWidth = Math.max(ZOOM_MIN_W, Math.min(openWidth, fillWidth))
+  const [zoomWidth, setZoomWidth] = useState(null) // null = the opening view
+  const dayWidth = zoomWidth ?? openWidth
+  const fitted = dayWidth === minWidth
   const step = snapMinutes(dayWidth)
   const ticks = tickHours(dayWidth)
 
@@ -325,7 +328,7 @@ export default function TripGantt({ trip, items: allItems, placeName, onOpenItem
     <div className="gantt-wrap">
     <div className="gantt-zoom" role="group" aria-label="Zoom">
       <button type="button" onClick={() => zoomTo(dayWidth / ZOOM_STEP)} disabled={dayWidth <= minWidth} title="Zoom out" aria-label="Zoom timeline out">−</button>
-      <button type="button" className={zoomWidth == null ? 'active' : ''} onClick={() => setZoomWidth(null)} title="Fit the whole trip" aria-label="Fit the whole trip">Fit</button>
+      <button type="button" className={fitted ? 'active' : ''} onClick={() => zoomTo(minWidth)} title="Fit the whole trip" aria-label="Fit the whole trip">Fit</button>
       <button type="button" onClick={() => zoomTo(dayWidth * ZOOM_STEP)} disabled={dayWidth >= ZOOM_MAX_W} title="Zoom in (or Ctrl/⌘ + scroll, or pinch)" aria-label="Zoom timeline in">+</button>
     </div>
     <div className="gantt" ref={scroller}>
