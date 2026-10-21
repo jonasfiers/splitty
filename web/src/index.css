@@ -351,7 +351,7 @@ body {
 
   .page-wrap {
     max-width: 800px;
-    margin: 0;
+    margin: 0 auto;
     padding: 32px 36px 40px;
   }
 }

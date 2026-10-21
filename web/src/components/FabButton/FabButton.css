@@ -26,10 +26,24 @@
     stroke-width: 2.5;
     fill: none;
 }
+.fab-label { display: none; }
 
+/* Desktop: a labelled pill pinned to the bottom-right of the centred 800px
+   .page-wrap column (36px is its side padding), not to the window corner. */
 @media (min-width: 768px) {
     .fab {
         bottom: 32px;
-        right: 36px;
+        right: max(36px, calc((100vw - var(--sidebar-w) - 800px) / 2 + 36px));
+        width: auto;
+        height: 44px;
+        padding: 0 20px 0 16px;
+        gap: 8px;
+        border-radius: 22px;
+    }
+    .fab svg { width: 18px; height: 18px; }
+    .fab-label {
+        display: inline;
+        font-size: 14px;
+        font-weight: 600;
     }
 }
