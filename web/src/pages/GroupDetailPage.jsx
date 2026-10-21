@@ -14,14 +14,18 @@ import { COLOURS, STROKES } from '../utils/chartColors.js'
 import CategoryPicker from '../components/CategoryPicker/CategoryPicker.jsx'
 import TripList from '../components/TripForm/TripList.jsx'
 import TripFormSheet from '../components/TripForm/TripFormSheet.jsx'
+import { useMediaQuery } from '../utils/useMediaQuery.js'
 
 const FILTERS = ['All', 'You paid', 'You owe']
+// Keep in sync with the .group-layout breakpoint in index.css.
+const WIDE_QUERY = '(min-width: 1180px)'
 
 export default function GroupDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { state } = useLocation()
   const { currentUser } = useAuth()
+  const wide = useMediaQuery(WIDE_QUERY)
 
   const [group, setGroup] = useState(null)
   const [expenses, setExpenses] = useState([])
@@ -245,6 +249,97 @@ export default function GroupDetailPage() {
     return true
   })
 
+  const balanceBanner = balance !== null && (
+    <div className="debt-banners">
+      {!balance.amount ? (
+        <div className="debt-banner settled">
+          <span style={{ fontSize: 16, marginRight: 6 }}>✓</span>
+          <span className="debt-banner-text">All settled up</span>
+        </div>
+      ) : balance.amount > 0 ? (
+        <div className="debt-banner owed">
+          <span className="debt-banner-text">You are owed {formatCurrency(balance.amount, balance.iso)}</span>
+          <button className="btn-pill-white" style={{ marginLeft: 'auto', color: 'inherit' }} onClick={() => {
+            const owers = members.filter(m => m.id !== currentUser.id && m.balance < 0)
+            if (owers.length === 1) openSettlement(owers[0])
+            else setShowSettlement(true)
+          }}>Settle up</button>
+        </div>
+      ) : (
+        <div className="debt-banner owes">
+          <span className="debt-banner-text">You owe {formatCurrency(Math.abs(balance.amount), balance.iso)}</span>
+          <button className="btn-pill-white" style={{ marginLeft: 'auto', color: 'inherit' }} onClick={() => {
+            const lenders = members.filter(m => m.id !== currentUser.id && m.balance > 0)
+            if (lenders.length === 1) openSettlement(lenders[0])
+            else setShowSettlement(true)
+          }}>Settle up</button>
+        </div>
+      )}
+    </div>
+  )
+
+  const categoryCard = categoryTotals.length > 0 && (
+    <div className="card">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+        <div className="section-label" style={{ padding: 0 }}>Spending by category</div>
+        {filters.categoryId && (
+          <button className="btn btn-ghost btn-sm" onClick={() => setFilters(f => ({ ...f, categoryId: null }))}>Clear filter</button>
+        )}
+      </div>
+      <ResponsiveContainer width="100%" height={200}>
+        <PieChart>
+          <Pie
+            data={donutData}
+            cx="50%" cy="50%"
+            innerRadius={55} outerRadius={80}
+            paddingAngle={3}
+            dataKey="total"
+            nameKey="name"
+            onClick={entry => setFilters(f => ({ ...f, categoryId: f.categoryId === entry.categoryId ? null : entry.categoryId }))}
+            style={{ cursor: 'pointer' }}
+          >
+            {donutData.map((cat, i) => {
+              const isSelected = !filters.categoryId || filters.categoryId === cat.categoryId
+              return <Cell key={cat.name} fill={COLOURS[i % COLOURS.length]} stroke={STROKES[i % STROKES.length]} strokeWidth={isSelected ? 1.5 : 0.5} opacity={isSelected ? 1 : 0.3} />
+            })}
+          </Pie>
+          <Tooltip content={({ active, payload }) => {
+            if (!active || !payload?.length) return null
+            const { name, icon, total } = payload[0].payload
+            return <ChartTooltip title={<>{icon} {name}</>} value={formatCurrency(total, balance?.iso)} />
+          }} />
+        </PieChart>
+      </ResponsiveContainer>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 16px', justifyContent: 'center', marginTop: 8 }}>
+        {donutData.map((cat, i) => {
+          const isSelected = !filters.categoryId || filters.categoryId === cat.categoryId
+          return (
+            <span key={cat.name} onClick={() => setFilters(f => ({ ...f, categoryId: f.categoryId === cat.categoryId ? null : cat.categoryId }))} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, color: 'var(--text-2)', opacity: isSelected ? 1 : 0.3, cursor: 'pointer', transition: 'opacity 0.2s' }}>
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: STROKES[i % STROKES.length], flexShrink: 0 }} />
+              {cat.icon} {cat.name}
+            </span>
+          )
+        })}
+      </div>
+    </div>
+  )
+
+  // Wide screens only: who owes what, always in view next to the expenses.
+  const membersCard = (
+    <div className="card">
+      <div className="section-label" style={{ padding: 0, marginBottom: 8 }}>Members</div>
+      {members.map(m => (
+        <div key={m.id} className="group-aside-member">
+          <Avatar name={m.name} size={28} colorIndex={m.avatarColor} emoji={m.avatarEmoji} />
+          <span className="member-name" style={{ flex: 1, minWidth: 0 }}>{m.name}</span>
+          <span className="member-bal" style={{ color: m.balance > 0 ? 'var(--green)' : m.balance < 0 ? 'var(--red)' : 'var(--text-3)' }}>
+            {m.balance ? formatCurrency(Math.abs(m.balance), balance?.iso) : '—'}
+          </span>
+        </div>
+      ))}
+    </div>
+  )
+
   return (
     <>
       {/* Sub-header */}
@@ -269,283 +364,222 @@ export default function GroupDetailPage() {
       {state?.notice && <p className="error" style={{ background: 'var(--accent-light)', color: 'var(--accent)', borderColor: 'var(--accent-subtle)' }}>{state.notice}</p>}
       {error && <p className="error">{error}</p>}
 
-      {balance !== null && (
-        <div className="debt-banners">
-          {!balance.amount ? (
-            <div className="debt-banner settled">
-              <span style={{ fontSize: 16, marginRight: 6 }}>✓</span>
-              <span className="debt-banner-text">All settled up</span>
-            </div>
-          ) : balance.amount > 0 ? (
-            <div className="debt-banner owed">
-              <span className="debt-banner-text">You are owed {formatCurrency(balance.amount, balance.iso)}</span>
-              <button className="btn-pill-white" style={{ marginLeft: 'auto', color: 'inherit' }} onClick={() => {
-                const owers = members.filter(m => m.id !== currentUser.id && m.balance < 0)
-                if (owers.length === 1) openSettlement(owers[0])
-                else setShowSettlement(true)
-              }}>Settle up</button>
-            </div>
-          ) : (
-            <div className="debt-banner owes">
-              <span className="debt-banner-text">You owe {formatCurrency(Math.abs(balance.amount), balance.iso)}</span>
-              <button className="btn-pill-white" style={{ marginLeft: 'auto', color: 'inherit' }} onClick={() => {
-                const lenders = members.filter(m => m.id !== currentUser.id && m.balance > 0)
-                if (lenders.length === 1) openSettlement(lenders[0])
-                else setShowSettlement(true)
-              }}>Settle up</button>
-            </div>
-          )}
-        </div>
-      )}
+      {!wide && balanceBanner}
 
-      {/* Tabs */}
-      <div className="filter-chips">
-        <button className={`chip${tab === 'expenses' ? ' active' : ''}`} onClick={() => setTab('expenses')}>Expenses</button>
-        <button className={`chip${tab === 'members' ? ' active' : ''}`} onClick={() => setTab('members')}>
-          Members {members.length > 0 && `· ${members.length}`}
-        </button>
-        <button className={`chip${tab === 'trips' ? ' active' : ''}`} onClick={() => setTab('trips')}>
-          Trips {trips.length > 0 && `· ${trips.length}`}
-        </button>
-      </div>
+      <div className="group-layout">
+        <div className="group-main">
+          {/* Tabs */}
+          <div className="filter-chips">
+            <button className={`chip${tab === 'expenses' ? ' active' : ''}`} onClick={() => setTab('expenses')}>Expenses</button>
+            <button className={`chip${tab === 'members' ? ' active' : ''}`} onClick={() => setTab('members')}>
+              Members {members.length > 0 && `· ${members.length}`}
+            </button>
+            <button className={`chip${tab === 'trips' ? ' active' : ''}`} onClick={() => setTab('trips')}>
+              Trips {trips.length > 0 && `· ${trips.length}`}
+            </button>
+          </div>
 
-      {tab === 'expenses' && <>
-        {/* Category breakdown */}
-        {categoryTotals.length > 0 && (
-          <div className="card">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-              <div className="section-label" style={{ padding: 0 }}>Spending by category</div>
-              {filters.categoryId && (
-                <button className="btn btn-ghost btn-sm" onClick={() => setFilters(f => ({ ...f, categoryId: null }))}>Clear filter</button>
+          {tab === 'expenses' && <>
+            {!wide && categoryCard}
+
+            {/* Filter chips */}
+            <div className="filter-chips">
+              {FILTERS.map(f => (
+                <button key={f} className={`chip${filter === f ? ' active' : ''}`} onClick={() => setFilter(f)}>{f}</button>
+              ))}
+            </div>
+
+            {/* Search & filters */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0 8px' }}>
+              <button
+                className={`btn btn-ghost btn-sm${showFilters ? ' active' : ''}`}
+                style={{ position: 'relative' }}
+                onClick={() => setShowFilters(v => !v)}
+              >
+                Filters
+                {activeFilterCount > 0 && (
+                  <span style={{
+                    position: 'absolute', top: -6, right: -6,
+                    background: 'var(--accent)', color: '#fff',
+                    borderRadius: 'var(--r-pill)', fontSize: 10, fontWeight: 700,
+                    padding: '1px 5px', lineHeight: '14px',
+                  }}>{activeFilterCount}</span>
+                )}
+              </button>
+              {activeFilterCount > 0 && (
+                <button className="btn btn-ghost btn-sm" onClick={() => {
+                  setFilters({ keyword: '', categoryId: null, paidByUserId: '', startDate: '', endDate: '' })
+                  setDebouncedKeyword('')
+                }}>Clear all</button>
               )}
             </div>
-            <ResponsiveContainer width="100%" height={200}>
-              <PieChart>
-                <Pie
-                  data={donutData}
-                  cx="50%" cy="50%"
-                  innerRadius={55} outerRadius={80}
-                  paddingAngle={3}
-                  dataKey="total"
-                  nameKey="name"
-                  onClick={entry => setFilters(f => ({ ...f, categoryId: f.categoryId === entry.categoryId ? null : entry.categoryId }))}
-                  style={{ cursor: 'pointer' }}
-                >
-                  {donutData.map((cat, i) => {
-                    const isSelected = !filters.categoryId || filters.categoryId === cat.categoryId
-                    return <Cell key={cat.name} fill={COLOURS[i % COLOURS.length]} stroke={STROKES[i % STROKES.length]} strokeWidth={isSelected ? 1.5 : 0.5} opacity={isSelected ? 1 : 0.3} />
-                  })}
-                </Pie>
-                <Tooltip content={({ active, payload }) => {
-                  if (!active || !payload?.length) return null
-                  const { name, icon, total } = payload[0].payload
-                  return <ChartTooltip title={<>{icon} {name}</>} value={formatCurrency(total, balance?.iso)} />
-                }} />
-              </PieChart>
-            </ResponsiveContainer>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 16px', justifyContent: 'center', marginTop: 8 }}>
-              {donutData.map((cat, i) => {
-                const isSelected = !filters.categoryId || filters.categoryId === cat.categoryId
-                return (
-                  <span key={cat.name} onClick={() => setFilters(f => ({ ...f, categoryId: f.categoryId === cat.categoryId ? null : cat.categoryId }))} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, color: 'var(--text-2)', opacity: isSelected ? 1 : 0.3, cursor: 'pointer', transition: 'opacity 0.2s' }}>
-                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: STROKES[i % STROKES.length], flexShrink: 0 }} />
-                    {cat.icon} {cat.name}
-                  </span>
-                )
-              })}
-            </div>
-          </div>
-        )}
 
-        {/* Filter chips */}
-        <div className="filter-chips">
-          {FILTERS.map(f => (
-            <button key={f} className={`chip${filter === f ? ' active' : ''}`} onClick={() => setFilter(f)}>{f}</button>
-          ))}
-        </div>
-
-        {/* Search & filters */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0 8px' }}>
-          <button
-            className={`btn btn-ghost btn-sm${showFilters ? ' active' : ''}`}
-            style={{ position: 'relative' }}
-            onClick={() => setShowFilters(v => !v)}
-          >
-            Filters
-            {activeFilterCount > 0 && (
-              <span style={{
-                position: 'absolute', top: -6, right: -6,
-                background: 'var(--accent)', color: '#fff',
-                borderRadius: 'var(--r-pill)', fontSize: 10, fontWeight: 700,
-                padding: '1px 5px', lineHeight: '14px',
-              }}>{activeFilterCount}</span>
-            )}
-          </button>
-          {activeFilterCount > 0 && (
-            <button className="btn btn-ghost btn-sm" onClick={() => {
-              setFilters({ keyword: '', categoryId: null, paidByUserId: '', startDate: '', endDate: '' })
-              setDebouncedKeyword('')
-            }}>Clear all</button>
-          )}
-        </div>
-
-        {showFilters && (
-          <div className="card" style={{ marginBottom: 12, padding: 16 }}>
-            <div className="form-group" style={{ marginBottom: 12 }}>
-              <label>Search</label>
-              <input
-                type="text"
-                placeholder="Filter by description…"
-                value={filters.keyword}
-                onChange={e => setFilters(f => ({ ...f, keyword: e.target.value }))}
-              />
-            </div>
-            <div className="form-row" style={{ marginBottom: 12 }}>
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label>From</label>
-                <input
-                  type="date"
-                  value={filters.startDate}
-                  onChange={e => setFilters(f => ({ ...f, startDate: e.target.value }))}
-                />
-              </div>
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label>To</label>
-                <input
-                  type="date"
-                  value={filters.endDate}
-                  onChange={e => setFilters(f => ({ ...f, endDate: e.target.value }))}
-                />
-              </div>
-            </div>
-            <div className="form-group" style={{ marginBottom: 12 }}>
-              <label>Category</label>
-              <CategoryPicker
-                value={filters.categoryId}
-                onChange={id => setFilters(f => ({ ...f, categoryId: id }))}
-                categories={categories}
-              />
-            </div>
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label>Paid by</label>
-              <select
-                value={filters.paidByUserId}
-                onChange={e => setFilters(f => ({ ...f, paidByUserId: e.target.value }))}
-              >
-                <option value="">Anyone</option>
-                {members.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
-              </select>
-            </div>
-          </div>
-        )}
-
-        {filteredExpenses.length === 0 ? (
-          <div className="empty-state" style={{ padding: '32px 24px' }}>
-            <img src="/cat-empty.svg" alt="" style={{ width: 80, height: 80 }} />
-            <p style={{ color: 'var(--text-3)', fontSize: 14 }}>No expenses yet.</p>
-          </div>
-        ) : (
-          <div className="expense-list">
-            {filteredExpenses.map(e => (
-              <div
-                key={e.id}
-                className="expense-item"
-                onClick={() => navigate(`/groups/${id}/expenses/${e.id}`)}
-              >
-                <div className="expense-icon" style={
-                  e.isTransfer ? { background: 'var(--accent-light)', color: 'var(--accent)' }
-                  : e.isSettlement ? { background: 'var(--green-light)', color: 'var(--green-dark)' }
-                  : {}
-                }>
-                  {expenseIcon(e)}
+            {showFilters && (
+              <div className="card" style={{ marginBottom: 12, padding: 16 }}>
+                <div className="form-group" style={{ marginBottom: 12 }}>
+                  <label>Search</label>
+                  <input
+                    type="text"
+                    placeholder="Filter by description…"
+                    value={filters.keyword}
+                    onChange={e => setFilters(f => ({ ...f, keyword: e.target.value }))}
+                  />
                 </div>
-                <div className="expense-info">
-                  <div className="expense-name">{e.description}</div>
-                  <div className="expense-meta">
-                    {e.paidByName ? `Paid by ${e.paidByName}` : 'Paid by —'}
-                    {e.date ? ` · ${formatDate(e.date)}` : ''}
+                <div className="form-row" style={{ marginBottom: 12 }}>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label>From</label>
+                    <input
+                      type="date"
+                      value={filters.startDate}
+                      onChange={e => setFilters(f => ({ ...f, startDate: e.target.value }))}
+                    />
+                  </div>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label>To</label>
+                    <input
+                      type="date"
+                      value={filters.endDate}
+                      onChange={e => setFilters(f => ({ ...f, endDate: e.target.value }))}
+                    />
                   </div>
                 </div>
-                <div className="expense-amounts">
-                  <div className="expense-share">{formatCurrency(e.amount, e.currencyIso)}</div>
-                  {e.isSettlement ? (
-                    e.paidByUserId === currentUser.id
-                      ? <div className="expense-total">you settled up</div>
-                      : e.shareAmount != null && <div className="expense-total">you received {formatCurrency(e.shareAmount, e.currencyIso)}</div>
-                  ) : e.isTransfer ? (
-                    e.paidByUserId === currentUser.id
-                      ? <div className="expense-total">you transferred</div>
-                      : e.shareAmount != null && <div className="expense-total">transferred to you</div>
-                  ) : (
-                    e.paidByUserId === currentUser.id
-                      ? <div className="expense-total">you paid</div>
-                      : e.shareAmount != null && <div className="expense-total">you owe {formatCurrency(e.shareAmount, e.currencyIso)}</div>
-                  )}
+                <div className="form-group" style={{ marginBottom: 12 }}>
+                  <label>Category</label>
+                  <CategoryPicker
+                    value={filters.categoryId}
+                    onChange={id => setFilters(f => ({ ...f, categoryId: id }))}
+                    categories={categories}
+                  />
+                </div>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label>Paid by</label>
+                  <select
+                    value={filters.paidByUserId}
+                    onChange={e => setFilters(f => ({ ...f, paidByUserId: e.target.value }))}
+                  >
+                    <option value="">Anyone</option>
+                    {members.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                  </select>
                 </div>
               </div>
-            ))}
-          </div>
-        )}
+            )}
 
-        {hasMore && (
-          <button className="btn-outline-amber" style={{ width: '100%', marginTop: 8 }} onClick={loadMore} disabled={loadingMore}>
-            {loadingMore ? 'Loading…' : 'Load more'}
-          </button>
-        )}
-      </>}
+            {filteredExpenses.length === 0 ? (
+              <div className="empty-state" style={{ padding: '32px 24px' }}>
+                <img src="/cat-empty.svg" alt="" style={{ width: 80, height: 80 }} />
+                <p style={{ color: 'var(--text-3)', fontSize: 14 }}>No expenses yet.</p>
+              </div>
+            ) : (
+              <div className="expense-list">
+                {filteredExpenses.map(e => (
+                  <div
+                    key={e.id}
+                    className="expense-item"
+                    onClick={() => navigate(`/groups/${id}/expenses/${e.id}`)}
+                  >
+                    <div className="expense-icon" style={
+                      e.isTransfer ? { background: 'var(--accent-light)', color: 'var(--accent)' }
+                      : e.isSettlement ? { background: 'var(--green-light)', color: 'var(--green-dark)' }
+                      : {}
+                    }>
+                      {expenseIcon(e)}
+                    </div>
+                    <div className="expense-info">
+                      <div className="expense-name">{e.description}</div>
+                      <div className="expense-meta">
+                        {e.paidByName ? `Paid by ${e.paidByName}` : 'Paid by —'}
+                        {e.date ? ` · ${formatDate(e.date)}` : ''}
+                      </div>
+                    </div>
+                    <div className="expense-amounts">
+                      <div className="expense-share">{formatCurrency(e.amount, e.currencyIso)}</div>
+                      {e.isSettlement ? (
+                        e.paidByUserId === currentUser.id
+                          ? <div className="expense-total">you settled up</div>
+                          : e.shareAmount != null && <div className="expense-total">you received {formatCurrency(e.shareAmount, e.currencyIso)}</div>
+                      ) : e.isTransfer ? (
+                        e.paidByUserId === currentUser.id
+                          ? <div className="expense-total">you transferred</div>
+                          : e.shareAmount != null && <div className="expense-total">transferred to you</div>
+                      ) : (
+                        e.paidByUserId === currentUser.id
+                          ? <div className="expense-total">you paid</div>
+                          : e.shareAmount != null && <div className="expense-total">you owe {formatCurrency(e.shareAmount, e.currencyIso)}</div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
 
-      {tab === 'members' && <>
-        <div className="members-section">
-          {members.map(m => (
-            <div key={m.id} className="member-row">
-              <Avatar name={m.name} size={34} colorIndex={m.avatarColor} emoji={m.avatarEmoji} />
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div className="member-name">{m.name}</div>
-                <div className="member-email">{m.email}</div>
-              </div>
-              <span className="member-bal" style={{ color: m.balance > 0 ? 'var(--green)' : m.balance < 0 ? 'var(--red)' : 'var(--text-3)' }}>
-                {m.balance ? formatCurrency(Math.abs(m.balance), balance?.iso) : '—'}
-              </span>
-              <div className="member-actions">
-                {m.id !== currentUser.id && m.balance !== 0 && (
-                  <>
-                    <button className="btn-pill-outline" style={{ fontSize: 11, padding: '4px 8px' }} onClick={() => openSettlement(m)}>
-                      Settle
+            {hasMore && (
+              <button className="btn-outline-amber" style={{ width: '100%', marginTop: 8 }} onClick={loadMore} disabled={loadingMore}>
+                {loadingMore ? 'Loading…' : 'Load more'}
+              </button>
+            )}
+          </>}
+
+          {tab === 'members' && <>
+            <div className="members-section">
+              {members.map(m => (
+                <div key={m.id} className="member-row">
+                  <Avatar name={m.name} size={34} colorIndex={m.avatarColor} emoji={m.avatarEmoji} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div className="member-name">{m.name}</div>
+                    <div className="member-email">{m.email}</div>
+                  </div>
+                  <span className="member-bal" style={{ color: m.balance > 0 ? 'var(--green)' : m.balance < 0 ? 'var(--red)' : 'var(--text-3)' }}>
+                    {m.balance ? formatCurrency(Math.abs(m.balance), balance?.iso) : '—'}
+                  </span>
+                  <div className="member-actions">
+                    {m.id !== currentUser.id && m.balance !== 0 && (
+                      <>
+                        <button className="btn-pill-outline" style={{ fontSize: 11, padding: '4px 8px' }} onClick={() => openSettlement(m)}>
+                          Settle
+                        </button>
+                        <button className="btn-pill-outline" style={{ fontSize: 11, padding: '4px 8px' }} onClick={() => openTransfer(m)}>
+                          Transfer
+                        </button>
+                      </>
+                    )}
+                    <button className="member-rm-btn" onClick={() => handleRemoveMember(m.id)} title="Remove">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="3 6 5 6 21 6"/>
+                        <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                        <path d="M10 11v6M14 11v6"/>
+                        <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+                      </svg>
                     </button>
-                    <button className="btn-pill-outline" style={{ fontSize: 11, padding: '4px 8px' }} onClick={() => openTransfer(m)}>
-                      Transfer
-                    </button>
-                  </>
-                )}
-                <button className="member-rm-btn" onClick={() => handleRemoveMember(m.id)} title="Remove">
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="3 6 5 6 21 6"/>
-                    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-                    <path d="M10 11v6M14 11v6"/>
-                    <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
-                  </svg>
-                </button>
-              </div>
+                  </div>
+                </div>
+              ))}
+
+              <button className="btn-pill-outline" style={{ marginTop: 12, width: '100%', padding: '10px' }} onClick={handleInvite}>
+                Invite via link
+              </button>
+
             </div>
-          ))}
+          </>}
 
-          <button className="btn-pill-outline" style={{ marginTop: 12, width: '100%', padding: '10px' }} onClick={handleInvite}>
-            Invite via link
-          </button>
-
+          {tab === 'trips' && (
+            trips.length === 0 ? (
+              <div className="empty-state" style={{ padding: '32px 24px' }}>
+                <img src="/cat-empty.svg" alt="" style={{ width: 80, height: 80 }} />
+                <p style={{ color: 'var(--text-3)', fontSize: 14 }}>No trips planned with this group yet.</p>
+              </div>
+            ) : (
+              <TripList trips={trips} />
+            )
+          )}
         </div>
-      </>}
-
-      {tab === 'trips' && (
-        trips.length === 0 ? (
-          <div className="empty-state" style={{ padding: '32px 24px' }}>
-            <img src="/cat-empty.svg" alt="" style={{ width: 80, height: 80 }} />
-            <p style={{ color: 'var(--text-3)', fontSize: 14 }}>No trips planned with this group yet.</p>
-          </div>
-        ) : (
-          <TripList trips={trips} />
-        )
-      )}
+        {wide && (
+          <aside className="group-aside">
+            {balanceBanner}
+            {categoryCard}
+            {membersCard}
+          </aside>
+        )}
+      </div>
 
       {tab === 'trips'
         ? <FabButton onClick={() => setShowNewTrip(true)} label="New trip" />

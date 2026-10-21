@@ -350,7 +350,8 @@ body {
   }
 
   .page-wrap {
-    max-width: 800px;
+    /* Pages with a desktop two-column layout widen this; the FAB follows it. */
+    max-width: var(--wrap-w, 800px);
     margin: 0 auto;
     padding: 32px 36px 40px;
   }
@@ -1223,6 +1224,33 @@ body {
   border-bottom: 1px solid var(--border);
 }
 .member-row:last-child { border-bottom: none; }
+
+/* Group page on wide screens: expenses on the left, balance/chart/members on
+   the right. Breakpoint shared with WIDE_QUERY in GroupDetailPage.jsx. */
+@media (min-width: 1180px) {
+  .page-wrap:has(.group-layout) { --wrap-w: 1240px; }
+  .group-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 340px;
+    gap: 28px;
+    align-items: start;
+  }
+  .group-aside {
+    position: sticky;
+    top: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .group-aside .debt-banners,
+  .group-aside .card { margin-bottom: 0; }
+  .group-aside-member {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 0;
+  }
+}
 .member-av {
   width: 34px; height: 34px;
   border-radius: 50%;
