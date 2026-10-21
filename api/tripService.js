@@ -171,6 +171,15 @@ const tripService = {
                 { tripId }
             );
 
+            // What the trip has cost so far: every linked expense once, even when
+            // one booking pays for several items (the two legs of a connecting flight).
+            const { records: paidRecords } = await driver.executeQuery(
+                `MATCH (e:Expense)-[:PAYS_FOR]->(:TripItem)-[:PART_OF]->(:Trip {id: $tripId})
+                 WITH DISTINCT e
+                 RETURN sum(coalesce(e.amountBase, 0)) AS paidBase, count(e) AS expenseCount`,
+                { tripId }
+            );
+
             return {
                 success: true,
                 trip: {
@@ -179,6 +188,9 @@ const tripService = {
                     groupTitle: tr.get('groupTitle'),
                     groupIcon: tr.get('groupIcon'),
                     groupIso: tr.get('groupIso'),
+                    // In the group's currency, like every balance in the app.
+                    paidBase: Number(num(paidRecords[0]?.get('paidBase')) ?? 0),
+                    expenseCount: num(paidRecords[0]?.get('expenseCount')) ?? 0,
                 },
                 items: itemRecords.map(r => {
                     const paidAmounts = r.get('paidAmounts');

@@ -121,8 +121,9 @@ export default function TripDetailPage() {
   const timeline = buildTimeline(trip, items)
   const now = today()
 
-  // What has been paid for the trip: its linked expenses, already in the group's currency.
-  const paid = items.reduce((sum, i) => sum + Number(i.paidBase || 0), 0)
+  // What has been paid for the trip, counted by the server so an expense linked
+  // to several items (both legs of a connecting flight) counts once.
+  const paid = Number(trip.paidBase || 0)
   const nights = daysBetween(trip.startDate, trip.endDate)
 
   const dayList = (
