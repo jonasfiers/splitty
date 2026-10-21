@@ -1,5 +1,6 @@
-import { useEffect, useRef } from 'react'
+import { useContext, useEffect, useRef } from 'react'
 import { dayOf, timeOf } from '../../utils/trip.js'
+import { ExpandedContext } from '../Expandable/Expandable.jsx'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { itemIcon } from '../../utils/trip.js'
@@ -33,12 +34,19 @@ function TripMap({ places, items, onOpenItem, highlight = null, onHover = () => 
   const lines = useRef(new Map())  // itemId -> { line, arrow }
   const hover = useRef(onHover)
   hover.current = onHover
+  const expanded = useContext(ExpandedContext)
 
   useEffect(() => {
     const located = places.filter(p => p.lat != null && p.lon != null)
     if (!el.current || located.length === 0) return
 
-    const map = L.map(el.current, { scrollWheelZoom: false })
+    // In the page the wheel scrolls the page until the map is clicked; full
+    // screen there is nothing else to scroll.
+    const map = L.map(el.current, { scrollWheelZoom: expanded })
+    if (!expanded) {
+      map.on('click', () => map.scrollWheelZoom.enable())
+      map.on('mouseout', () => map.scrollWheelZoom.disable())
+    }
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
@@ -131,7 +139,7 @@ function TripMap({ places, items, onOpenItem, highlight = null, onHover = () => 
     resized.observe(el.current)
 
     return () => { resized.disconnect(); map.remove() }
-  }, [places, items, onOpenItem])
+  }, [places, items, onOpenItem, expanded])
 
   useEffect(() => {
     const on = highlight?.length ? new Set(highlight) : null
