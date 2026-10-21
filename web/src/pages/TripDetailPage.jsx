@@ -36,6 +36,8 @@ export default function TripDetailPage() {
   const [items, setItems] = useState([])
   const [places, setPlaces] = useState([])
   const [tab, setTab] = useState('timeline')
+  // Item ids under the pointer in the timeline or on the map; the other one lights them up.
+  const [highlight, setHighlight] = useState(null)
   const [showKinds, setShowKinds] = useState(false)
   const [showEdit, setShowEdit] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -124,7 +126,7 @@ export default function TripDetailPage() {
 
   const mapView = (
     <Suspense fallback={<Loading />}>
-      <TripMap places={places} items={items} onOpenItem={openItem} />
+      <TripMap places={places} items={items} onOpenItem={openItem} highlight={highlight} onHover={setHighlight} />
       {places.some(p => p.lat == null) && (
         <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 8 }}>
           Not on the map: {places.filter(p => p.lat == null).map(p => p.name).join(', ')}
@@ -182,7 +184,7 @@ export default function TripDetailPage() {
           <p style={{ color: 'var(--text-3)', fontSize: 14 }}>Nothing planned yet. Add a flight, a stay or something to do.</p>
         </div>
       ) : (
-        <TripGantt trip={trip} items={items} placeName={placeName} onOpenItem={openItem} />
+        <TripGantt trip={trip} items={items} placeName={placeName} onOpenItem={openItem} highlight={highlight} onHover={setHighlight} />
       )}
 
       {wide ? (

@@ -70,7 +70,7 @@ function pack(bars) {
 // Rough rendered width of a bar's text at 12px, icon and padding included.
 const textWidth = text => 30 + text.length * 6.6
 
-export default function TripGantt({ trip, items, placeName, onOpenItem }) {
+export default function TripGantt({ trip, items, placeName, onOpenItem, highlight = null, onHover = () => {} }) {
   const scroller = useRef(null)
   const [boxWidth, setBoxWidth] = useState(0)
   const now = today()
@@ -132,6 +132,7 @@ export default function TripGantt({ trip, items, placeName, onOpenItem }) {
   }
 
   const width = dayCount * dayWidth
+  const lit = highlight?.length ? new Set(highlight) : null
   const todayIndex = daysBetween(first, now)
 
   return (
@@ -174,10 +175,12 @@ export default function TripGantt({ trip, items, placeName, onOpenItem }) {
                 <button
                   key={item.id}
                   type="button"
-                  className={`gantt-bar ${lane.kind}${captioned ? ' captioned' : ''}${flipped ? ' flipped' : ''}`}
+                  className={`gantt-bar ${lane.kind}${captioned ? ' captioned' : ''}${flipped ? ' flipped' : ''}${lit ? (lit.has(item.id) ? ' lit' : ' faded') : ''}`}
                   style={{ left: start * dayWidth, width: (end - start) * dayWidth, top: row * 34 + 5 }}
                   title={tooltip(item)}
                   onClick={() => onOpenItem(item)}
+                  onMouseEnter={() => onHover([item.id])}
+                  onMouseLeave={() => onHover(null)}
                 >
                   <span className="gantt-bar-icon">{itemIcon(item)}</span>
                   {captioned

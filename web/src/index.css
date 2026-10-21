@@ -2405,6 +2405,23 @@ a.expense-item { color: inherit; text-decoration: none; }
   font-weight: 700;
   color: #E8603A;
 }
+.trip-pin { position: relative; transition: transform .15s, opacity .15s; }
+.trip-pin.active { transform: scale(1.25); box-shadow: 0 0 0 4px rgba(232, 96, 58, .25), var(--shadow-md); }
+.trip-pin.faded, .trip-leg.faded { opacity: .35; }
+/* Visiting order, in the pin's corner. */
+.trip-pin-n {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  border-radius: 9px;
+  background: #E8603A;
+  color: #fff;
+  font: 700 10px/17px var(--font-body);
+  text-align: center;
+}
 .trip-leg {
   width: 24px;
   height: 24px;

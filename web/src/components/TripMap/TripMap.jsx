@@ -1,13 +1,38 @@
 import { useEffect, useRef } from 'react'
+import { dayOf, timeOf } from '../../utils/trip.js'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { itemIcon } from '../../utils/trip.js'
 
+// Places numbered in the order the trip reaches them: walk the items by start
+// time and number each place the first time it comes up (a journey reaches its
+// origin before its destination).
+// A start without a time sorts like the timeline draws it: a stay from
+// mid-afternoon, anything else from the start of the day.
+const sortKey = item => (timeOf(item.start) ? item.start : `${dayOf(item.start)}T${item.kind === 'stay' ? '15:00' : '00:00'}`)
+
+function visitOrder(items) {
+  const order = new Map()
+  const visit = id => { if (id && !order.has(id)) order.set(id, order.size + 1) }
+  for (const item of [...items].filter(i => dayOf(i.start)).sort((a, b) => sortKey(a).localeCompare(sortKey(b)))) {
+    if (item.kind === 'transport') { visit(item.fromPlaceId); visit(item.toPlaceId) } else visit(item.placeId)
+  }
+  return order
+}
+
 // The map is not stored anywhere: it is the trip's Place nodes that have
 // coordinates, one pin per place however many items happen there, and a line
 // for every transport whose two ends are both on the map.
-function TripMap({ places, items, onOpenItem }) {
+//
+// `highlight` (item ids) marks those items' pins and journeys and fades the
+// rest; `onHover` reports the items under the pointer, so the timeline can do
+// the same. Both are applied without rebuilding the map.
+function TripMap({ places, items, onOpenItem, highlight = null, onHover = () => {} }) {
   const el = useRef(null)
+  const pins = useRef(new Map())   // placeId -> { marker, itemIds }
+  const lines = useRef(new Map())  // itemId -> { line, arrow }
+  const hover = useRef(onHover)
+  hover.current = onHover
 
   useEffect(() => {
     const located = places.filter(p => p.lat != null && p.lon != null)
@@ -21,6 +46,10 @@ function TripMap({ places, items, onOpenItem }) {
 
     const byId = new Map(located.map(p => [p.id, p]))
     const itemsAt = placeId => items.filter(i => [i.placeId, i.fromPlaceId, i.toPlaceId].includes(placeId))
+    const order = visitOrder(items)
+    const numbered = located.length > 1
+    pins.current.clear()
+    lines.current.clear()
 
     for (const place of located) {
       const here = itemsAt(place.id)
@@ -29,7 +58,7 @@ function TripMap({ places, items, onOpenItem }) {
       const marker = L.marker([place.lat, place.lon], {
         icon: L.divIcon({
           className: '',
-          html: `<div class="trip-pin">${stay ? itemIcon(stay) : here.length > 1 ? here.length : here[0] ? itemIcon(here[0]) : '📍'}</div>`,
+          html: `<div class="trip-pin">${stay ? itemIcon(stay) : here.length > 1 ? here.length : here[0] ? itemIcon(here[0]) : '📍'}${numbered && order.has(place.id) ? `<span class="trip-pin-n">${order.get(place.id)}</span>` : ''}</div>`,
           iconSize: [34, 34],
           iconAnchor: [17, 17],
         }),
@@ -50,6 +79,9 @@ function TripMap({ places, items, onOpenItem }) {
         popup.append(link)
       }
       marker.bindPopup(popup)
+      marker.on('mouseover', () => hover.current(here.map(i => i.id)))
+      marker.on('mouseout', () => hover.current(null))
+      pins.current.set(place.id, { marker, itemIds: here.map(i => i.id) })
     }
 
     // Each journey is a gentle arc bending to the right of its direction, so a
@@ -68,7 +100,7 @@ function TripMap({ places, items, onOpenItem }) {
       const control = a.add(b).divideBy(2).add(L.point(-d.y, d.x).multiplyBy(0.18))
       const at = t => a.multiplyBy((1 - t) ** 2).add(control.multiplyBy(2 * (1 - t) * t)).add(b.multiplyBy(t ** 2))
       const curve = Array.from({ length: 33 }, (_, i) => map.unproject(at(i / 32), 0))
-      L.polyline(curve, { color: '#E8603A', weight: 2.5, opacity: .8, dashArray: '6 7' }).addTo(map)
+      const line = L.polyline(curve, { color: '#E8603A', weight: 2.5, opacity: .8, dashArray: '6 7' }).addTo(map)
 
       // At t = 0.5 the curve's tangent is parallel to b - a.
       const angle = length ? (Math.atan2(d.y, d.x) * 180) / Math.PI : 0
@@ -83,6 +115,9 @@ function TripMap({ places, items, onOpenItem }) {
         zIndexOffset: -100,
       }).addTo(map)
       arrow.on('click', () => onOpenItem(item))
+      arrow.on('mouseover', () => hover.current([item.id]))
+      arrow.on('mouseout', () => hover.current(null))
+      lines.current.set(item.id, { line, arrow })
     })
 
     const bounds = L.latLngBounds(located.map(p => [p.lat, p.lon]))
@@ -91,6 +126,22 @@ function TripMap({ places, items, onOpenItem }) {
 
     return () => map.remove()
   }, [places, items, onOpenItem])
+
+  useEffect(() => {
+    const on = highlight?.length ? new Set(highlight) : null
+    for (const { marker, itemIds } of pins.current.values()) {
+      const pin = marker.getElement()?.querySelector('.trip-pin')
+      const hit = on && itemIds.some(id => on.has(id))
+      pin?.classList.toggle('active', !!hit)
+      pin?.classList.toggle('faded', !!on && !hit)
+      marker.setZIndexOffset(hit ? 1000 : 0)
+    }
+    for (const [itemId, { line, arrow }] of lines.current) {
+      const hit = on?.has(itemId)
+      line.setStyle({ opacity: on && !hit ? .25 : .9, weight: hit ? 4 : 2.5 })
+      arrow.getElement()?.querySelector('.trip-leg')?.classList.toggle('faded', !!on && !hit)
+    }
+  }, [highlight, places, items])
 
   if (!places.some(p => p.lat != null && p.lon != null)) {
     return (
