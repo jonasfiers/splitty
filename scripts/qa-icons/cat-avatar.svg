@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none">
+  <circle cx="24" cy="24" r="24" fill="#F5EDE0"></circle>
+  
+  <polygon points="10,18 14,8 20,18" fill="#F5A623"></polygon>
+  <polygon points="28,18 34,8 38,18" fill="#F5A623"></polygon>
+  <polygon points="12,17 14,10 18,17" fill="#F07167"></polygon>
+  <polygon points="30,17 34,10 36,17" fill="#F07167"></polygon>
+  
+  <circle cx="24" cy="28" r="16" fill="#F5A623"></circle>
+  
+  <ellipse cx="19" cy="27" rx="2.5" ry="3" fill="#2C1A0E"></ellipse>
+  <ellipse cx="29" cy="27" rx="2.5" ry="3" fill="#2C1A0E"></ellipse>
+  <circle cx="20" cy="26" r="0.9" fill="white"></circle>
+  <circle cx="30" cy="26" r="0.9" fill="white"></circle>
+  
+  <ellipse cx="24" cy="32" rx="1.5" ry="1.1" fill="#F07167"></ellipse>
+  
+  <line x1="8" y1="30" x2="19" y2="32" stroke="#2C1A0E" stroke-width="0.7" opacity="0.4"></line>
+  <line x1="8" y1="33" x2="19" y2="33" stroke="#2C1A0E" stroke-width="0.7" opacity="0.4"></line>
+  <line x1="29" y1="32" x2="40" y2="30" stroke="#2C1A0E" stroke-width="0.7" opacity="0.4"></line>
+  <line x1="29" y1="33" x2="40" y2="33" stroke="#2C1A0E" stroke-width="0.7" opacity="0.4"></line>
+<rect x="12" y="31" width="24" height="13" rx="6.5" fill="#7C3AED" stroke="#fff" stroke-width="1.5"/><text x="24" y="40.6" text-anchor="middle" font-family="DejaVu Sans, Arial, sans-serif" font-weight="700" font-size="9" fill="#fff">QA</text></svg>
