@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate, useSearchParams, Link } from 'react-router'
 import client from '../api/client'
-import CurrencyInput from '../components/CurrencyInput/CurrencyInput.jsx'
 import PlacePicker from '../components/PlacePicker/PlacePicker.jsx'
 import Loading from '../components/Loading.jsx'
 import BackLink from '../components/BackLink.jsx'
@@ -32,14 +31,11 @@ export default function TripItemFormPage() {
     startDate: '', startTime: '',
     endDate: '', endTime: '',
     from: null, to: null, place: null,
-    price: 0,
-    currencyIso: '',
     confirmationRef: '',
     url: '',
     notes: '',
   })
   const [places, setPlaces] = useState([])
-  const [currencies, setCurrencies] = useState([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -48,12 +44,10 @@ export default function TripItemFormPage() {
   useEffect(() => {
     Promise.all([
       client.get(`/trips/${tripId}`),
-      client.get('/currencies'),
       ...(isEdit ? [client.get(`/trips/items/${itemId}`)] : []),
-    ]).then(([tripRes, curRes, itemRes]) => {
+    ]).then(([tripRes, itemRes]) => {
       const trip = tripRes.data.trip
       setPlaces(tripRes.data.places || [])
-      setCurrencies(curRes.data.currencies || [])
 
       if (isEdit) {
         const i = itemRes.data.item
@@ -69,8 +63,6 @@ export default function TripItemFormPage() {
           from: i.from ? { id: i.from.id } : null,
           to: i.to ? { id: i.to.id } : null,
           place: i.place ? { id: i.place.id } : null,
-          price: i.price ?? 0,
-          currencyIso: i.currencyIso || trip.groupIso || '',
           confirmationRef: i.confirmationRef || '',
           url: i.url || '',
           notes: i.notes || '',
@@ -90,7 +82,6 @@ export default function TripItemFormPage() {
           // A stay is the one item that nearly always has an end: the whole trip.
           endDate: end ? dayOf(end) : searchParams.get('kind') === 'stay' && !start ? trip.endDate : '',
           endTime: end ? timeOf(end) : '',
-          currencyIso: trip.groupIso || '',
         }))
       }
     }).catch(() => setMissing(true)).finally(() => setLoading(false))
@@ -122,8 +113,6 @@ export default function TripItemFormPage() {
       confirmationRef: form.confirmationRef,
       url: form.url.trim(),
       notes: form.notes,
-      price: form.price > 0 ? form.price : null,
-      currencyIso: form.price > 0 ? form.currencyIso : '',
       ...(kind === 'transport'
         ? { mode: form.mode, carrier: form.carrier, number: form.number, from: form.from, to: form.to }
         : { place: form.place }),
@@ -238,19 +227,6 @@ export default function TripItemFormPage() {
             <div className="form-group">
               <label>Time <span className="label-optional">optional</span></label>
               <input type="time" value={form.endTime} onChange={e => set({ endTime: e.target.value })} />
-            </div>
-          </div>
-
-          <div className="form-row form-row-compact">
-            <div className="form-group">
-              <label>Currency</label>
-              <select value={form.currencyIso} onChange={e => set({ currencyIso: e.target.value })}>
-                {currencies.map(c => <option key={c.iso} value={c.iso}>{c.symbol} {c.iso}</option>)}
-              </select>
-            </div>
-            <div className="form-group">
-              <label>Price <span className="label-optional">optional</span></label>
-              <CurrencyInput iso={form.currencyIso || 'EUR'} value={form.price} onChange={price => set({ price })} />
             </div>
           </div>
 

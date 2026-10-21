@@ -14,7 +14,7 @@ const moment = (date, time) => (date ? (time ? `${date}T${time}` : date) : '')
 // The essentials of a new trip item, in a pop-up over the trip: what the
 // timeline drag (or tap) already decided, plus a name, the place(s) and, for
 // travel, the mode. "More details…" carries what is filled in over to the
-// full form for price, booking reference and notes.
+// full form for the booking reference, link and notes.
 function QuickAddSheet({ tripId, kind, start, end, places, onClose, onSaved, onMore }) {
   const [form, setForm] = useState({
     title: '',
@@ -45,7 +45,6 @@ function QuickAddSheet({ tripId, kind, start, end, places, onClose, onSaved, onM
         title,
         start: moment(form.startDate, form.startTime),
         end: moment(form.endDate || (form.endTime ? form.startDate : ''), form.endTime),
-        price: null,
         ...(kind === 'transport' ? { mode: form.mode, from: form.from, to: form.to } : { place: form.place }),
       })
       onSaved(title)

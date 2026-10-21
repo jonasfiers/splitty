@@ -59,20 +59,14 @@ export default function TripItemDetailPage() {
     } catch { setError('Failed to delete.') }
   }
 
-  // The expense form does the splitting; it gets the item's details as a head
-  // start and links the new expense back to this item once it is saved.
+  // What it costs lives in the expense: the expense form does the amount and
+  // the splitting, gets the item's name as a head start, and links the new
+  // expense back to this item once it is saved.
   const handleCreateExpense = () => {
-    const remaining = item.price != null && item.currencyIso === item.groupIso
-      ? Math.max(0, Number(item.price) - item.expenses.reduce((sum, e) => sum + Number(e.amountBase || 0), 0))
-      : item.price
     navigate(`/groups/${item.groupId}/expenses/new`, {
       state: {
         tripItem: { id: item.id, tripId, title: item.title },
-        prefill: {
-          description: item.title,
-          amount: item.expenses.length > 0 ? remaining : item.price,
-          currencyIso: item.currencyIso,
-        },
+        prefill: { description: item.title },
       },
     })
   }
@@ -166,11 +160,6 @@ export default function TripItemDetailPage() {
           {(item.carrier || item.number) && (
             <Row label={item.mode === 'flight' ? 'Flight' : item.mode === 'car' ? 'Rental' : 'Operator'}>
               {[item.carrier, item.number].filter(Boolean).join(' ')}
-            </Row>
-          )}
-          {item.price != null && item.currencyIso && (
-            <Row label="Price">
-              <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent)' }}>{formatCurrency(item.price, item.currencyIso)}</span>
             </Row>
           )}
           {item.confirmationRef && (

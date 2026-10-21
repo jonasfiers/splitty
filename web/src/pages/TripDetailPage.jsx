@@ -121,12 +121,7 @@ export default function TripDetailPage() {
   const timeline = buildTimeline(trip, items)
   const now = today()
 
-  // Planned prices can be in several currencies and are never converted; what
-  // was paid is already in the group's currency, like every balance.
-  const planned = items.reduce((acc, i) => {
-    if (i.price != null && i.currencyIso) acc[i.currencyIso] = (acc[i.currencyIso] ?? 0) + Number(i.price)
-    return acc
-  }, {})
+  // What has been paid for the trip: its linked expenses, already in the group's currency.
   const paid = items.reduce((sum, i) => sum + Number(i.paidBase || 0), 0)
   const nights = daysBetween(trip.startDate, trip.endDate)
 
@@ -156,11 +151,8 @@ export default function TripDetailPage() {
                     </div>
                   </div>
                   <div className="expense-amounts">
-                    {item.price != null && item.currencyIso && (
-                      <div className="expense-share">{formatCurrency(item.price, item.currencyIso)}</div>
-                    )}
                     <div className="expense-total">
-                      {item.expenseCount > 0 ? '✓ paid' : item.price != null ? 'not paid yet' : ''}
+                      {item.expenseCount > 0 ? '✓ paid' : ''}
                       {item.attachmentCount > 0 && ` 📎${item.attachmentCount}`}
                     </div>
                   </div>
@@ -214,14 +206,8 @@ export default function TripDetailPage() {
 
       {trip.notes && <p className="trip-notes">{trip.notes}</p>}
 
-      {(Object.keys(planned).length > 0 || paid > 0) && (
+      {paid > 0 && (
         <div className="trip-costs">
-          <div>
-            <div className="trip-costs-label">Planned</div>
-            <div className="trip-costs-value">
-              {Object.keys(planned).length === 0 ? '—' : Object.entries(planned).map(([iso, amount]) => formatCurrency(amount, iso)).join(' + ')}
-            </div>
-          </div>
           <div>
             <div className="trip-costs-label">Paid so far</div>
             <div className="trip-costs-value">{formatCurrency(paid, trip.groupIso)}</div>
