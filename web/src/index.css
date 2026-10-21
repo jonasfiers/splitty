@@ -2524,26 +2524,29 @@ a.expense-item { color: inherit; text-decoration: none; }
   text-align: center;
 }
 .trip-leg {
+  /* A bare arrowhead on the journey line; the 24px box is only the hover/click target. */
   width: 24px;
   height: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #FEFCFA;
-  border: 1.5px solid #E8603A;
-  border-radius: 50%;
-  box-shadow: var(--shadow-sm);
   cursor: pointer;
+  transition: opacity .15s;
 }
 .trip-leg svg {
-  width: 14px;
-  height: 14px;
-  fill: none;
-  stroke: #E8603A;
-  stroke-width: 2.6;
-  stroke-linecap: round;
-  stroke-linejoin: round;
+  width: 18px;
+  height: 18px;
+  overflow: visible;
 }
+.trip-leg path {
+  fill: #E8603A;
+  /* A white edge keeps it readable over sea, land and labels alike. */
+  stroke: #FEFCFA;
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+  paint-order: stroke;
+}
+.trip-leg:hover path { fill: #D4512B; }
 .trip-popup {
   display: flex;
   flex-direction: column;

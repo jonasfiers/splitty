@@ -28,10 +28,50 @@ function visitOrder(items) {
 // `highlight` (item ids) marks those items' pins and journeys and fades the
 // rest; `onHover` reports the items under the pointer, so the timeline can do
 // the same. Both are applied without rebuilding the map.
+// Direction arrows along each journey: every ARROW_SPACING px on screen, kept
+// ARROW_END_GAP px clear of the pins at both ends; a short journey gets one in
+// the middle. Only arrows within ARROW_MARGIN px of the view are placed.
+const ARROW_SPACING = 140
+const ARROW_END_GAP = 28
+const ARROW_MARGIN = 80
+const arrowIcon = angle => L.divIcon({
+  className: '',
+  html: `<div class="trip-leg"><svg viewBox="0 0 24 24" style="transform: rotate(${angle}deg)"><path d="M5 5 L20 12 L5 19 L9 12 Z" /></svg></div>`,
+  iconSize: [24, 24],
+  iconAnchor: [12, 12],
+})
+
+// Points every `spacing` px along a polyline given in screen pixels, each with
+// the direction of travel there (degrees, screen y pointing down).
+function pointsAlong(pts, spacing, gap) {
+  const segs = []
+  let total = 0
+  for (let i = 1; i < pts.length; i++) {
+    const len = pts[i - 1].distanceTo(pts[i])
+    segs.push({ a: pts[i - 1], b: pts[i], from: total, len })
+    total += len
+  }
+  if (total === 0) return []
+  const usable = total - 2 * gap
+  const distances = usable < spacing
+    ? [total / 2]
+    : Array.from({ length: Math.floor(usable / spacing) + 1 }, (_, k) => gap + (usable % spacing) / 2 + k * spacing)
+  return distances.map(dist => {
+    const seg = segs.find(sg => dist <= sg.from + sg.len) ?? segs[segs.length - 1]
+    const f = seg.len ? (dist - seg.from) / seg.len : 0
+    return {
+      point: seg.a.add(seg.b.subtract(seg.a).multiplyBy(f)),
+      angle: (Math.atan2(seg.b.y - seg.a.y, seg.b.x - seg.a.x) * 180) / Math.PI,
+    }
+  })
+}
+
 function TripMap({ places, items, onOpenItem, highlight = null, onHover = () => {} }) {
   const el = useRef(null)
   const pins = useRef(new Map())   // placeId -> { marker, itemIds }
-  const lines = useRef(new Map())  // itemId -> { line, arrow }
+  const lines = useRef(new Map())  // itemId -> { line, arrows (layer group) }
+  const highlightRef = useRef(highlight)
+  highlightRef.current = highlight
   const hover = useRef(onHover)
   hover.current = onHover
   const expanded = useContext(ExpandedContext)
@@ -112,23 +152,34 @@ function TripMap({ places, items, onOpenItem, highlight = null, onHover = () => 
       const curve = Array.from({ length: 33 }, (_, i) => map.unproject(at(i / 32), 0))
       const line = L.polyline(curve, { color: '#E8603A', weight: 2.5, opacity: .8, dashArray: '6 7' }).addTo(map)
 
-      // At t = 0.5 the curve's tangent is parallel to b - a.
-      const angle = length ? (Math.atan2(d.y, d.x) * 180) / Math.PI : 0
-      const arrow = L.marker(map.unproject(at(0.5), 0), {
-        icon: L.divIcon({
-          className: '',
-          html: `<div class="trip-leg"><svg viewBox="0 0 24 24" style="transform: rotate(${angle}deg)"><path d="M5 12h13M13 6l6 6-6 6" /></svg></div>`,
-          iconSize: [24, 24],
-          iconAnchor: [12, 12],
-        }),
-        title: `${legs.length > 1 ? `${n + 1}. ` : ''}${itemIcon(item)} ${item.title}: ${from.name} → ${to.name}`,
-        zIndexOffset: -100,
-      }).addTo(map)
-      arrow.on('click', () => onOpenItem(item))
-      arrow.on('mouseover', () => hover.current([item.id]))
-      arrow.on('mouseout', () => hover.current(null))
-      lines.current.set(item.id, { line, arrow })
+      const arrows = L.layerGroup().addTo(map)
+      const title = `${legs.length > 1 ? `${n + 1}. ` : ''}${itemIcon(item)} ${item.title}: ${from.name} → ${to.name}`
+      lines.current.set(item.id, { item, curve, line, arrows, title })
     })
+
+    // Arrows are placed in screen pixels, so they are redone after every zoom
+    // or pan (and resize); the highlight is reapplied to the new ones.
+    const placeArrows = () => {
+      const size = map.getSize()
+      const inView = p => {
+        const c = map.layerPointToContainerPoint(p)
+        return c.x > -ARROW_MARGIN && c.y > -ARROW_MARGIN && c.x < size.x + ARROW_MARGIN && c.y < size.y + ARROW_MARGIN
+      }
+      for (const { item, curve, arrows, title } of lines.current.values()) {
+        arrows.clearLayers()
+        const pts = curve.map(ll => map.latLngToLayerPoint(ll))
+        for (const { point, angle } of pointsAlong(pts, ARROW_SPACING, ARROW_END_GAP)) {
+          if (!inView(point)) continue
+          const arrow = L.marker(map.layerPointToLatLng(point), { icon: arrowIcon(angle), title, zIndexOffset: -100 })
+          arrow.on('click', () => onOpenItem(item))
+          arrow.on('mouseover', () => hover.current([item.id]))
+          arrow.on('mouseout', () => hover.current(null))
+          arrows.addLayer(arrow)
+        }
+      }
+      applyHighlight.current(highlightRef.current)
+    }
+    map.on('zoomend moveend resize', placeArrows)
 
     const bounds = L.latLngBounds(located.map(p => [p.lat, p.lon]))
     const frame = () => {
@@ -136,6 +187,7 @@ function TripMap({ places, items, onOpenItem, highlight = null, onHover = () => 
       else map.fitBounds(bounds, { padding: [36, 36], maxZoom: 14 })
     }
     frame()
+    placeArrows()
 
     // Leaflet only measures its box once. When the box changes size (a full
     // screen layout settling, the window resizing) it is told so, and the trip
@@ -151,8 +203,9 @@ function TripMap({ places, items, onOpenItem, highlight = null, onHover = () => 
     return () => { resized.disconnect(); map.remove() }
   }, [places, items, onOpenItem, expanded])
 
-  useEffect(() => {
-    const on = highlight?.length ? new Set(highlight) : null
+  const applyHighlight = useRef(() => {})
+  applyHighlight.current = current => {
+    const on = current?.length ? new Set(current) : null
     for (const { marker, itemIds } of pins.current.values()) {
       const pin = marker.getElement()?.querySelector('.trip-pin')
       const hit = on && itemIds.some(id => on.has(id))
@@ -160,12 +213,13 @@ function TripMap({ places, items, onOpenItem, highlight = null, onHover = () => 
       pin?.classList.toggle('faded', !!on && !hit)
       marker.setZIndexOffset(hit ? 1000 : 0)
     }
-    for (const [itemId, { line, arrow }] of lines.current) {
+    for (const [itemId, { line, arrows }] of lines.current) {
       const hit = on?.has(itemId)
       line.setStyle({ opacity: on && !hit ? .25 : .9, weight: hit ? 4 : 2.5 })
-      arrow.getElement()?.querySelector('.trip-leg')?.classList.toggle('faded', !!on && !hit)
+      arrows.eachLayer(arrow => arrow.getElement()?.querySelector('.trip-leg')?.classList.toggle('faded', !!on && !hit))
     }
-  }, [highlight, places, items])
+  }
+  useEffect(() => { applyHighlight.current(highlight) }, [highlight, places, items])
 
   if (!places.some(p => p.lat != null && p.lon != null)) {
     return (
