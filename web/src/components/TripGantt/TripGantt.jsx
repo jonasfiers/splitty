@@ -18,7 +18,7 @@ const LANES = [
 // how it reads at a glance: one bar per night.
 const DEFAULT_CHECK_IN = 15
 const DEFAULT_CHECK_OUT = 11
-const MIN_BAR = 0.12 // of a day, so short or instant items stay clickable
+const MIN_BAR_PX = 22 // short or instant items are drawn at least this wide, so they stay clickable
 const LABEL_W = 64
 const MIN_DAY_W = 96 // narrower than this and bar titles stop being readable
 // Zoom range: ~100 px an hour at the wide end; at the narrow end the whole trip
@@ -59,7 +59,7 @@ function span(item, first) {
     start = at(startDay, startHour)
     end = item.end ? at(endDay, endHour ?? 24) : start
   }
-  return [start, Math.max(end, start + MIN_BAR)]
+  return [start, Math.max(end, start)]
 }
 
 // Overlapping bars in one lane go on separate rows, first come first served.
@@ -233,7 +233,9 @@ export default function TripGantt({ trip, items: allItems, placeName, onOpenItem
     const bars = dated
       .filter(item => item.kind === lane.kind)
       .map(item => {
-        const [start, end] = span(item, first)
+        const [start, real] = span(item, first)
+        // The minimum is in pixels, not time: zoomed in, a 5-minute item is drawn as 5 minutes.
+        const end = Math.max(real, start + MIN_BAR_PX / dayWidth)
         // Too narrow for any text: the bar keeps its icon and the title sits
         // beside it, on the left when there is no room before the last day ends.
         const captioned = (end - start) * dayWidth < CAPTION_BELOW
