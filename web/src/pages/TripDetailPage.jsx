@@ -40,6 +40,8 @@ export default function TripDetailPage() {
   // Item ids under the pointer in the timeline or on the map; the other one lights them up.
   const [highlight, setHighlight] = useState(null)
   const [showKinds, setShowKinds] = useState(false)
+  // A range dragged out on the travel lane, waiting for the kind of transport.
+  const [pendingTravel, setPendingTravel] = useState(null)
   const [showEdit, setShowEdit] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -56,6 +58,15 @@ export default function TripDetailPage() {
   }, [load])
 
   const openItem = useCallback(item => navigate(`/trips/${id}/items/${item.id}`), [navigate, id])
+
+  const newItemUrl = (kind, { mode, start, end } = {}) => {
+    const q = new URLSearchParams({ kind, ...(mode && { mode }), ...(start && { start }), ...(end && { end }) })
+    return `/trips/${id}/items/new?${q}`
+  }
+  const createFromTimeline = ({ kind, start, end }) => {
+    if (kind === 'transport') setPendingTravel({ start, end })
+    else navigate(newItemUrl(kind, { start, end }))
+  }
 
   const handleDelete = async () => {
     if (!window.confirm(`Delete "${trip.title}" with everything planned in it? Its expenses stay in the group. This cannot be undone.`)) return
@@ -195,7 +206,7 @@ export default function TripDetailPage() {
             </Suspense>
           )}
         >
-          <TripGantt trip={trip} items={items} placeName={placeName} onOpenItem={openItem} highlight={highlight} onHover={setHighlight} />
+          <TripGantt trip={trip} items={items} placeName={placeName} onOpenItem={openItem} onCreate={createFromTimeline} highlight={highlight} onHover={setHighlight} />
         </Expandable>
       )}
 
@@ -224,6 +235,24 @@ export default function TripDetailPage() {
       )}
 
       <FabButton onClick={() => setShowKinds(true)} label="Add to trip" />
+
+      {pendingTravel && (
+        // Above the full-screen timeline too, where this can also be started.
+        <div className="sheet-overlay" style={{ zIndex: 1100 }} onClick={e => { if (e.target === e.currentTarget) setPendingTravel(null) }}>
+          <div className="sheet">
+            <div className="sheet-handle" />
+            <p className="sheet-title">Add travel</p>
+            <div className="trip-kind-grid">
+              {TRANSPORT_MODES.map(m => (
+                <button key={m.value} className="trip-kind" onClick={() => navigate(newItemUrl('transport', { mode: m.value, ...pendingTravel }))}>
+                  <span>{m.icon}</span>{m.label}
+                </button>
+              ))}
+            </div>
+            <button className="btn btn-ghost" style={{ width: '100%', marginTop: 8 }} onClick={() => setPendingTravel(null)}>Cancel</button>
+          </div>
+        </div>
+      )}
 
       {showKinds && (
         <div className="sheet-overlay" onClick={e => { if (e.target === e.currentTarget) setShowKinds(false) }}>

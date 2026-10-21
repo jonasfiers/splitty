@@ -95,3 +95,49 @@
 .gantt-bar { transition: filter .15s, box-shadow .15s, opacity .15s; }
 .gantt-bar.faded { opacity: .35; }
 .gantt-bar.lit { box-shadow: 0 0 0 2px var(--accent), var(--shadow-md); }
+
+/* Drag (mouse) or tap (touch) on a lane to add an item there. */
+.gantt-track.creatable { cursor: crosshair; }
+.gantt-ghost {
+    position: absolute;
+    top: 5px;
+    height: 28px;
+    z-index: 4; /* over existing bars while dragging */
+    display: flex;
+    align-items: center;
+    padding: 0 8px;
+    border-radius: 8px;
+    border: 1.5px dashed;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: visible;
+    pointer-events: none;
+    box-shadow: var(--shadow-md);
+}
+.gantt-ghost.stay { background: var(--green-light); border-color: var(--green); color: var(--green-dark); }
+.gantt-ghost.transport { background: var(--accent-subtle); border-color: var(--accent); color: var(--accent); }
+.gantt-ghost.activity { background: var(--surface-2); border-color: var(--border-strong); color: var(--text); }
+.gantt-hint {
+    position: sticky;
+    left: 0;
+    padding: 2px 14px 8px;
+    font-size: 11px;
+    color: var(--text-3);
+}
+.gantt-hint-touch { display: none; }
+@media (hover: none) {
+    .gantt-hint-pointer { display: none; }
+    .gantt-hint-touch { display: inline; }
+}
+/* The range being dragged out, as a tag beside the ghost so it reads over other bars. */
+.gantt-ghost span {
+    position: absolute;
+    left: calc(100% + 6px);
+    padding: 3px 7px;
+    border-radius: 6px;
+    background: var(--surface);
+    border: 1px solid var(--border-strong);
+    box-shadow: var(--shadow-md);
+    color: var(--text);
+}

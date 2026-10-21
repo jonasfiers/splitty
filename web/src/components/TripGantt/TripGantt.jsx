@@ -70,9 +70,40 @@ function pack(bars) {
 // Rough rendered width of a bar's text at 12px, icon and padding included.
 const textWidth = text => 30 + text.length * 6.6
 
-export default function TripGantt({ trip, items, placeName, onOpenItem, highlight = null, onHover = () => {} }) {
+const SNAP = 1 / 48 // half an hour, for travel and activities; stays snap to days
+const DRAG_THRESHOLD = 6 // px a mouse must move before a press counts as a drag
+
+const pad = n => String(n).padStart(2, '0')
+// Position (days from the first column) -> 'YYYY-MM-DDTHH:mm', snapped.
+function momentAt(first, pos) {
+  const slots = Math.round(pos / SNAP)
+  const day = Math.floor(slots / 48)
+  const minutes = (slots - day * 48) * 30
+  return `${addDays(first, day)}T${pad(Math.floor(minutes / 60))}:${pad(minutes % 60)}`
+}
+
+// The item a press-and-drag (or a tap) on a lane describes.
+function rangeFor(kind, first, from, to, tapped) {
+  const lo = Math.min(from, to), hi = Math.max(from, to)
+  if (kind === 'stay') {
+    const checkIn = Math.floor(lo)
+    const checkOut = Math.max(Math.floor(hi), checkIn + 1)
+    return { start: addDays(first, checkIn), end: addDays(first, checkOut) }
+  }
+  // A tap only picks the day; the times are for the form.
+  if (tapped) return { start: addDays(first, Math.floor(lo)), end: null }
+  const start = momentAt(first, lo)
+  const end = momentAt(first, Math.max(hi, lo + SNAP))
+  return { start, end: end === start ? momentAt(first, lo + SNAP) : end }
+}
+
+// `onCreate({ kind, start, end })`, when given, lets a drag across a lane (or a
+// tap on a touch screen, where a drag scrolls) start a new item there.
+export default function TripGantt({ trip, items, placeName, onOpenItem, onCreate = null, highlight = null, onHover = () => {} }) {
   const scroller = useRef(null)
   const [boxWidth, setBoxWidth] = useState(0)
+  const [ghost, setGhost] = useState(null) // { kind, from, to } while dragging
+  const press = useRef(null)
   const now = today()
 
   // Short trips stretch to fill the card; long ones keep a readable day width and scroll.
@@ -132,6 +163,35 @@ export default function TripGantt({ trip, items, placeName, onOpenItem, highligh
   }
 
   const width = dayCount * dayWidth
+
+  const posOf = (e, track) => Math.min(Math.max((e.clientX - track.getBoundingClientRect().left) / dayWidth, 0), dayCount)
+  const startPress = kind => e => {
+    if (!onCreate || e.button > 0 || e.target.closest('.gantt-bar')) return
+    const track = e.currentTarget
+    press.current = { kind, track, x: e.clientX, from: posOf(e, track), touch: e.pointerType !== 'mouse', dragging: false }
+    if (e.pointerType === 'mouse') {
+      e.preventDefault() // no text selection while dragging
+      track.setPointerCapture(e.pointerId)
+    }
+  }
+  const movePress = e => {
+    const p = press.current
+    if (!p || p.touch) return
+    if (!p.dragging && Math.abs(e.clientX - p.x) < DRAG_THRESHOLD) return
+    p.dragging = true
+    setGhost({ kind: p.kind, from: p.from, to: posOf(e, p.track) })
+  }
+  const endPress = e => {
+    const p = press.current
+    press.current = null
+    setGhost(null)
+    if (!p) return
+    const to = p.dragging ? posOf(e, p.track) : p.from
+    // A mouse click without a drag does nothing: on desktop, creating is a drag.
+    if (!p.dragging && !p.touch) return
+    onCreate({ kind: p.kind, ...rangeFor(p.kind, first, p.from, to, !p.dragging) })
+  }
+  const cancelPress = () => { press.current = null; setGhost(null) }
   const lit = highlight?.length ? new Set(highlight) : null
   const todayIndex = daysBetween(first, now)
 
@@ -160,7 +220,14 @@ export default function TripGantt({ trip, items, placeName, onOpenItem, highligh
         {lanes.map(lane => (
           <div key={lane.kind} className="gantt-lane">
             <div className="gantt-label">{lane.label}</div>
-            <div className="gantt-track" style={{ width, height: lane.rows * 34 + 10 }}>
+            <div
+              className={`gantt-track${onCreate ? ' creatable' : ''}`}
+              style={{ width, height: lane.rows * 34 + 10 }}
+              onPointerDown={startPress(lane.kind)}
+              onPointerMove={movePress}
+              onPointerUp={endPress}
+              onPointerCancel={cancelPress}
+            >
               {columns.map((day, i) => (
                 <div
                   key={day}
@@ -171,6 +238,21 @@ export default function TripGantt({ trip, items, placeName, onOpenItem, highligh
               {todayIndex >= 0 && todayIndex < dayCount && (
                 <div className="gantt-now" style={{ left: (todayIndex + (new Date().getHours() + new Date().getMinutes() / 60) / 24) * dayWidth }} />
               )}
+              {ghost?.kind === lane.kind && (() => {
+                const r = rangeFor(lane.kind, first, ghost.from, ghost.to, false)
+                const s = daysBetween(first, dayOf(r.start)) + (lane.kind === 'stay' ? DEFAULT_CHECK_IN / 24 : (hourOf(r.start) ?? 0) / 24)
+                const e = daysBetween(first, dayOf(r.end)) + (lane.kind === 'stay' ? DEFAULT_CHECK_OUT / 24 : (hourOf(r.end) ?? 24) / 24)
+                const nights = daysBetween(dayOf(r.start), dayOf(r.end))
+                return (
+                  <div className={`gantt-ghost ${lane.kind}`} style={{ left: s * dayWidth, width: Math.max((e - s) * dayWidth, 4) }}>
+                    <span>
+                      {lane.kind === 'stay'
+                        ? `${nights} night${nights !== 1 ? 's' : ''}`
+                        : `${timeOf(r.start)} – ${timeOf(r.end)}`}
+                    </span>
+                  </div>
+                )
+              })()}
               {lane.bars.map(({ item, start, end, row, captioned, flipped }) => (
                 <button
                   key={item.id}
@@ -192,6 +274,12 @@ export default function TripGantt({ trip, items, placeName, onOpenItem, highligh
           </div>
         ))}
       </div>
+      {onCreate && (
+        <div className="gantt-hint">
+          <span className="gantt-hint-pointer">Drag across a lane to add something there</span>
+          <span className="gantt-hint-touch">Tap an empty spot in a lane to add something on that day</span>
+        </div>
+      )}
     </div>
   )
 }

@@ -76,11 +76,18 @@ export default function TripItemFormPage() {
           notes: i.notes || '',
         }))
       } else {
+        // ?start= / ?end= ('YYYY-MM-DD' or 'YYYY-MM-DDTHH:mm') come from dragging
+        // out a range on the trip timeline.
+        const valid = m => /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2})?$/.test(m || '')
+        const start = valid(searchParams.get('start')) ? searchParams.get('start') : null
+        const end = valid(searchParams.get('end')) ? searchParams.get('end') : null
         setForm(f => ({
           ...f,
-          startDate: trip.startDate,
+          startDate: start ? dayOf(start) : trip.startDate,
+          startTime: start ? timeOf(start) : '',
           // A stay is the one item that nearly always has an end: the whole trip.
-          endDate: searchParams.get('kind') === 'stay' ? trip.endDate : '',
+          endDate: end ? dayOf(end) : searchParams.get('kind') === 'stay' && !start ? trip.endDate : '',
+          endTime: end ? timeOf(end) : '',
           currencyIso: trip.groupIso || '',
         }))
       }
