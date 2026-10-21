@@ -1251,6 +1251,71 @@ body {
     padding: 7px 0;
   }
 }
+
+/* Expense detail: chart and people stacked on phones, side by side on wide
+   screens, with the details and actions in a column on the right. */
+.expense-split-members {
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+  margin-top: 4px;
+}
+@media (min-width: 1180px) {
+  .page-wrap:has(.expense-detail-layout) { --wrap-w: 1140px; }
+  .expense-detail-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 300px;
+    gap: 28px;
+    align-items: start;
+  }
+  .expense-detail-aside {
+    position: sticky;
+    top: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .expense-detail-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .expense-detail-actions .btn { width: 100%; }
+  .expense-split-body {
+    display: grid;
+    grid-template-columns: 260px minmax(0, 1fr);
+    gap: 24px;
+    align-items: center;
+  }
+  .expense-split-members {
+    border-top: none;
+    border-left: 1px solid var(--border);
+    margin: 0;
+    padding: 0 0 0 20px;
+  }
+}
+
+/* Expense form: on desktop the narrow form is centred instead of hugging the
+   left edge; from 1180px the split gets its own pane next to the fields. */
+.expense-form-card { max-width: 560px; }
+.expense-form-split { margin-top: 1rem; }
+@media (min-width: 768px) {
+  .page-wrap:has(.expense-form-card) { --wrap-w: 632px; }
+}
+@media (min-width: 1180px) {
+  .page-wrap:has(.expense-form-card) { --wrap-w: 1100px; }
+  .expense-form-card { max-width: none; }
+  .expense-form-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 32px;
+    align-items: start;
+  }
+  .expense-form-split {
+    margin: 0;
+    padding-left: 32px;
+    border-left: 1px solid var(--border);
+  }
+}
 .member-av {
   width: 34px; height: 34px;
   border-radius: 50%;

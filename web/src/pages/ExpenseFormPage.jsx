@@ -212,147 +212,151 @@ export default function ExpenseFormPage() {
         <p style={{ fontSize: 13, color: 'var(--text-3)', margin: '-8px 0 12px' }}>For “{tripItem.title}”</p>
       )}
 
-      <div className="card" style={{ maxWidth: 560 }}>
+      <div className="card expense-form-card">
         <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label>Description</label>
-            <input
-              value={form.description}
-              onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
-              placeholder="What was this for?"
-              required
-            />
-          </div>
-
-          <div className="form-row form-row-compact">
-            <div className="form-group">
-              <label>Currency</label>
-              <select
-                value={form.currencyIso}
-                onChange={e => {
-                  const newIso = e.target.value
-                  const newDec = currencies.find(c => c.iso === newIso)?.amountOfDecimals ?? 2
-                  setForm(f => ({
-                    ...f,
-                    currencyIso: newIso,
-                    amount: f.amount ? parseFloat(f.amount).toFixed(newDec) : '',
-                  }))
-                }}
-                required
-              >
-                <option value="">Select…</option>
-                {currencies.map(c => (
-                  <option key={c.iso} value={c.iso}>{c.symbol} {c.iso}</option>
-                ))}
-              </select>
-            </div>
-            <div className="form-group">
-              <label>Amount</label>
-              <CurrencyInput
-                iso={form.currencyIso}
-                value={form.amount}
-                onChange={val => setForm(f => ({ ...f, amount: val }))}
-                required
-              />
-            </div>
-          </div>
-
-          <div className="form-row">
-            <div className="form-group">
-              <label>Date</label>
-              <input
-                type="date"
-                value={form.date}
-                onChange={e => setForm(f => ({ ...f, date: e.target.value }))}
-                required
-              />
-            </div>
-            <div className="form-group">
-              <label>Category</label>
-              <CategoryPicker
-                value={form.categoryId || null}
-                onChange={id => setForm(f => ({ ...f, categoryId: id ?? '' }))}
-                categories={categories}
-              />
-            </div>
-          </div>
-
-          <div className="form-row">
-            <div className="form-group">
-              <label>Paid by</label>
-              <select
-                value={form.paidByUserId}
-                onChange={e => setForm(f => ({ ...f, paidByUserId: e.target.value }))}
-                required
-              >
-                <option value="">Select…</option>
-                {users.map(u => (
-                  <option key={u.id} value={u.id}>{u.id === currentUser?.id ? 'Me' : u.name}</option>
-                ))}
-              </select>
-            </div>
-            {(!groupId || isEdit) && (
+          <div className="expense-form-grid">
+            <div className="expense-form-fields">
               <div className="form-group">
-                <label>Group</label>
-                <select
-                  value={form.groupId}
-                  onChange={e => setForm(f => ({ ...f, groupId: e.target.value }))}
+                <label>Description</label>
+                <input
+                  value={form.description}
+                  onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
+                  placeholder="What was this for?"
                   required
-                >
-                  <option value="">Select…</option>
-                  {groups.map(g => (
-                    <option key={g.id} value={g.id}>{g.title}</option>
-                  ))}
-                </select>
+                />
+              </div>
+
+              <div className="form-row form-row-compact">
+                <div className="form-group">
+                  <label>Currency</label>
+                  <select
+                    value={form.currencyIso}
+                    onChange={e => {
+                      const newIso = e.target.value
+                      const newDec = currencies.find(c => c.iso === newIso)?.amountOfDecimals ?? 2
+                      setForm(f => ({
+                        ...f,
+                        currencyIso: newIso,
+                        amount: f.amount ? parseFloat(f.amount).toFixed(newDec) : '',
+                      }))
+                    }}
+                    required
+                  >
+                    <option value="">Select…</option>
+                    {currencies.map(c => (
+                      <option key={c.iso} value={c.iso}>{c.symbol} {c.iso}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Amount</label>
+                  <CurrencyInput
+                    iso={form.currencyIso}
+                    value={form.amount}
+                    onChange={val => setForm(f => ({ ...f, amount: val }))}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Date</label>
+                  <input
+                    type="date"
+                    value={form.date}
+                    onChange={e => setForm(f => ({ ...f, date: e.target.value }))}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Category</label>
+                  <CategoryPicker
+                    value={form.categoryId || null}
+                    onChange={id => setForm(f => ({ ...f, categoryId: id ?? '' }))}
+                    categories={categories}
+                  />
+                </div>
+              </div>
+
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Paid by</label>
+                  <select
+                    value={form.paidByUserId}
+                    onChange={e => setForm(f => ({ ...f, paidByUserId: e.target.value }))}
+                    required
+                  >
+                    <option value="">Select…</option>
+                    {users.map(u => (
+                      <option key={u.id} value={u.id}>{u.id === currentUser?.id ? 'Me' : u.name}</option>
+                    ))}
+                  </select>
+                </div>
+                {(!groupId || isEdit) && (
+                  <div className="form-group">
+                    <label>Group</label>
+                    <select
+                      value={form.groupId}
+                      onChange={e => setForm(f => ({ ...f, groupId: e.target.value }))}
+                      required
+                    >
+                      <option value="">Select…</option>
+                      {groups.map(g => (
+                        <option key={g.id} value={g.id}>{g.title}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {shares.length > 0 && (
+              <div className="form-group expense-form-split">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                  <label>Split</label>
+                  <button type="button" className="btn btn-ghost btn-sm" onClick={splitEqually}>Split equally</button>
+                </div>
+                {shares.map((s, i) => {
+                  const user = users.find(u => u.id === s.userId)
+                  return (
+                    <div key={s.userId} className="form-row form-row-compact-reverse" style={{ alignItems: 'center', marginBottom: '0.4rem' }}>
+                      <label style={{ flex: 2, marginBottom: 0, display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                        <input
+                          type="checkbox"
+                          checked={s.included}
+                          onChange={() => toggleMember(i)}
+                          style={{ margin: 0 }}
+                        />
+                        <span style={{ color: s.included ? 'inherit' : 'var(--text-3)'}}>
+                          {user?.name ?? s.userId}
+                        </span>
+                      </label>
+                      <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
+                        <CurrencyInput
+                            iso={form.currencyIso}
+                            value={s.amount}
+                            onChange={val => setShares(prev => prev.map((x, j) => j === i ? { ...x, amount: val } : x))}
+                            required={s.included}
+                        />
+                      </div>
+                    </div>
+                  )
+                })}
+                {(() => {
+                  const sum = shares.filter(s => s.included).reduce((acc, s) => acc + Number(s.amount || 0), 0)
+                  const total = Number(form.amount || 0)
+                  const diff = total - sum
+                  const ok = diff === 0
+                  return total > 0 ? (
+                    <div style={{ fontSize: 12, marginTop: 8, textAlign: 'right', color: ok ? 'var(--green-dark)' : 'var(--red-dark)', fontWeight: 600 }}>
+                      {ok ? '✓ Shares match total' : `${diff > 0 ? '+' : ''}${formatCurrency(diff, form.currencyIso)} unassigned`}
+                    </div>
+                  ) : null
+                })()}
               </div>
             )}
           </div>
-
-          {shares.length > 0 && (
-            <div className="form-group" style={{ marginTop: '1rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                <label>Split</label>
-                <button type="button" className="btn btn-ghost btn-sm" onClick={splitEqually}>Split equally</button>
-              </div>
-              {shares.map((s, i) => {
-                const user = users.find(u => u.id === s.userId)
-                return (
-                  <div key={s.userId} className="form-row form-row-compact-reverse" style={{ alignItems: 'center', marginBottom: '0.4rem' }}>
-                    <label style={{ flex: 2, marginBottom: 0, display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                      <input
-                        type="checkbox"
-                        checked={s.included}
-                        onChange={() => toggleMember(i)}
-                        style={{ margin: 0 }}
-                      />
-                      <span style={{ color: s.included ? 'inherit' : 'var(--text-3)'}}>
-                        {user?.name ?? s.userId}
-                      </span>
-                    </label>
-                    <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
-                      <CurrencyInput
-                          iso={form.currencyIso}
-                          value={s.amount}
-                          onChange={val => setShares(prev => prev.map((x, j) => j === i ? { ...x, amount: val } : x))}
-                          required={s.included}
-                      />
-                    </div>
-                  </div>
-                )
-              })}
-              {(() => {
-                const sum = shares.filter(s => s.included).reduce((acc, s) => acc + Number(s.amount || 0), 0)
-                const total = Number(form.amount || 0)
-                const diff = total - sum
-                const ok = diff === 0
-                return total > 0 ? (
-                  <div style={{ fontSize: 12, marginTop: 8, textAlign: 'right', color: ok ? 'var(--green-dark)' : 'var(--red-dark)', fontWeight: 600 }}>
-                    {ok ? '✓ Shares match total' : `${diff > 0 ? '+' : ''}${formatCurrency(diff, form.currencyIso)} unassigned`}
-                  </div>
-                ) : null
-              })()}
-            </div>
-          )}
 
           {error && <p className="error">{error}</p>}
 
