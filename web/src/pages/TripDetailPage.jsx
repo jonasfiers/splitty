@@ -6,7 +6,7 @@ import Loading from '../components/Loading.jsx'
 import BackLink from '../components/BackLink.jsx'
 import TripFormSheet from '../components/TripForm/TripFormSheet.jsx'
 import { formatCurrency } from '../utils/currency.js'
-import { KINDS, TRANSPORT_MODES, itemIcon, buildTimeline, formatDay, formatDateRange, daysBetween, today } from '../utils/trip.js'
+import { KINDS, TRANSPORT_MODES, itemIcon, buildTimeline, formatDay, formatDateRange, formatMoment, daysBetween, today } from '../utils/trip.js'
 import TripGantt from '../components/TripGantt/TripGantt.jsx'
 import Expandable from '../components/Expandable/Expandable.jsx'
 import { useMediaQuery } from '../utils/useMediaQuery.js'
@@ -42,6 +42,8 @@ export default function TripDetailPage() {
   const [showKinds, setShowKinds] = useState(false)
   // A range dragged out on the travel lane, waiting for the kind of transport.
   const [pendingTravel, setPendingTravel] = useState(null)
+  // The last bar moved on the timeline, offered for undo for a few seconds.
+  const [moved, setMoved] = useState(null) // { item, before: { start, end } }
   const [showEdit, setShowEdit] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -63,6 +65,32 @@ export default function TripDetailPage() {
     const q = new URLSearchParams({ kind, ...(mode && { mode }), ...(start && { start }), ...(end && { end }) })
     return `/trips/${id}/items/new?${q}`
   }
+  // Dragging a bar saves at once; the page shows the new times straight away
+  // and puts them back if the server refuses.
+  const reschedule = async (item, when) => {
+    const before = { start: item.start, end: item.end ?? null }
+    setItems(prev => prev.map(i => (i.id === item.id ? { ...i, ...when } : i)))
+    try {
+      await client.patch(`/trips/items/${item.id}/when`, when)
+      setMoved({ item: { ...item, ...when }, before })
+    } catch (err) {
+      setItems(prev => prev.map(i => (i.id === item.id ? { ...i, ...before } : i)))
+      setError(err.response?.data?.error || `Could not move "${item.title}".`)
+    }
+  }
+  const undoMove = async () => {
+    if (!moved) return
+    const { item, before } = moved
+    setMoved(null)
+    await reschedule(item, before)
+    setMoved(null)
+  }
+  useEffect(() => {
+    if (!moved) return
+    const t = setTimeout(() => setMoved(null), 6000)
+    return () => clearTimeout(t)
+  }, [moved])
+
   const createFromTimeline = ({ kind, start, end }) => {
     if (kind === 'transport') setPendingTravel({ start, end })
     else navigate(newItemUrl(kind, { start, end }))
@@ -206,7 +234,7 @@ export default function TripDetailPage() {
             </Suspense>
           )}
         >
-          <TripGantt trip={trip} items={items} placeName={placeName} onOpenItem={openItem} onCreate={createFromTimeline} highlight={highlight} onHover={setHighlight} />
+          <TripGantt trip={trip} items={items} placeName={placeName} onOpenItem={openItem} onCreate={createFromTimeline} onReschedule={reschedule} highlight={highlight} onHover={setHighlight} />
         </Expandable>
       )}
 
@@ -235,6 +263,13 @@ export default function TripDetailPage() {
       )}
 
       <FabButton onClick={() => setShowKinds(true)} label="Add to trip" />
+
+      {moved && (
+        <div className="trip-toast" role="status">
+          <span>Moved “{moved.item.title}” to {formatMoment(moved.item.start)}</span>
+          <button type="button" onClick={undoMove}>Undo</button>
+        </div>
+      )}
 
       {pendingTravel && (
         // Above the full-screen timeline too, where this can also be started.

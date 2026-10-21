@@ -169,6 +169,25 @@ router.put('/items/:itemId', async (req, res) => {
     }
 });
 
+// RESCHEDULE — start and end only (dragging a bar on the timeline). Same date
+// rules as the full form; everything else about the item is left alone.
+router.patch('/items/:itemId/when', async (req, res) => {
+    try {
+        const start = text(req.body.start, 16);
+        const end = text(req.body.end, 16) || null;
+        if (!isValidMoment(start)) return res.status(400).json({ error: 'A start date is required.' });
+        if (end && !isValidMoment(end)) return res.status(400).json({ error: 'The end date is not valid.' });
+        if (end && end.slice(0, 10) < start.slice(0, 10)) return res.status(400).json({ error: 'It can not end before it starts.' });
+        if (end && end.length === 16 && start.length === 16 && end < start) return res.status(400).json({ error: 'It can not end before it starts.' });
+        const result = await tripService.rescheduleItem(req.params.itemId, req.user.id, { start, end });
+        if (!result.success) return res.status(404).json(result);
+        res.json(result);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // DELETE
 router.delete('/items/:itemId', async (req, res) => {
     try {

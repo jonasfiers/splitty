@@ -141,3 +141,67 @@
     box-shadow: var(--shadow-md);
     color: var(--text);
 }
+
+/* Moving a bar (drag its body) or changing its start or end (drag a handle). Mouse only. */
+.gantt-bar.movable { cursor: grab; }
+.gantt-bar.dragging { cursor: grabbing; z-index: 5; box-shadow: var(--shadow-lg); overflow: visible; }
+.gantt-handle {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 9px;
+    cursor: ew-resize;
+    z-index: 1;
+}
+.gantt-handle.start { left: 0; }
+.gantt-handle.end { right: 0; }
+.gantt-handle::after {
+    content: '';
+    position: absolute;
+    top: 8px;
+    bottom: 8px;
+    left: 3px;
+    width: 3px;
+    border-radius: 2px;
+    background: currentColor;
+    opacity: 0;
+    transition: opacity .15s;
+}
+.gantt-bar.movable:hover .gantt-handle::after,
+.gantt-bar.dragging .gantt-handle::after { opacity: .45; }
+.gantt-drag-tag {
+    position: absolute;
+    left: 0;
+    bottom: calc(100% + 6px);
+    padding: 3px 7px;
+    border-radius: 6px;
+    background: var(--surface);
+    border: 1px solid var(--border-strong);
+    box-shadow: var(--shadow-md);
+    color: var(--text);
+    font-weight: 600;
+    white-space: nowrap;
+    pointer-events: none;
+}
+
+/* "Moved … · Undo" after dragging a bar; above the full-screen view too. */
+.trip-toast {
+    position: fixed;
+    left: 50%;
+    bottom: calc(var(--nav-h) + 20px);
+    transform: translateX(-50%);
+    z-index: 1200;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    max-width: calc(100vw - 32px);
+    padding: 10px 12px 10px 16px;
+    border-radius: var(--r-md);
+    background: var(--text);
+    color: var(--surface);
+    font-size: 13px;
+    box-shadow: var(--shadow-lg);
+}
+.trip-toast span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.trip-toast button { color: var(--accent); font-weight: 700; flex-shrink: 0; }
+@media (min-width: 768px) { .trip-toast { bottom: 28px; } }

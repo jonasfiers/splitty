@@ -82,6 +82,39 @@ function momentAt(first, pos) {
   return `${addDays(first, day)}T${pad(Math.floor(minutes / 60))}:${pad(minutes % 60)}`
 }
 
+// A moment moved by `delta` days: a timed one snaps to half hours, a date-only
+// one moves by whole days and stays date-only.
+function shifted(first, moment, delta) {
+  if (!moment) return moment
+  if (!timeOf(moment)) return addDays(dayOf(moment), Math.round(delta))
+  return momentAt(first, daysBetween(first, dayOf(moment)) + hourOf(moment) / 24 + delta)
+}
+
+// The same ordering rules as the server: the end may not come before the
+// start, and a stay lasts at least one night.
+function inOrder(kind, start, end) {
+  if (!end) return true
+  if (kind === 'stay') return dayOf(end) > dayOf(start)
+  if (dayOf(end) !== dayOf(start)) return dayOf(end) > dayOf(start)
+  return !timeOf(end) || !timeOf(start) || timeOf(end) > timeOf(start)
+}
+
+// New start and end for an item dragged by `delta` days, by its body ('move')
+// or by one of its ends; null when the result would be out of order.
+function rescheduled(first, item, mode, delta) {
+  let { start, end } = item
+  if (mode === 'move') {
+    start = shifted(first, start, delta)
+    end = shifted(first, end, delta)
+  } else if (mode === 'start') {
+    start = shifted(first, start, delta)
+  } else {
+    // An item without an end gets one by dragging its right edge.
+    end = end ? shifted(first, end, delta) : timeOf(start) ? shifted(first, start, delta) : addDays(dayOf(start), Math.round(delta))
+  }
+  return inOrder(item.kind, start, end) ? { start, end } : null
+}
+
 // The item a press-and-drag (or a tap) on a lane describes.
 function rangeFor(kind, first, from, to, tapped) {
   const lo = Math.min(from, to), hi = Math.max(from, to)
@@ -99,11 +132,18 @@ function rangeFor(kind, first, from, to, tapped) {
 
 // `onCreate({ kind, start, end })`, when given, lets a drag across a lane (or a
 // tap on a touch screen, where a drag scrolls) start a new item there.
-export default function TripGantt({ trip, items, placeName, onOpenItem, onCreate = null, highlight = null, onHover = () => {} }) {
+// `onReschedule(item, { start, end })`, when given, lets a mouse drag a bar to
+// move it, or drag its ends to change when it starts or ends.
+export default function TripGantt({ trip, items: allItems, placeName, onOpenItem, onCreate = null, onReschedule = null, highlight = null, onHover = () => {} }) {
   const scroller = useRef(null)
   const [boxWidth, setBoxWidth] = useState(0)
   const [ghost, setGhost] = useState(null) // { kind, from, to } while dragging
   const press = useRef(null)
+  const [preview, setPreview] = useState(null) // { id, start, end } while a bar is dragged
+  const barDrag = useRef(null)
+  const skipClick = useRef(false)
+  // While a bar is dragged it is drawn (and packed) at its new times.
+  const items = preview ? allItems.map(i => (i.id === preview.id ? { ...i, start: preview.start, end: preview.end } : i)) : allItems
   const now = today()
 
   // Short trips stretch to fill the card; long ones keep a readable day width and scroll.
@@ -192,6 +232,30 @@ export default function TripGantt({ trip, items, placeName, onOpenItem, onCreate
     onCreate({ kind: p.kind, ...rangeFor(p.kind, first, p.from, to, !p.dragging) })
   }
   const cancelPress = () => { press.current = null; setGhost(null) }
+
+  const startBarDrag = item => e => {
+    if (!onReschedule || e.pointerType !== 'mouse' || e.button > 0) return
+    e.preventDefault()
+    e.currentTarget.setPointerCapture(e.pointerId)
+    barDrag.current = { item, mode: e.target.dataset.handle || 'move', x: e.clientX, dragging: false, when: null }
+  }
+  const moveBarDrag = e => {
+    const d = barDrag.current
+    if (!d) return
+    if (!d.dragging && Math.abs(e.clientX - d.x) < DRAG_THRESHOLD) return
+    d.dragging = true
+    const when = rescheduled(first, d.item, d.mode, (e.clientX - d.x) / dayWidth)
+    if (when) { d.when = when; setPreview({ id: d.item.id, ...when }) }
+  }
+  const endBarDrag = () => {
+    const d = barDrag.current
+    barDrag.current = null
+    if (!d?.dragging) return
+    skipClick.current = true
+    if (d.when && (d.when.start !== d.item.start || (d.when.end ?? null) !== (d.item.end ?? null))) onReschedule(d.item, d.when)
+    setPreview(null)
+  }
+  const cancelBarDrag = () => { barDrag.current = null; setPreview(null) }
   const lit = highlight?.length ? new Set(highlight) : null
   const todayIndex = daysBetween(first, now)
 
@@ -257,17 +321,31 @@ export default function TripGantt({ trip, items, placeName, onOpenItem, onCreate
                 <button
                   key={item.id}
                   type="button"
-                  className={`gantt-bar ${lane.kind}${captioned ? ' captioned' : ''}${flipped ? ' flipped' : ''}${lit ? (lit.has(item.id) ? ' lit' : ' faded') : ''}`}
+                  className={`gantt-bar ${lane.kind}${captioned ? ' captioned' : ''}${flipped ? ' flipped' : ''}${lit ? (lit.has(item.id) ? ' lit' : ' faded') : ''}${onReschedule ? ' movable' : ''}${preview?.id === item.id ? ' dragging' : ''}`}
                   style={{ left: start * dayWidth, width: (end - start) * dayWidth, top: row * 34 + 5 }}
-                  title={tooltip(item)}
-                  onClick={() => onOpenItem(item)}
+                  title={preview ? undefined : tooltip(item)}
+                  onClick={() => {
+                    if (skipClick.current) { skipClick.current = false; return }
+                    onOpenItem(item)
+                  }}
                   onMouseEnter={() => onHover([item.id])}
                   onMouseLeave={() => onHover(null)}
+                  onPointerDown={startBarDrag(item)}
+                  onPointerMove={moveBarDrag}
+                  onPointerUp={endBarDrag}
+                  onPointerCancel={cancelBarDrag}
                 >
+                  {onReschedule && !captioned && <span className="gantt-handle start" data-handle="start" />}
                   <span className="gantt-bar-icon">{itemIcon(item)}</span>
                   {captioned
                     ? <span className="gantt-caption">{item.title}</span>
                     : <span className="gantt-bar-text">{label(item)}</span>}
+                  {onReschedule && !captioned && <span className="gantt-handle end" data-handle="end" />}
+                  {preview?.id === item.id && (
+                    <span className="gantt-drag-tag">
+                      {[item.start, item.end].filter(Boolean).map(m => `${formatDay(dayOf(m), { weekday: 'short', day: 'numeric' })}${timeOf(m) ? ` ${timeOf(m)}` : ''}`).join(' – ')}
+                    </span>
+                  )}
                 </button>
               ))}
             </div>
@@ -276,7 +354,9 @@ export default function TripGantt({ trip, items, placeName, onOpenItem, onCreate
       </div>
       {onCreate && (
         <div className="gantt-hint">
-          <span className="gantt-hint-pointer">Drag across a lane to add something there</span>
+          <span className="gantt-hint-pointer">
+            Drag across a lane to add something there{onReschedule && ' · drag a bar, or its ends, to change when it happens'}
+          </span>
           <span className="gantt-hint-touch">Tap an empty spot in a lane to add something on that day</span>
         </div>
       )}

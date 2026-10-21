@@ -370,6 +370,23 @@ const tripService = {
         }
     },
 
+    // RESCHEDULE — only the start and end, from dragging a bar on the timeline.
+    rescheduleItem: async (itemId, userId, { start, end }) => {
+        try {
+            const { records } = await driver.executeQuery(
+                `MATCH ${ITEM_ACCESS}
+                 SET i.start = $start, i.end = $end
+                 RETURN i.id AS id`,
+                { itemId, userId, start, end: end ?? null }
+            );
+            return records.length
+                ? { success: true }
+                : { success: false, message: 'Trip item not found or access denied' };
+        } catch (err) {
+            throw new Error(`Failed to reschedule trip item: ${err.message}`);
+        }
+    },
+
     // DELETE ITEM — its attachments go with it, its expenses stay in the group.
     deleteItem: async (itemId, userId) => {
         const session = driver.session();
