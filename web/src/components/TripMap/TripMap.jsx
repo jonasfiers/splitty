@@ -131,11 +131,21 @@ function TripMap({ places, items, onOpenItem, highlight = null, onHover = () => 
     })
 
     const bounds = L.latLngBounds(located.map(p => [p.lat, p.lon]))
-    if (located.length === 1) map.setView(bounds.getCenter(), 13)
-    else map.fitBounds(bounds, { padding: [36, 36], maxZoom: 14 })
+    const frame = () => {
+      if (located.length === 1) map.setView(bounds.getCenter(), 13)
+      else map.fitBounds(bounds, { padding: [36, 36], maxZoom: 14 })
+    }
+    frame()
 
-    // Leaflet only measures its box once; going full screen and back resizes it.
-    const resized = new ResizeObserver(() => map.invalidateSize())
+    // Leaflet only measures its box once. When the box changes size (a full
+    // screen layout settling, the window resizing) it is told so, and the trip
+    // is framed again until the user has moved the map themselves.
+    let moved = false
+    for (const event of ['mousedown', 'touchstart', 'wheel']) el.current.addEventListener(event, () => { moved = true }, { once: true, passive: true })
+    const resized = new ResizeObserver(() => {
+      map.invalidateSize()
+      if (!moved) frame()
+    })
     resized.observe(el.current)
 
     return () => { resized.disconnect(); map.remove() }

@@ -60,3 +60,13 @@
 /* What each view does with the room. */
 .expandable.expanded .gantt { flex: 0 1 auto; min-height: 0; overflow: auto; margin-bottom: 0; }
 .expandable.expanded .trip-map { flex: 1; height: auto; }
+
+/* Whatever fills the rest of the window under a view that is shorter than it. */
+.expandable-extra {
+    flex: 1;
+    min-height: 220px;
+    margin-top: 12px;
+    display: flex;
+    flex-direction: column;
+}
+.expandable-extra .trip-map { flex: 1; height: auto; }

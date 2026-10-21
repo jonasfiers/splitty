@@ -12,7 +12,10 @@ export const ExpandedContext = createContext(false)
 // While open it is rendered into <body>: a sticky ancestor (the map column)
 // forms its own stacking context, and nothing inside one can rise above the
 // rest of the page however high its z-index. The view remounts on the move.
-export default function Expandable({ label, children }) {
+//
+// `extra` is shown below the view only while it is full screen, to fill the
+// room the view itself does not need (the trip map under the timeline).
+export default function Expandable({ label, children, extra = null }) {
   const [open, setOpen] = useState(false)
 
   useEffect(() => {
@@ -44,7 +47,10 @@ export default function Expandable({ label, children }) {
         )}
       </button>
       <div className="expandable-body">
-        <ExpandedContext.Provider value={open}>{children}</ExpandedContext.Provider>
+        <ExpandedContext.Provider value={open}>
+          {children}
+          {open && extra && <div className="expandable-extra">{extra}</div>}
+        </ExpandedContext.Provider>
       </div>
     </div>
   )
