@@ -185,3 +185,11 @@ Uploaded tickets are files on CT104, not data in Neo4j, and none of what they ne
 - **A larger body limit on CT101.** nginx rejects request bodies over 1 MB by default, long before the API's own 10 MB limit is reached. `location /api/` needs `client_max_body_size` raised to a little over 10 MB, or uploads of real PDFs fail with a 413 that never reaches CT104.
 
 The files are covered by the nightly `vzdump` of CT104, not by `scripts/backup-neo4j.sh`: a Neo4j tarball restored on its own brings back `Attachment` nodes whose files are missing.
+
+## QA
+
+`scripts/deploy-qa.sh` (`--web-only`, `--api-only`) publishes **this worktree as it is**
+— any branch, committed or not — to CT116 `splitty-qa`, reachable over Tailscale at
+`https://splitty-qa.home.jonasfiers.eu`. QA runs on a copy of production data with its own
+secrets; its mail goes to a local sink and it has no push subscriptions or passkeys.
+Use it to look at a change on a working Splitty before it goes to `main`.
