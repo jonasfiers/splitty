@@ -1796,6 +1796,42 @@ body {
   color: var(--text);
 }
 
+/* Insights: period / group / scope controls, a row of key figures, and from
+   1180px the category and member charts side by side. */
+.insights-controls { margin-bottom: 16px; }
+.insights-controls .filter-chips { padding-top: 0; flex-wrap: wrap; }
+.insights-controls-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.insights-scope { display: flex; gap: 6px; }
+.insights-body { transition: opacity .15s; }
+.insights-body.refreshing { opacity: .55; }
+.insights-kpis {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.card.insights-kpi { margin-bottom: 0; padding: 14px 16px; min-width: 0; }
+.insights-kpi-label { font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); }
+.insights-kpi-value { font-family: var(--font-mono); font-size: 20px; font-weight: 600; color: var(--text); margin-top: 4px; }
+.insights-kpi-text { font-family: var(--font-body); font-size: 16px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.insights-kpi-sub { font-size: 12px; color: var(--text-3); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.insights-kpi-link { display: block; color: inherit; }
+.insights-kpi-link:hover { border-color: var(--border-strong); }
+
+@media (min-width: 768px) {
+  .insights-kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .insights-controls-row .form-group { flex: 0 1 320px !important; }
+}
+@media (min-width: 1180px) {
+  .page-wrap:has(.insights-body) { --wrap-w: 1140px; }
+  .insights-pair {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 20px;
+    align-items: start;
+  }
+}
+
 /* Activity: one card per day with compact rows; filters above the feed on
    phones, in a column beside it (with a weekly summary) from 1180px. */
 .act-filters { margin-bottom: 14px; }
@@ -1803,7 +1839,7 @@ body {
 .act-filters .filter-chips { padding-top: 0; flex-wrap: wrap; }
 .act-day { margin-bottom: 16px; }
 .act-day-label { margin: 0 0 6px; padding: 0; }
-.act-day-card { padding: 4px 16px; margin-bottom: 0; }
+.card.act-day-card { padding: 4px 16px; margin-bottom: 0; }
 .act-row {
   display: flex;
   align-items: center;
@@ -1827,7 +1863,7 @@ body {
 .act-desc { font-weight: 600; font-size: 14px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; transition: color .15s; }
 .act-meta { font-size: 12px; color: var(--text-3); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .act-amt { font-weight: 600; font-size: 14px; font-family: var(--font-mono); flex-shrink: 0; }
-.act-summary { margin-bottom: 0; }
+.card.act-summary { margin-bottom: 0; }
 .act-summary-big { font-size: 20px; font-weight: 700; color: var(--text); }
 .act-summary-line { font-size: 13px; color: var(--text-2); margin-top: 4px; }
 

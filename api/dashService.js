@@ -1,5 +1,19 @@
 const driver = require('./neo4j');
 
+// The user's own part of each expense, for getInsights' "mine" scope. The payer
+// has no OWED_BY of their own: only the others' shares are stored, so what the
+// payer carries is the amount minus those. Expenses the user neither paid nor
+// shares in drop out.
+const MY_SHARE = `
+            OPTIONAL MATCH (e)-[share:OWED_BY]->(me)
+            OPTIONAL MATCH (me)-[paid:PAID]->(e)
+            WITH me, e, g, share, paid
+            WHERE share IS NOT NULL OR paid IS NOT NULL
+            OPTIONAL MATCH (e)-[other:OWED_BY]->(:User)
+            WITH e, g, share, sum(other.amount) AS owedByAll
+            WITH e, g, CASE WHEN share IS NOT NULL THEN share.amount ELSE e.amount - owedByAll END AS raw
+            WHERE raw > 0`
+
 const dashService = {
 
     // BALANCE HEADER
@@ -154,35 +168,46 @@ const dashService = {
         }
     },
 
-    getInsights: async (userId) => {
+    // Optional filters: from (YYYY-MM-DD, inclusive), groupId (one of the user's
+    // groups), mine (count the user's own share of each expense instead of its
+    // full amount). Without them this is all groups, all time, full amounts.
+    getInsights: async (userId, { from = null, groupId = null, mine = false } = {}) => {
+        // Shared start of every query below. Only these two fixed fragments vary,
+        // never anything taken from the request.
+        const base = (dated) => `
+            MATCH (me:User {id: $userId})-[:MEMBER_OF]->(g:Group)
+            WHERE $groupId IS NULL OR g.id = $groupId
+            MATCH (e:Expense)-[:BALANCE_IN]->(g)
+            WHERE NOT coalesce(e.isSettlement, false)
+              AND ($from IS NULL OR e.date >= $from)
+              ${dated ? 'AND e.date IS NOT NULL' : ''}
+            ${mine ? MY_SHARE : 'WITH e, g, e.amount AS raw'}
+            WITH e, g, raw * coalesce(e.rateSnapshot, 1) AS amt`
+        const params = { userId, from, groupId }
         try {
-            const [monthlyRes, categoryRes, memberRes, dowRes] = await Promise.all([
+            const [monthlyRes, categoryRes, memberRes, dowRes, biggestRes] = await Promise.all([
                 driver.executeQuery(
-                    `MATCH (g:Group)<-[:MEMBER_OF]-(:User {id: $userId})
-                    MATCH (e:Expense)-[:BALANCE_IN]->(g)
-                    WHERE e.date IS NOT NULL AND NOT coalesce(e.isSettlement, false)
+                    `${base(true)}
                     OPTIONAL MATCH (e)-[:IN_CATEGORY]->(c:Category)
                     OPTIONAL MATCH path = (c)-[:CHILD_OF*]->(root:Category)
                     WHERE NOT (root)-[:CHILD_OF]->(:Category)
-                    WITH e, 
+                    WITH e, amt,
                         CASE WHEN c IS NULL THEN 'Uncategorized'
                              WHEN path IS NULL THEN c.name
                              ELSE apoc.text.join([node IN reverse(nodes(path)) | node.name], ' - ')
                         END AS categoryName
-                    WITH substring(e.date, 0, 7) AS month, categoryName, sum(e.amount * coalesce(e.rateSnapshot, 1)) AS amount
+                    WITH substring(e.date, 0, 7) AS month, categoryName, sum(amt) AS amount
                     ORDER BY month DESC, amount DESC
                     WITH month, collect({name: categoryName, amount: amount}) AS breakdown, sum(amount) AS total
                     RETURN month, breakdown, total
                     ORDER BY month DESC
                     LIMIT 12`,
-                    { userId }
+                    params
                 ),
                 driver.executeQuery(
-                    `MATCH (g:Group)<-[:MEMBER_OF]-(:User {id: $userId})
-                    MATCH (e:Expense)-[:BALANCE_IN]->(g)
-                    WHERE NOT coalesce(e.isSettlement, false)
+                    `${base(false)}
                     OPTIONAL MATCH (e)-[:IN_CATEGORY]->(c:Category)
-                    WITH c, sum(e.amount * coalesce(e.rateSnapshot, 1)) AS total
+                    WITH c, sum(amt) AS total
                     OPTIONAL MATCH iconPath = (c)-[:CHILD_OF*0..]->(iconAncestor:Category)
                     WHERE iconAncestor.icon <> ""
                     WITH c, total, iconAncestor, length(iconPath) AS iconDist
@@ -197,31 +222,35 @@ const dashService = {
                         coalesce(nearestIcon.icon, '❓') AS icon,
                         total
                     ORDER BY total DESC`,
-                    { userId }
+                    params
                 ),
                 driver.executeQuery(
-                    `MATCH (g:Group)<-[:MEMBER_OF]-(:User {id: $userId})
-                    MATCH (e:Expense)-[:BALANCE_IN]->(g)
-                    WHERE NOT coalesce(e.isSettlement, false)
+                    `${base(false)}
                     MATCH (u:User)-[:PAID]->(e)
-                    WITH u.name AS name, sum(e.amount * coalesce(e.rateSnapshot, 1)) AS total
+                    WITH u.name AS name, sum(amt) AS total
                     RETURN name, total
                     ORDER BY total DESC`,
-                    { userId }
+                    params
                 ),
                 driver.executeQuery(
-                    `MATCH (g:Group)<-[:MEMBER_OF]-(:User {id: $userId})
-                    MATCH (e:Expense)-[:BALANCE_IN]->(g)
-                    WHERE e.date IS NOT NULL AND NOT coalesce(e.isSettlement, false)
+                    `${base(true)}
                     WITH date(e.date).dayOfWeek AS dow,
                          ((date(e.date).day - 1) / 7) + 1 AS weekOfMonth,
-                         e.amount * coalesce(e.rateSnapshot, 1) AS amt
+                         amt
                     WITH dow, weekOfMonth, sum(amt) AS total, count(*) AS count
                     RETURN dow, weekOfMonth, total, count
                     ORDER BY weekOfMonth, dow`,
-                    { userId }
+                    params
+                ),
+                driver.executeQuery(
+                    `${base(false)}
+                    RETURN e.id AS id, e.description AS description, e.date AS date, g.id AS groupId, amt
+                    ORDER BY amt DESC
+                    LIMIT 1`,
+                    params
                 ),
             ])
+            const biggest = biggestRes.records[0]
             return {
                 success: true,
                 monthly: monthlyRes.records.map(r => ({
@@ -244,6 +273,13 @@ const dashService = {
                     total: Number(r.get('total')),
                     count: r.get('count').toNumber()
                 })),
+                biggest: biggest ? {
+                    id: biggest.get('id'),
+                    description: biggest.get('description'),
+                    date: biggest.get('date'),
+                    groupId: biggest.get('groupId'),
+                    amount: Number(biggest.get('amt'))
+                } : null,
             }
         } catch (err) {
             throw new Error(`Failed to get insights: ${err.message}`)

@@ -1,10 +1,30 @@
 import { useState, useEffect, useMemo, Fragment } from 'react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, Label } from 'recharts'
 import client from '../api/client'
-import { formatCurrency } from '../utils/currency.js'
+import { Link } from 'react-router'
+import { formatCurrency, formatCompactCurrency } from '../utils/currency.js'
 import Loading from '../components/Loading.jsx'
 import { COLOURS, STROKES } from '../utils/chartColors.js'
 const DOW_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+const PERIODS = [
+  { key: 'month', label: 'This month' },
+  { key: '3m', label: '3 months' },
+  { key: 'year', label: 'This year' },
+  { key: 'all', label: 'All time' },
+]
+
+// First day (YYYY-MM-DD) of the selected period, or null for all time.
+function periodStart(period) {
+  const now = new Date()
+  const first = (y, m) => `${y}-${String(m + 1).padStart(2, '0')}-01`
+  if (period === 'month') return first(now.getFullYear(), now.getMonth())
+  if (period === '3m') {
+    const d = new Date(now.getFullYear(), now.getMonth() - 2, 1)
+    return first(d.getFullYear(), d.getMonth())
+  }
+  if (period === 'year') return `${now.getFullYear()}-01-01`
+  return null
+}
 
 const shortMonth = m => {
   const [y, mo] = m.split('-')
@@ -20,12 +40,28 @@ export default function InsightsPage() {
   const [hiddenPie, setHiddenPie] = useState([])
   const [activeCategory, setActiveCategory] = useState(null)
   const [hoveredCell, setHoveredCell] = useState(null)
+  const [period, setPeriod] = useState('all')
+  const [groupId, setGroupId] = useState('')
+  const [scope, setScope] = useState('group')
+  const [groups, setGroups] = useState([])
+  const [refreshing, setRefreshing] = useState(false)
+  const [error, setError] = useState('')
 
   useEffect(() => {
-    client.get('/dash/insights')
-      .then(r => setData(r.data))
-      .finally(() => setLoading(false))
+    client.get('/dash/groups').then(r => setGroups(r.data.groups || [])).catch(() => {})
   }, [])
+
+  // Refetch on every filter change; the previous figures stay up (dimmed) meanwhile.
+  useEffect(() => {
+    let current = true
+    const from = periodStart(period)
+    setRefreshing(true)
+    client.get('/dash/insights', { params: { ...(from && { from }), ...(groupId && { groupId }), ...(scope === 'mine' && { scope }) } })
+      .then(r => { if (current) { setData(r.data); setError(''); setActiveCategory(null); setHiddenPie([]) } })
+      .catch(() => { if (current) setError('Insights could not be loaded. Please try again.') })
+      .finally(() => { if (current) { setLoading(false); setRefreshing(false) } })
+    return () => { current = false }
+  }, [period, groupId, scope])
 
   const { monthly, categories, chartData, stackKeys, members, dowMatrix, dowMax } = useMemo(() => {
     if (!data) return { monthly: [], categories: [], chartData: [], stackKeys: [], members: [], dowMatrix: [], dowMax: 1 }
@@ -153,22 +189,88 @@ export default function InsightsPage() {
   }
 
   if (loading) return <Loading />
-  if (!data) return null
 
   const iso = 'EUR'
+  const mine = scope === 'mine'
+  const total = categories.reduce((sum, c) => sum + c.total, 0)
+  // Average over the months the chart covers (at most the last 12).
+  const months = monthly.length || 1
+  const average = monthly.reduce((sum, m) => sum + m.total, 0) / months
+  const topRoot = Object.entries(categories.reduce((acc, c) => {
+    const root = c.name.split(' - ')[0]
+    acc[root] = (acc[root] || 0) + c.total
+    return acc
+  }, {})).sort((a, b) => b[1] - a[1])[0]
+  const topIcon = topRoot && categories.find(c => c.name.split(' - ')[0] === topRoot[0])?.icon
+  const biggest = data?.biggest
+
+  const controls = (
+    <div className="insights-controls">
+      <div className="filter-chips">
+        {PERIODS.map(p => (
+          <button key={p.key} className={`chip${period === p.key ? ' active' : ''}`} onClick={() => setPeriod(p.key)}>{p.label}</button>
+        ))}
+      </div>
+      <div className="insights-controls-row">
+        {groups.length > 1 && (
+          <div className="form-group" style={{ marginBottom: 0, flex: 1, minWidth: 0 }}>
+            <select value={groupId} onChange={e => setGroupId(e.target.value)} aria-label="Group">
+              <option value="">All groups</option>
+              {groups.map(g => <option key={g.id} value={g.id}>{g.icon ? `${g.icon} ` : ''}{g.title}</option>)}
+            </select>
+          </div>
+        )}
+        <div className="insights-scope" role="group" aria-label="Amounts">
+          <button className={`chip${!mine ? ' active' : ''}`} onClick={() => setScope('group')}>Group total</button>
+          <button className={`chip${mine ? ' active' : ''}`} onClick={() => setScope('mine')}>My share</button>
+        </div>
+      </div>
+    </div>
+  )
 
   return (
     <>
       <div className="page-header"><h1>Insights</h1></div>
+      {controls}
+      {error && <p className="error">{error}</p>}
 
-      {monthly.length > 0 && (
+      <div className={`insights-body${refreshing ? ' refreshing' : ''}`}>
+      {total > 0 && (
+        <div className="insights-kpis">
+          <div className="card insights-kpi">
+            <div className="insights-kpi-label">{mine ? 'Your share' : 'Spent'}</div>
+            <div className="insights-kpi-value">{formatCurrency(total, iso)}</div>
+          </div>
+          <div className="card insights-kpi">
+            <div className="insights-kpi-label">Per month</div>
+            <div className="insights-kpi-value">{formatCurrency(Math.round(average), iso)}</div>
+            <div className="insights-kpi-sub">average over {months} month{months !== 1 ? 's' : ''}</div>
+          </div>
+          {topRoot && (
+            <div className="card insights-kpi">
+              <div className="insights-kpi-label">Top category</div>
+              <div className="insights-kpi-value insights-kpi-text">{topIcon} {topRoot[0]}</div>
+              <div className="insights-kpi-sub">{formatCurrency(topRoot[1], iso)} · {Math.round((topRoot[1] / total) * 100)}%</div>
+            </div>
+          )}
+          {biggest && (
+            <Link to={`/groups/${biggest.groupId}/expenses/${biggest.id}`} className="card insights-kpi insights-kpi-link">
+              <div className="insights-kpi-label">Biggest expense</div>
+              <div className="insights-kpi-value insights-kpi-text">{biggest.description}</div>
+              <div className="insights-kpi-sub">{formatCurrency(biggest.amount, iso)}{mine && ' (your share)'}</div>
+            </Link>
+          )}
+        </div>
+      )}
+
+      {period !== 'month' && monthly.length > 0 && (
         <>
           <div className="section-label">Monthly spending</div>
           <div className="card" style={{ padding: '24px 16px 16px' }}>
             <ResponsiveContainer width="100%" height={240}>
               <BarChart data={chartData} barSize={28} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <XAxis dataKey="month" tickFormatter={shortMonth} tick={{ fontSize: 12, fill: 'var(--text-3)' }} axisLine={false} tickLine={false} />
-                <YAxis width={65} tickFormatter={v => formatCurrency(v, iso)} tick={{ fontSize: 11, fill: 'var(--text-3)' }} axisLine={false} tickLine={false} />
+                <YAxis width={56} tickFormatter={v => formatCompactCurrency(v, iso)} tick={{ fontSize: 11, fill: 'var(--text-3)' }} axisLine={false} tickLine={false} />
                 <Tooltip
                   cursor={{ fill: 'var(--surface-2)' }}
                   content={({ active, payload }) => {
@@ -243,8 +345,9 @@ export default function InsightsPage() {
         </>
       )}
 
+      <div className="insights-pair">
       {categories.length > 0 && (
-        <>
+        <div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
             <div className="section-label">Spending by category</div>
             {activeCategory && (
@@ -380,16 +483,16 @@ export default function InsightsPage() {
               })}
             </div>
           </div>
-        </>
+        </div>
       )}
 
       {members.length > 0 && (
-        <>
-          <div className="section-label">Spending by member</div>
+        <div>
+          <div className="section-label">{mine ? 'Who paid for your share' : 'Paid by member'}</div>
           <div className="card" style={{ padding: '24px 16px 16px' }}>
             <ResponsiveContainer width="100%" height={members.length * 44 + 16}>
               <BarChart data={members} layout="vertical" margin={{ top: 0, right: 16, left: 0, bottom: 0 }}>
-                <XAxis type="number" tickFormatter={v => formatCurrency(v, iso)} tick={{ fontSize: 11, fill: 'var(--text-3)' }} axisLine={false} tickLine={false} />
+                <XAxis type="number" tickFormatter={v => formatCompactCurrency(v, iso)} tick={{ fontSize: 11, fill: 'var(--text-3)' }} axisLine={false} tickLine={false} />
                 <YAxis type="category" dataKey="name" width={80} tick={{ fontSize: 12, fill: 'var(--text-2)' }} axisLine={false} tickLine={false} />
                 <Tooltip
                   cursor={{ fill: 'var(--surface-2)' }}
@@ -408,8 +511,9 @@ export default function InsightsPage() {
               </BarChart>
             </ResponsiveContainer>
           </div>
-        </>
+        </div>
       )}
+      </div>
 
       {dowMatrix.some(row => row.some(cell => cell.total > 0)) && (
         <>
@@ -453,12 +557,15 @@ export default function InsightsPage() {
         </>
       )}
 
-      {monthly.length === 0 && categories.length === 0 && (
+      {!error && total === 0 && (
         <div className="empty-state">
           <img src="/cat-empty.svg" alt="" style={{ width: 80, height: 80 }} />
-          <p style={{ color: 'var(--text-3)', fontSize: 14 }}>No data yet. Add some expenses to see insights.</p>
+          <p style={{ color: 'var(--text-3)', fontSize: 14 }}>
+            {period === 'all' && !groupId ? 'No data yet. Add some expenses to see insights.' : 'No expenses for this selection.'}
+          </p>
         </div>
       )}
+      </div>
     </>
   )
 }

@@ -47,7 +47,13 @@ router.get('/profile', async (req, res) => {
 
 router.get('/insights', async (req, res) => {
     try {
-        const result = await dashService.getInsights(req.user.id)
+        // All optional; anything malformed is ignored rather than rejected.
+        const { from, groupId, scope } = req.query
+        const result = await dashService.getInsights(req.user.id, {
+            from: typeof from === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(from) ? from : null,
+            groupId: typeof groupId === 'string' && groupId ? groupId : null,
+            mine: scope === 'mine',
+        })
         res.json(result)
     } catch (error) {
         res.status(500).json({ error: error.message })
