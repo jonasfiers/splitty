@@ -1,0 +1,92 @@
+/* Trip timeline (TripGantt.jsx). Scrolls sideways when the trip is wider than
+   the page; the lane names stay pinned on the left. */
+.gantt {
+    overflow-x: auto;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    box-shadow: var(--shadow-sm);
+    margin-bottom: 20px;
+}
+.gantt-inner { position: relative; padding-bottom: 6px; }
+.gantt-head, .gantt-lane { display: flex; }
+.gantt-label {
+    position: sticky;
+    left: 0;
+    z-index: 3;
+    width: 64px;
+    flex-shrink: 0;
+    padding: 12px 0 0 14px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--text-3);
+    background: var(--surface);
+}
+.gantt-head .gantt-label { padding: 0; }
+.gantt-days { display: flex; border-bottom: 1px solid var(--border); }
+.gantt-day {
+    flex-shrink: 0;
+    padding: 10px 8px 8px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-2);
+    border-left: 1px solid var(--border);
+    white-space: nowrap;
+}
+.gantt-day.weekend { color: var(--text-3); }
+.gantt-day.outside { color: var(--text-3); font-weight: 500; }
+.gantt-day.today { color: var(--accent); }
+.gantt-month { margin-left: 6px; font-weight: 500; color: var(--text-3); }
+.gantt-lane + .gantt-lane .gantt-track { border-top: 1px dashed var(--border); }
+.gantt-track { position: relative; flex-shrink: 0; }
+.gantt-cell { position: absolute; top: 0; bottom: 0; border-left: 1px solid var(--border); }
+.gantt-cell.outside { background: repeating-linear-gradient(135deg, transparent 0 6px, var(--surface-2) 6px 8px); }
+.gantt-now { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--accent); opacity: .7; z-index: 1; }
+.gantt-bar {
+    position: absolute;
+    z-index: 2;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 0 7px;
+    border-radius: 8px;
+    border: 1px solid;
+    font-size: 12px;
+    font-weight: 600;
+    text-align: left;
+    overflow: hidden;
+    cursor: pointer;
+    transition: filter .15s, box-shadow .15s;
+}
+.gantt-bar:hover { filter: brightness(.97); box-shadow: var(--shadow-md); }
+.gantt-bar.stay { background: var(--green-light); border-color: var(--green); color: var(--green-dark); }
+.gantt-bar.transport { background: var(--accent-subtle); border-color: var(--accent); color: var(--accent); }
+.gantt-bar.activity { background: var(--surface-2); border-color: var(--border-strong); color: var(--text); }
+.gantt-bar-icon { flex-shrink: 0; font-size: 13px; }
+.gantt-bar-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Trip page from 1180px: the day list and the map side by side under the timeline. */
+@media (min-width: 1180px) {
+    .page-wrap:has(.trip-split) { --wrap-w: 1240px; }
+    .trip-split {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 28px;
+        align-items: start;
+    }
+    .trip-split-map { position: sticky; top: 24px; }
+}
+
+/* A bar too short for its title keeps just the icon; the title sits beside it. */
+.gantt-bar.captioned { overflow: visible; justify-content: center; padding: 0; min-width: 22px; }
+.gantt-caption {
+    position: absolute;
+    left: calc(100% + 6px);
+    white-space: nowrap;
+    font-weight: 600;
+    color: var(--text-2);
+}
+.gantt-bar.flipped .gantt-caption { left: auto; right: calc(100% + 6px); }
