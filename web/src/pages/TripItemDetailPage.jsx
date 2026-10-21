@@ -1,9 +1,14 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo, lazy, Suspense } from 'react'
 import { useParams, useNavigate, Link } from 'react-router'
 import client from '../api/client'
 import Loading from '../components/Loading.jsx'
 import BackLink from '../components/BackLink.jsx'
 import LinkExpenseSheet from '../components/TripForm/LinkExpenseSheet.jsx'
+import { useMediaQuery } from '../utils/useMediaQuery.js'
+
+// Leaflet is only worth downloading when the map is shown (wide screens).
+const TripMap = lazy(() => import('../components/TripMap/TripMap.jsx'))
+const noop = () => {}
 import { formatCurrency, formatDate } from '../utils/currency.js'
 import { KINDS, TRANSPORT_MODES, itemIcon, dayOf, formatMoment, mapsUrl, formatBytes } from '../utils/trip.js'
 
@@ -39,6 +44,8 @@ export default function TripItemDetailPage() {
   const [uploading, setUploading] = useState(false)
   const [copied, setCopied] = useState(false)
   const [linking, setLinking] = useState(false)
+  // Same breakpoint as the other two-column pages (see index.css).
+  const wide = useMediaQuery('(min-width: 1180px)')
   const [error, setError] = useState('')
 
   const load = useCallback(async () => {
@@ -115,6 +122,15 @@ export default function TripItemDetailPage() {
     setTimeout(() => setCopied(false), 2000)
   }
 
+  // The item's own place(s) for the map, in the shape TripMap takes; memoised
+  // so the map is not rebuilt on every render.
+  const mapData = useMemo(() => {
+    if (!item) return null
+    const places = [item.from, item.to, item.place].filter(p => p && p.lat != null && p.lon != null)
+    if (places.length === 0) return null
+    return { places, items: [{ ...item, placeId: item.place?.id, fromPlaceId: item.from?.id, toPlaceId: item.to?.id }] }
+  }, [item])
+
   if (loading) return <Loading />
   if (!item) return null
 
@@ -127,132 +143,151 @@ export default function TripItemDetailPage() {
       <div className="sub-header">
         <BackLink to={`/trips/${tripId}`} />
         <span className="sub-header-title">{item.kind === 'transport' ? (mode?.label ?? 'Transport') : KINDS[item.kind].label}</span>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button className="sub-header-del" style={{ color: 'var(--accent)' }} onClick={() => navigate(`/trips/${tripId}/items/${itemId}/edit`)}>Edit</button>
-          <button className="sub-header-del" onClick={handleDelete}>Delete</button>
-        </div>
+        {wide ? <span aria-hidden="true" /> : (
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button className="sub-header-del" style={{ color: 'var(--accent)' }} onClick={() => navigate(`/trips/${tripId}/items/${itemId}/edit`)}>Edit</button>
+            <button className="sub-header-del" onClick={handleDelete}>Delete</button>
+          </div>
+        )}
       </div>
       {error && <p className="error">{error}</p>}
 
-      <div className="card">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20 }}>
-          <div className="expense-icon" style={{ width: 56, height: 56, fontSize: 26, borderRadius: 'var(--r-lg)', flexShrink: 0 }}>
-            {itemIcon(item)}
-          </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--text)', marginBottom: 4, overflowWrap: 'anywhere' }}>{item.title}</div>
-            <div style={{ fontSize: 13, color: 'var(--text-3)' }}>
-              <Link to={`/trips/${tripId}`} style={{ color: 'inherit' }}>{item.tripTitle}</Link>
-            </div>
-          </div>
-        </div>
-
-        <hr className="divider" style={{ margin: '0 0 16px' }} />
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <Row label={START_LABEL[item.kind]}>{formatMoment(item.start)}</Row>
-          {item.end && (
-            <Row label={END_LABEL[item.kind]}>
-              {sameDayEnd && item.end.length > 10 ? item.end.slice(11, 16) : formatMoment(item.end)}
-            </Row>
-          )}
-          {item.from && <Row label="From"><PlaceValue place={item.from} /></Row>}
-          {item.to && <Row label="To"><PlaceValue place={item.to} /></Row>}
-          {item.place && <Row label="Where"><PlaceValue place={item.place} /></Row>}
-          {(item.carrier || item.number) && (
-            <Row label={item.mode === 'flight' ? 'Flight' : item.mode === 'car' ? 'Rental' : 'Operator'}>
-              {[item.carrier, item.number].filter(Boolean).join(' ')}
-            </Row>
-          )}
-          {item.confirmationRef && (
-            <Row label="Booking reference">
-              <button type="button" className="trip-ref" onClick={copyReference} title="Copy">
-                {item.confirmationRef} <span>{copied ? 'copied' : 'copy'}</span>
-              </button>
-            </Row>
-          )}
-          {item.url && (
-            <Row label="Link">
-              <a href={item.url} target="_blank" rel="noopener noreferrer">{item.url.replace(/^https?:\/\/(www\.)?/i, '').split('/')[0]}</a>
-            </Row>
-          )}
-        </div>
-
-        {item.notes && <p className="trip-notes" style={{ margin: '16px 0 0' }}>{item.notes}</p>}
-      </div>
-
-      <div className="section-label">Paid for with</div>
-      {item.expenses.length > 0 && (
-        <div className="expense-list">
-          {item.expenses.map(e => (
-            <div key={e.id} className="expense-item" onClick={() => navigate(`/groups/${item.groupId}/expenses/${e.id}`)}>
-              <div className="expense-icon" style={{ background: 'var(--green-light)', color: 'var(--green-dark)' }}>✓</div>
-              <div className="expense-info">
-                <div className="expense-name">{e.description}</div>
-                <div className="expense-meta">Paid by {e.paidByName ?? '—'}{e.date ? ` · ${formatDate(e.date)}` : ''}</div>
+      <div className="item-layout">
+        <div className="item-main">
+          <div className="card">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20 }}>
+              <div className="expense-icon" style={{ width: 56, height: 56, fontSize: 26, borderRadius: 'var(--r-lg)', flexShrink: 0 }}>
+                {itemIcon(item)}
               </div>
-              <div className="expense-amounts">
-                <div className="expense-share">{formatCurrency(e.amount, e.currencyIso)}</div>
-                <button
-                  type="button"
-                  className="trip-unlink"
-                  onClick={event => { event.stopPropagation(); handleUnlink(e) }}
-                >
-                  unlink
-                </button>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--text)', marginBottom: 4, overflowWrap: 'anywhere' }}>{item.title}</div>
+                <div style={{ fontSize: 13, color: 'var(--text-3)' }}>
+                  <Link to={`/trips/${tripId}`} style={{ color: 'inherit' }}>{item.tripTitle}</Link>
+                </div>
               </div>
             </div>
-          ))}
-        </div>
-      )}
-      {item.expenses.length > 1 && (
-        <p style={{ fontSize: 12, color: 'var(--text-3)', margin: '-8px 0 12px', textAlign: 'right' }}>
-          {formatCurrency(paid, item.groupIso)} paid in total
-        </p>
-      )}
-      <div className="trip-expense-actions">
-        <button className="btn-pill-outline" onClick={handleCreateExpense}>
-          {item.expenses.length > 0 ? 'Add another expense' : 'Create expense'}
-        </button>
-        <button className="btn-pill-outline" onClick={() => setLinking(true)}>Link existing expense</button>
-      </div>
-      {linking && (
-        <LinkExpenseSheet
-          itemId={itemId}
-          groupId={item.groupId}
-          linkedIds={item.expenses.map(e => e.id)}
-          onClose={() => setLinking(false)}
-          onLinked={async () => { setLinking(false); await load() }}
-        />
-      )}
 
-      <div className="section-label">Tickets and documents</div>
-      {item.attachments.length > 0 && (
-        <div className="expense-list">
-          {item.attachments.map(a => (
-            // A plain link, so the browser's own PDF and image viewers open it.
-            <a key={a.id} className="expense-item" href={`/api${a.url}`} target="_blank" rel="noopener noreferrer">
-              <div className="expense-icon">{a.mimeType === 'application/pdf' ? '📄' : '🖼️'}</div>
-              <div className="expense-info">
-                <div className="expense-name">{a.filename}</div>
-                <div className="expense-meta">{formatBytes(a.size)}</div>
-              </div>
-              <button
-                type="button"
-                className="trip-unlink"
-                onClick={event => { event.preventDefault(); event.stopPropagation(); handleDeleteAttachment(a) }}
-              >
-                delete
-              </button>
-            </a>
-          ))}
+            <hr className="divider" style={{ margin: '0 0 16px' }} />
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <Row label={START_LABEL[item.kind]}>{formatMoment(item.start)}</Row>
+              {item.end && (
+                <Row label={END_LABEL[item.kind]}>
+                  {sameDayEnd && item.end.length > 10 ? item.end.slice(11, 16) : formatMoment(item.end)}
+                </Row>
+              )}
+              {item.from && <Row label="From"><PlaceValue place={item.from} /></Row>}
+              {item.to && <Row label="To"><PlaceValue place={item.to} /></Row>}
+              {item.place && <Row label="Where"><PlaceValue place={item.place} /></Row>}
+              {(item.carrier || item.number) && (
+                <Row label={item.mode === 'flight' ? 'Flight' : item.mode === 'car' ? 'Rental' : 'Operator'}>
+                  {[item.carrier, item.number].filter(Boolean).join(' ')}
+                </Row>
+              )}
+              {item.confirmationRef && (
+                <Row label="Booking reference">
+                  <button type="button" className="trip-ref" onClick={copyReference} title="Copy">
+                    {item.confirmationRef} <span>{copied ? 'copied' : 'copy'}</span>
+                  </button>
+                </Row>
+              )}
+              {item.url && (
+                <Row label="Link">
+                  <a href={item.url} target="_blank" rel="noopener noreferrer">{item.url.replace(/^https?:\/\/(www\.)?/i, '').split('/')[0]}</a>
+                </Row>
+              )}
+            </div>
+
+            {item.notes && <p className="trip-notes" style={{ margin: '16px 0 0' }}>{item.notes}</p>}
+          </div>
+          {wide && mapData && (
+            <Suspense fallback={<Loading />}>
+              <TripMap places={mapData.places} items={mapData.items} onOpenItem={noop} />
+            </Suspense>
+          )}
         </div>
-      )}
-      <input ref={fileInput} type="file" accept="application/pdf,image/jpeg,image/png,image/webp" hidden onChange={handleUpload} />
-      <button className="btn-pill-outline" style={{ width: '100%', padding: '10px' }} onClick={() => fileInput.current?.click()} disabled={uploading}>
-        {uploading ? 'Uploading…' : 'Add a file'}
-      </button>
-      <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 8 }}>PDF or image, 10 MB at most.</p>
+
+        <aside className="item-aside">
+          {wide && (
+            <div className="item-actions">
+              <button className="btn btn-secondary" onClick={() => navigate(`/trips/${tripId}/items/${itemId}/edit`)}>Edit item</button>
+              <button className="btn btn-ghost" onClick={handleDelete}>Delete</button>
+            </div>
+          )}
+          <div className="section-label">Paid for with</div>
+          {item.expenses.length > 0 && (
+            <div className="expense-list">
+              {item.expenses.map(e => (
+                <div key={e.id} className="expense-item" onClick={() => navigate(`/groups/${item.groupId}/expenses/${e.id}`)}>
+                  <div className="expense-icon" style={{ background: 'var(--green-light)', color: 'var(--green-dark)' }}>✓</div>
+                  <div className="expense-info">
+                    <div className="expense-name">{e.description}</div>
+                    <div className="expense-meta">Paid by {e.paidByName ?? '—'}{e.date ? ` · ${formatDate(e.date)}` : ''}</div>
+                  </div>
+                  <div className="expense-amounts">
+                    <div className="expense-share">{formatCurrency(e.amount, e.currencyIso)}</div>
+                    <button
+                      type="button"
+                      className="trip-unlink"
+                      onClick={event => { event.stopPropagation(); handleUnlink(e) }}
+                    >
+                      unlink
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          {item.expenses.length > 1 && (
+            <p style={{ fontSize: 12, color: 'var(--text-3)', margin: '-8px 0 12px', textAlign: 'right' }}>
+              {formatCurrency(paid, item.groupIso)} paid in total
+            </p>
+          )}
+          <div className="trip-expense-actions">
+            <button className="btn-pill-outline" onClick={handleCreateExpense}>
+              {item.expenses.length > 0 ? 'Add another expense' : 'Create expense'}
+            </button>
+            <button className="btn-pill-outline" onClick={() => setLinking(true)}>Link existing expense</button>
+          </div>
+          {linking && (
+            <LinkExpenseSheet
+              itemId={itemId}
+              groupId={item.groupId}
+              linkedIds={item.expenses.map(e => e.id)}
+              onClose={() => setLinking(false)}
+              onLinked={async () => { setLinking(false); await load() }}
+            />
+          )}
+
+          <div className="section-label">Tickets and documents</div>
+          {item.attachments.length > 0 && (
+            <div className="expense-list">
+              {item.attachments.map(a => (
+                // A plain link, so the browser's own PDF and image viewers open it.
+                <a key={a.id} className="expense-item" href={`/api${a.url}`} target="_blank" rel="noopener noreferrer">
+                  <div className="expense-icon">{a.mimeType === 'application/pdf' ? '📄' : '🖼️'}</div>
+                  <div className="expense-info">
+                    <div className="expense-name">{a.filename}</div>
+                    <div className="expense-meta">{formatBytes(a.size)}</div>
+                  </div>
+                  <button
+                    type="button"
+                    className="trip-unlink"
+                    onClick={event => { event.preventDefault(); event.stopPropagation(); handleDeleteAttachment(a) }}
+                  >
+                    delete
+                  </button>
+                </a>
+              ))}
+            </div>
+          )}
+          <input ref={fileInput} type="file" accept="application/pdf,image/jpeg,image/png,image/webp" hidden onChange={handleUpload} />
+          <button className="btn-pill-outline" style={{ width: '100%', padding: '10px' }} onClick={() => fileInput.current?.click()} disabled={uploading}>
+            {uploading ? 'Uploading…' : 'Add a file'}
+          </button>
+          <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 8 }}>PDF or image, 10 MB at most.</p>
+        </aside>
+      </div>
     </>
   )
 }

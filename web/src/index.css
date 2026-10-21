@@ -1796,6 +1796,78 @@ body {
   color: var(--text);
 }
 
+/* Trips overview from 768px: cards in a grid (3 across from 1180px). */
+.trip-cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.trip-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 16px;
+  text-align: left;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-sm);
+  transition: border-color .15s, box-shadow .15s;
+}
+.trip-card:hover { border-color: var(--border-strong); box-shadow: var(--shadow-md); }
+.trip-card.past { opacity: .7; }
+.trip-card-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.trip-card-icon {
+  width: 44px; height: 44px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px;
+  border-radius: var(--r-md);
+  background: var(--accent-light);
+}
+.trip-card-when {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: var(--r-pill);
+  background: var(--surface-2);
+  color: var(--text-2);
+}
+.trip-card-when.now { background: var(--accent-subtle); color: var(--accent); }
+.trip-card-title { font-size: 16px; font-weight: 700; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.trip-card-dates { font-size: 13px; color: var(--text-2); }
+.trip-card-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--text-3);
+}
+.trip-card-foot span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Trip item from 1180px: details and its map on the left; actions, expenses
+   and documents in a column on the right. */
+@media (min-width: 1180px) {
+  .page-wrap:has(.trip-cards) { --wrap-w: 1140px; }
+  .trip-cards { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .page-wrap:has(.item-layout) { --wrap-w: 1140px; }
+  .item-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 360px;
+    gap: 28px;
+    align-items: start;
+  }
+  .item-main .trip-map { height: 340px; }
+  .item-aside { position: sticky; top: 24px; }
+  .item-aside > .section-label:first-of-type { margin-top: 0; }
+  .item-actions { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
+  .item-actions .btn { width: 100%; }
+  .item-aside .trip-expense-actions { flex-direction: column; }
+}
+
 /* Trip item: create or link an expense, and the picker for linking one. */
 .trip-expense-actions { display: flex; gap: 8px; }
 .trip-expense-actions .btn-pill-outline { flex: 1; padding: 10px; }

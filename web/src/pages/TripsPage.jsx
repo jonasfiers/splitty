@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router'
 import client from '../api/client'
 import FabButton from '../components/FabButton/FabButton.jsx'
 import Loading from '../components/Loading.jsx'
-import TripList from '../components/TripForm/TripList.jsx'
+import TripList, { TripCards } from '../components/TripForm/TripList.jsx'
+import { useMediaQuery } from '../utils/useMediaQuery.js'
 import TripFormSheet from '../components/TripForm/TripFormSheet.jsx'
 import { today } from '../utils/trip.js'
 
@@ -24,6 +25,9 @@ export default function TripsPage() {
       .catch(() => setError('Failed to load trips. Please refresh the page.'))
       .finally(() => setLoading(false))
   }, [])
+
+  // From tablet width up, trips are shown as cards.
+  const cards = useMediaQuery('(min-width: 768px)')
 
   if (loading) return <Loading />
 
@@ -54,12 +58,12 @@ export default function TripsPage() {
 
       {upcoming.length > 0 && <>
         <div className="section-label">Upcoming</div>
-        <TripList trips={upcoming} showGroup />
+        {cards ? <TripCards trips={upcoming} /> : <TripList trips={upcoming} showGroup />}
       </>}
 
       {past.length > 0 && <>
         <div className="section-label">Past</div>
-        <TripList trips={past} showGroup />
+        {cards ? <TripCards trips={past} past /> : <TripList trips={past} showGroup />}
       </>}
 
       {groups.length > 0 && <FabButton onClick={() => setShowNew(true)} label="New trip" />}
