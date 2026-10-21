@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router'
 import client from '../api/client'
 import { formatCurrency } from '../utils/currency'
 import { timeAgo } from '../utils/time.js'

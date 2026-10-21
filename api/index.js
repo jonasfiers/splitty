@@ -1,5 +1,5 @@
-require('dotenv').config({path: '../.env'});
-require('dotenv').config({path: '../.env.local', override: true});
+require('dotenv').config({path: '../.env', quiet: true});
+require('dotenv').config({path: '../.env.local', override: true, quiet: true});
 
 // index.js
 const express = require('express');
@@ -27,6 +27,12 @@ app.use(cors({
     credentials: true
 }));
 app.use(express.json());
+// Express 5 leaves req.body undefined when a request has no JSON body; the routes
+// destructure it and rely on Express 4's {} default to answer 400 rather than 500.
+app.use((req, res, next) => {
+    req.body ??= {};
+    next();
+});
 
 app.get('/health', (req, res) => {
     res.status(200).send('OK');

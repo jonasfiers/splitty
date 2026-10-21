@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react'
-import { Link, useNavigate, useLocation } from 'react-router-dom'
+import { Link, useNavigate, useLocation } from 'react-router'
 import { useAuth } from '../context/AuthContext'
 import client from '../api/client'
 import CatAvatar from '../components/CatAvatar/CatAvatar'

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom'
+import { useParams, useNavigate, useSearchParams, Link } from 'react-router'
 import client from '../api/client'
 import CurrencyInput from '../components/CurrencyInput/CurrencyInput.jsx'
 import PlacePicker from '../components/PlacePicker/PlacePicker.jsx'

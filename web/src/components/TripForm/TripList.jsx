@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router'
 import { formatDateRange, daysBetween, today } from '../../utils/trip.js'
 
 const countdown = trip => {

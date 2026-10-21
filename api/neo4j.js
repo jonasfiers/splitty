@@ -1,4 +1,4 @@
-require('dotenv').config({path: '../.env'});
+require('dotenv').config({path: '../.env', quiet: true});
 const neo4j = require('neo4j-driver');
 
 if (!process.env.NEO4J_PASSWORD) {

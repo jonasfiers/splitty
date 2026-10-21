@@ -1,4 +1,4 @@
-import { Outlet, NavLink, Link, useNavigate } from 'react-router-dom'
+import { Outlet, NavLink, Link, useNavigate } from 'react-router'
 import { useAuth } from '../context/AuthContext'
 import { Avatar } from './Avatar.jsx'
 import CatAvatar from './CatAvatar/CatAvatar'
