@@ -83,6 +83,8 @@ export default function TripItemFormPage() {
         const end = valid(searchParams.get('end')) ? searchParams.get('end') : null
         setForm(f => ({
           ...f,
+          // ?title= comes along from the quick-add pop-up's "More details…".
+          title: (searchParams.get('title') || '').slice(0, 160),
           startDate: start ? dayOf(start) : trip.startDate,
           startTime: start ? timeOf(start) : '',
           // A stay is the one item that nearly always has an end: the whole trip.

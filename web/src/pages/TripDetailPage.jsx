@@ -5,6 +5,7 @@ import FabButton from '../components/FabButton/FabButton.jsx'
 import Loading from '../components/Loading.jsx'
 import BackLink from '../components/BackLink.jsx'
 import TripFormSheet from '../components/TripForm/TripFormSheet.jsx'
+import QuickAddSheet from '../components/TripForm/QuickAddSheet.jsx'
 import { formatCurrency } from '../utils/currency.js'
 import { KINDS, TRANSPORT_MODES, itemIcon, buildTimeline, formatDay, formatDateRange, formatMoment, daysBetween, today } from '../utils/trip.js'
 import TripGantt from '../components/TripGantt/TripGantt.jsx'
@@ -40,8 +41,9 @@ export default function TripDetailPage() {
   // Item ids under the pointer in the timeline or on the map; the other one lights them up.
   const [highlight, setHighlight] = useState(null)
   const [showKinds, setShowKinds] = useState(false)
-  // A range dragged out on the travel lane, waiting for the kind of transport.
-  const [pendingTravel, setPendingTravel] = useState(null)
+  // A range dragged out (or a day tapped) on the timeline: { kind, start, end }.
+  const [quickAdd, setQuickAdd] = useState(null)
+  const [added, setAdded] = useState(null) // title of the item just added that way
   // The last bar moved on the timeline, offered for undo for a few seconds.
   const [moved, setMoved] = useState(null) // { item, before: { start, end } }
   const [showEdit, setShowEdit] = useState(false)
@@ -61,8 +63,8 @@ export default function TripDetailPage() {
 
   const openItem = useCallback(item => navigate(`/trips/${id}/items/${item.id}`), [navigate, id])
 
-  const newItemUrl = (kind, { mode, start, end } = {}) => {
-    const q = new URLSearchParams({ kind, ...(mode && { mode }), ...(start && { start }), ...(end && { end }) })
+  const newItemUrl = (kind, { mode, start, end, title } = {}) => {
+    const q = new URLSearchParams({ kind, ...(mode && { mode }), ...(start && { start }), ...(end && { end }), ...(title && { title }) })
     return `/trips/${id}/items/new?${q}`
   }
   // Dragging a bar saves at once; the page shows the new times straight away
@@ -91,10 +93,17 @@ export default function TripDetailPage() {
     return () => clearTimeout(t)
   }, [moved])
 
-  const createFromTimeline = ({ kind, start, end }) => {
-    if (kind === 'transport') setPendingTravel({ start, end })
-    else navigate(newItemUrl(kind, { start, end }))
+  const createFromTimeline = range => setQuickAdd(range)
+  const quickAdded = async title => {
+    setQuickAdd(null)
+    await load()
+    setAdded(title)
   }
+  useEffect(() => {
+    if (!added) return
+    const t = setTimeout(() => setAdded(null), 4000)
+    return () => clearTimeout(t)
+  }, [added])
 
   const handleDelete = async () => {
     if (!window.confirm(`Delete "${trip.title}" with everything planned in it? Its expenses stay in the group. This cannot be undone.`)) return
@@ -271,22 +280,19 @@ export default function TripDetailPage() {
         </div>
       )}
 
-      {pendingTravel && (
-        // Above the full-screen timeline too, where this can also be started.
-        <div className="sheet-overlay" style={{ zIndex: 1100 }} onClick={e => { if (e.target === e.currentTarget) setPendingTravel(null) }}>
-          <div className="sheet">
-            <div className="sheet-handle" />
-            <p className="sheet-title">Add travel</p>
-            <div className="trip-kind-grid">
-              {TRANSPORT_MODES.map(m => (
-                <button key={m.value} className="trip-kind" onClick={() => navigate(newItemUrl('transport', { mode: m.value, ...pendingTravel }))}>
-                  <span>{m.icon}</span>{m.label}
-                </button>
-              ))}
-            </div>
-            <button className="btn btn-ghost" style={{ width: '100%', marginTop: 8 }} onClick={() => setPendingTravel(null)}>Cancel</button>
-          </div>
-        </div>
+      {added && !moved && (
+        <div className="trip-toast" role="status"><span>Added “{added}”</span></div>
+      )}
+
+      {quickAdd && (
+        <QuickAddSheet
+          tripId={id}
+          {...quickAdd}
+          places={places}
+          onClose={() => setQuickAdd(null)}
+          onSaved={quickAdded}
+          onMore={({ kind, ...rest }) => navigate(newItemUrl(kind, rest))}
+        />
       )}
 
       {showKinds && (

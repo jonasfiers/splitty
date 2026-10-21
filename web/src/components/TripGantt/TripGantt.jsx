@@ -289,12 +289,20 @@ export default function TripGantt({ trip, items: allItems, placeName, onOpenItem
     press.current = null
     setGhost(null)
     if (!p) return
-    const to = p.dragging ? posOf(e, p.track) : p.from
+    // A tap is handled by the click that follows it (tapCreate): opening the
+    // pop-up here would let that click land on whatever the pop-up puts under the finger.
+    if (p.touch) { tap.current = p; return }
     // A mouse click without a drag does nothing: on desktop, creating is a drag.
-    if (!p.dragging && !p.touch) return
-    onCreate({ kind: p.kind, ...rangeFor(p.kind, first, p.from, to, !p.dragging, step) })
+    if (!p.dragging) return
+    onCreate({ kind: p.kind, ...rangeFor(p.kind, first, p.from, posOf(e, p.track), false, step) })
   }
-  const cancelPress = () => { press.current = null; setGhost(null) }
+  const cancelPress = () => { press.current = null; tap.current = null; setGhost(null) }
+  const tap = useRef(null)
+  const tapCreate = () => {
+    const p = tap.current
+    tap.current = null
+    if (p) onCreate({ kind: p.kind, ...rangeFor(p.kind, first, p.from, p.from, true, step) })
+  }
 
   const startBarDrag = item => e => {
     if (!onReschedule || e.pointerType !== 'mouse' || e.button > 0) return
@@ -365,6 +373,7 @@ export default function TripGantt({ trip, items: allItems, placeName, onOpenItem
               onPointerMove={movePress}
               onPointerUp={endPress}
               onPointerCancel={cancelPress}
+              onClick={tapCreate}
             >
               {columns.map((day, i) => (
                 <div
