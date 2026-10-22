@@ -145,6 +145,14 @@ function cached(key) {
     return hit.data;
 }
 
+// Only what the page uses is cached: a full answer is around 100 KB of
+// alternatives, stops passed and debug output; this is a few KB.
+const slim = data => ({
+    itineraries: (data.itineraries || []).map(normaliseItinerary).filter(Boolean),
+    previousCursor: data.previousPageCursor || null,
+    nextCursor: data.nextPageCursor || null,
+});
+
 async function plan(params) {
     const key = JSON.stringify(params);
     const hit = cached(key);
@@ -154,7 +162,7 @@ async function plan(params) {
     // Chain onto the queue so concurrent searches still go out one at a time;
     // the same search asked twice meanwhile is answered from the cache.
     waiting++;
-    const result = queue.then(() => cached(key) ?? fetchPlan(params));
+    const result = queue.then(() => cached(key) ?? fetchPlan(params).then(slim));
     queue = result.catch(() => {});
     let data;
     try {
@@ -163,8 +171,11 @@ async function plan(params) {
         waiting--;
     }
 
+    // Expired answers go on every insert, not only when asked for again.
+    const now = Date.now();
+    for (const [k, entry] of cache) if (now - entry.at > CACHE_TTL_MS) cache.delete(k);
     if (cache.size >= CACHE_MAX) cache.delete(cache.keys().next().value);
-    cache.set(key, { at: Date.now(), data });
+    cache.set(key, { at: now, data });
     return data;
 }
 
@@ -287,7 +298,7 @@ async function search({ from, to, when, arriveBy, modes, cursor, wide }) {
     const widen = p => ({ ...p, radius: String(WIDEN_METRES) });
     let widened = Boolean(wide);
     let data = await plan(widened ? widen(params) : params);
-    if (!widened && !cursor && (data.itineraries || []).length === 0) {
+    if (!widened && !cursor && data.itineraries.length === 0) {
         widened = true;
         data = await plan(widen(params));
     }
@@ -295,9 +306,7 @@ async function search({ from, to, when, arriveBy, modes, cursor, wide }) {
         zone,
         widened,
         widenedMetres: widened ? WIDEN_METRES : null,
-        itineraries: (data.itineraries || []).map(normaliseItinerary).filter(Boolean),
-        previousCursor: data.previousPageCursor || null,
-        nextCursor: data.nextPageCursor || null,
+        ...data,
     };
 }
 
