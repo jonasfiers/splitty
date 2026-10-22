@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, lazy, Suspense } from 'react'
 import { useParams, useNavigate, useSearchParams, useLocation } from 'react-router'
 import client from '../api/client'
 import Loading from '../components/Loading.jsx'
@@ -6,8 +6,11 @@ import BackLink from '../components/BackLink.jsx'
 import PlacePicker from '../components/PlacePicker/PlacePicker.jsx'
 import ConnectionCard from '../components/TripRoute/ConnectionCard.jsx'
 import ConfirmConnection from '../components/TripRoute/ConfirmConnection.jsx'
+import Expandable from '../components/Expandable/Expandable.jsx'
 import { dayOf, timeOf, today, daysBetween, formatDay } from '../utils/trip.js'
 import { useMediaQuery } from '../utils/useMediaQuery.js'
+
+const RouteMap = lazy(() => import('../components/TripRoute/RouteMap.jsx'))
 
 const MODES = [
   { value: 'all',  label: 'All' },
@@ -48,6 +51,12 @@ export default function TripRoutePage() {
   const [searching, setSearching] = useState(null) // 'search' | 'earlier' | 'later'
   const [error, setError] = useState('')
   const [chosen, setChosen] = useState(null)
+  // The connection highlighted on the map: under the pointer, or else the one
+  // tapped (on the map, or with a card's Map button). Kept by key, not by
+  // index, so earlier connections added on top do not shift it.
+  const [hoverKey, setHoverKey] = useState(null)
+  const [selectedKey, setSelectedKey] = useState(null)
+  const [view, setView] = useState('list') // below 1180px: 'list' | 'map'
 
   useEffect(() => {
     client.get(`/trips/${tripId}`).then(({ data }) => {
@@ -102,6 +111,8 @@ export default function TripRoutePage() {
       })
       if (!direction) {
         setResult({ query, ...data })
+        setHoverKey(null)
+        setSelectedKey(null)
         if (!wide) setTimeout(() => resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50)
         return
       }
@@ -206,10 +217,76 @@ export default function TripRoutePage() {
     </form>
   )
 
+  const itineraries = result?.itineraries ?? []
+  const keyAt = i => (i == null || !itineraries[i] ? null : connectionKey(itineraries[i]))
+  const indexOf = key => (key ? itineraries.findIndex(it => connectionKey(it) === key) : -1)
+  const highlightIndex = [indexOf(hoverKey), indexOf(selectedKey)].find(i => i >= 0) ?? null
+  const showMap = itineraries.length > 0
+  const pickOnMap = i => {
+    setSelectedKey(keyAt(i))
+    // Side by side, the list follows the map to the connection picked there.
+    if (wide) document.querySelectorAll('.route-results .route-card')[i]?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+  }
+
+  const mapView = showMap && (
+    <Suspense fallback={<Loading />}>
+      <Expandable label="Connections · Map">
+        <RouteMap itineraries={itineraries} highlight={highlightIndex} onHover={i => setHoverKey(keyAt(i))} onSelect={pickOnMap} />
+      </Expandable>
+    </Suspense>
+  )
+
+  const card = (it, extra = {}) => (
+    <ConnectionCard
+      key={connectionKey(it)}
+      itinerary={it}
+      searchDay={result.query.when.slice(0, 10)}
+      onChoose={setChosen}
+      active={showMap && connectionKey(it) === keyAt(highlightIndex)}
+      onHover={on => setHoverKey(on ? connectionKey(it) : null)}
+      {...extra}
+    />
+  )
+
+  const list = (
+    <>
+      {result?.previousCursor && (
+        <button type="button" className="btn btn-ghost btn-sm route-page-btn" onClick={() => run(result.query, 'earlier')} disabled={Boolean(searching)}>
+          {searching === 'earlier' ? 'Searching…' : '↑ Earlier'}
+        </button>
+      )}
+      {itineraries.map(it => card(it, wide ? {} : { onShowOnMap: () => { setSelectedKey(connectionKey(it)); setView('map') } }))}
+      {result?.nextCursor && (
+        <button type="button" className="btn btn-ghost btn-sm route-page-btn" onClick={() => run(result.query, 'later')} disabled={Boolean(searching)}>
+          {searching === 'later' ? 'Searching…' : '↓ Later'}
+        </button>
+      )}
+    </>
+  )
+
+  // Below 1180px the map takes the list's place, with the picked connection under it.
+  const narrowMap = (
+    <>
+      {mapView}
+      <div className="route-map-pick">
+        {indexOf(selectedKey) >= 0
+          ? card(itineraries[indexOf(selectedKey)])
+          : <p className="route-hint">Tap a line to see that connection.</p>}
+      </div>
+    </>
+  )
+
   const results = result && (
     <div ref={resultsRef} className="route-results">
-      <div className="section-label">Connections</div>
-      {result.itineraries.length === 0 ? (
+      {!wide && showMap ? (
+        <div className="filter-chips route-view-chips">
+          <button type="button" className={`chip${view === 'list' ? ' active' : ''}`} onClick={() => setView('list')}>List · {itineraries.length}</button>
+          <button type="button" className={`chip${view === 'map' ? ' active' : ''}`} onClick={() => setView('map')}>Map</button>
+        </div>
+      ) : (
+        <div className="section-label">Connections</div>
+      )}
+      {itineraries.length === 0 ? (
         <div className="trip-day-empty route-empty">
           {daysBetween(today(), result.query.when.slice(0, 10)) > FAR_AHEAD_DAYS ? (
             <>
@@ -233,19 +310,7 @@ export default function TripRoutePage() {
               are included. Walking times to them are estimates.
             </p>
           )}
-          {result.previousCursor && (
-            <button type="button" className="btn btn-ghost btn-sm route-page-btn" onClick={() => run(result.query, 'earlier')} disabled={Boolean(searching)}>
-              {searching === 'earlier' ? 'Searching…' : '↑ Earlier'}
-            </button>
-          )}
-          {result.itineraries.map(it => (
-            <ConnectionCard key={connectionKey(it)} itinerary={it} searchDay={result.query.when.slice(0, 10)} onChoose={setChosen} />
-          ))}
-          {result.nextCursor && (
-            <button type="button" className="btn btn-ghost btn-sm route-page-btn" onClick={() => run(result.query, 'later')} disabled={Boolean(searching)}>
-              {searching === 'later' ? 'Searching…' : '↓ Later'}
-            </button>
-          )}
+          {!wide && view === 'map' ? narrowMap : list}
         </>
       )}
       <p className="route-attribution">
@@ -259,16 +324,21 @@ export default function TripRoutePage() {
     <div className="route-page">
       {header}
       <div className="route-layout">
-        <div className="route-layout-form">{searchForm}</div>
-        <div className="route-layout-results">
-          {results || (wide && (
-            <p className="route-hint route-intro">
-              Public transport between two places, from the community timetables of{' '}
-              <a href="https://transitous.org/sources/" target="_blank" rel="noopener noreferrer">Transitous</a>.
-              Pick a connection to add its trains, buses and ferries to the trip.
-            </p>
-          ))}
+        <div className="route-layout-main">
+          {searchForm}
+          {results}
         </div>
+        {wide && (
+          <div className="route-layout-map">
+            {showMap ? mapView : !result && (
+              <p className="route-hint route-intro">
+                Public transport between two places, from the community timetables of{' '}
+                <a href="https://transitous.org/sources/" target="_blank" rel="noopener noreferrer">Transitous</a>.
+                Pick a connection to add its trains, buses and ferries to the trip.
+              </p>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )

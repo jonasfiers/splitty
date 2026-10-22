@@ -1,7 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState, lazy, Suspense } from 'react'
 import client from '../../api/client'
 import { TRANSPORT_MODES, dayOf, timeOf, formatDay, formatDuration } from '../../utils/trip.js'
 import { legIcon, legLabel, crossesZones, TIGHT_MINUTES } from './ConnectionCard.jsx'
+import Expandable from '../Expandable/Expandable.jsx'
+import Loading from '../Loading.jsx'
+
+const RouteMap = lazy(() => import('./RouteMap.jsx'))
 
 // Without the server's matching (it failed, or the limit was hit) every stop
 // is a new place under its timetable name; the same stop twice is one place.
@@ -76,6 +80,11 @@ function ConfirmConnection({ tripId, itinerary, onBack, onSaved }) {
   }
 
   const chosen = legs.map((leg, i) => ({ leg, found: itinerary.legs[i], i })).filter(x => x.leg.include)
+  // The map shows this connection alone, numbered as in the results; legs
+  // switched off drop out of it.
+  const alone = useMemo(() => [itinerary], [itinerary])
+  const skipKey = legs.map(l => (l.include ? 1 : 0)).join('')
+  const skip = useMemo(() => [...skipKey].flatMap((on, i) => (on === '1' ? [] : [i])), [skipKey])
 
   const handleSave = async () => {
     if (saving || chosen.length === 0) return
@@ -128,6 +137,14 @@ function ConfirmConnection({ tripId, itinerary, onBack, onSaved }) {
           {crossesZones(itinerary) && ' · local times'}
         </div>
       </div>
+
+      <Suspense fallback={<Loading />}>
+        <div className="route-confirm-map">
+          <Expandable label="Connection · Map">
+            <RouteMap itineraries={alone} skip={skip} />
+          </Expandable>
+        </div>
+      </Suspense>
 
       {places === null ? (
         <p className="route-hint">Matching the stops to this trip’s places…</p>

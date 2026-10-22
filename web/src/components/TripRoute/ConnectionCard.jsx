@@ -24,17 +24,21 @@ export const crossesZones = itinerary =>
 
 // One connection in the search results: when, how long, how many changes,
 // and every leg with the wait between them. Choosing it opens the confirm step.
-function ConnectionCard({ itinerary: it, searchDay, onChoose }) {
+// `active` marks it as the one highlighted on the map; `onHover` reports the
+// pointer over it, and `onShowOnMap` (narrow screens) adds a button for the map.
+function ConnectionCard({ itinerary: it, searchDay, onChoose, active = false, onHover = null, onShowOnMap = null }) {
   const nextDay = daysBetween(dayOf(it.departure), dayOf(it.arrival))
   const choose = () => onChoose(it)
 
   return (
     <div
-      className="route-card"
+      className={`route-card${active ? ' active' : ''}`}
       role="button"
       tabIndex={0}
       onClick={choose}
       onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); choose() } }}
+      onMouseEnter={onHover ? () => onHover(true) : undefined}
+      onMouseLeave={onHover ? () => onHover(false) : undefined}
     >
       <div className="route-card-head">
         <div className="route-card-times">
@@ -90,7 +94,12 @@ function ConnectionCard({ itinerary: it, searchDay, onChoose }) {
             crossesZones(it) && 'local times',
           ].filter(Boolean).join(' · ')}
         </span>
-        <span className="route-card-choose">Choose ›</span>
+        <span className="route-card-actions">
+          {onShowOnMap && (
+            <button type="button" className="btn btn-ghost btn-sm" onClick={e => { e.stopPropagation(); onShowOnMap() }}>Map</button>
+          )}
+          <span className="route-card-choose">Choose ›</span>
+        </span>
       </div>
     </div>
   )

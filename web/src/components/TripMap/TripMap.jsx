@@ -4,6 +4,7 @@ import { ExpandedContext } from '../Expandable/Expandable.jsx'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { itemIcon } from '../../utils/trip.js'
+import { addTiles, arcBetween, arrowIcon, arrowsAlong, keepFramed } from './mapParts.js'
 
 // Places numbered in the order the trip reaches them: walk the items by start
 // time and number each place the first time it comes up (a journey reaches its
@@ -28,44 +29,6 @@ function visitOrder(items) {
 // `highlight` (item ids) marks those items' pins and journeys and fades the
 // rest; `onHover` reports the items under the pointer, so the timeline can do
 // the same. Both are applied without rebuilding the map.
-// Direction arrows along each journey: every ARROW_SPACING px on screen, kept
-// ARROW_END_GAP px clear of the pins at both ends; a short journey gets one in
-// the middle. Only arrows within ARROW_MARGIN px of the view are placed.
-const ARROW_SPACING = 140
-const ARROW_END_GAP = 28
-const ARROW_MARGIN = 80
-const arrowIcon = angle => L.divIcon({
-  className: '',
-  html: `<div class="trip-leg"><svg viewBox="0 0 24 24" style="transform: rotate(${angle}deg)"><path d="M5 5 L20 12 L5 19 L9 12 Z" /></svg></div>`,
-  iconSize: [24, 24],
-  iconAnchor: [12, 12],
-})
-
-// Points every `spacing` px along a polyline given in screen pixels, each with
-// the direction of travel there (degrees, screen y pointing down).
-function pointsAlong(pts, spacing, gap) {
-  const segs = []
-  let total = 0
-  for (let i = 1; i < pts.length; i++) {
-    const len = pts[i - 1].distanceTo(pts[i])
-    segs.push({ a: pts[i - 1], b: pts[i], from: total, len })
-    total += len
-  }
-  if (total === 0) return []
-  const usable = total - 2 * gap
-  const distances = usable < spacing
-    ? [total / 2]
-    : Array.from({ length: Math.floor(usable / spacing) + 1 }, (_, k) => gap + (usable % spacing) / 2 + k * spacing)
-  return distances.map(dist => {
-    const seg = segs.find(sg => dist <= sg.from + sg.len) ?? segs[segs.length - 1]
-    const f = seg.len ? (dist - seg.from) / seg.len : 0
-    return {
-      point: seg.a.add(seg.b.subtract(seg.a).multiplyBy(f)),
-      angle: (Math.atan2(seg.b.y - seg.a.y, seg.b.x - seg.a.x) * 180) / Math.PI,
-    }
-  })
-}
-
 function TripMap({ places, items, onOpenItem, highlight = null, onHover = () => {} }) {
   const el = useRef(null)
   const pins = useRef(new Map())   // placeId -> { marker, itemIds }
@@ -87,10 +50,7 @@ function TripMap({ places, items, onOpenItem, highlight = null, onHover = () => 
       map.on('click', () => map.scrollWheelZoom.enable())
       map.on('mouseout', () => map.scrollWheelZoom.disable())
     }
-    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-    }).addTo(map)
+    addTiles(map)
 
     const byId = new Map(located.map(p => [p.id, p]))
     const itemsAt = placeId => items.filter(i => [i.placeId, i.fromPlaceId, i.toPlaceId].includes(placeId))
@@ -134,22 +94,13 @@ function TripMap({ places, items, onOpenItem, highlight = null, onHover = () => 
       pins.current.set(place.id, { marker, itemIds: here.map(i => i.id) })
     }
 
-    // Each journey is a gentle arc bending to the right of its direction, so a
-    // trip out and back draws two separate lines, with an arrow at the middle.
-    // The arc is computed in Leaflet's zoom-0 pixel space; Web Mercator keeps
-    // angles, so the arrow's rotation is right at every zoom level.
+    // Each journey is a gentle arc with arrows along it (mapParts.js).
     const legs = items
       .filter(i => i.kind === 'transport' && byId.get(i.fromPlaceId) && byId.get(i.toPlaceId) && i.fromPlaceId !== i.toPlaceId)
       .sort((a, b) => (a.start || '').localeCompare(b.start || ''))
     legs.forEach((item, n) => {
       const from = byId.get(item.fromPlaceId), to = byId.get(item.toPlaceId)
-      const a = map.project([from.lat, from.lon], 0), b = map.project([to.lat, to.lon], 0)
-      const d = b.subtract(a)
-      const length = Math.hypot(d.x, d.y)
-      // Screen y points down, so (-dy, dx) is the right-hand side of travel.
-      const control = a.add(b).divideBy(2).add(L.point(-d.y, d.x).multiplyBy(0.18))
-      const at = t => a.multiplyBy((1 - t) ** 2).add(control.multiplyBy(2 * (1 - t) * t)).add(b.multiplyBy(t ** 2))
-      const curve = Array.from({ length: 33 }, (_, i) => map.unproject(at(i / 32), 0))
+      const curve = arcBetween(map, from, to)
       const line = L.polyline(curve, { color: '#E8603A', weight: 2.5, opacity: .8, dashArray: '6 7' }).addTo(map)
 
       const arrows = L.layerGroup().addTo(map)
@@ -160,17 +111,10 @@ function TripMap({ places, items, onOpenItem, highlight = null, onHover = () => 
     // Arrows are placed in screen pixels, so they are redone after every zoom
     // or pan (and resize); the highlight is reapplied to the new ones.
     const placeArrows = () => {
-      const size = map.getSize()
-      const inView = p => {
-        const c = map.layerPointToContainerPoint(p)
-        return c.x > -ARROW_MARGIN && c.y > -ARROW_MARGIN && c.x < size.x + ARROW_MARGIN && c.y < size.y + ARROW_MARGIN
-      }
       for (const { item, curve, arrows, title } of lines.current.values()) {
         arrows.clearLayers()
-        const pts = curve.map(ll => map.latLngToLayerPoint(ll))
-        for (const { point, angle } of pointsAlong(pts, ARROW_SPACING, ARROW_END_GAP)) {
-          if (!inView(point)) continue
-          const arrow = L.marker(map.layerPointToLatLng(point), { icon: arrowIcon(angle), title, zIndexOffset: -100 })
+        for (const { latLng, angle } of arrowsAlong(map, curve)) {
+          const arrow = L.marker(latLng, { icon: arrowIcon(angle), title, zIndexOffset: -100 })
           arrow.on('click', () => onOpenItem(item))
           arrow.on('mouseover', () => hover.current([item.id]))
           arrow.on('mouseout', () => hover.current(null))
@@ -189,18 +133,10 @@ function TripMap({ places, items, onOpenItem, highlight = null, onHover = () => 
     frame()
     placeArrows()
 
-    // Leaflet only measures its box once. When the box changes size (a full
-    // screen layout settling, the window resizing) it is told so, and the trip
-    // is framed again until the user has moved the map themselves.
-    let moved = false
-    for (const event of ['mousedown', 'touchstart', 'wheel']) el.current.addEventListener(event, () => { moved = true }, { once: true, passive: true })
-    const resized = new ResizeObserver(() => {
-      map.invalidateSize()
-      if (!moved) frame()
-    })
-    resized.observe(el.current)
+    // Framed again whenever the box changes size, until the user moves the map.
+    const unframe = keepFramed(map, el.current, frame)
 
-    return () => { resized.disconnect(); map.remove() }
+    return () => { unframe(); map.remove() }
   }, [places, items, onOpenItem, expanded])
 
   const applyHighlight = useRef(() => {})

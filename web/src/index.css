@@ -2598,7 +2598,7 @@ a.expense-item { color: inherit; text-decoration: none; }
   cursor: pointer;
   transition: border-color .15s, box-shadow .15s;
 }
-.route-card:hover, .route-card:focus-visible { border-color: var(--accent); box-shadow: var(--shadow-md); outline: none; }
+.route-card:hover, .route-card:focus-visible, .route-card.active { border-color: var(--accent); box-shadow: var(--shadow-md); outline: none; }
 .route-card-head, .route-confirm-head {
   display: flex;
   justify-content: space-between;
@@ -2691,6 +2691,15 @@ a.expense-item { color: inherit; text-decoration: none; }
   color: var(--text-3);
 }
 .route-card-choose { font-size: 13px; font-weight: 700; color: var(--accent); white-space: nowrap; }
+.route-card-actions { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+/* The route map: the trip map's look (pins, arcs, arrows), sized for a list beside or above it. */
+.route-map { height: min(55vh, 380px); }
+.route-view-chips { padding-top: 0; }
+.route-map-pick { margin-top: 12px; }
+.route-stop { width: 30px; height: 30px; font-size: 14px; }
+.trip-pin.route-stop-off { display: none; }
+.route-confirm-map { margin-bottom: 16px; }
+.route-confirm-map .route-map { height: 240px; }
 .route-page-btn { width: 100%; margin-bottom: 12px; }
 .route-empty { margin-bottom: 12px; }
 .route-hint { font-size: 13px; color: var(--text-3); margin-bottom: 12px; }
@@ -2727,15 +2736,18 @@ a.expense-item { color: inherit; text-decoration: none; }
 
 @media (min-width: 768px) {
   .page-wrap:has(.route-confirm) { --wrap-w: 720px; }
+  .route-confirm-map .route-map { height: 320px; }
 }
 @media (min-width: 1180px) {
-  .page-wrap:has(.route-layout) { --wrap-w: 1140px; }
+  /* The form and the connections on the left, the map beside them, staying in view. */
+  .page-wrap:has(.route-layout) { --wrap-w: 1240px; }
   .route-layout {
     display: grid;
-    grid-template-columns: 400px minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: 28px;
     align-items: start;
   }
-  .route-layout-form { position: sticky; top: 0; }
-  .route-intro { margin-top: 28px; }
+  .route-layout-map { position: sticky; top: 24px; }
+  .route-layout-map .route-map { height: min(80vh, 680px); }
+  .route-intro { margin-top: 8px; }
 }
