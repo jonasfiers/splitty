@@ -38,8 +38,11 @@ const placeProps = p => ({
 
 // A place slot on an item is either {id} (an existing place of this trip),
 // {name, address, lat, lon} (a new one, created with the item) or empty.
-async function resolvePlace(tx, tripId, ref) {
+// `created` (optional) remembers the places made in this transaction, so the
+// same new place given to several items becomes one node.
+async function resolvePlace(tx, tripId, ref, created) {
     if (!ref) return null;
+    if (created?.has(ref)) return created.get(ref);
     if (ref.id) {
         const { records } = await tx.run(
             'MATCH (p:Place {id: $id})-[:PLACE_OF]->(:Trip {id: $tripId}) RETURN p.id AS id',
@@ -55,15 +58,17 @@ async function resolvePlace(tx, tripId, ref) {
          RETURN p.id AS id`,
         { tripId, name: ref.name, address: ref.address ?? '', lat: ref.lat ?? null, lon: ref.lon ?? null }
     );
-    return records[0].get('id');
+    const id = records[0].get('id');
+    created?.set(ref, id);
+    return id;
 }
 
-async function attachPlacesAndCurrency(tx, tripId, itemId, kind, data) {
+async function attachPlacesAndCurrency(tx, tripId, itemId, kind, data, created) {
     const slots = kind === 'transport'
         ? [['DEPARTS_FROM', data.from], ['ARRIVES_AT', data.to]]
         : [['AT', data.place]];
     for (const [rel, ref] of slots) {
-        const placeId = await resolvePlace(tx, tripId, ref);
+        const placeId = await resolvePlace(tx, tripId, ref, created);
         if (!placeId) continue;
         await tx.run(
             `MATCH (i:TripItem {id: $itemId}), (p:Place {id: $placeId}) CREATE (i)-[:${rel}]->(p)`,
@@ -92,6 +97,24 @@ const itemProps = (kind, data) => ({
         number: data.number ?? '',
     } : {}),
 });
+
+// One new item and its places, inside a write transaction. Null when the
+// user has no access to the trip.
+async function insertItem(tx, tripId, userId, kind, data, created) {
+    const { records } = await tx.run(
+        `MATCH ${TRIP_ACCESS}
+         MATCH (u:User {id: $userId})
+         CREATE (i:TripItem:${KIND_LABELS[kind]} {id: randomUUID()})-[:PART_OF]->(t)
+         CREATE (i)-[:CREATED_BY {on: datetime()}]->(u)
+         SET i += $props
+         RETURN i.id AS id`,
+        { tripId, userId, props: itemProps(kind, data) }
+    );
+    if (records.length === 0) return null;
+    const itemId = records[0].get('id');
+    await attachPlacesAndCurrency(tx, tripId, itemId, kind, data, created);
+    return itemId;
+}
 
 const tripService = {
     KIND_LABELS,
@@ -274,22 +297,35 @@ const tripService = {
         const session = driver.session();
         try {
             return await session.executeWrite(async tx => {
-                const { records } = await tx.run(
-                    `MATCH ${TRIP_ACCESS}
-                     MATCH (u:User {id: $userId})
-                     CREATE (i:TripItem:${KIND_LABELS[kind]} {id: randomUUID()})-[:PART_OF]->(t)
-                     CREATE (i)-[:CREATED_BY {on: datetime()}]->(u)
-                     SET i += $props
-                     RETURN i.id AS id`,
-                    { tripId, userId, props: itemProps(kind, data) }
-                );
-                if (records.length === 0) return { success: false, message: 'Trip not found or access denied' };
-                const itemId = records[0].get('id');
-                await attachPlacesAndCurrency(tx, tripId, itemId, kind, data);
+                const itemId = await insertItem(tx, tripId, userId, kind, data);
+                if (!itemId) return { success: false, message: 'Trip not found or access denied' };
                 return { success: true, id: itemId };
             });
         } catch (err) {
             throw new Error(`Failed to create trip item: ${err.message}`);
+        } finally {
+            await session.close();
+        }
+    },
+
+    // CREATE ITEMS — several at once, all or nothing (the legs of a journey
+    // found by the route planner). A new place object shared by two items, the
+    // station where one train arrives and the next leaves, becomes one Place.
+    createItems: async (tripId, userId, kind, list) => {
+        const session = driver.session();
+        try {
+            return await session.executeWrite(async tx => {
+                const created = new Map();
+                const ids = [];
+                for (const data of list) {
+                    const itemId = await insertItem(tx, tripId, userId, kind, data, created);
+                    if (!itemId) return { success: false, message: 'Trip not found or access denied' };
+                    ids.push(itemId);
+                }
+                return { success: true, ids };
+            });
+        } catch (err) {
+            throw new Error(`Failed to create trip items: ${err.message}`);
         } finally {
             await session.close();
         }
@@ -422,6 +458,18 @@ const tripService = {
         } finally {
             await session.close();
         }
+    },
+
+    // PLACES of a trip, or null without access (the route planner starts from these).
+    getPlaces: async (tripId, userId) => {
+        const { records } = await driver.executeQuery(
+            `MATCH ${TRIP_ACCESS}
+             OPTIONAL MATCH (p:Place)-[:PLACE_OF]->(t)
+             RETURN t.id AS id, collect(p) AS places`,
+            { tripId, userId }
+        );
+        if (records.length === 0) return null;
+        return records[0].get('places').map(p => placeProps(p.properties));
     },
 
     // UPDATE PLACE — one correction reaches every item at that place.
