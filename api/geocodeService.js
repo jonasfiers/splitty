@@ -117,4 +117,4 @@ async function englishStopName(name, lat, lon) {
     });
 }
 
-module.exports = { search, englishStopName, metresBetween };
+module.exports = { search, englishStopName, isLatin, metresBetween };

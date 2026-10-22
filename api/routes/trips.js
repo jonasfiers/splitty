@@ -498,7 +498,8 @@ router.post('/:id/routes/places', routeLimiter, async (req, res) => {
         });
 
         const deadline = Date.now() + NAME_LOOKUP_MS;
-        for (const p of proposals.filter(p => !p.id).slice(0, MAX_NAME_LOOKUPS)) {
+        // Only stops with a name worth translating count towards the cap.
+        for (const p of proposals.filter(p => !p.id && !geocodeService.isLatin(p.originalName)).slice(0, MAX_NAME_LOOKUPS)) {
             const left = deadline - Date.now();
             if (left <= 0) break;
             try {
