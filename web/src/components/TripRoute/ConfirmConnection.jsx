@@ -47,9 +47,12 @@ function ConfirmConnection({ tripId, itinerary, onBack, onSaved }) {
     const stops = itinerary.legs.flatMap(l => [l.from, l.to]).map(({ name, lat, lon }) => ({ name, lat, lon }))
     client.post(`/trips/${tripId}/routes/places`, { stops })
       .then(({ data }) => apply(data))
-      .catch(() => {
+      .catch(err => {
         apply(unmatched(itinerary))
-        if (current) setNotice('Could not match the stops to this trip’s places, so each stop becomes a new place under its timetable name.')
+        if (!current) return
+        setNotice(err?.response?.status === 429
+          ? 'Too many stop lookups in the last minute, so the stops are not matched to this trip’s places: each becomes a new place under its timetable name. Rename them below, or go back and choose again in a minute.'
+          : 'Could not match the stops to this trip’s places, so each stop becomes a new place under its timetable name. You can rename them below.')
       })
     return () => { current = false }
   }, [tripId, itinerary])

@@ -113,6 +113,18 @@ const routeLimiter = rateLimit({
     legacyHeaders: false,
 });
 
+// Matching a chosen connection's stops to the trip's places costs Transitous
+// nothing and Nominatim at most a few bounded lookups, so it has its own,
+// looser limit: a run of searches must not leave the confirm step unmatched.
+const routePlacesLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    limit: 30,
+    keyGenerator: req => req.user.id,
+    message: { error: 'Too many stop lookups, please wait a moment.' },
+    standardHeaders: 'draft-7',
+    legacyHeaders: false,
+});
+
 // One end of a route search: a place of the trip (by id) or 'lat,lon'.
 function parseRouteEnd(value, places, label) {
     const raw = text(value, 80).replace(/\s+/g, '');
@@ -464,7 +476,7 @@ router.get('/:id/routes', routeLimiter, async (req, res) => {
 // script gets the English name of that station from OpenStreetMap when one is
 // found. Answers { places: [{key, id?, name, originalName, lat, lon}], keys }
 // with one key per stop, in the order sent.
-router.post('/:id/routes/places', routeLimiter, async (req, res) => {
+router.post('/:id/routes/places', routePlacesLimiter, async (req, res) => {
     try {
         const places = await tripService.getPlaces(req.params.id, req.user.id);
         if (!places) return res.status(404).json({ error: 'Trip not found or access denied' });
