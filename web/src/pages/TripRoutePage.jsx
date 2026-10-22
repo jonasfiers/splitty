@@ -151,6 +151,22 @@ export default function TripRoutePage() {
 
   const swap = () => set({ from: form.to, to: form.from })
 
+  // After saving, back to the trip page with a notice. Opened from that page,
+  // the finder's history entry is left by going back to it, so Back from the
+  // trip page then goes wherever the user was before; the notice is added to
+  // that entry once it is reached. Opened from a link there is no trip page
+  // behind it, and the finder's entry is replaced instead.
+  const backToTrip = n => {
+    const target = `/trips/${tripId}`
+    const notice = { notice: `Added ${n} item${n !== 1 ? 's' : ''} from the connection.` }
+    if (state?.fromTrip && window.history.state?.idx > 0) {
+      window.addEventListener('popstate', () => navigate(target, { replace: true, state: notice }), { once: true })
+      navigate(-1)
+    } else {
+      navigate(target, { replace: true, state: notice })
+    }
+  }
+
   if (loading) return <Loading />
   if (missing) return <div className="empty-state"><p className="empty-state-title">Trip not found.</p></div>
 
@@ -170,7 +186,7 @@ export default function TripRoutePage() {
           tripId={tripId}
           itinerary={chosen}
           onBack={() => setChosen(null)}
-          onSaved={n => navigate(`/trips/${tripId}`, { replace: true, state: { notice: `Added ${n} item${n !== 1 ? 's' : ''} from the connection.` } })}
+          onSaved={backToTrip}
         />
       </div>
     )

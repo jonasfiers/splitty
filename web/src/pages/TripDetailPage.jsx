@@ -97,7 +97,7 @@ export default function TripDetailPage() {
   // timeline (its start to depart after, its end to arrive by).
   const findRoute = ({ start, end, from, to } = {}) => {
     const q = new URLSearchParams({ ...(start && { when: start }), ...(end && { by: end }) })
-    navigate(`/trips/${id}/route${q.toString() ? `?${q}` : ''}`, { state: { from, to } })
+    navigate(`/trips/${id}/route${q.toString() ? `?${q}` : ''}`, { state: { from, to, fromTrip: true } })
   }
 
   const createFromTimeline = range => setQuickAdd(range)
