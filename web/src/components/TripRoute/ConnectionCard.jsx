@@ -68,7 +68,7 @@ function ConnectionCard({ itinerary: it, searchDay, onChoose }) {
               <div className="route-leg-info">
                 <div className="route-leg-stops">{leg.from.name} → {leg.to.name}</div>
                 <div className="route-leg-meta">
-                  {[legLabel(leg), leg.headsign && `towards ${leg.headsign}`, leg.carrier].filter(Boolean).join(' · ')}
+                  {[legLabel(leg), leg.headsign && `towards ${leg.headsign}`, leg.carrier, leg.arrivalNote?.replace(/\.$/, '')].filter(Boolean).join(' · ')}
                 </div>
               </div>
             </li>

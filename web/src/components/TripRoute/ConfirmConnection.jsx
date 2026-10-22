@@ -64,6 +64,8 @@ function ConfirmConnection({ tripId, itinerary, onBack, onSaved }) {
     const line = found.line && found.line !== leg.number ? `Line ${found.line}` : ''
     const direction = found.headsign ? `${line ? 'towards' : 'Towards'} ${found.headsign}` : ''
     const parts = [[line, direction].filter(Boolean).join(', ')]
+    // A leg that crosses westward into another zone ends on its departure clock.
+    if (found.arrivalNote) parts.push(found.arrivalNote.replace(/\.$/, ''))
     const change = found.change
     const next = legs[i + 1]
     if (change && next?.include) {

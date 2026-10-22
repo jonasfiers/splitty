@@ -186,6 +186,14 @@ function normaliseLeg(leg) {
     const startTime = leg.scheduledStartTime || leg.startTime;
     const endTime = leg.scheduledEndTime || leg.endTime;
     const mode = splittyMode(leg.mode);
+    const start = utcToLocal(startTime, from.tz);
+    const arrival = utcToLocal(endTime, to.tz);
+    // Westward across a zone border a short ride can arrive "before" it left
+    // (Tornio 12:00 EET -> Haparanda 11:10 CET). An item can not end before it
+    // starts, so such a leg ends on its departure clock (12:10, the true
+    // duration) and says when that is locally.
+    const backwards = arrival < start;
+    const day = backwards && arrival.slice(0, 10) !== utcToLocal(endTime, from.tz).slice(0, 10) ? ` on ${arrival.slice(0, 10)}` : '';
     return {
         mode,
         transitMode: leg.mode,
@@ -198,8 +206,9 @@ function normaliseLeg(leg) {
         title: `${from.name} → ${to.name}`,
         from,
         to,
-        start: utcToLocal(startTime, from.tz),
-        end: utcToLocal(endTime, to.tz),
+        start,
+        end: backwards ? utcToLocal(endTime, from.tz) : arrival,
+        ...(backwards ? { arrivalNote: `Arrives ${arrival.slice(11, 16)} local time${day}.` } : {}),
         minutes: minutesBetween(startTime, endTime),
         stops: (leg.intermediateStops || []).length,
         startTime,
