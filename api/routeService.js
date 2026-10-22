@@ -197,6 +197,21 @@ const stopOf = place => ({
     tz: place.tz || zoneAt(place.lat, place.lon),
 });
 
+// Readable names for operators that Taiwan's feeds only name in Chinese, as
+// seen in real Transitous answers. Exact matches only; any other name stays
+// as the feed gives it.
+const AGENCY_NAMES = new Map([
+    ['交通部臺灣鐵路管理局', 'Taiwan Railways (TRA)'],
+    ['臺灣高速鐵路股份有限公司', 'Taiwan High Speed Rail (THSR)'],
+    ['臺北大眾捷運股份有限公司', 'Taipei Metro'],
+    ['高雄捷運股份有限公司', 'Kaohsiung Metro'],
+    ['南投客運', 'Nantou Bus'],
+    ['首都客運', 'Capital Bus'],
+    ['臺北客運', 'Taipei Bus'],
+    ['宜蘭縣政府', 'Yilan County Government'],
+]);
+const agencyName = name => AGENCY_NAMES.get(name) ?? (name || '');
+
 function normaliseLeg(leg) {
     const from = stopOf(leg.from), to = stopOf(leg.to);
     // The timetable time, which is what goes on the itinerary; a delay known
@@ -217,7 +232,7 @@ function normaliseLeg(leg) {
         transitMode: leg.mode,
         line: leg.displayName || leg.routeShortName || '',
         headsign: leg.headsign || '',
-        carrier: leg.agencyName || '',
+        carrier: agencyName(leg.agencyName),
         // Feeds differ: a train number is in tripShortName when the feed has
         // one at all; a bus is known by its route number.
         number: leg.tripShortName || (mode === 'bus' ? leg.routeShortName || '' : ''),
