@@ -132,7 +132,14 @@ async function fetchPlan(params) {
         throw new RouteError('The route planner could not search between these places at that time.', 422);
     }
     if (!res.ok) throw new RouteError('The route planner (Transitous) is not available right now. Try again later.');
-    return res.json();
+    // The body arrives after the headers, under the same timeout; a proxy's
+    // error page can come with a 200 too.
+    try {
+        return await res.json();
+    } catch (err) {
+        if (err.name === 'TimeoutError' || err.name === 'AbortError') throw new RouteError('The route planner took too long to answer. Try again in a moment.', 504);
+        throw new RouteError('The route planner (Transitous) sent an answer that could not be read. Try again later.');
+    }
 }
 
 function cached(key) {
