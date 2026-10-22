@@ -15,7 +15,7 @@ const moment = (date, time) => (date ? (time ? `${date}T${time}` : date) : '')
 // timeline drag (or tap) already decided, plus a name, the place(s) and, for
 // travel, the mode. "More details…" carries what is filled in over to the
 // full form for the booking reference, link and notes.
-function QuickAddSheet({ tripId, kind, start, end, places, onClose, onSaved, onMore }) {
+function QuickAddSheet({ tripId, kind, start, end, places, onClose, onSaved, onMore, onFindRoute }) {
   const [form, setForm] = useState({
     title: '',
     mode: 'flight',
@@ -68,6 +68,15 @@ function QuickAddSheet({ tripId, kind, start, end, places, onClose, onSaved, onM
     ...(form.title.trim() && { title: form.title.trim() }),
   })
 
+  // Travel by train or bus: let the route planner fill it in, starting from
+  // what is set here (the dragged range, and the places if already picked).
+  const findRoute = () => onFindRoute({
+    start: moment(form.startDate, form.startTime),
+    end: moment(form.endDate || (form.endTime ? form.startDate : ''), form.endTime),
+    from: form.from,
+    to: form.to,
+  })
+
   return (
     // Above the full-screen timeline too, where this can also be started.
     <div className="sheet-overlay" style={{ zIndex: 1100 }} onClick={e => { if (e.target === e.currentTarget) onClose() }}>
@@ -75,6 +84,11 @@ function QuickAddSheet({ tripId, kind, start, end, places, onClose, onSaved, onM
         <div className="sheet-handle" />
         <p className="sheet-title">{KINDS[kind].icon} Add {kind === 'transport' ? 'travel' : KINDS[kind].label.toLowerCase()}</p>
         <form onSubmit={handleSubmit}>
+          {kind === 'transport' && onFindRoute && (
+            <button type="button" className="btn btn-pill-outline quick-add-route" onClick={findRoute}>
+              🔎 Find a train or bus connection
+            </button>
+          )}
           {kind === 'transport' && (
             <div className="filter-chips" style={{ paddingTop: 0, flexWrap: 'wrap' }}>
               {TRANSPORT_MODES.map(m => (

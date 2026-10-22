@@ -45,12 +45,15 @@ Times are local wall-clock strings, as printed on the ticket, with no timezone. 
 
 Uploaded tickets live on disk, outside the API's directory (`UPLOAD_DIR`); the graph holds an `Attachment` node with the name, type and size. Place search uses OpenStreetMap's Nominatim, proxied and rate-limited by the API, and map tiles come from OpenStreetMap.
 
+"Find a route" searches public-transport connections through [Transitous](https://transitous.org/), a community-run MOTIS instance built on the open timetables operators publish, so coverage differs by region and kind of transport. Transitous answers in UTC; the API turns a search time into UTC with the timezone at the place's coordinates (`@photostructure/tz-lookup`, offline) and gives every leg back on the wall clock of its own stops, so the legs of a chosen connection become ordinary transport items, added in one transaction. Searches are cached, sent one at a time and rate-limited per user, with a User-Agent naming `APP_URL` and `CONTACT_EMAIL`, as Transitous's usage policy asks.
+
 ## Features
 
 - Groups with multi-currency support and daily exchange-rate snapshots
 - Expenses with hierarchical categories, arbitrary per-person shares, and settlements
 - Balance transfers between groups
 - Trips planned per group: transport, stays and activities on a day-by-day timeline and a map, with booking details and attached tickets, each able to create the expense that pays for it
+- Public-transport route search for trips (Transitous), adding a chosen connection's trains and buses as items
 - Passkey (WebAuthn) and password login
 - Push notifications for group activity
 - Installable PWA with an offline-friendly service worker

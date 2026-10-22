@@ -21,6 +21,7 @@ const TripsPage             = lazy(() => import('./pages/TripsPage'))
 const TripDetailPage        = lazy(() => import('./pages/TripDetailPage'))
 const TripItemFormPage      = lazy(() => import('./pages/TripItemFormPage'))
 const TripItemDetailPage    = lazy(() => import('./pages/TripItemDetailPage'))
+const TripRoutePage         = lazy(() => import('./pages/TripRoutePage'))
 const InvitePage            = lazy(() => import('./pages/InvitePage'))
 const ForgotPasswordPage    = lazy(() => import('./pages/ForgotPasswordPage'))
 const ResetPasswordPage     = lazy(() => import('./pages/ResetPasswordPage'))
@@ -52,6 +53,7 @@ export default function App() {
               <Route path="/trips" element={<TripsPage />} />
               <Route path="/trips/:id" element={<TripDetailPage />} />
               <Route path="/trips/:tripId/items/new" element={<TripItemFormPage />} />
+              <Route path="/trips/:tripId/route" element={<TripRoutePage />} />
               <Route path="/trips/:tripId/items/:itemId" element={<TripItemDetailPage />} />
               <Route path="/trips/:tripId/items/:itemId/edit" element={<TripItemFormPage />} />
               <Route path="/activity" element={<ActivityPage />} />

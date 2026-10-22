@@ -94,3 +94,9 @@ export const mapsUrl = place =>
 
 export const formatBytes = bytes =>
   bytes >= 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} kB`
+
+// 75 -> '1 h 15 min'
+export const formatDuration = minutes => {
+  const h = Math.floor(minutes / 60), m = minutes % 60
+  return h ? `${h} h${m ? ` ${m} min` : ''}` : `${m} min`
+}

@@ -93,6 +93,13 @@ export default function TripDetailPage() {
     return () => clearTimeout(t)
   }, [moved])
 
+  // The route planner, from the add sheet or with a range dragged out on the
+  // timeline (its start to depart after, its end to arrive by).
+  const findRoute = ({ start, end, from, to } = {}) => {
+    const q = new URLSearchParams({ ...(start && { when: start }), ...(end && { by: end }) })
+    navigate(`/trips/${id}/route${q.toString() ? `?${q}` : ''}`, { state: { from, to } })
+  }
+
   const createFromTimeline = range => setQuickAdd(range)
   const quickAdded = async title => {
     setQuickAdd(null)
@@ -279,6 +286,7 @@ export default function TripDetailPage() {
           onClose={() => setQuickAdd(null)}
           onSaved={quickAdded}
           onMore={({ kind, ...rest }) => navigate(newItemUrl(kind, rest))}
+          onFindRoute={findRoute}
         />
       )}
 
@@ -288,6 +296,9 @@ export default function TripDetailPage() {
             <div className="sheet-handle" />
             <p className="sheet-title">Add to trip</p>
             <div className="trip-kind-grid">
+              <button className="trip-kind trip-kind-wide" onClick={() => findRoute()}>
+                <span>🔎</span>Find a public-transport route
+              </button>
               {TRANSPORT_MODES.filter(m => m.value !== 'other').map(m => (
                 <button key={m.value} className="trip-kind" onClick={() => navigate(`/trips/${id}/items/new?kind=transport&mode=${m.value}`)}>
                   <span>{m.icon}</span>{m.label}
