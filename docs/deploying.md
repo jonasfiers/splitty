@@ -176,6 +176,10 @@ root lockfile is ever missing, the script falls back to `npm install
   therefore not hash-match the built file; fetch from CT101 with a `Host:`
   header to compare bytes against `web/dist`.
 
+## Route planner contact address
+
+The route planner identifies itself to Transitous as `Splitty/<api version> (<APP_URL>; <CONTACT_EMAIL>)`, as its usage policy asks. `CONTACT_EMAIL` is optional and read from `/etc/splitty-api.env` like the rest; set it (the technical address) so the volunteers running Transitous can reach someone if Splitty misbehaves. Beyond that the API only needs outgoing HTTPS to `api.transitous.org`; it already reaches Nominatim for place search, which also supplies English station names.
+
 ## Trip attachments need three things outside the repo
 
 Uploaded tickets are files on CT104, not data in Neo4j, and none of what they need is something `deploy.sh` sets up:
