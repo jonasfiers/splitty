@@ -1,8 +1,13 @@
 import { Fragment } from 'react'
 import { TRANSPORT_MODES, dayOf, timeOf, daysBetween, formatDay, formatDuration } from '../../utils/trip.js'
 
-// A change shorter than this is easy to miss with luggage or a late train.
+// A change with less time than this to spare is easy to miss with luggage or
+// a late train. The wait between two vehicles includes any walk between their
+// stops, so what is spare is the wait minus the walk.
 export const TIGHT_MINUTES = 10
+export const spareMinutes = change => Math.max(0, change.waitMinutes - change.walkMinutes)
+export const isTight = change => spareMinutes(change) < TIGHT_MINUTES
+export const tightLabel = change => (change.walkMinutes ? `Tight · ${spareMinutes(change)} min spare` : 'Tight')
 
 const TRANSIT_ICONS = { HIGHSPEED_RAIL: '🚄', SUBWAY: '🚇', METRO: '🚇', TRAM: '🚊', COACH: '🚌' }
 
@@ -77,9 +82,9 @@ function ConnectionCard({ itinerary: it, searchDay, onChoose, active = false, on
               </div>
             </li>
             {leg.change && (
-              <li className={`route-change${leg.change.waitMinutes < TIGHT_MINUTES ? ' tight' : ''}`}>
+              <li className={`route-change${isTight(leg.change) ? ' tight' : ''}`}>
                 <span>{changeText(leg.change)}</span>
-                {leg.change.waitMinutes < TIGHT_MINUTES && <span className="route-tag">Tight</span>}
+                {isTight(leg.change) && <span className="route-tag">{tightLabel(leg.change)}</span>}
               </li>
             )}
           </Fragment>

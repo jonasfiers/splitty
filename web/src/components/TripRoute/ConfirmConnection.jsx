@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, lazy, Suspense } from 'react'
 import client from '../../api/client'
 import { TRANSPORT_MODES, dayOf, timeOf, formatDay, formatDuration } from '../../utils/trip.js'
-import { legIcon, legLabel, crossesZones, TIGHT_MINUTES } from './ConnectionCard.jsx'
+import { legIcon, legLabel, crossesZones, isTight, tightLabel, spareMinutes } from './ConnectionCard.jsx'
 import Expandable from '../Expandable/Expandable.jsx'
 import Loading from '../Loading.jsx'
 
@@ -74,7 +74,8 @@ function ConfirmConnection({ tripId, itinerary, onBack, onSaved }) {
     const next = legs[i + 1]
     if (change && next?.include) {
       const walkTo = next.fromKey !== leg.toKey ? ` to ${nameOf(next.fromKey)}` : ''
-      parts.push(`${change.waitMinutes} min to change at ${nameOf(leg.toKey)}${change.walkMinutes ? ` (${change.walkMinutes} min walk${walkTo})` : ''}`)
+      // The wait includes the walk, so a note with a walk also says what is left.
+      parts.push(`${change.waitMinutes} min to change at ${nameOf(leg.toKey)}${change.walkMinutes ? ` (${change.walkMinutes} min walk${walkTo}, ${spareMinutes(change)} min to spare)` : ''}`)
     }
     return parts.filter(Boolean).map(p => `${p}.`).join(' ')
   }
@@ -220,9 +221,9 @@ function ConfirmConnection({ tripId, itinerary, onBack, onSaved }) {
                 )}
 
                 {found.change && legs[i + 1] && (
-                  <p className={`route-change${found.change.waitMinutes < TIGHT_MINUTES ? ' tight' : ''}`}>
+                  <p className={`route-change${isTight(found.change) ? ' tight' : ''}`}>
                     <span>{found.change.waitMinutes} min to change{found.change.walkMinutes ? `, ${found.change.walkMinutes} min walk` : ''}</span>
-                    {found.change.waitMinutes < TIGHT_MINUTES && <span className="route-tag">Tight</span>}
+                    {isTight(found.change) && <span className="route-tag">{tightLabel(found.change)}</span>}
                   </p>
                 )}
               </div>
