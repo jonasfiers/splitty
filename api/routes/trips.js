@@ -13,6 +13,11 @@ const FILE_LINK_TTL = '1h';
 const LAT_LON = /^(-?\d{1,2}(?:\.\d+)?),(-?\d{1,3}(?:\.\d+)?)$/;
 const NEAR_METRES = 300; // a stop this close to a place of the trip is that place
 const MAX_LEGS = 12;
+// English names for new stops: at most this many per connection, and none
+// started after this long, so the request stays well inside proxy timeouts.
+// The rest keep their timetable names, which the user can still edit.
+const MAX_NAME_LOOKUPS = 8;
+const NAME_LOOKUP_MS = 10000;
 
 // Attachment links are signed with a key derived from JWT_SECRET, never with
 // the secret itself: a link must not double as a login token, or the reverse.
@@ -172,6 +177,7 @@ router.get('/geocode', geocodeLimiter, async (req, res) => {
         if (q.length < 3) return res.status(400).json({ error: 'Type at least 3 characters to search.' });
         res.json({ success: true, results: await geocodeService.search(q) });
     } catch (error) {
+        if (error.busy) return res.status(503).json({ error: 'Place search is busy. Try again in a few seconds.' });
         console.error(error);
         res.status(502).json({ error: 'Place search is not available right now.' });
     }
@@ -491,11 +497,20 @@ router.post('/:id/routes/places', routeLimiter, async (req, res) => {
             return proposal.key;
         });
 
-        for (const p of proposals.filter(p => !p.id)) {
+        const deadline = Date.now() + NAME_LOOKUP_MS;
+        for (const p of proposals.filter(p => !p.id).slice(0, MAX_NAME_LOOKUPS)) {
+            const left = deadline - Date.now();
+            if (left <= 0) break;
             try {
-                p.name = (await geocodeService.englishStopName(p.originalName, p.lat, p.lon)) || p.name;
+                // A lookup still running at the deadline finishes in the
+                // background and only fills the cache.
+                const name = await Promise.race([
+                    geocodeService.englishStopName(p.originalName, p.lat, p.lon),
+                    new Promise(resolve => setTimeout(resolve, left, null)),
+                ]);
+                p.name = name || p.name;
             } catch (err) {
-                // Nominatim being away only costs the English name.
+                // Nominatim being away or busy only costs the English name.
                 console.error(`English stop name lookup failed: ${err.message}`);
             }
         }

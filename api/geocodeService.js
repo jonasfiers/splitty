@@ -7,10 +7,14 @@
 const ENDPOINT = 'https://nominatim.openstreetmap.org/search';
 const MIN_INTERVAL_MS = 1100;
 const CACHE_MAX = 500;
+// Each lookup in the queue is at least another second's wait, so past a few
+// a new one fails at once instead of holding its request open.
+const MAX_WAITING = 4;
 
 const cache = new Map();
 let queue = Promise.resolve();
 let lastCall = 0;
+let waiting = 0;
 
 const userAgent = () => `Splitty/1.0 (${process.env.APP_URL || 'self-hosted'})`;
 
@@ -28,12 +32,20 @@ async function fetchJson(params) {
     return res.json();
 }
 
-// Cached, and chained onto the queue so concurrent lookups still go out one at a time.
+// Cached, and chained onto the queue so concurrent lookups still go out one
+// at a time. A full queue throws an error marked `busy`.
 async function throttled(key, load) {
     if (cache.has(key)) return cache.get(key);
-    const result = queue.then(load);
+    if (waiting >= MAX_WAITING) throw Object.assign(new Error('Geocoder queue is full'), { busy: true });
+    waiting++;
+    const result = queue.then(() => (cache.has(key) ? cache.get(key) : load()));
     queue = result.catch(() => {});
-    const value = await result;
+    let value;
+    try {
+        value = await result;
+    } finally {
+        waiting--;
+    }
 
     if (cache.size >= CACHE_MAX) cache.delete(cache.keys().next().value);
     cache.set(key, value);
