@@ -163,7 +163,9 @@ export default function TripRoutePage() {
         <label>From</label>
         <PlacePicker value={form.from} onChange={from => set({ from })} places={places} placeholder="Station, hotel, address…" />
       </div>
-      <button type="button" className="route-swap" onClick={swap} aria-label="Swap from and to">⇅</button>
+      <div className="route-swap-row">
+        <button type="button" className="route-swap" onClick={swap} aria-label="Swap from and to">⇅ Swap</button>
+      </div>
       <div className="form-group">
         <label>To</label>
         <PlacePicker value={form.to} onChange={to => set({ to })} places={places} placeholder="Station, hotel, address…" />
