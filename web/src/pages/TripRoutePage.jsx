@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, lazy, Suspense } from 'react'
+import { useState, useEffect, useRef, useMemo, lazy, Suspense } from 'react'
 import { useParams, useNavigate, useSearchParams, useLocation } from 'react-router'
 import client from '../api/client'
 import Loading from '../components/Loading.jsx'
@@ -57,6 +57,14 @@ export default function TripRoutePage() {
   const [hoverKey, setHoverKey] = useState(null)
   const [selectedKey, setSelectedKey] = useState(null)
   const [view, setView] = useState('list') // below 1180px: 'list' | 'map'
+  // Arriving by a time, the best connection is the one arriving last before
+  // it, so those lists run latest first. A sorted copy: the answer itself is
+  // shared with the API's cache and the pages merged into it stay in time order.
+  const arriveByList = Boolean(result?.query.arriveBy)
+  const itineraries = useMemo(() => {
+    const list = result?.itineraries ?? []
+    return arriveByList ? [...list].sort((a, b) => b.arrival.localeCompare(a.arrival) || b.departure.localeCompare(a.departure)) : list
+  }, [result, arriveByList])
 
   useEffect(() => {
     client.get(`/trips/${tripId}`).then(({ data }) => {
@@ -217,7 +225,6 @@ export default function TripRoutePage() {
     </form>
   )
 
-  const itineraries = result?.itineraries ?? []
   const keyAt = i => (i == null || !itineraries[i] ? null : connectionKey(itineraries[i]))
   const indexOf = key => (key ? itineraries.findIndex(it => connectionKey(it) === key) : -1)
   const highlightIndex = [indexOf(hoverKey), indexOf(selectedKey)].find(i => i >= 0) ?? null
@@ -248,19 +255,18 @@ export default function TripRoutePage() {
     />
   )
 
+  // Earlier and later connections load where they belong in the list: above
+  // and below it in time order, the other way round when it runs latest first.
+  const pageButton = (direction, atTop) => result?.[direction === 'earlier' ? 'previousCursor' : 'nextCursor'] && (
+    <button type="button" className="btn btn-ghost btn-sm route-page-btn" onClick={() => run(result.query, direction)} disabled={Boolean(searching)}>
+      {searching === direction ? 'Searching…' : `${atTop ? '↑' : '↓'} ${direction === 'earlier' ? 'Earlier' : 'Later'}`}
+    </button>
+  )
   const list = (
     <>
-      {result?.previousCursor && (
-        <button type="button" className="btn btn-ghost btn-sm route-page-btn" onClick={() => run(result.query, 'earlier')} disabled={Boolean(searching)}>
-          {searching === 'earlier' ? 'Searching…' : '↑ Earlier'}
-        </button>
-      )}
+      {pageButton(arriveByList ? 'later' : 'earlier', true)}
       {itineraries.map(it => card(it, wide ? {} : { onShowOnMap: () => { setSelectedKey(connectionKey(it)); setView('map') } }))}
-      {result?.nextCursor && (
-        <button type="button" className="btn btn-ghost btn-sm route-page-btn" onClick={() => run(result.query, 'later')} disabled={Boolean(searching)}>
-          {searching === 'later' ? 'Searching…' : '↓ Later'}
-        </button>
-      )}
+      {pageButton(arriveByList ? 'earlier' : 'later', false)}
     </>
   )
 
