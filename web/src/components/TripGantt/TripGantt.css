@@ -121,7 +121,8 @@
 .gantt-hint {
     position: sticky;
     left: 0;
-    padding: 2px 14px 8px;
+    padding: 2px 130px 8px 14px; /* room for the zoom buttons in the corner */
+    min-height: 30px;
     font-size: 11px;
     color: var(--text-3);
 }
@@ -206,11 +207,11 @@
 .trip-toast button { color: var(--accent); font-weight: 700; flex-shrink: 0; }
 @media (min-width: 768px) { .trip-toast { bottom: 28px; } }
 
-/* Zoom: − / Fit / + beside the full-screen button, hour marks once days are wide enough. */
+/* Zoom: − / Fit / + in the bottom corner, clear of the dates; hour marks once days are wide enough. */
 .gantt-zoom {
     position: absolute;
-    top: 8px;
-    right: 48px;
+    bottom: 6px;
+    right: 10px;
     z-index: 6;
     display: flex;
     background: var(--surface);
