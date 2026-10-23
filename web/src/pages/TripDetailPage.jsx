@@ -5,6 +5,7 @@ import FabButton from '../components/FabButton/FabButton.jsx'
 import Loading from '../components/Loading.jsx'
 import BackLink from '../components/BackLink.jsx'
 import TripFormSheet from '../components/TripForm/TripFormSheet.jsx'
+import DuplicateTripSheet from '../components/TripForm/DuplicateTripSheet.jsx'
 import QuickAddSheet from '../components/TripForm/QuickAddSheet.jsx'
 import { formatCurrency } from '../utils/currency.js'
 import { KINDS, TRANSPORT_MODES, itemIcon, buildTimeline, formatDay, formatDateRange, formatMoment, daysBetween, today } from '../utils/trip.js'
@@ -27,7 +28,14 @@ const describe = (item, placeName) => {
   return parts.filter(part => part && part !== item.title).join(' · ')
 }
 
-export default function TripDetailPage() {
+// A new trip id (e.g. after copying) remounts the page, so nothing of the
+// previous trip's state carries over.
+export default function TripDetailPageForId() {
+  const { id } = useParams()
+  return <TripDetailPage key={id} />
+}
+
+function TripDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { state } = useLocation()
@@ -47,6 +55,7 @@ export default function TripDetailPage() {
   // The last bar moved on the timeline, offered for undo for a few seconds.
   const [moved, setMoved] = useState(null) // { item, before: { start, end } }
   const [showEdit, setShowEdit] = useState(false)
+  const [showCopy, setShowCopy] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
@@ -104,13 +113,14 @@ export default function TripDetailPage() {
       setError(`Could not delete "${item.title}".`)
     }
   }, [])
+  // Returns the delete request, so a caller can wait until the server has it.
   const flushRemoved = useCallback(() => {
     const r = removedRef.current
-    if (!r) return
+    if (!r) return Promise.resolve()
     removedRef.current = null
     clearTimeout(r.timer)
     setRemoved(null)
-    sendDelete(r.item)
+    return sendDelete(r.item)
   }, [sendDelete])
   const removeItem = item => {
     flushRemoved()
@@ -128,6 +138,14 @@ export default function TripDetailPage() {
     setItems(prev => [...prev, r.item])
   }
   useEffect(() => flushRemoved, [flushRemoved])
+
+  // A copy is made from what the server has, so a pending delete goes out
+  // (and is done) first, and no Undo of the original lingers.
+  const openCopy = async () => {
+    setMoved(null)
+    await flushRemoved()
+    setShowCopy(true)
+  }
 
   // The route planner, from the add sheet or with a range dragged out on the
   // timeline (its start to depart after, its end to arrive by).
@@ -229,6 +247,7 @@ export default function TripDetailPage() {
         <span className="sub-header-title">Trip</span>
         <div style={{ display: 'flex', gap: 8 }}>
           <button className="sub-header-del" style={{ color: 'var(--accent)' }} onClick={() => setShowEdit(true)}>Edit</button>
+          <button className="sub-header-del" style={{ color: 'var(--accent)' }} onClick={openCopy}>Copy</button>
           <button className="sub-header-del" onClick={handleDelete}>Delete</button>
         </div>
       </div>
@@ -360,6 +379,14 @@ export default function TripDetailPage() {
             <button className="btn btn-ghost" style={{ width: '100%', marginTop: 8 }} onClick={() => setShowKinds(false)}>Cancel</button>
           </div>
         </div>
+      )}
+
+      {showCopy && (
+        <DuplicateTripSheet
+          trip={trip}
+          onClose={() => setShowCopy(false)}
+          onCopied={(newId, title) => { setShowCopy(false); navigate(`/trips/${newId}`, { state: { notice: `Copied to "${title}". You are looking at the copy.` } }) }}
+        />
       )}
 
       {showEdit && (

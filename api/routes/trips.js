@@ -390,6 +390,20 @@ router.get('/:id', async (req, res) => {
     }
 });
 
+// DUPLICATE — {title} names the copy
+router.post('/:id/copy', async (req, res) => {
+    try {
+        const title = text(req.body.title, 120);
+        if (!title) return res.status(400).json({ error: 'A trip needs a title.' });
+        const result = await tripService.duplicateTrip(req.params.id, req.user.id, title);
+        if (!result.success) return res.status(404).json(result);
+        res.status(201).json(result);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // UPDATE
 router.put('/:id', async (req, res) => {
     try {

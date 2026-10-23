@@ -137,6 +137,81 @@ const tripService = {
         }
     },
 
+    // DUPLICATE: a new trip in the same group with the same dates, notes, places
+    // and items (its own copies, so editing one trip never touches the other).
+    // Expenses and attachments stay with the original: an expense linked to both
+    // would be counted twice, and a file shared by both would vanish with either.
+    // The copy remembers where it came from (COPIED_FROM), which is all a later
+    // "compare with the original" needs. One transaction: no half-made copy.
+    duplicateTrip: async (tripId, userId, title) => {
+        const session = driver.session();
+        try {
+            return await session.executeWrite(async tx => {
+                const { records } = await tx.run(
+                    `MATCH ${TRIP_ACCESS}
+                     MATCH (u:User {id: $userId})
+                     CREATE (n:Trip {id: randomUUID(), title: $title, icon: t.icon, startDate: t.startDate, endDate: t.endDate, notes: t.notes})-[:PLANNED_IN]->(g)
+                     CREATE (n)-[:CREATED_BY {on: datetime()}]->(u)
+                     CREATE (n)-[:COPIED_FROM {on: datetime()}]->(t)
+                     RETURN n.id AS id`,
+                    { tripId, userId, title }
+                );
+                if (records.length === 0) return { success: false, message: 'Trip not found or access denied' };
+                const newId = records[0].get('id');
+
+                const { records: placeRecords } = await tx.run(
+                    'MATCH (p:Place)-[:PLACE_OF]->(:Trip {id: $tripId}) RETURN p', { tripId }
+                );
+                const placeIds = new Map();
+                for (const r of placeRecords) {
+                    const p = r.get('p').properties;
+                    const { records: made } = await tx.run(
+                        `MATCH (t:Trip {id: $newId})
+                         CREATE (p:Place {id: randomUUID(), name: $name, address: $address, lat: $lat, lon: $lon})-[:PLACE_OF]->(t)
+                         RETURN p.id AS id`,
+                        { newId, ...placeProps(p) }
+                    );
+                    placeIds.set(p.id, made[0].get('id'));
+                }
+
+                const { records: itemRecords } = await tx.run(
+                    `MATCH (i:TripItem)-[:PART_OF]->(:Trip {id: $tripId})
+                     OPTIONAL MATCH (i)-[:EXPRESSED_IN]->(c:Currency)
+                     OPTIONAL MATCH (i)-[:AT]->(p:Place)
+                     OPTIONAL MATCH (i)-[:DEPARTS_FROM]->(f:Place)
+                     OPTIONAL MATCH (i)-[:ARRIVES_AT]->(a:Place)
+                     RETURN i, labels(i) AS labels, c.iso AS currencyIso,
+                            p.id AS placeId, f.id AS fromPlaceId, a.id AS toPlaceId`,
+                    { tripId }
+                );
+                for (const r of itemRecords) {
+                    const kind = kindOf(r.get('labels'));
+                    const data = r.get('i').properties;
+                    const itemId = await insertItem(tx, newId, userId, kind, data, null);
+                    const links = [['AT', r.get('placeId')], ['DEPARTS_FROM', r.get('fromPlaceId')], ['ARRIVES_AT', r.get('toPlaceId')]];
+                    for (const [rel, oldPlaceId] of links) {
+                        if (!oldPlaceId) continue;
+                        await tx.run(
+                            `MATCH (i:TripItem {id: $itemId}), (p:Place {id: $placeId}) CREATE (i)-[:${rel}]->(p)`,
+                            { itemId, placeId: placeIds.get(oldPlaceId) }
+                        );
+                    }
+                    if (r.get('currencyIso')) {
+                        await tx.run(
+                            'MATCH (i:TripItem {id: $itemId}), (c:Currency {iso: $iso}) CREATE (i)-[:EXPRESSED_IN]->(c)',
+                            { itemId, iso: r.get('currencyIso') }
+                        );
+                    }
+                }
+                return { success: true, id: newId, itemCount: itemRecords.length };
+            });
+        } catch (err) {
+            throw new Error(`Failed to duplicate trip: ${err.message}`);
+        } finally {
+            await session.close();
+        }
+    },
+
     // READ ALL (optionally for one group)
     getTrips: async (userId, groupId = null) => {
         try {
