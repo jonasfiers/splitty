@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { addDays, daysBetween, dayOf, timeOf, formatDay, itemIcon, today } from '../../utils/trip.js'
 import './TripGantt.css'
 
@@ -14,6 +15,7 @@ const LANES = [
   { kind: 'transport', label: 'Travel' },
   { kind: 'activity', label: 'Do' },
 ]
+const ADD_NOUN = { stay: 'a stay', transport: 'transport', activity: 'an activity' }
 // A stay given without times runs from mid-afternoon to late morning, which is
 // how it reads at a glance: one bar per night.
 const DEFAULT_CHECK_IN = 15
@@ -144,7 +146,7 @@ function rangeFor(kind, first, from, to, tapped, step) {
 // tap on a touch screen, where a drag scrolls) start a new item there.
 // `onReschedule(item, { start, end })`, when given, lets a mouse drag a bar to
 // move it, or drag its ends to change when it starts or ends.
-export default function TripGantt({ trip, items: allItems, placeName, onOpenItem, onCreate = null, onReschedule = null, highlight = null, onHover = () => {} }) {
+export default function TripGantt({ trip, items: allItems, placeName, onOpenItem, onCreate = null, onReschedule = null, onDelete = null, highlight = null, onHover = () => {} }) {
   const scroller = useRef(null)
   const [boxWidth, setBoxWidth] = useState(0)
   const [ghost, setGhost] = useState(null) // { kind, from, to } while dragging
@@ -152,6 +154,26 @@ export default function TripGantt({ trip, items: allItems, placeName, onOpenItem
   const [preview, setPreview] = useState(null) // { id, start, end } while a bar is dragged
   const barDrag = useRef(null)
   const skipClick = useRef(false)
+  // The right-click menu: { x, y, item } on a bar, { x, y, kind, at } on an empty spot of a lane.
+  const [menu, setMenu] = useState(null)
+  useEffect(() => {
+    if (!menu) return
+    const close = () => setMenu(null)
+    const onKey = e => { if (e.key === 'Escape') close() }
+    window.addEventListener('pointerdown', close)
+    window.addEventListener('keydown', onKey)
+    window.addEventListener('resize', close)
+    window.addEventListener('blur', close)
+    scroller.current?.addEventListener('scroll', close)
+    const el = scroller.current
+    return () => {
+      window.removeEventListener('pointerdown', close)
+      window.removeEventListener('keydown', onKey)
+      window.removeEventListener('resize', close)
+      window.removeEventListener('blur', close)
+      el?.removeEventListener('scroll', close)
+    }
+  }, [menu])
   // While a bar is dragged it is drawn (and packed) at its new times.
   const items = preview ? allItems.map(i => (i.id === preview.id ? { ...i, start: preview.start, end: preview.end } : i)) : allItems
   const now = today()
@@ -329,6 +351,19 @@ export default function TripGantt({ trip, items: allItems, placeName, onOpenItem
     setPreview(null)
   }
   const cancelBarDrag = () => { barDrag.current = null; setPreview(null) }
+  const barMenu = item => e => {
+    if (!onDelete) return
+    e.preventDefault()
+    e.stopPropagation()
+    cancelBarDrag()
+    setMenu({ x: e.clientX, y: e.clientY, item })
+  }
+  const laneMenu = kind => e => {
+    if (!onCreate || e.target.closest('.gantt-bar')) return
+    e.preventDefault()
+    cancelPress()
+    setMenu({ x: e.clientX, y: e.clientY, kind, at: posOf(e, e.currentTarget) })
+  }
   const lit = highlight?.length ? new Set(highlight) : null
   const todayIndex = daysBetween(first, now)
 
@@ -376,6 +411,7 @@ export default function TripGantt({ trip, items: allItems, placeName, onOpenItem
               onPointerUp={endPress}
               onPointerCancel={cancelPress}
               onClick={tapCreate}
+              onContextMenu={laneMenu(lane.kind)}
             >
               {columns.map((day, i) => (
                 <div
@@ -421,6 +457,7 @@ export default function TripGantt({ trip, items: allItems, placeName, onOpenItem
                   onPointerMove={moveBarDrag}
                   onPointerUp={endBarDrag}
                   onPointerCancel={cancelBarDrag}
+                  onContextMenu={barMenu(item)}
                 >
                   {onReschedule && !captioned && <span className="gantt-handle start" data-handle="start" />}
                   <span className="gantt-bar-icon">{itemIcon(item)}</span>
@@ -439,10 +476,31 @@ export default function TripGantt({ trip, items: allItems, placeName, onOpenItem
           </div>
         ))}
       </div>
+      {menu && createPortal(
+        <div
+          className="gantt-menu"
+          role="menu"
+          style={{ left: Math.min(menu.x, window.innerWidth - 190), top: Math.min(menu.y, window.innerHeight - 120) }}
+          onPointerDown={e => e.stopPropagation()}
+          onContextMenu={e => e.preventDefault()}
+        >
+          {menu.item ? (
+            <>
+              <button type="button" role="menuitem" onClick={() => { setMenu(null); onOpenItem(menu.item) }}>Open</button>
+              <button type="button" role="menuitem" className="danger" onClick={() => { setMenu(null); onDelete(menu.item) }}>Delete</button>
+            </>
+          ) : (
+            <button type="button" role="menuitem" onClick={() => { setMenu(null); onCreate({ kind: menu.kind, ...rangeFor(menu.kind, first, menu.at, menu.at, true, step) }) }}>
+              Add {ADD_NOUN[menu.kind]} here
+            </button>
+          )}
+        </div>,
+        document.body,
+      )}
       {onCreate && (
         <div className="gantt-hint">
           <span className="gantt-hint-pointer">
-            Drag across a lane to add something there{onReschedule && ' · drag a bar, or its ends, to change when it happens'} · Ctrl/⌘ + scroll or pinch to zoom
+            Drag across a lane to add something there{onReschedule && ' · drag a bar, or its ends, to change when it happens'}{onDelete && ' · right-click a bar for more'} · Ctrl/⌘ + scroll or pinch to zoom
           </span>
           <span className="gantt-hint-touch">Tap an empty spot in a lane to add something on that day</span>
         </div>

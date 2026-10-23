@@ -250,3 +250,26 @@
     border-left: 1px dashed var(--border);
     opacity: .7;
 }
+
+/* Right-click menu on a bar or an empty spot of a lane. */
+.gantt-menu {
+    position: fixed;
+    z-index: 1300;
+    min-width: 170px;
+    padding: 4px;
+    display: flex;
+    flex-direction: column;
+    border-radius: var(--r-md);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-lg);
+}
+.gantt-menu button {
+    padding: 8px 12px;
+    text-align: left;
+    font-size: 14px;
+    color: var(--text);
+    border-radius: var(--r-sm, 6px);
+}
+.gantt-menu button:hover, .gantt-menu button:focus-visible { background: var(--accent-light); outline: none; }
+.gantt-menu button.danger { color: var(--red-dark); }

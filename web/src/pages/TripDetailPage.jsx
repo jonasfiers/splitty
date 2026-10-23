@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, lazy, Suspense } from 'react'
+import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react'
 import { useParams, useNavigate, useLocation, Link } from 'react-router'
 import client from '../api/client'
 import FabButton from '../components/FabButton/FabButton.jsx'
@@ -92,6 +92,42 @@ export default function TripDetailPage() {
     const t = setTimeout(() => setMoved(null), 6000)
     return () => clearTimeout(t)
   }, [moved])
+
+  // Deleting from the timeline has no confirm dialog: the item leaves the page
+  // at once and is only deleted on the server after a few seconds, so Undo is
+  // just cancelling that. Leaving the page sends it straight away.
+  const [removed, setRemoved] = useState(null) // { item, timer }
+  const removedRef = useRef(null)
+  const sendDelete = useCallback(async item => {
+    try { await client.delete(`/trips/items/${item.id}`) } catch {
+      setItems(prev => (prev.some(i => i.id === item.id) ? prev : [...prev, item]))
+      setError(`Could not delete "${item.title}".`)
+    }
+  }, [])
+  const flushRemoved = useCallback(() => {
+    const r = removedRef.current
+    if (!r) return
+    removedRef.current = null
+    clearTimeout(r.timer)
+    setRemoved(null)
+    sendDelete(r.item)
+  }, [sendDelete])
+  const removeItem = item => {
+    flushRemoved()
+    setItems(prev => prev.filter(i => i.id !== item.id))
+    const r = { item, timer: setTimeout(flushRemoved, 6000) }
+    removedRef.current = r
+    setRemoved(r)
+  }
+  const undoRemove = () => {
+    const r = removedRef.current
+    if (!r) return
+    removedRef.current = null
+    clearTimeout(r.timer)
+    setRemoved(null)
+    setItems(prev => [...prev, r.item])
+  }
+  useEffect(() => flushRemoved, [flushRemoved])
 
   // The route planner, from the add sheet or with a range dragged out on the
   // timeline (its start to depart after, its end to arrive by).
@@ -237,7 +273,7 @@ export default function TripDetailPage() {
             </Suspense>
           )}
         >
-          <TripGantt trip={trip} items={items} placeName={placeName} onOpenItem={openItem} onCreate={createFromTimeline} onReschedule={reschedule} highlight={highlight} onHover={setHighlight} />
+          <TripGantt trip={trip} items={items} placeName={placeName} onOpenItem={openItem} onCreate={createFromTimeline} onReschedule={reschedule} onDelete={removeItem} highlight={highlight} onHover={setHighlight} />
         </Expandable>
       )}
 
@@ -267,14 +303,21 @@ export default function TripDetailPage() {
 
       <FabButton onClick={() => setShowKinds(true)} label="Add to trip" />
 
-      {moved && (
+      {moved && !removed && (
         <div className="trip-toast" role="status">
           <span>Moved “{moved.item.title}” to {formatMoment(moved.item.start)}</span>
           <button type="button" onClick={undoMove}>Undo</button>
         </div>
       )}
 
-      {added && !moved && (
+      {removed && (
+        <div className="trip-toast" role="status">
+          <span>Deleted “{removed.item.title}”</span>
+          <button type="button" onClick={undoRemove}>Undo</button>
+        </div>
+      )}
+
+      {added && !moved && !removed && (
         <div className="trip-toast" role="status"><span>Added “{added}”</span></div>
       )}
 
