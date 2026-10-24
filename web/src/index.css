@@ -2497,6 +2497,23 @@ a.expense-item { color: inherit; text-decoration: none; }
   position: relative;
   z-index: 0;
 }
+
+/* Dark theme: the standard tiles are inverted (hue turned back so water stays
+   blue), only the tile layer, so markers, arcs and pop-ups keep their colours. */
+[data-theme="dark"] .leaflet-container { background: #1b1b1b; }
+[data-theme="dark"] .leaflet-tile-pane {
+  filter: invert(1) hue-rotate(180deg) brightness(.92) contrast(.88) saturate(.8);
+}
+/* Pins and Leaflet's own white chrome (zoom buttons, pop-ups, attribution) follow the theme. */
+[data-theme="dark"] .trip-pin { background: var(--surface); border-color: var(--accent); color: var(--accent); }
+[data-theme="dark"] .trip-pin-n { background: var(--accent); }
+[data-theme="dark"] .leaflet-bar a,
+[data-theme="dark"] .leaflet-popup-content-wrapper,
+[data-theme="dark"] .leaflet-popup-tip { background: var(--surface); color: var(--text); }
+[data-theme="dark"] .leaflet-bar a { border-bottom-color: var(--border); }
+[data-theme="dark"] .leaflet-bar a.leaflet-disabled { background: var(--surface-2); color: var(--text-3); }
+[data-theme="dark"] .leaflet-control-attribution { background: rgba(36, 30, 26, .8); color: var(--text-3); }
+[data-theme="dark"] .leaflet-control-attribution a { color: var(--accent); }
 .trip-pin {
   width: 34px;
   height: 34px;
