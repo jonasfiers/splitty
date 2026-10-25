@@ -1319,17 +1319,29 @@ const passkeyService = {
 };
 
 const TOKEN_TYPES = new Set(['Invite', 'Password', 'EmailVerification', 'EmailChange']);
+// One live token per user for these: their payload carries the userId, and a new
+// link replaces the user's earlier ones of the same type, so only the newest
+// email works. Invites stay many-per-group (several links may be shared at once).
+const PER_USER_TOKEN_TYPES = new Set(['Password', 'EmailVerification', 'EmailChange']);
 
 const tokenService = {
     create: async (type, payload, ttlMs) => {
         if (!TOKEN_TYPES.has(type)) throw new Error(`Invalid token type: ${type}`);
-        await driver.executeQuery(`MATCH (t:Token:${type}) WHERE t.expiresAt <= datetime() DELETE t`);
+        const perUser = PER_USER_TOKEN_TYPES.has(type);
+        if (perUser && !payload.userId) throw new Error(`${type} token requires a userId`);
         const token = crypto.randomBytes(32).toString('hex');
         const expiresAt = new Date(Date.now() + ttlMs).toISOString();
+        // Expired tokens are swept by purgeExpired (startup + daily), not here.
         await driver.executeQuery(
+            (perUser
+                ? `OPTIONAL MATCH (old:Token:${type} {userId: $userId})
+            WITH collect(old) AS olds
+            FOREACH (o IN olds | DELETE o)
+            `
+                : '') +
             `CREATE (t:Token:${type} {token: $token, expiresAt: datetime($expiresAt)})
             SET t += $payload`,
-            { token, expiresAt, payload }
+            { token, expiresAt, payload, userId: payload.userId ?? null }
         );
         return token;
     },
@@ -1343,16 +1355,34 @@ const tokenService = {
         return records.length > 0 ? records[0].get('props') : null;
     },
 
+    // For the per-user types, using a token also revokes that user's other
+    // tokens of the same type (e.g. any other reset link after a password reset).
     consume: async (type, token) => {
         if (!TOKEN_TYPES.has(type)) throw new Error(`Invalid token type: ${type}`);
         const { records } = await driver.executeQuery(
-            `MATCH (t:Token:${type} {token: $token}) WHERE t.expiresAt > datetime()
+            PER_USER_TOKEN_TYPES.has(type)
+                ? `MATCH (t:Token:${type} {token: $token}) WHERE t.expiresAt > datetime()
+            WITH t, properties(t) AS props
+            OPTIONAL MATCH (other:Token:${type} {userId: t.userId}) WHERE other <> t
+            WITH t, props, collect(other) AS others
+            FOREACH (o IN others | DELETE o)
+            DELETE t
+            RETURN props`
+                : `MATCH (t:Token:${type} {token: $token}) WHERE t.expiresAt > datetime()
             WITH t, properties(t) AS props
             DELETE t
             RETURN props`,
             { token }
         );
         return records.length > 0 ? records[0].get('props') : null;
+    },
+
+    // Deletes expired tokens of every type; returns how many went.
+    purgeExpired: async () => {
+        const { summary } = await driver.executeQuery(
+            'MATCH (t:Token) WHERE t.expiresAt <= datetime() DELETE t'
+        );
+        return summary.counters.updates().nodesDeleted;
     },
 };
 

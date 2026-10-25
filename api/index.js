@@ -59,6 +59,20 @@ app.use('/invites', require('./routes/invites'));
 app.use('/trips', require('./routes/trips.js'));
 
 
+// EXPIRED TOKEN PURGE — on startup, then daily. find/consume already ignore
+// expired tokens; this only stops them piling up. Never fatal.
+const { tokenService } = require('./crudService');
+const purgeExpiredTokens = async () => {
+    try {
+        const n = await tokenService.purgeExpired();
+        if (n > 0) console.log(`Purged ${n} expired token${n === 1 ? '' : 's'}`);
+    } catch (err) {
+        console.error('Expired token purge failed:', err.message);
+    }
+};
+purgeExpiredTokens();
+setInterval(purgeExpiredTokens, 24 * 60 * 60 * 1000).unref();
+
 // KEEP LISTENING ON PORTS
 
 app.listen(PORT, () => {
