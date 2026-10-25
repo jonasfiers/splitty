@@ -41,6 +41,17 @@
 
 'use strict';
 const fs = require('fs');
+const path = require('path');
+
+// npm's own semver, bundled with the node running this (no install needed:
+// this runs before `npm ci`). Without it the range check below is skipped and
+// `npm ls` after the install is the only range check.
+let semver = null;
+try {
+  semver = require(path.join(path.dirname(process.execPath), '..', 'lib', 'node_modules', 'npm', 'node_modules', 'semver'));
+} catch {
+  console.error('api-lock-from-root: warning: npm\'s bundled semver not found, skipping the range check');
+}
 
 const [rootLockPath, apiPkgPath] = process.argv.slice(2);
 if (!rootLockPath || !apiPkgPath) {
@@ -78,14 +89,19 @@ const resolveIn = (pkgs, from, name) => {
   return null;
 };
 
-// Edges of a package: [name, kind] where kind is prod|dev|optional|peer.
+// Edges of a package: [name, kind, spec] where kind is
+// prod|dev|optional|peer|peerOptional. Optional peers are never placed or
+// walked (npm does not install them for their own sake); they are only
+// checked where some other edge brought a copy into the tree.
 const edgesOf = (entry, isRoot) => {
   const out = [];
-  for (const n of Object.keys(entry.dependencies || {})) out.push([n, 'prod']);
-  for (const n of Object.keys(entry.optionalDependencies || {})) out.push([n, 'optional']);
+  for (const [n, spec] of Object.entries(entry.dependencies || {})) out.push([n, 'prod', spec]);
+  for (const [n, spec] of Object.entries(entry.optionalDependencies || {})) out.push([n, 'optional', spec]);
   const meta = entry.peerDependenciesMeta || {};
-  for (const n of Object.keys(entry.peerDependencies || {})) out.push([n, meta[n] && meta[n].optional ? 'optional' : 'peer']);
-  if (isRoot) for (const n of Object.keys(entry.devDependencies || {})) out.push([n, 'dev']);
+  for (const [n, spec] of Object.entries(entry.peerDependencies || {})) {
+    out.push([n, meta[n] && meta[n].optional ? 'peerOptional' : 'peer', spec]);
+  }
+  if (isRoot) for (const [n, spec] of Object.entries(entry.devDependencies || {})) out.push([n, 'dev', spec]);
   return out;
 };
 const same = (a, b) => a.version === b.version && a.integrity === b.integrity && a.resolved === b.resolved;
@@ -97,13 +113,14 @@ const queue = [''];
 while (queue.length) {
   const here = queue.shift();
   for (const [name, kind] of edgesOf(P[src[here]], here === '')) {
+    if (kind === 'peerOptional') continue;
     const target = resolveIn(P, src[here], name);
     if (!target) {
       if (kind === 'optional') continue; // e.g. a platform-specific package npm skipped
       die(`${src[here] || '(root)'} needs ${name}, which the root lock does not provide`);
     }
     if (P[target].link) die(`${name} is a link in the root lock; not supported here`);
-    if (P[target].inBundle) continue; // shipped inside its parent's tarball
+    if (P[target].inBundle) die(`${target} is a bundled dependency in the root lock; not supported here`);
     const found = resolveIn(out, here, name);
     if (found && same(out[found], P[target])) continue;
     // Hoist to the top if nothing is there yet; otherwise nest under the
@@ -119,34 +136,50 @@ while (queue.length) {
 // Verify every edge against the root tree; see the header.
 let edges = 0;
 for (const here of ['', ...Object.keys(out)]) {
-  for (const [name] of edgesOf(P[src[here]], here === '')) {
+  for (const [name, kind, spec] of edgesOf(P[src[here]], here === '')) {
     const want = resolveIn(P, src[here], name);
-    if (!want || P[want].inBundle) continue;
     const got = resolveIn(out, here, name);
-    if (!got || !same(out[got], P[want])) {
-      die(`edge ${here || '(root)'} -> ${name}: root lock has ${P[want].version}, derived tree has ${got ? out[got].version : 'nothing'}`);
+    if (kind === 'peerOptional') {
+      if (got && want && !same(out[got], P[want])) {
+        die(`optional peer ${here || '(root)'} -> ${name}: root lock has ${P[want].version}, derived tree has ${out[got].version}`);
+      }
+    } else {
+      if (!want) continue; // optional and absent, as in the root tree
+      if (!got || !same(out[got], P[want])) {
+        die(`edge ${here || '(root)'} -> ${name}: root lock has ${P[want].version}, derived tree has ${got ? out[got].version : 'nothing'}`);
+      }
+      edges++;
     }
-    edges++;
+    // A version outside the declared range can only come from an `overrides`
+    // entry in the root package.json, which the standalone lock cannot carry
+    // (and `npm ls` would then reject the install). Say so up front.
+    if (got && semver && semver.validRange(spec, true) && !semver.satisfies(out[got].version, spec, true)) {
+      die(`version ${out[got].version} of ${name} is outside range ${spec} required by ${src[here] || '(root)'} — root overrides are not supported by the API deploy`);
+    }
   }
 }
 
-// Dependency flags relative to the new root: dev = only reachable through a
-// devDependency, optional = only reachable through optional edges.
-const reach = (kinds, viaOptional) => {
+// Dependency flags relative to the new root, as npm sets them: dev = only
+// reachable through a devDependency, optional = only through optional edges,
+// devOptional = not needed by prod except optionally, and also needed by dev.
+// `rootKinds` picks which of the root's edges to start from; below the root,
+// prod and peer edges are followed, optional ones only if `viaOptional`.
+const reach = (rootKinds, viaOptional) => {
   const seen = new Set();
-  const walk = (here, isRoot) => {
-    for (const [name, kind] of edgesOf(P[src[here]], isRoot)) {
+  const walk = (here, kinds) => {
+    for (const [name, kind] of edgesOf(P[src[here]], here === '')) {
       if (!kinds.includes(kind) && !(viaOptional && kind === 'optional')) continue;
       const at = resolveIn(out, here, name);
-      if (at && !seen.has(at)) { seen.add(at); walk(at, false); }
+      if (at && !seen.has(at)) { seen.add(at); walk(at, ['prod', 'peer']); }
     }
   };
-  walk('', true);
+  walk('', rootKinds);
   return seen;
 };
 const prodHard = reach(['prod', 'peer'], false);
 const prodAny = reach(['prod', 'peer'], true);
-const anyHard = reach(['prod', 'peer', 'dev'], false);
+const devHard = reach(['dev'], false);
+const devAny = reach(['dev'], true);
 
 const packages = { '': { name: apiPkg.name, version: apiPkg.version } };
 for (const f of ['license', 'dependencies', 'devDependencies', 'optionalDependencies', 'peerDependencies', 'engines']) {
@@ -155,8 +188,12 @@ for (const f of ['license', 'dependencies', 'devDependencies', 'optionalDependen
 for (const k of Object.keys(out).sort()) {
   const { dev, optional, devOptional, peer, ...entry } = out[k];
   if (!prodHard.has(k)) {
-    if (!prodAny.has(k)) entry.dev = true;
-    if (!anyHard.has(k)) entry.optional = true;
+    if (prodAny.has(k) && devAny.has(k)) entry.devOptional = true;
+    else if (prodAny.has(k)) entry.optional = true;
+    else {
+      entry.dev = true;
+      if (!devHard.has(k)) entry.optional = true;
+    }
   }
   packages[k] = entry;
 }

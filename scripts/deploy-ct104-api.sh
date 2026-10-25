@@ -6,10 +6,10 @@
 #
 # WHY THE API'S DEPENDENCIES ARE INSTALLED HERE AND NOT ON DEVBOX
 # ---------------------------------------------------------------
-# api/package.json depends on bcrypt, a native addon compiled against a
+# api/package.json depends on bcrypt, a native addon whose binary is tied to a
 # specific Node ABI. devbox runs Node 22, CT104 runs Node 24 (/opt/node24).
 # A node_modules tree installed on devbox and copied here would ship a
-# bcrypt.node built for the wrong ABI and the service would fail to start.
+# bcrypt.node for the wrong ABI and the service would fail to start.
 # So dependency installation happens here, with /opt/node24/bin/npm, always.
 #
 # WHICH VERSIONS GET INSTALLED
@@ -166,7 +166,9 @@ case "$cmd" in
     log "index.js parses OK"
     log "installed (top level):"
     as_app_user npm ls --omit=dev --depth=0 2>&1 | tail -n +2 | sed 's/^/    [ct104]   /'
-    as_app_user npm audit --omit=dev 2>&1 | sed 's/^/    [ct104]   audit: /' || log "npm audit reported findings (not fatal)"
+    timeout 30 runuser -u "$APP_USER" -- env HOME="$NPM_HOME" PATH="${NODE_BIN}:/usr/bin:/bin" \
+      npm_config_cache="${NPM_HOME}/.npm" npm audit --omit=dev --fetch-timeout=15000 --fetch-retries=0 2>&1 \
+      | sed 's/^/    [ct104]   audit: /' || log "npm audit reported findings or could not run (not fatal)"
 
     log "cutting over"
     systemctl stop "$SERVICE"

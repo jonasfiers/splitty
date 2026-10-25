@@ -16,10 +16,10 @@
 #     CT101 (nginx) has no Node at all and only ever receives a tarball.
 #
 #  2. THE API'S DEPENDENCIES ARE INSTALLED ON CT104. NEVER ON DEVBOX.
-#     api/package.json depends on bcrypt, a native addon compiled against a
+#     api/package.json depends on bcrypt, a native addon whose binary is tied to a
 #     specific Node ABI. devbox runs Node 22; CT104 runs Node 24 at
 #     /opt/node24. Installing on devbox and copying the tree over would ship a
-#     bcrypt.node built for the wrong ABI and splitty-api.service would fail to
+#     bcrypt.node for the wrong ABI and splitty-api.service would fail to
 #     start. So `npm ci --omit=dev` runs on CT104 with /opt/node24/bin/npm,
 #     as the splitty service account, every time — installing exactly the
 #     versions in the committed root package-lock.json (via a lock derived

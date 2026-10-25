@@ -28,6 +28,7 @@ if [ "$DO_API" = true ]; then
   # derived from it by api-lock-from-root.js and `npm ci`.
   TGZ="/var/tmp/splitty-qa-api-$STAMP.tgz"
   ROOT_LOCK="/var/tmp/splitty-qa-lock-$STAMP.json"
+  trap 'rm -f "$ROOT_LOCK" /root/api-lock-from-root.js /root/deploy-ct116-qa.sh' EXIT
   app_npm() { (cd "$APP.new" && runuser -u splitty -- env PATH="$NODE_BIN:/usr/bin:/bin" HOME=/var/tmp/splitty-npm-home \
       npm_config_cache=/var/tmp/splitty-npm-home/.npm "$@"); }
   install -d -o splitty -g splitty /var/tmp/splitty-npm-home
@@ -35,7 +36,6 @@ if [ "$DO_API" = true ]; then
   tar xzf "$TGZ" -C "$APP.new" && rm -f "$TGZ"
   "$NODE_BIN/node" /root/api-lock-from-root.js "$ROOT_LOCK" "$APP.new/package.json" 2>&1 >"$APP.new/package-lock.json" \
     | sed 's/^/    [ct116] /'
-  rm -f "$ROOT_LOCK"
   chown -R splitty:splitty "$APP.new"
   log "npm ci --omit=dev with npm $(app_npm npm -v) (Node $("$NODE_BIN/node" -v))"
   app_npm npm ci --omit=dev --no-audit --no-fund 2>&1 | sed 's/^/    [ct116] /'
@@ -46,7 +46,8 @@ if [ "$DO_API" = true ]; then
   "$NODE_BIN/node" --check "$APP.new/index.js"
   log "installed (top level):"
   app_npm npm ls --omit=dev --depth=0 2>&1 | tail -n +2 | sed 's/^/    [ct116]   /'
-  app_npm npm audit --omit=dev 2>&1 | sed 's/^/    [ct116]   audit: /' || log "npm audit reported findings (not fatal)"
+  app_npm timeout 30 npm audit --omit=dev --fetch-timeout=15000 --fetch-retries=0 2>&1 \
+    | sed 's/^/    [ct116]   audit: /' || log "npm audit reported findings or could not run (not fatal)"
 
   systemctl stop splitty-api 2>/dev/null || true
   rm -rf "$APP.prev"; [ -f "$APP/index.js" ] && mv "$APP" "$APP.prev" || rm -rf "$APP"

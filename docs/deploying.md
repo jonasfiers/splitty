@@ -34,14 +34,14 @@ Node installed at all and only ever receives a tarball of the finished
 
 ### The API's dependencies are installed on CT104. Never on devbox.
 
-`api/package.json` depends on **`bcrypt`**, a native addon compiled against a
-specific Node ABI.
+`api/package.json` depends on **`bcrypt`**, a native addon: its binary only
+loads under the Node ABI it was built or prebuilt for.
 
-- devbox runs **Node 22** (`v22.23.1`)
-- CT104 runs **Node 24** (`v24.19.0`, at `/opt/node24`)
+- devbox runs **Node 22**
+- CT104 (and QA) run **Node 24**, at `/opt/node24`
 
 Installing `node_modules` on devbox and copying the tree to CT104 would ship a
-`bcrypt.node` built for the wrong ABI, and `splitty-api.service` would fail to
+`bcrypt.node` for the wrong ABI, and `splitty-api.service` would fail to
 start. So `npm ci --omit=dev` always runs **on CT104**, with
 `/opt/node24/bin/npm`, as the `splitty` service account. The deploy then
 hashes with bcrypt under Node 24 before cutting over, so an ABI mistake fails
@@ -99,7 +99,10 @@ holds the API's files, one `node_modules/` and that derived lock.
 
 Exactly those in the committed root `package-lock.json`, on CT104 and on QA
 alike (CT116 uses the same mechanism). No server keeps a lock of its own
-any more; each deploy builds `node_modules` from scratch.
+any more; each deploy builds `node_modules` from scratch. Production takes the
+lock from the pushed commit; QA takes it from the devbox **worktree**, so
+commit a dependency change before trying it on QA, or QA proves nothing about
+what production will get.
 
 The root lock describes the `api` workspace as a two-level tree (most packages
 hoisted to `node_modules/`, some nested under `api/node_modules/`), which
@@ -110,6 +113,8 @@ into a tree rooted at the API and writes it as a standalone lock:
 
 - every entry (version, resolved URL, integrity) is copied unchanged from the
   root lock; nothing is resolved or fetched;
+- bundled and linked packages are refused, and optional peers are only
+  checked, never added;
 - every dependency edge is re-resolved in the new tree and must land on the
   same version and integrity as in the root tree, or the script fails;
 - the lock's root entry is the root lock's `api` entry, so `npm ci` refuses to
@@ -131,7 +136,11 @@ On devbox, at the repo root: `npm update` (or edit a range in
 `api/package.json` and `npm install`) → commit `package-lock.json` (and
 `api/package.json`) → `./scripts/deploy-qa.sh --api-only` → push →
 `./scripts/deploy.sh --api-only`. An `overrides` entry only works in the root
-`package.json`; npm ignores it in a workspace.
+`package.json` (npm ignores it in a workspace), and the API deploy only
+accepts overrides that stay inside the ranges asking for that package (say, a
+newer patch within `^2.3.0`). The standalone lock cannot carry an override, so
+one that forces a version outside a range fails the deploy before cutover with
+"root overrides are not supported by the API deploy".
 
 ## The health gate
 
