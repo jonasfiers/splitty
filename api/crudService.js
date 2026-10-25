@@ -13,6 +13,22 @@ const formatAmount = (amount, iso) => {
     return new Intl.NumberFormat('en', { style: 'currency', currency: iso }).format(amount / 10 ** decimals)
 }
 
+// Settlements (:Expense:Settlement) and balance transfers (:Expense:Transfer)
+// count in balances like any expense, but they cannot be edited or re-split:
+// the only change allowed is deleting them (cancel in the app). The routes
+// answer this with its status instead of their usual 404.
+const NOT_AN_EXPENSE = { success: false, status: 409, message: 'Settlements and balance transfers cannot be changed, only cancelled' };
+
+const isSettlementOrTransfer = async (expenseId, currUserId) => {
+    const { records } = await driver.executeQuery(
+        `MATCH (:User {id: $currUserId})-[:MEMBER_OF]->(:Group)<-[:BALANCE_IN]-(e:Expense {id: $expenseId})
+        WHERE e:Settlement OR e:Transfer
+        RETURN e.id`,
+        { expenseId, currUserId }
+    );
+    return records.length > 0;
+}
+
 const userServiceNeo4j = {
     // CREATE
     createUser: async (name, email, password) => {
@@ -738,14 +754,13 @@ const expenseService = {
             const amountBase = Math.round(amount * rate);
 
             const { records } = await driver.executeQuery(
-                `CREATE (e:Expense {
+                `CREATE (e:Expense:Settlement {
                     id: randomUUID(), 
                     description: 'Settlement', 
                     amount: $amount, 
                     amountBase: $amountBase, 
                     rateSnapshot: $rate, 
-                    date: $date,
-                    isSettlement: true
+                    date: $date
                 })
                 WITH e
                 MATCH (cur:Currency) WHERE cur.iso = $currencyIso
@@ -828,14 +843,13 @@ const expenseService = {
             try {
                 ({ settlementId, transferId } = await session.executeWrite(async tx => {
                     const sRes = await tx.run(
-                        `CREATE (s:Expense {
+                        `CREATE (s:Expense:Transfer {
                             id: randomUUID(),
                             description: $settlementDescription,
                             amount: $amount,
                             amountBase: $amount,
                             rateSnapshot: 1.0,
-                            date: $date,
-                            isTransfer: true
+                            date: $date
                         })
                         WITH s
                         MATCH (payer:User {id: $debtorId})
@@ -858,14 +872,13 @@ const expenseService = {
                     const sid = sRes.records[0].get('id');
 
                     const tRes = await tx.run(
-                        `CREATE (t:Expense {
+                        `CREATE (t:Expense:Transfer {
                             id: randomUUID(),
                             description: $description,
                             amount: $transferAmount,
                             amountBase: $transferAmount,
                             rateSnapshot: 1.0,
-                            date: $date,
-                            isTransfer: true
+                            date: $date
                         })
                         WITH t
                         MATCH (creditor:User {id: $creditorId})
@@ -943,7 +956,9 @@ const expenseService = {
                     coalesce(nearestIcon.icon, '') AS categoryIcon,
                     c.id AS categoryId,
                     cur.iso AS currencyIso,
-                    o.amount AS shareAmount
+                    o.amount AS shareAmount,
+                    e:Settlement AS isSettlement,
+                    e:Transfer AS isTransfer
                 ORDER BY e.date DESC
                 SKIP $skip LIMIT $limit`,
                 {
@@ -964,6 +979,8 @@ const expenseService = {
                 categoryId:   record.get('categoryId'),
                 currencyIso:  record.get('currencyIso'),
                 shareAmount:  record.get('shareAmount'),
+                isSettlement: record.get('isSettlement'),
+                isTransfer:   record.get('isTransfer'),
             }))
             return { success: true, expenses, hasMore: expenses.length === limit };
         }
@@ -978,7 +995,7 @@ const expenseService = {
             const { records } = await driver.executeQuery(
                 `MATCH (u:User {id: $userId})-[:MEMBER_OF]->(g:Group {id: $groupId})
                 MATCH (e:Expense)-[:BALANCE_IN]->(g)
-                WHERE NOT coalesce(e.isSettlement, false) AND NOT coalesce(e.isTransfer, false)
+                WHERE NOT e:Settlement AND NOT e:Transfer
                 OPTIONAL MATCH (e)-[:IN_CATEGORY]->(c:Category)
                 OPTIONAL MATCH iconPath = (c)-[:CHILD_OF*0..]->(iconAncestor:Category)
                 WHERE iconAncestor.icon <> ""
@@ -1033,7 +1050,7 @@ const expenseService = {
                 WITH e, u, c, cur, gc, categoryName, collect(iconAncestor)[0] AS nearestIcon
                 RETURN e, u.id AS paidByUserId, u.name AS paidByName, c.id AS categoryId,
                        coalesce(nearestIcon.icon, '') AS categoryIcon, categoryName, cur.iso AS currencyIso,
-                       gc.iso AS groupCurrencyIso`,
+                       gc.iso AS groupCurrencyIso, e:Settlement AS isSettlement, e:Transfer AS isTransfer`,
                 {id, userId}
             )
             if (records.length === 0) { return { success: false, message: 'Expense not found or access denied.' };}
@@ -1049,6 +1066,8 @@ const expenseService = {
                     categoryName:    record.get('categoryName'),
                     currencyIso:     record.get('currencyIso'),
                     groupCurrencyIso: record.get('groupCurrencyIso'),
+                    isSettlement:    record.get('isSettlement'),
+                    isTransfer:      record.get('isTransfer'),
                 }
             };
         }
@@ -1066,10 +1085,11 @@ const expenseService = {
             const { records: memberRecords } = await driver.executeQuery(
                 `MATCH (e:Expense {id: $id})-[:BALANCE_IN]->(:Group)<-[:MEMBER_OF]-(:User {id: $currUserId})
                 MATCH (:User {id: $currUserId})-[:MEMBER_OF]->(g:Group {id: $groupId})
-                RETURN g`,
+                RETURN g, e:Settlement OR e:Transfer AS fixed`,
                 { id, groupId, currUserId }
             );
             if (memberRecords.length === 0) throw new Error('Access denied: You are not a member of this group');
+            if (memberRecords[0].get('fixed')) return NOT_AN_EXPENSE;
 
             const { records: groupRecords } = await driver.executeQuery(
                 'MATCH (g:Group {id: $groupId})-[:EXPRESSED_IN]->(c:Currency) RETURN c.iso AS iso',
@@ -1172,6 +1192,7 @@ const shareService = {
 
     createShare: async (expenseId, userId, amount, currUserId) => {
         try {
+            if (await isSettlementOrTransfer(expenseId, currUserId)) return NOT_AN_EXPENSE;
             const { summary } = await driver.executeQuery(
                 `MATCH (cu:User {id: $currUserId})-[:MEMBER_OF]->(g:Group)<-[:BALANCE_IN]-(e:Expense {id: $expenseId})
                 MATCH (u:User {id: $userId})
@@ -1214,6 +1235,7 @@ const shareService = {
     // DELETE SHARE
     deleteShare: async (expenseId, userId, currUserId) => {
         try {
+            if (await isSettlementOrTransfer(expenseId, currUserId)) return NOT_AN_EXPENSE;
             const { summary } = await driver.executeQuery(
                 'MATCH (cu:User {id: $currUserId})-[:MEMBER_OF]->(g:Group)<-[:BALANCE_IN]-(e:Expense {id: $expenseId}) ' +
                 'MATCH (e)-[r:OWED_BY]->(u:User {id: $userId}) ' +

@@ -262,7 +262,7 @@ router.delete('/items/:itemId', async (req, res) => {
 router.post('/items/:itemId/expenses', async (req, res) => {
     try {
         const result = await tripService.linkExpense(req.params.itemId, String(req.body.expenseId || ''), req.user.id);
-        if (!result.success) return res.status(404).json(result);
+        if (!result.success) return res.status(result.status || 404).json(result);
         res.status(201).json(result);
     } catch (error) {
         console.error(error);

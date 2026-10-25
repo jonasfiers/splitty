@@ -105,7 +105,7 @@ const dashService = {
             c.iso as currencyIso,
             type(r) as action,
             r.on as timestamp,
-            e.isSettlement as isSettlement
+            e:Settlement as isSettlement
             order by r.on DESC`,
                 {userId}
             )
@@ -135,7 +135,7 @@ const dashService = {
                 `MATCH (u:User {id: $userId})
                 OPTIONAL MATCH (g:Group)<-[:MEMBER_OF]-(u)
                 OPTIONAL MATCH (g)<-[:BALANCE_IN]-(e:Expense)
-                WHERE NOT coalesce(e.isSettlement, false)
+                WHERE NOT e:Settlement AND NOT e:Transfer
                 WITH u, count(distinct g) AS groupCount, count(distinct e) AS expenseCount
                 CALL {
                     WITH u
@@ -178,7 +178,7 @@ const dashService = {
             MATCH (me:User {id: $userId})-[:MEMBER_OF]->(g:Group)
             WHERE $groupId IS NULL OR g.id = $groupId
             MATCH (e:Expense)-[:BALANCE_IN]->(g)
-            WHERE NOT coalesce(e.isSettlement, false)
+            WHERE NOT e:Settlement AND NOT e:Transfer
               AND ($from IS NULL OR e.date >= $from)
               ${dated ? 'AND e.date IS NOT NULL' : ''}
             ${mine ? MY_SHARE : 'WITH e, g, e.amount AS raw'}
@@ -304,7 +304,7 @@ const dashService = {
                     g.title AS group,
                     payer.name AS paidBy,
                     o.amount AS myShare,
-                    e.isSettlement AS isSettlement
+                    e:Settlement AS isSettlement
                 ORDER BY e.date DESC`,
                 { userId }
             );

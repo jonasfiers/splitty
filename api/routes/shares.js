@@ -6,6 +6,7 @@ router.post('/', async (req, res) => {
     try {
         const { expenseId, userId, amount } = req.body;
         const result = await shareService.createShare(expenseId, userId, amount, req.user.id);
+        if (result.status) return res.status(result.status).json(result);
         res.status(201).json(result);
     } catch (error) {
         console.error(error);
@@ -42,7 +43,7 @@ router.delete('/expense/:expenseId/user/:userId', async (req, res) => {
     try {
         const { expenseId, userId } = req.params;
         const result = await shareService.deleteShare(expenseId, userId, req.user.id);
-        if (!result.success) return res.status(404).json(result);
+        if (!result.success) return res.status(result.status || 404).json(result);
         res.json(result);
     } catch (error) {
         console.error(error);

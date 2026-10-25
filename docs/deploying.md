@@ -197,3 +197,33 @@ The files are covered by the nightly `vzdump` of CT104, not by `scripts/backup-n
 `https://splitty-qa.home.jonasfiers.eu`. QA runs on a copy of production data with its own
 secrets; its mail goes to a local sink and it has no push subscriptions or passkeys.
 Use it to look at a change on a working Splitty before it goes to `main`.
+
+## Expense kind labels (one-off migration)
+
+Settlements and balance transfers used to be `:Expense` nodes told apart by
+`isSettlement: true` / `isTransfer: true`; they are now `:Expense:Settlement`
+and `:Expense:Transfer`. The API that reads labels needs the labels to exist
+before it serves, and the API before it needs the properties, so
+`scripts/migrate-expense-kind-labels.sh` runs in two phases around the deploy.
+Run it on CT104 as root, from the checkout (`pct exec 104`, as for everything
+else):
+
+1. Push the commit, then bring the checkout up to it on CT104 so the script is
+   there: `git -C /opt/splitty pull --ff-only` (the deploy pulls the same
+   commit again, harmlessly).
+2. `/opt/splitty/scripts/migrate-expense-kind-labels.sh phase1` — adds the
+   labels, keeps the properties. The running API ignores labels, so this can
+   go in any time before the deploy. Expect 1 settlement and 4 transfer nodes
+   labelled, and every check in the output to show its expected value.
+3. `./scripts/deploy.sh --api-only` from devbox.
+4. Check the app: Insights and the profile's expense count no longer include
+   transfers, balances are unchanged, settlements and transfers still show as
+   such and can still be cancelled.
+5. `/opt/splitty/scripts/migrate-expense-kind-labels.sh phase2` — re-applies
+   phase 1 and removes the properties in one transaction. From here on, rolling
+   the API back means running phase 1 in reverse first
+   (`SET e.isSettlement = true` on `:Settlement`, likewise transfers).
+
+`... check` prints the same counts and consistency checks without changing
+anything. Each phase is idempotent. No index is needed for the labels; the repo
+creates no indexes or constraints.

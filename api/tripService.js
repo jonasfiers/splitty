@@ -564,8 +564,17 @@ const tripService = {
     },
 
     // LINK EXPENSE — only an expense of the same group can pay for an item.
+    // Settlements and balance transfers pay for nothing, so they cannot be linked.
     linkExpense: async (itemId, expenseId, userId) => {
         try {
+            const { records: fixed } = await driver.executeQuery(
+                `MATCH ${ITEM_ACCESS}
+                 MATCH (e:Expense {id: $expenseId})-[:BALANCE_IN]->(g)
+                 WHERE e:Settlement OR e:Transfer
+                 RETURN e.id AS id`,
+                { itemId, expenseId, userId }
+            );
+            if (fixed.length > 0) return { success: false, status: 409, message: 'Settlements and balance transfers cannot be linked to a trip item' };
             const { records } = await driver.executeQuery(
                 `MATCH ${ITEM_ACCESS}
                  MATCH (e:Expense {id: $expenseId})-[:BALANCE_IN]->(g)

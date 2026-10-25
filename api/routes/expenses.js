@@ -37,7 +37,7 @@ router.put('/:id', async (req, res) => {
         const { id } = req.params;
         const { groupId, description, categoryId, amount, currencyIso, date, paidByUserId } = req.body;
         const result = await expenseService.updateExpense(id,groupId, description, categoryId, amount, currencyIso, date, paidByUserId, currUserId);
-        if (!result.success) return res.status(404).json(result);
+        if (!result.success) return res.status(result.status || 404).json(result);
         res.json(result);
     }
     catch (error) {
