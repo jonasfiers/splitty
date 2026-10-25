@@ -24,7 +24,7 @@ You paid €96 for the cabin weekend; Mila owes €32, Theo owes €40. That's o
 
 **Balances are derived, never stored.** What Mila owes you is summed on the fly from every `PAID`/`OWED_BY` pair across your shared groups. There's no balance field to keep in sync, so there's nothing to drift, and the full history of *why* a balance is what it is stays queryable.
 
-**Settlements aren't a separate concept.** Paying someone back is just another `Expense` node (`isSettlement: true`) — the same traversal that computes balances handles them for free.
+**Settlements aren't a separate concept.** Paying someone back is just another `Expense` node, with a second label (`:Expense:Settlement`; a balance transfer is `:Expense:Transfer`) — the same traversal that computes balances handles them for free.
 
 ## Trips
 

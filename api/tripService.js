@@ -574,7 +574,7 @@ const tripService = {
                  RETURN e.id AS id`,
                 { itemId, expenseId, userId }
             );
-            if (fixed.length > 0) return { success: false, status: 409, message: 'Settlements and balance transfers cannot be linked to a trip item' };
+            if (fixed.length > 0) return { success: false, status: 409, message: 'Settlements and balance transfers cannot be linked to a trip item', error: 'Settlements and balance transfers cannot be linked to a trip item' };
             const { records } = await driver.executeQuery(
                 `MATCH ${ITEM_ACCESS}
                  MATCH (e:Expense {id: $expenseId})-[:BALANCE_IN]->(g)

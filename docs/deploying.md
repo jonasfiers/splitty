@@ -202,28 +202,51 @@ Use it to look at a change on a working Splitty before it goes to `main`.
 
 Settlements and balance transfers used to be `:Expense` nodes told apart by
 `isSettlement: true` / `isTransfer: true`; they are now `:Expense:Settlement`
-and `:Expense:Transfer`. The API that reads labels needs the labels to exist
-before it serves, and the API before it needs the properties, so
-`scripts/migrate-expense-kind-labels.sh` runs in two phases around the deploy.
-Run it on CT104 as root, from the checkout (`pct exec 104`, as for everything
-else):
+and `:Expense:Transfer`. The API that reads labels needs the labels to exist,
+and the API before it needs the properties, so
+`scripts/migrate-expense-kind-labels.sh` runs in phases around the deploy.
 
-1. Push the commit, then bring the checkout up to it on CT104 so the script is
-   there: `git -C /opt/splitty pull --ff-only` (the deploy pulls the same
-   commit again, harmlessly).
-2. `/opt/splitty/scripts/migrate-expense-kind-labels.sh phase1` — adds the
-   labels, keeps the properties. The running API ignores labels, so this can
-   go in any time before the deploy. Expect 1 settlement and 4 transfer nodes
-   labelled, and every check in the output to show its expected value.
-3. `./scripts/deploy.sh --api-only` from devbox.
-4. Check the app: Insights and the profile's expense count no longer include
-   transfers, balances are unchanged, settlements and transfers still show as
-   such and can still be cancelled.
-5. `/opt/splitty/scripts/migrate-expense-kind-labels.sh phase2` — re-applies
-   phase 1 and removes the properties in one transaction. From here on, rolling
-   the API back means running phase 1 in reverse first
-   (`SET e.isSettlement = true` on `:Settlement`, likewise transfers).
+The script needs no checkout (CT116 has none). It reads the API's own
+`/etc/splitty-api.env` (not `/opt/splitty/.env`, whose `NEO4J_URI` is a dead
+Docker-era name) and finds Neo4j through `neo4j.service`. Copy it in through
+pve and run it as root, here on CT116; use 104 for production:
 
-`... check` prints the same counts and consistency checks without changing
-anything. Each phase is idempotent. No index is needed for the labels; the repo
-creates no indexes or constraints.
+```sh
+scp scripts/migrate-expense-kind-labels.sh root@192.168.0.240:/tmp/mekl.sh
+ssh root@192.168.0.240 "pct push 116 /tmp/mekl.sh /root/mekl.sh && pct exec 116 -- bash /root/mekl.sh phase1"
+```
+
+| Phase      | Does                                                                 |
+| ---------- | -------------------------------------------------------------------- |
+| `phase1`   | adds the labels, keeps the properties; the old API is unaffected     |
+| `phase2`   | phase 1 again plus removing the properties, in one transaction       |
+| `rollback` | sets the properties again from the labels (labels stay)              |
+| `check`    | read-only counts and consistency checks; `--strict` also fails on leftover properties |
+
+Every phase ends with the check (phase2 with `--strict`) and exits non-zero if
+any check shows `FAIL`. Every phase is idempotent.
+
+**QA (CT116) first.** `phase1` on CT116 → `./scripts/deploy-qa.sh --api-only`
+→ verify (Insights and the profile's expense count leave out transfers,
+balances unchanged, settlements and transfers still show as such and can
+still be cancelled, but not edited) → `phase2` on CT116. If QA is ever
+refreshed from a production copy taken before the migration, run `phase1`
+(and later `phase2`) there again.
+
+**Production (CT104).**
+
+1. `phase1` immediately before the deploy. On production data as of
+   2026-10 expect 1 settlement and 4 transfer nodes labelled (production
+   numbers only; QA and test data differ).
+2. `./scripts/deploy.sh --api-only`.
+3. `phase1` again right after the deploy, for anything the old API wrote in
+   between.
+4. Verify as on QA.
+5. `phase2`.
+
+**Rolling back.** Once the new API has been deployed, it writes labels only,
+so going back to the previous API at any point (before or after phase 2)
+means: run `rollback` first, then restore the previous API from
+`/opt/splitty-api-node24.prev`.
+
+No index is needed for the labels; the repo creates no indexes or constraints.

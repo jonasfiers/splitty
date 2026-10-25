@@ -17,7 +17,7 @@ const formatAmount = (amount, iso) => {
 // count in balances like any expense, but they cannot be edited or re-split:
 // the only change allowed is deleting them (cancel in the app). The routes
 // answer this with its status instead of their usual 404.
-const NOT_AN_EXPENSE = { success: false, status: 409, message: 'Settlements and balance transfers cannot be changed, only cancelled' };
+const NOT_AN_EXPENSE = { success: false, status: 409, message: 'Settlements and balance transfers cannot be changed, only cancelled', error: 'Settlements and balance transfers cannot be changed, only cancelled' };
 
 const isSettlementOrTransfer = async (expenseId, currUserId) => {
     const { records } = await driver.executeQuery(
