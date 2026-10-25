@@ -10,7 +10,7 @@ import { useMediaQuery } from '../utils/useMediaQuery.js'
 const TripMap = lazy(() => import('../components/TripMap/TripMap.jsx'))
 const noop = () => {}
 import { formatCurrency, formatDate } from '../utils/currency.js'
-import { KINDS, TRANSPORT_MODES, itemIcon, dayOf, formatMoment, mapsUrl, formatBytes } from '../utils/trip.js'
+import { KINDS, TRANSPORT_MODES, itemIcon, dayOf, formatMoment, mapsLink, linkTarget, formatBytes } from '../utils/trip.js'
 
 const START_LABEL = { transport: 'Departure', stay: 'Check-in', activity: 'Starts' }
 const END_LABEL = { transport: 'Arrival', stay: 'Check-out', activity: 'Ends' }
@@ -25,10 +25,10 @@ function Row({ label, children }) {
 }
 
 function PlaceValue({ place }) {
-  const url = mapsUrl(place)
+  const link = mapsLink(place)
   return (
     <>
-      {url ? <a href={url} target="_blank" rel="noopener noreferrer">{place.name}</a> : place.name}
+      {link ? <a href={link.url} target={linkTarget(link.url)} rel="noopener noreferrer" title={link.label}>{place.name}</a> : place.name}
       {place.address && <span className="trip-row-sub">{place.address}</span>}
     </>
   )

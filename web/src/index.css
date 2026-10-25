@@ -2584,6 +2584,14 @@ a.expense-item { color: inherit; text-decoration: none; }
   color: #D4512B;
   cursor: pointer;
 }
+.trip-popup a.trip-popup-nav {
+  font-size: 13px;
+  font-weight: 600;
+  color: #D4512B;
+  text-decoration: none;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+}
 /* Date beside its time, on every screen width. */
 .form-row-when { grid-template-columns: 3fr 2fr; }
 .form-row-when .form-group { min-width: 0; }

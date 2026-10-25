@@ -3,7 +3,7 @@ import { dayOf, timeOf } from '../../utils/trip.js'
 import { ExpandedContext } from '../Expandable/Expandable.jsx'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
-import { itemIcon } from '../../utils/trip.js'
+import { itemIcon, linkTarget, mapsLink } from '../../utils/trip.js'
 import { addTiles, arcBetween, arrowIcon, arrowsAlong, keepFramed } from './mapParts.js'
 
 // Places numbered in the order the trip reaches them: walk the items by start
@@ -81,6 +81,14 @@ function TripMap({ places, items, onOpenItem, highlight = null, onHover = () => 
       const name = document.createElement('strong')
       name.textContent = place.name
       popup.append(name)
+      const maps = mapsLink(place)
+      const nav = document.createElement('a')
+      nav.className = 'trip-popup-nav'
+      nav.href = maps.url
+      if (linkTarget(maps.url)) nav.target = linkTarget(maps.url)
+      nav.rel = 'noopener noreferrer'
+      nav.textContent = `🧭 ${maps.label}`
+      popup.append(nav)
       for (const item of here) {
         const link = document.createElement('button')
         link.type = 'button'

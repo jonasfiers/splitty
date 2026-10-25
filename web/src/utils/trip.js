@@ -87,10 +87,34 @@ export function buildTimeline(trip, items) {
   return timeline
 }
 
-export const mapsUrl = place =>
-  place?.lat != null && place?.lon != null
-    ? `https://www.openstreetmap.org/?mlat=${place.lat}&mlon=${place.lon}#map=16/${place.lat}/${place.lon}`
-    : null
+// iPadOS reports itself as a Mac; a touch screen gives it away.
+const device = () => {
+  const ua = navigator.userAgent
+  if (/iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)) return 'ios'
+  if (/Android/.test(ua)) return 'android'
+  return 'desktop'
+}
+
+// A link that starts navigation to the place on a phone: Apple Maps
+// directions on iOS, a geo: link on Android (which lets the user pick Google
+// Maps, Waze, Organic Maps...). A desktop has nothing to navigate with, so it
+// gets the place on OpenStreetMap. Coordinates rather than the name, which can
+// be in a script the maps app won't find.
+export const mapsLink = place => {
+  if (place?.lat == null || place?.lon == null) return null
+  const { lat, lon } = place
+  switch (device()) {
+    case 'ios':
+      return { url: `https://maps.apple.com/?daddr=${lat},${lon}`, label: 'Navigate here' }
+    case 'android':
+      return { url: `geo:${lat},${lon}?q=${lat},${lon}(${encodeURIComponent(place.name || '')})`, label: 'Navigate here' }
+    default:
+      return { url: `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}#map=16/${lat}/${lon}`, label: 'Open in OpenStreetMap' }
+  }
+}
+
+// geo: is handed to an app; only a web page wants a new tab.
+export const linkTarget = url => (url.startsWith('http') ? '_blank' : undefined)
 
 export const formatBytes = bytes =>
   bytes >= 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} kB`
