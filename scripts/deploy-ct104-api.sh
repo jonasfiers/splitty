@@ -12,6 +12,16 @@
 # bcrypt.node built for the wrong ABI and the service would fail to start.
 # So dependency installation happens here, with /opt/node24/bin/npm, always.
 #
+# WHICH VERSIONS GET INSTALLED
+# ----------------------------
+# Exactly those in the repo's committed root package-lock.json — never a lock
+# of this host's own. scripts/api-lock-from-root.js (from the checkout being
+# deployed) derives a standalone lock for the api workspace from it, copying
+# every entry unchanged and verifying every dependency edge, and `npm ci`
+# installs that: it refuses if api/package.json and the lock disagree, never
+# rewrites the lock, and starts from an empty node_modules. QA (CT116) does
+# the same, so QA runs what production will run.
+#
 # Note /opt/node24/bin/npm has an `#!/usr/bin/env node` shebang and there is no
 # `node` on the default PATH, so npm must be invoked with /opt/node24/bin ON
 # PATH — using npm's absolute path alone is not enough.
@@ -124,33 +134,39 @@ case "$cmd" in
     fi
     log "checkout now at $(git -C "$CHECKOUT" rev-parse --short HEAD)"
 
-    # Build the next app dir beside the live one. Seeding it from the current
-    # live dir gives npm an existing node_modules to reconcile against, so an
-    # unchanged dependency set costs seconds and bcrypt is not recompiled.
+    # Build the next app dir beside the live one, from scratch: the source
+    # from the checkout plus a lock derived from the committed root lock. The
+    # old host-local package-lock.json is not carried over (it stays only in
+    # the .prev rollback copy).
     log "staging new app dir at $NEW"
     rm -rf "$NEW"
-    cp -a "$APP" "$NEW"
-
-    # Sync source over the staged copy. node_modules and the locally generated
-    # package-lock.json are excluded from BOTH transfer and deletion — that
-    # lock is gitignored and exists only on this host.
-    rsync -a --delete \
-      --exclude 'node_modules/' \
-      --exclude 'package-lock.json' \
+    mkdir "$NEW"
+    rsync -a --exclude 'node_modules/' --exclude 'package-lock.json' \
       "${CHECKOUT}/api/" "${NEW}/"
+    "${NODE_BIN}/node" "${CHECKOUT}/scripts/api-lock-from-root.js" \
+      "${CHECKOUT}/package-lock.json" "${NEW}/package.json" 2>&1 >"${NEW}/package-lock.json" \
+      | sed 's/^/    [ct104] /'
     chown -R "${APP_USER}:${APP_GROUP}" "$NEW"
 
-    log "installing production deps with ${NODE_BIN}/npm (Node $("${NODE_BIN}/node" -v))"
     cd "$NEW"
-    as_app_user npm install --omit=dev --no-audit --no-fund
+    log "npm ci --omit=dev with ${NODE_BIN}/npm $(as_app_user npm -v) (Node $("${NODE_BIN}/node" -v))"
+    as_app_user npm ci --omit=dev --no-audit --no-fund 2>&1 | sed 's/^/    [ct104] /'
 
-    # Prove the tree actually loads under this Node before cutting over. This
-    # is precisely the failure mode a devbox-side install would produce.
+    # Prove the tree is complete and actually works under this Node before
+    # cutting over. bcrypt is the native, ABI-sensitive one — precisely what a
+    # devbox-side install, or an install script npm withheld, would break.
     log "verifying the built tree under Node 24"
-    runuser -u "$APP_USER" -- env HOME="$NPM_HOME" "${NODE_BIN}/node" \
-      -e "require('${NEW}/node_modules/bcrypt'); console.log('    [ct104] bcrypt (native, ABI-sensitive) loads OK under Node ' + process.versions.node)"
+    as_app_user node -e "require('bcrypt').hashSync('x', 4); console.log('    [ct104] bcrypt (native) hashes OK under Node ' + process.versions.node)"
+    if ! ls_out="$(as_app_user npm ls --omit=dev --all 2>&1)"; then
+      printf '%s\n' "$ls_out" | sed 's/^/    [ct104]   /' >&2
+      die "npm ls --omit=dev reports problems with the installed tree"
+    fi
+    log "npm ls --omit=dev --all is clean"
     runuser -u "$APP_USER" -- "${NODE_BIN}/node" --check "${NEW}/index.js"
     log "index.js parses OK"
+    log "installed (top level):"
+    as_app_user npm ls --omit=dev --depth=0 2>&1 | tail -n +2 | sed 's/^/    [ct104]   /'
+    as_app_user npm audit --omit=dev 2>&1 | sed 's/^/    [ct104]   audit: /' || log "npm audit reported findings (not fatal)"
 
     log "cutting over"
     systemctl stop "$SERVICE"

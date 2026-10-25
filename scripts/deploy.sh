@@ -20,8 +20,10 @@
 #     specific Node ABI. devbox runs Node 22; CT104 runs Node 24 at
 #     /opt/node24. Installing on devbox and copying the tree over would ship a
 #     bcrypt.node built for the wrong ABI and splitty-api.service would fail to
-#     start. So `npm install --omit=dev` runs on CT104 with /opt/node24/bin/npm,
-#     as the splitty service account, every time.
+#     start. So `npm ci --omit=dev` runs on CT104 with /opt/node24/bin/npm,
+#     as the splitty service account, every time — installing exactly the
+#     versions in the committed root package-lock.json (via a lock derived
+#     from it by scripts/api-lock-from-root.js), never a host-local lock.
 #
 #     Corollary: the two halves of a deploy get their source differently. The
 #     web half is built from THIS worktree. The API half is `git pull`ed on
@@ -413,11 +415,11 @@ if $DO_API; then
   if $DRY_RUN; then
     plan "CT104: git -C /opt/splitty fetch && merge --ff-only origin/$BRANCH"
     plan "CT104: verify HEAD == $COMMIT_SHORT"
-    plan "CT104: cp -a /opt/splitty-api-node24 /opt/splitty-api-node24.new"
-    plan "CT104: rsync /opt/splitty/api/ -> .new (excluding node_modules, package-lock.json)"
+    plan "CT104: rsync /opt/splitty/api/ -> empty /opt/splitty-api-node24.new (no node_modules, no lock)"
+    plan "CT104: scripts/api-lock-from-root.js package-lock.json -> .new/package-lock.json"
     plan "CT104: chown -R splitty:splitty .new"
-    plan "CT104: /opt/node24/bin/npm install --omit=dev  (as splitty, Node 24 ABI)"
-    plan "CT104: verify bcrypt loads and index.js parses"
+    plan "CT104: /opt/node24/bin/npm ci --omit=dev  (as splitty, Node 24 ABI)"
+    plan "CT104: verify bcrypt hashes, npm ls is clean, index.js parses; log versions + npm audit"
     plan "CT104: stop splitty-api, mv live -> .prev, mv .new -> live, start"
   else
     set +e
@@ -491,7 +493,7 @@ else
   log "web:     not deployed this run"
 fi
 if $API_DEPLOYED; then
-  log "api:     deps installed on CT104 with /opt/node24/bin/npm -> /opt/splitty-api-node24"
+  log "api:     npm ci on CT104 with /opt/node24/bin/npm (root lock) -> /opt/splitty-api-node24"
   log "         rollback target: CT104:/opt/splitty-api-node24.prev"
   log "         service: $(ct_capture "$CT_API" systemctl is-active splitty-api.service)"
 else

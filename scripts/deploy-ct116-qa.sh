@@ -23,18 +23,30 @@ if [ "$DO_WEB" = true ]; then
 fi
 
 if [ "$DO_API" = true ]; then
+  # Same install as production (scripts/deploy-ct104-api.sh): from scratch,
+  # exactly the versions in the repo's root package-lock.json, via a lock
+  # derived from it by api-lock-from-root.js and `npm ci`.
   TGZ="/var/tmp/splitty-qa-api-$STAMP.tgz"
-  rm -rf "$APP.new"
-  # Start from the live tree so npm reconciles against an existing node_modules.
-  if [ -d "$APP/node_modules" ]; then cp -a "$APP" "$APP.new"; else mkdir -p "$APP.new"; fi
-  find "$APP.new" -mindepth 1 -maxdepth 1 ! -name node_modules ! -name package-lock.json -exec rm -rf {} +
+  ROOT_LOCK="/var/tmp/splitty-qa-lock-$STAMP.json"
+  app_npm() { (cd "$APP.new" && runuser -u splitty -- env PATH="$NODE_BIN:/usr/bin:/bin" HOME=/var/tmp/splitty-npm-home \
+      npm_config_cache=/var/tmp/splitty-npm-home/.npm "$@"); }
+  install -d -o splitty -g splitty /var/tmp/splitty-npm-home
+  rm -rf "$APP.new" && mkdir -p "$APP.new"
   tar xzf "$TGZ" -C "$APP.new" && rm -f "$TGZ"
+  "$NODE_BIN/node" /root/api-lock-from-root.js "$ROOT_LOCK" "$APP.new/package.json" 2>&1 >"$APP.new/package-lock.json" \
+    | sed 's/^/    [ct116] /'
+  rm -f "$ROOT_LOCK"
   chown -R splitty:splitty "$APP.new"
-  log "installing production deps with Node $("$NODE_BIN/node" -v)"
-  (cd "$APP.new" && runuser -u splitty -- env PATH="$NODE_BIN:$PATH" HOME=/var/tmp/splitty-npm-home \
-      npm_config_cache=/var/tmp/splitty-npm-home/.npm npm install --omit=dev --no-audit --no-fund >/dev/null)
-  (cd "$APP.new" && runuser -u splitty -- "$NODE_BIN/node" -e 'require("bcrypt")') || { log "bcrypt does not load"; exit 1; }
+  log "npm ci --omit=dev with npm $(app_npm npm -v) (Node $("$NODE_BIN/node" -v))"
+  app_npm npm ci --omit=dev --no-audit --no-fund 2>&1 | sed 's/^/    [ct116] /'
+  app_npm node -e "require('bcrypt').hashSync('x', 4)" || { log "bcrypt does not load"; exit 1; }
+  log "bcrypt (native) hashes OK"
+  app_npm npm ls --omit=dev --all >/dev/null || { app_npm npm ls --omit=dev --all 2>&1 | sed 's/^/    [ct116]   /'; log "npm ls reports problems"; exit 1; }
+  log "npm ls --omit=dev --all is clean"
   "$NODE_BIN/node" --check "$APP.new/index.js"
+  log "installed (top level):"
+  app_npm npm ls --omit=dev --depth=0 2>&1 | tail -n +2 | sed 's/^/    [ct116]   /'
+  app_npm npm audit --omit=dev 2>&1 | sed 's/^/    [ct116]   audit: /' || log "npm audit reported findings (not fatal)"
 
   systemctl stop splitty-api 2>/dev/null || true
   rm -rf "$APP.prev"; [ -f "$APP/index.js" ] && mv "$APP" "$APP.prev" || rm -rf "$APP"
@@ -55,4 +67,4 @@ if [ "$DO_API" = true ]; then
   fi
 fi
 nginx -t 2>/dev/null && systemctl reload nginx
-rm -f /root/deploy-ct116-qa.sh
+rm -f /root/deploy-ct116-qa.sh /root/api-lock-from-root.js

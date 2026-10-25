@@ -72,7 +72,13 @@ fi
 stage "Publish to CT116"
 ship "$REPO/scripts/deploy-ct116-qa.sh" /root/deploy-ct116-qa.sh
 $DO_WEB && ship "$TMP/web.tgz" "/var/tmp/splitty-qa-web-$STAMP.tgz"
-$DO_API && ship "$TMP/api.tgz" "/var/tmp/splitty-qa-api-$STAMP.tgz"
+if $DO_API; then
+  ship "$TMP/api.tgz" "/var/tmp/splitty-qa-api-$STAMP.tgz"
+  # The API's dependency versions come from the root lock, as in production.
+  cp package-lock.json "$TMP/splitty-qa-lock-$STAMP.json"
+  ship "$TMP/splitty-qa-lock-$STAMP.json" "/var/tmp/splitty-qa-lock-$STAMP.json"
+  ship "$REPO/scripts/api-lock-from-root.js" /root/api-lock-from-root.js
+fi
 pve_ssh "pct exec $CT -- bash /root/deploy-ct116-qa.sh $STAMP $DO_WEB $DO_API"
 
 stage "Check through CT115"

@@ -42,10 +42,10 @@ specific Node ABI.
 
 Installing `node_modules` on devbox and copying the tree to CT104 would ship a
 `bcrypt.node` built for the wrong ABI, and `splitty-api.service` would fail to
-start. So `npm install --omit=dev` always runs **on CT104**, with
+start. So `npm ci --omit=dev` always runs **on CT104**, with
 `/opt/node24/bin/npm`, as the `splitty` service account. The deploy then
-explicitly `require()`s bcrypt under Node 24 before cutting over, so an ABI
-mistake fails the deploy instead of the service.
+hashes with bcrypt under Node 24 before cutting over, so an ABI mistake fails
+the deploy instead of the service.
 
 Two related traps:
 
@@ -86,19 +86,52 @@ word arguments.
 written into file-by-file; it changes identity in a single `rename(2)`, and
 the outgoing build is kept at `/var/www/splitty.prev`.
 
-**API (CT104).** `git pull` in `/opt/splitty` → copy the live app dir to
-`/opt/splitty-api-node24.new` → rsync `api/` over it → `npm install --omit=dev`
-with Node 24 → verify bcrypt loads and `index.js` parses → stop the service,
-swap the directory, start. The outgoing app dir is kept at
-`/opt/splitty-api-node24.prev`.
+**API (CT104).** `git pull` in `/opt/splitty` → rsync `api/` into an empty
+`/opt/splitty-api-node24.new` → derive its `package-lock.json` from the root
+lock → `npm ci --omit=dev` with Node 24 → gates: bcrypt hashes, `npm ls
+--omit=dev --all` is clean, `index.js` parses → log the top-level versions and
+`npm audit --omit=dev` (findings are not fatal) → stop the service, swap the
+directory, start. The outgoing app dir is kept at
+`/opt/splitty-api-node24.prev`. The live layout is unchanged: the app dir
+holds the API's files, one `node_modules/` and that derived lock.
 
-The staged copy is seeded from the live directory so npm has an existing
-`node_modules` to reconcile against; an unchanged dependency set costs under a
-second and bcrypt is not recompiled.
+### Which dependency versions the servers run
 
-`node_modules/` and `package-lock.json` are excluded from both transfer and
-deletion during the rsync. That lock file is gitignored and exists only on
-CT104.
+Exactly those in the committed root `package-lock.json`, on CT104 and on QA
+alike (CT116 uses the same mechanism). No server keeps a lock of its own
+any more; each deploy builds `node_modules` from scratch.
+
+The root lock describes the `api` workspace as a two-level tree (most packages
+hoisted to `node_modules/`, some nested under `api/node_modules/`), which
+cannot simply be flattened into one directory: a hoisted package such as
+multer would then pick up api's nested `type-is` 2.x instead of its own 1.x.
+`scripts/api-lock-from-root.js` therefore re-places the API's dependency graph
+into a tree rooted at the API and writes it as a standalone lock:
+
+- every entry (version, resolved URL, integrity) is copied unchanged from the
+  root lock; nothing is resolved or fetched;
+- every dependency edge is re-resolved in the new tree and must land on the
+  same version and integrity as in the root tree, or the script fails;
+- the lock's root entry is the root lock's `api` entry, so `npm ci` refuses to
+  install when `api/package.json` and the committed lock disagree (and never
+  rewrites the lock).
+
+Web packages never get there: only the API's closure is walked, and
+`--omit=dev` drops nodemon.
+
+npm 11 on the servers withholds install scripts it has not been told to allow
+and warns `install-scripts ... bcrypt@6.0.0 (install: node-gyp-build)`. That
+is expected: bcrypt ships prebuilt binaries for linux-x64 and loads them at
+`require()` time, and the bcrypt gate fails the deploy before cutover if it
+ever cannot.
+
+### Updating dependencies
+
+On devbox, at the repo root: `npm update` (or edit a range in
+`api/package.json` and `npm install`) → commit `package-lock.json` (and
+`api/package.json`) → `./scripts/deploy-qa.sh --api-only` → push →
+`./scripts/deploy.sh --api-only`. An `overrides` entry only works in the root
+`package.json`; npm ignores it in a workspace.
 
 ## The health gate
 
