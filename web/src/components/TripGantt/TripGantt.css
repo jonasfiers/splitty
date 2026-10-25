@@ -3,6 +3,8 @@
 .gantt-wrap { position: relative; margin-bottom: 20px; }
 .gantt {
     overflow-x: auto;
+    /* One finger scrolls; a pinch zooms the timeline (TripGantt.jsx), not the page. */
+    touch-action: pan-x pan-y;
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--r-lg);

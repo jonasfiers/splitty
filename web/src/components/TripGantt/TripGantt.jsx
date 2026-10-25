@@ -151,6 +151,7 @@ export default function TripGantt({ trip, items: allItems, placeName, onOpenItem
   const [boxWidth, setBoxWidth] = useState(0)
   const [ghost, setGhost] = useState(null) // { kind, from, to } while dragging
   const press = useRef(null)
+  const tap = useRef(null) // a finished touch press, waiting for its click
   const [preview, setPreview] = useState(null) // { id, start, end } while a bar is dragged
   const barDrag = useRef(null)
   const skipClick = useRef(false)
@@ -245,6 +246,71 @@ export default function TripGantt({ trip, items: allItems, placeName, onOpenItem
     return () => el.removeEventListener('wheel', onWheel)
   }, [])
 
+  // Two-finger pinch on a touch screen zooms the timeline, around the point
+  // between the fingers. Scaled from the width when the pinch began, so it
+  // doesn't drift; at most one zoom per frame. The page's own pinch zoom is
+  // blocked here only (touch-action in the CSS, and preventDefault for iOS
+  // Safari, which hasn't always honoured it); one finger still scrolls.
+  // `pinched` stays set until every finger is up, so no part of a pinch is taken for a tap.
+  const pinched = useRef(false)
+  useEffect(() => {
+    const el = scroller.current
+    if (!el) return
+    let pinch = null // { dist, width, latest: { dist, mid } }
+    let frame = 0
+    const measure = ([a, b]) => ({
+      dist: Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY) || 1,
+      mid: (a.clientX + b.clientX) / 2,
+    })
+    const onStart = e => {
+      if (e.touches.length < 2) return
+      e.preventDefault()
+      // The first finger's press would otherwise end as a tap.
+      pinched.current = true
+      press.current = null
+      tap.current = null
+      setGhost(null)
+      const { dist } = measure(e.touches)
+      pinch = { dist, width: widthRef.current, latest: null }
+    }
+    const onMove = e => {
+      if (!pinch || e.touches.length < 2) return
+      e.preventDefault()
+      pinch.latest = measure(e.touches)
+      if (frame) return
+      frame = requestAnimationFrame(() => {
+        frame = 0
+        if (!pinch?.latest) return
+        const { dist, mid } = pinch.latest
+        zoomRef.current(pinch.width * (dist / pinch.dist), mid)
+      })
+    }
+    const onEnd = e => {
+      if (e.touches.length < 2) {
+        pinch = null
+        cancelAnimationFrame(frame)
+        frame = 0
+      }
+      if (!e.touches.length) pinched.current = false
+    }
+    const block = e => e.preventDefault() // iOS Safari's own pinch events
+    el.addEventListener('touchstart', onStart, { passive: false })
+    el.addEventListener('touchmove', onMove, { passive: false })
+    el.addEventListener('touchend', onEnd)
+    el.addEventListener('touchcancel', onEnd)
+    el.addEventListener('gesturestart', block)
+    el.addEventListener('gesturechange', block)
+    return () => {
+      cancelAnimationFrame(frame)
+      el.removeEventListener('touchstart', onStart)
+      el.removeEventListener('touchmove', onMove)
+      el.removeEventListener('touchend', onEnd)
+      el.removeEventListener('touchcancel', onEnd)
+      el.removeEventListener('gesturestart', block)
+      el.removeEventListener('gesturechange', block)
+    }
+  }, [])
+
   const label = item => {
     if (item.kind !== 'transport') return item.title
     const route = [placeName(item.fromPlaceId), placeName(item.toPlaceId)].filter(Boolean).join(' → ')
@@ -293,7 +359,7 @@ export default function TripGantt({ trip, items: allItems, placeName, onOpenItem
 
   const posOf = (e, track) => Math.min(Math.max((e.clientX - track.getBoundingClientRect().left) / dayWidth, 0), dayCount)
   const startPress = kind => e => {
-    if (!onCreate || e.button > 0 || e.target.closest('.gantt-bar')) return
+    if (!onCreate || pinched.current || e.button > 0 || e.target.closest('.gantt-bar')) return
     const track = e.currentTarget
     press.current = { kind, track, x: e.clientX, from: posOf(e, track), touch: e.pointerType !== 'mouse', dragging: false }
     if (e.pointerType === 'mouse') {
@@ -312,7 +378,7 @@ export default function TripGantt({ trip, items: allItems, placeName, onOpenItem
     const p = press.current
     press.current = null
     setGhost(null)
-    if (!p) return
+    if (!p || pinched.current) return
     // A tap is handled by the click that follows it (tapCreate): opening the
     // pop-up here would let that click land on whatever the pop-up puts under the finger.
     if (p.touch) { tap.current = p; return }
@@ -321,7 +387,6 @@ export default function TripGantt({ trip, items: allItems, placeName, onOpenItem
     onCreate({ kind: p.kind, ...rangeFor(p.kind, first, p.from, posOf(e, p.track), false, step) })
   }
   const cancelPress = () => { press.current = null; tap.current = null; setGhost(null) }
-  const tap = useRef(null)
   const tapCreate = () => {
     const p = tap.current
     tap.current = null
@@ -502,7 +567,7 @@ export default function TripGantt({ trip, items: allItems, placeName, onOpenItem
           <span className="gantt-hint-pointer">
             Drag across a lane to add something there{onReschedule && ' · drag a bar, or its ends, to change when it happens'}{onDelete && ' · right-click a bar for more'} · Ctrl/⌘ + scroll or pinch to zoom
           </span>
-          <span className="gantt-hint-touch">Tap an empty spot in a lane to add something on that day</span>
+          <span className="gantt-hint-touch">Tap an empty spot in a lane to add something on that day · pinch to zoom</span>
         </div>
       )}
     </div>
