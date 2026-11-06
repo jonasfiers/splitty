@@ -22,10 +22,19 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     if (!token) return
     let live = true
-    client.get('/admin/me')
+    let timer = null
+    // A network blip or 5xx is retried (up to 3 tries, a few seconds apart)
+    // rather than taken as "not an admin"; a 401/403 is a real answer.
+    const ask = attempt => client.get('/admin/me')
       .then(r => { if (live) setAdmin({ known: true, isAdmin: r.data?.isAdmin === true }) })
-      .catch(() => { if (live) setAdmin({ known: true, isAdmin: false }) })
-    return () => { live = false }
+      .catch(err => {
+        if (!live) return
+        const status = err?.response?.status
+        if (status === 401 || status === 403 || attempt >= 3) setAdmin({ known: true, isAdmin: false })
+        else timer = setTimeout(() => ask(attempt + 1), 3000 * attempt)
+      })
+    ask(1)
+    return () => { live = false; clearTimeout(timer) }
   }, [token])
   const isAdmin = !token ? false : admin.known ? admin.isAdmin : null
   const forgetAdmin = () => setAdmin({ known: false, isAdmin: false })

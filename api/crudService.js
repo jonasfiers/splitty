@@ -52,7 +52,7 @@ const userServiceNeo4j = {
                 RETURN DISTINCT u`,
                 {requesterId}
             )
-            return {success: true, users: records.map(record => { const { password, email, ...u } = record.get('u').properties; return u; })};
+            return {success: true, users: records.map(record => { const { password, email, role, ...u } = record.get('u').properties; return u; })};
         }
         catch (err) {
             throw new Error(`Failed to get users: ${err.message}`);
@@ -68,7 +68,7 @@ const userServiceNeo4j = {
                 {id, requesterId}
             )
             if (records.length === 0) return { success: false, message: 'User not found' };
-            const { password, ...user } = records[0].get('u').properties;
+            const { password, role, ...user } = records[0].get('u').properties;
             return {success:true, user};
         }
         catch (err) {

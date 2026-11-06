@@ -80,13 +80,28 @@ case "$EMAIL" in
   *) fail "not an email address: $EMAIL" ;;
 esac
 
+# Exact match on the stored address (registration is case-sensitive, so
+# Jonas@x and jonas@x can be two accounts), and the change is made only if
+# exactly one account matches; grant also refuses an account login would
+# refuse: emailVerified = false (new, unconfirmed registrations). Older
+# accounts have no flag at all and log in normally, so they qualify.
 if [ "$ACTION" = grant ]; then
-  QUERY="MATCH (u:User) WHERE toLower(u.email) = toLower(\$email) SET u.role = 'admin' RETURN u.email AS email, u.role AS role;"
+  WHERE="u.email = \$email AND coalesce(u.emailVerified, true) <> false"
+  CHANGE="SET u.role = 'admin'"
 else
-  QUERY="MATCH (u:User) WHERE toLower(u.email) = toLower(\$email) REMOVE u.role RETURN u.email AS email, u.role AS role;"
+  WHERE="u.email = \$email"
+  CHANGE="REMOVE u.role"
 fi
+QUERY="MATCH (u:User) WHERE $WHERE
+WITH collect(u) AS us WHERE size(us) = 1
+UNWIND us AS u $CHANGE
+RETURN u.email AS email, u.role AS role;"
 
 OUT=$(cypher --param "email => '$EMAIL'" "$QUERY")
 echo "$OUT"
-# plain format prints a header line, then one line per match
-[ "$(printf '%s\n' "$OUT" | wc -l)" -ge 2 ] || fail "no user with email $EMAIL"
+# plain format prints a header line, then one line per changed account;
+# nothing at all when the WITH filtered everything out
+if [ "$(printf '%s\n' "$OUT" | wc -l)" -lt 2 ]; then
+  N=$(cypher --param "email => '$EMAIL'" "MATCH (u:User) WHERE u.email = \$email RETURN count(u) AS n, sum(CASE WHEN u.emailVerified = false THEN 0 ELSE 1 END) AS canLogIn;" | tail -1)
+  fail "nothing changed for $EMAIL (accounts with that exact address, of which can log in: $N); grant needs exactly one that can log in"
+fi
