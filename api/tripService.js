@@ -318,6 +318,9 @@ const tripService = {
             const { records } = await driver.executeQuery(
                 `MATCH ${TRIP_ACCESS}
                  SET t.title = $title, t.icon = $icon, t.startDate = $startDate, t.endDate = $endDate, t.notes = $notes
+                 WITH t
+                 MATCH (u:User {id: $userId})
+                 CREATE (t)-[:UPDATED_BY {on: datetime()}]->(u)
                  RETURN t.id AS id`,
                 { tripId, userId, title, icon: icon ?? '', startDate, endDate, notes: notes ?? '' }
             );
@@ -479,8 +482,11 @@ const tripService = {
                      OPTIONAL MATCH (i)-[r:AT|DEPARTS_FROM|ARRIVES_AT|EXPRESSED_IN]->()
                      DELETE r
                      WITH DISTINCT i
-                     SET i += $props`,
-                    { itemId, props: itemProps(kind, data) }
+                     SET i += $props
+                     WITH i
+                     MATCH (u:User {id: $userId})
+                     CREATE (i)-[:UPDATED_BY {on: datetime()}]->(u)`,
+                    { itemId, userId, props: itemProps(kind, data) }
                 );
                 await attachPlacesAndCurrency(tx, tripId, itemId, kind, data);
                 await tx.run(DELETE_ORPHAN_PLACES, { tripId });
@@ -499,6 +505,9 @@ const tripService = {
             const { records } = await driver.executeQuery(
                 `MATCH ${ITEM_ACCESS}
                  SET i.start = $start, i.end = $end
+                 WITH i
+                 MATCH (u:User {id: $userId})
+                 CREATE (i)-[:UPDATED_BY {on: datetime()}]->(u)
                  RETURN i.id AS id`,
                 { itemId, userId, start, end: end ?? null }
             );

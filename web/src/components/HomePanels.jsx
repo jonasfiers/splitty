@@ -4,6 +4,7 @@ import client from '../api/client'
 import { formatCurrency } from '../utils/currency.js'
 import { timeAgo } from '../utils/time.js'
 import { today, daysBetween, formatDateRange } from '../utils/trip.js'
+import { activityLink, activityVerb, isTripActivity } from '../utils/activity.js'
 
 const RECENT = 5
 const TOP_CATEGORIES = 3
@@ -112,16 +113,16 @@ function RecentActivity({ activity }) {
       {activity.slice(0, RECENT).map((a, i) => (
         <Link
           key={i}
-          to={a.groupId ? `/groups/${a.groupId}/expenses/${a.expenseId}` : '/activity'}
+          to={activityLink(a)}
           className="home-activity-row"
         >
           <div style={{ flex: 1, minWidth: 0 }}>
             <div className="home-activity-desc">{a.description}</div>
             <div className="home-panel-sub">
-              {a.userName} {a.isSettlement ? 'settled up' : a.action === 'CREATED_BY' ? 'added' : 'updated'} · {timeAgo(a.timestamp)}
+              {a.userName} {activityVerb(a)} · {timeAgo(a.timestamp)}
             </div>
           </div>
-          <span className="home-activity-amt">{formatCurrency(a.amount, a.currencyIso)}</span>
+          {!isTripActivity(a) && <span className="home-activity-amt">{formatCurrency(a.amount, a.currencyIso)}</span>}
         </Link>
       ))}
     </div>

@@ -89,42 +89,68 @@ const dashService = {
         }
     },
 
-    // ACTIVITY CARDS
+    // ACTIVITY CARDS — expenses (added / edited / settlements) and trips
+    // (trip or item added / edited, file uploaded) in the user's groups,
+    // newest first. Every row carries `kind`: expense | trip | tripItem | file.
     getActivity: async (userId) => {
         try {
             const {records} = await driver.executeQuery(
-                `MATCH 
-                (u:User)<-[r:UPDATED_BY|CREATED_BY]-(e:Expense)-[:BALANCE_IN]->(g:Group)<-[:MEMBER_OF]-(:User {id: $userId})
+                `MATCH (u:User)<-[r:UPDATED_BY|CREATED_BY]-(e:Expense)-[:BALANCE_IN]->(g:Group)<-[:MEMBER_OF]-(:User {id: $userId})
                 MATCH (e)-[:EXPRESSED_IN]->(c:Currency)
-            RETURN
-            u.name as userName, 
-            e.id as expenseId, 
-            g.id as groupId, 
-            e.description as description, 
-            e.amount as amount, 
-            c.iso as currencyIso,
-            type(r) as action,
-            r.on as timestamp,
-            e:Settlement as isSettlement
-            order by r.on DESC`,
+                RETURN 'expense' AS kind, u.name AS userName, g.id AS groupId, type(r) AS action, r.on AS timestamp,
+                       e.id AS expenseId, e.description AS description, e.amount AS amount, c.iso AS currencyIso,
+                       e:Settlement AS isSettlement,
+                       null AS tripId, null AS tripTitle, null AS itemId, null AS itemKind, null AS itemMode, null AS itemTitle
+                UNION ALL
+                MATCH (u:User)<-[r:UPDATED_BY|CREATED_BY]-(t:Trip)-[:PLANNED_IN]->(g:Group)<-[:MEMBER_OF]-(:User {id: $userId})
+                RETURN 'trip' AS kind, u.name AS userName, g.id AS groupId, type(r) AS action, r.on AS timestamp,
+                       null AS expenseId, t.title AS description, null AS amount, null AS currencyIso, false AS isSettlement,
+                       t.id AS tripId, t.title AS tripTitle, null AS itemId, null AS itemKind, null AS itemMode, null AS itemTitle
+                UNION ALL
+                MATCH (u:User)<-[r:UPDATED_BY|CREATED_BY]-(i:TripItem)-[:PART_OF]->(t:Trip)-[:PLANNED_IN]->(g:Group)<-[:MEMBER_OF]-(:User {id: $userId})
+                RETURN 'tripItem' AS kind, u.name AS userName, g.id AS groupId, type(r) AS action, r.on AS timestamp,
+                       null AS expenseId, i.title AS description, null AS amount, null AS currencyIso, false AS isSettlement,
+                       t.id AS tripId, t.title AS tripTitle, i.id AS itemId,
+                       [l IN labels(i) WHERE l <> 'TripItem'][0] AS itemKind, i.mode AS itemMode, i.title AS itemTitle
+                UNION ALL
+                MATCH (u:User)<-[r:UPLOADED_BY]-(a:Attachment)-[:ATTACHED_TO]->(i:TripItem)-[:PART_OF]->(t:Trip)-[:PLANNED_IN]->(g:Group)<-[:MEMBER_OF]-(:User {id: $userId})
+                RETURN 'file' AS kind, u.name AS userName, g.id AS groupId, 'UPLOADED_BY' AS action, r.on AS timestamp,
+                       null AS expenseId, a.filename AS description, null AS amount, null AS currencyIso, false AS isSettlement,
+                       t.id AS tripId, t.title AS tripTitle, i.id AS itemId,
+                       [l IN labels(i) WHERE l <> 'TripItem'][0] AS itemKind, i.mode AS itemMode, i.title AS itemTitle`,
                 {userId}
             )
-            return {
-                success: true,
-                activities: records.map(record => ({
+            const activities = records.map(record => {
+                const kind = record.get('kind')
+                const base = {
+                    kind,
                     userName: record.get('userName'),
-                    expenseId: record.get('expenseId'),
                     groupId: record.get('groupId'),
-                    description: record.get('description'),
-                    amount: record.get('amount'),
-                    currencyIso: record.get('currencyIso'),
                     action: record.get('action'),
                     timestamp: record.get('timestamp').toStandardDate().getTime(),
-                    isSettlement: record.get('isSettlement') || false
-                }))
-            };
+                    description: record.get('description'),
+                }
+                if (kind === 'expense') return {
+                    ...base,
+                    expenseId: record.get('expenseId'),
+                    amount: record.get('amount'),
+                    currencyIso: record.get('currencyIso'),
+                    isSettlement: record.get('isSettlement') || false,
+                }
+                return {
+                    ...base,
+                    isSettlement: false,
+                    tripId: record.get('tripId'),
+                    tripTitle: record.get('tripTitle'),
+                    itemId: record.get('itemId'),
+                    itemKind: (record.get('itemKind') || '').toLowerCase() || null,
+                    itemMode: record.get('itemMode'),
+                    itemTitle: record.get('itemTitle'),
+                }
+            }).sort((x, y) => y.timestamp - x.timestamp)
+            return { success: true, activities };
         } catch (err) {
-            throw new Error(`Failed to get groups: ${err.message}`);
+            throw new Error(`Failed to get activity: ${err.message}`);
         }
     },
 

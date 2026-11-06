@@ -5,6 +5,7 @@ import { formatCurrency } from '../utils/currency'
 import Loading from '../components/Loading.jsx'
 import { useMediaQuery } from '../utils/useMediaQuery.js'
 import TabHeader from '../components/PageHeader/TabHeader.jsx'
+import { activityLink, activityVerb, activityMatches, activityIcon, activityTone, isTripActivity } from '../utils/activity.js'
 
 const PAGE = 50
 const TYPES = [
@@ -12,9 +13,8 @@ const TYPES = [
   { key: 'added', label: 'Added' },
   { key: 'edited', label: 'Edited' },
   { key: 'settlements', label: 'Settlements' },
+  { key: 'trips', label: 'Trips' },
 ]
-
-const typeOf = a => (a.isSettlement ? 'settlements' : a.action === 'CREATED_BY' ? 'added' : 'edited')
 
 const dayKey = ts => {
   const d = new Date(ts)
@@ -59,7 +59,7 @@ export default function ActivityPage() {
   }, [])
 
   const filtered = useMemo(
-    () => activities.filter(a => (type === 'all' || typeOf(a) === type) && (!groupId || a.groupId === groupId)),
+    () => activities.filter(a => activityMatches(a, type) && (!groupId || a.groupId === groupId)),
     [activities, type, groupId],
   )
 
@@ -81,8 +81,8 @@ export default function ActivityPage() {
     const [topName, topCount] = [...people].sort((x, y) => y[1] - x[1])[0] || []
     return {
       total: recent.length,
-      added: recent.filter(a => typeOf(a) === 'added').length,
-      settlements: recent.filter(a => typeOf(a) === 'settlements').length,
+      added: recent.filter(a => activityMatches(a, 'added')).length,
+      settlements: recent.filter(a => activityMatches(a, 'settlements')).length,
       topName, topCount,
     }
   }, [activities])
@@ -161,23 +161,23 @@ export default function ActivityPage() {
           <div className="card act-day-card">
             {items.map((a, i) => {
               const g = groups.get(a.groupId)
-              const kind = typeOf(a)
+              const trip = isTripActivity(a)
               return (
                 <div
-                  key={`${a.expenseId}-${a.timestamp}-${i}`}
+                  key={`${a.kind}-${a.expenseId || a.itemId || a.tripId}-${a.timestamp}-${i}`}
                   className="act-row"
-                  onClick={() => a.groupId && navigate(`/groups/${a.groupId}/expenses/${a.expenseId}`)}
+                  onClick={() => navigate(activityLink(a))}
                 >
-                  <div className={`act-icon ${kind}`}>{kind === 'settlements' ? '✓' : kind === 'added' ? '＋' : '✎'}</div>
+                  <div className={`act-icon ${activityTone(a)}${trip ? ' trip' : ''}`}>{activityIcon(a)}</div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div className="act-desc">{a.description}</div>
                     <div className="act-meta">
                       {g && <>{g.icon ? `${g.icon} ` : ''}{g.title} · </>}
-                      {a.userName} {kind === 'settlements' ? 'recorded a settlement' : kind === 'added' ? 'added' : 'updated'}
+                      {a.userName} {activityVerb(a, { settled: 'recorded a settlement' })}
                     </div>
                   </div>
                   <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                    <div className="act-amt">{formatCurrency(a.amount, a.currencyIso)}</div>
+                    {!trip && <div className="act-amt">{formatCurrency(a.amount, a.currencyIso)}</div>}
                     <div className="act-meta">{timeLabel(a.timestamp)}</div>
                   </div>
                 </div>
