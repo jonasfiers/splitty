@@ -37,13 +37,16 @@ export const activityMatches = (a, context, action) =>
   (context === 'all' || (context === 'trips') === isTripActivity(a)) &&
   (action === 'all' || actionOf(a) === action)
 
-// The icon box: + / ✎ / ✓ for expenses, the item's own icon for trip events.
+// The icon box shows what the row is about (the expense's category, the
+// trip item's kind...) in the same way for every kind of row; a small badge
+// in its corner shows what happened to it (see activityBadge).
 export const activityIcon = a => {
-  if (isDeletedActivity(a)) return '🗑'
   if (a.kind === 'trip') return '🧳'
   if (a.kind === 'file') return '📎'
   if (a.kind === 'tripItem') return itemIcon({ kind: a.itemKind, mode: a.itemMode })
-  return a.isSettlement ? '✓' : a.action === 'CREATED_BY' ? '＋' : '✎'
+  if (a.isSettlement) return '🤝'
+  if (a.isTransfer) return '↔️'
+  return a.categoryIcon || '🧾'
 }
-export const activityTone = a =>
-  isDeletedActivity(a) ? 'deleted' : a.isSettlement ? 'settlements' : a.action === 'UPDATED_BY' ? 'edited' : 'added'
+export const activityBadge = a => ({ added: '+', edited: '✎', deleted: '×' })[actionOf(a)]
+export const activityTone = a => actionOf(a)

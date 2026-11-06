@@ -5,7 +5,7 @@ import { formatCurrency } from '../utils/currency'
 import Loading from '../components/Loading.jsx'
 import { useMediaQuery } from '../utils/useMediaQuery.js'
 import TabHeader from '../components/PageHeader/TabHeader.jsx'
-import { activityLink, activityVerb, activityMatches, activityIcon, activityTone, isTripActivity, isDeletedActivity, actionOf } from '../utils/activity.js'
+import { activityLink, activityVerb, activityMatches, activityIcon, activityBadge, activityTone, isTripActivity, isDeletedActivity, actionOf } from '../utils/activity.js'
 
 const PAGE = 50
 const CONTEXTS = [
@@ -179,7 +179,10 @@ export default function ActivityPage() {
                   className={`act-row${isDeletedActivity(a) ? ' act-row-deleted' : ''}`}
                   onClick={() => { const to = activityLink(a); if (to) navigate(to) }}
                 >
-                  <div className={`act-icon ${activityTone(a)}${trip ? ' trip' : ''}`}>{activityIcon(a)}</div>
+                  <div className="act-icon">
+                    <span aria-hidden="true">{activityIcon(a)}</span>
+                    <span className={`act-badge ${activityTone(a)}`} aria-hidden="true">{activityBadge(a)}</span>
+                  </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div className="act-desc">{a.description}</div>
                     <div className="act-meta">

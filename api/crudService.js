@@ -1208,8 +1208,11 @@ const expenseService = {
                  UNWIND gone AS x
                  MATCH (x)-[:BALANCE_IN]->(g:Group)
                  OPTIONAL MATCH (x)-[:EXPRESSED_IN]->(cur:Currency)
+                 WITH u, x, g, cur,
+                      reduce(best = null, y IN [(x)-[:IN_CATEGORY]->(:Category)-[r:CHILD_OF*0..]->(a:Category) WHERE a.icon <> '' | {icon: a.icon, d: size(r)}]
+                             | CASE WHEN best IS NULL OR y.d < best.d THEN y ELSE best END).icon AS categoryIcon
                  CREATE (d:Deletion {
-                     id: randomUUID(), on: datetime(), title: x.description, amount: x.amount, currencyIso: cur.iso,
+                     id: randomUUID(), on: datetime(), title: x.description, amount: x.amount, currencyIso: cur.iso, categoryIcon: categoryIcon,
                      kind: CASE WHEN x:Settlement THEN 'settlement' WHEN x:Transfer THEN 'transfer' ELSE 'expense' END
                  })-[:IN_GROUP]->(g)
                  CREATE (d)-[:DELETED_BY]->(u)

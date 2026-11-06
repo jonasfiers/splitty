@@ -1847,17 +1847,27 @@ body {
 .act-row:first-child { border-top: none; }
 .act-row:hover .act-desc { color: var(--accent); }
 .act-icon {
-  width: 32px; height: 32px;
+  position: relative;
+  width: 34px; height: 34px;
   border-radius: var(--r-md);
   flex-shrink: 0;
   display: flex; align-items: center; justify-content: center;
-  font-size: 14px;
-  background: var(--accent-subtle);
-  color: var(--accent);
+  font-size: 17px;
+  background: var(--surface-2);
 }
-.act-icon.added, .act-icon.settlements { background: var(--green-light); color: var(--green-dark); }
-.act-icon.trip { background: var(--accent-light); font-size: 16px; }
-.act-icon.deleted { background: var(--red-light); color: var(--red-dark); font-size: 15px; }
+.act-badge {
+  position: absolute;
+  right: -4px; bottom: -4px;
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 800; line-height: 1;
+  color: #fff;
+  border: 2px solid var(--surface);
+}
+.act-badge.added { background: var(--green); }
+.act-badge.edited { background: var(--accent); font-size: 9px; }
+.act-badge.deleted { background: var(--red); }
 .act-row-deleted { cursor: default; }
 .act-row-deleted .act-desc { text-decoration: line-through; text-decoration-color: var(--text-3); color: var(--text-2); }
 .act-actions { margin-top: 8px; }
