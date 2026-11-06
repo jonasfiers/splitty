@@ -5,7 +5,7 @@ import { formatCurrency } from '../utils/currency'
 import Loading from '../components/Loading.jsx'
 import { useMediaQuery } from '../utils/useMediaQuery.js'
 import TabHeader from '../components/PageHeader/TabHeader.jsx'
-import { activityLink, activityVerb, activityMatches, activityIcon, activityBadge, activityTone, isTripActivity, isDeletedActivity, actionOf } from '../utils/activity.js'
+import { activityLink, activityVerb, activityMatches, activityIcon, activityTone, isTripActivity, isDeletedActivity, actionOf } from '../utils/activity.js'
 
 const PAGE = 50
 const CONTEXTS = [
@@ -181,7 +181,7 @@ export default function ActivityPage() {
                 >
                   <div className="act-icon">
                     <span aria-hidden="true">{activityIcon(a)}</span>
-                    <span className={`act-badge ${activityTone(a)}`} aria-hidden="true">{activityBadge(a)}</span>
+                    <ActionBadge action={activityTone(a)} />
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div className="act-desc">{a.description}</div>
@@ -227,5 +227,20 @@ export default function ActivityPage() {
         )}
       </div>
     </>
+  )
+}
+
+// Drawn, not typed: text glyphs (+ ✎ ×) sit at different heights in the
+// font and never centre exactly in a badge this small.
+const BADGE_PATHS = {
+  added: 'M12 6v12M6 12h12',
+  edited: 'M15.5 5.5l3 3L9 18l-4 1 1-4z',
+  deleted: 'M7 7l10 10M17 7L7 17',
+}
+function ActionBadge({ action }) {
+  return (
+    <span className={`act-badge ${action}`} aria-hidden="true">
+      <svg viewBox="0 0 24 24"><path d={BADGE_PATHS[action]} /></svg>
+    </span>
   )
 }

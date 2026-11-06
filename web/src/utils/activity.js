@@ -48,5 +48,4 @@ export const activityIcon = a => {
   if (a.isTransfer) return '↔️'
   return a.categoryIcon || '🧾'
 }
-export const activityBadge = a => ({ added: '+', edited: '✎', deleted: '×' })[actionOf(a)]
 export const activityTone = a => actionOf(a)

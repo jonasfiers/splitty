@@ -1857,16 +1857,20 @@ body {
 }
 .act-badge {
   position: absolute;
-  right: -4px; bottom: -4px;
-  width: 16px; height: 16px;
+  right: -5px; bottom: -5px;
+  width: 18px; height: 18px;
   border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
-  font-size: 11px; font-weight: 800; line-height: 1;
-  color: #fff;
   border: 2px solid var(--surface);
+  box-sizing: content-box;
 }
+.act-badge svg {
+  width: 12px; height: 12px;
+  fill: none; stroke: #fff; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round;
+}
+.act-badge.edited svg { stroke-width: 2.6; }
 .act-badge.added { background: var(--green); }
-.act-badge.edited { background: var(--accent); font-size: 9px; }
+.act-badge.edited { background: var(--accent); }
 .act-badge.deleted { background: var(--red); }
 .act-row-deleted { cursor: default; }
 .act-row-deleted .act-desc { text-decoration: line-through; text-decoration-color: var(--text-3); color: var(--text-2); }
