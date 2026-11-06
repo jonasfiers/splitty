@@ -32,16 +32,19 @@ export function Avatar({ name, size = 34, style, colorIndex, emoji }) {
   )
 }
 
+// Overlapping avatars, the first one on top: each next one tucks under the
+// one to its left (a later element would otherwise paint over the earlier).
 export function AvatarStack({ members = [], max = 4 }) {
+  const shown = members.slice(0, max)
   return (
     <div className="avatar-stack">
-      {members.slice(0, max).map((m, i) => {
+      {shown.map((m, i) => {
         const { bg, fg } = m.avatarColor !== undefined && m.avatarColor !== null
           ? colorFor(m.avatarColor)
           : colorFor(m.name)
         const display = m.avatarEmoji || getInitials(m.name)
         return (
-          <div key={m.id ?? i} className="av" style={{ background: bg, color: fg }}>
+          <div key={m.id ?? i} className="av" style={{ background: bg, color: fg, zIndex: shown.length - i }}>
             {display}
           </div>
         )
