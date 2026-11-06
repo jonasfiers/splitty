@@ -1,0 +1,39 @@
+/* Fixed light colours in both themes: easiest to read, and to scan. */
+.bigref {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: #fff;
+  color: #000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4vh;
+  padding: max(24px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
+           max(24px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  cursor: pointer;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.bigref-label {
+  font-family: var(--font-body);
+  font-size: 16px;
+  color: #555;
+  text-align: center;
+}
+.bigref-value {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  line-height: 1.15;
+  text-align: center;
+  overflow-wrap: anywhere;
+  /* A mono character plus spacing is ~0.68em wide: fill ~90% of the width. */
+  font-size: min(calc(132vw / var(--chars)), 28vh);
+}
+.bigref-hint {
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: #888;
+}

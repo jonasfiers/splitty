@@ -4,6 +4,7 @@ import client from '../api/client'
 import Loading from '../components/Loading.jsx'
 import BackLink from '../components/BackLink.jsx'
 import LinkExpenseSheet from '../components/TripForm/LinkExpenseSheet.jsx'
+import BigReference from '../components/BigReference/BigReference.jsx'
 import { useMediaQuery } from '../utils/useMediaQuery.js'
 
 // Leaflet is only worth downloading when the map is shown (wide screens).
@@ -43,6 +44,8 @@ export default function TripItemDetailPage() {
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [showBigRef, setShowBigRef] = useState(false)
+  const closeBigRef = useCallback(() => setShowBigRef(false), [])
   const [linking, setLinking] = useState(false)
   // Same breakpoint as the other two-column pages (see index.css).
   const wide = useMediaQuery('(min-width: 1180px)')
@@ -186,9 +189,24 @@ export default function TripItemDetailPage() {
               )}
               {item.confirmationRef && (
                 <Row label="Booking reference">
-                  <button type="button" className="trip-ref" onClick={copyReference} title="Copy">
-                    {item.confirmationRef} <span>{copied ? 'copied' : 'copy'}</span>
-                  </button>
+                  <span className="trip-ref">
+                    <button type="button" className="trip-ref-code" onClick={copyReference} title="Copy">
+                      {item.confirmationRef}
+                    </button>
+                    <button type="button" className="trip-ref-icon" onClick={copyReference} aria-label="Copy booking reference" title={copied ? 'Copied' : 'Copy'}>
+                      {copied ? (
+                        <svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
+                      ) : (
+                        <svg viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2" /><path d="M5 15V6a2 2 0 0 1 2-2h8" /></svg>
+                      )}
+                    </button>
+                    <button type="button" className="trip-ref-icon" onClick={() => setShowBigRef(true)} aria-label="Show booking reference full screen" title="Show big">
+                      <svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" /></svg>
+                    </button>
+                  </span>
+                  {showBigRef && (
+                    <BigReference value={item.confirmationRef} label={`${item.title} · Booking reference`} onClose={closeBigRef} />
+                  )}
                 </Row>
               )}
               {item.url && (

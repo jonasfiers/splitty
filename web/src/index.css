@@ -2395,23 +2395,46 @@ body {
   margin-top: 2px;
 }
 .trip-ref {
-  font-family: var(--font-mono);
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text);
+  display: inline-flex;
+  align-items: stretch;
+  vertical-align: middle;
   background: var(--surface-2);
   border: 1px solid var(--border);
   border-radius: var(--r-sm);
-  padding: 3px 8px;
+  overflow: hidden;
+}
+.trip-ref button {
+  background: none;
+  border: none;
+  margin: 0;
   cursor: pointer;
+  color: var(--text);
 }
-.trip-ref span {
-  font-family: var(--font-body);
-  font-weight: 400;
-  font-size: 11px;
-  color: var(--text-3);
-  margin-left: 6px;
+.trip-ref button + button { border-left: 1px solid var(--border); }
+.trip-ref button:hover { background: var(--border); }
+.trip-ref-code {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 4px 10px;
 }
+.trip-ref-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  padding: 0;
+}
+.trip-ref-icon svg {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: var(--text-3);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.trip-ref-icon:hover svg { stroke: var(--text); }
 .trip-unlink {
   font-size: 11px;
   color: var(--text-3);
