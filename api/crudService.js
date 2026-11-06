@@ -1038,19 +1038,19 @@ const expenseService = {
                 OPTIONAL MATCH (g)-[:EXPRESSED_IN]->(gc:Currency)
                 OPTIONAL MATCH path = (c)-[:CHILD_OF*]->(root:Category)
                 WHERE NOT (root)-[:CHILD_OF]->(:Category)
-                WITH e, u, c, cur, gc,
+                WITH e, g, u, c, cur, gc,
                     CASE WHEN c IS NULL THEN null
                          WHEN path IS NULL THEN c.name
                          ELSE apoc.text.join([node IN reverse(nodes(path)) | node.name], ' - ')
                     END AS categoryName
                 OPTIONAL MATCH iconPath = (c)-[:CHILD_OF*0..]->(iconAncestor:Category)
                 WHERE iconAncestor.icon <> ""
-                WITH e, u, c, cur, gc, categoryName, iconAncestor, length(iconPath) AS iconDist
+                WITH e, g, u, c, cur, gc, categoryName, iconAncestor, length(iconPath) AS iconDist
                 ORDER BY iconDist
-                WITH e, u, c, cur, gc, categoryName, collect(iconAncestor)[0] AS nearestIcon
+                WITH e, g, u, c, cur, gc, categoryName, collect(iconAncestor)[0] AS nearestIcon
                 RETURN e, u.id AS paidByUserId, u.name AS paidByName, c.id AS categoryId,
                        coalesce(nearestIcon.icon, '') AS categoryIcon, categoryName, cur.iso AS currencyIso,
-                       gc.iso AS groupCurrencyIso, e:Settlement AS isSettlement, e:Transfer AS isTransfer`,
+                       gc.iso AS groupCurrencyIso, g.title AS groupTitle, e:Settlement AS isSettlement, e:Transfer AS isTransfer`,
                 {id, userId}
             )
             if (records.length === 0) { return { success: false, message: 'Expense not found or access denied.' };}
@@ -1066,6 +1066,7 @@ const expenseService = {
                     categoryName:    record.get('categoryName'),
                     currencyIso:     record.get('currencyIso'),
                     groupCurrencyIso: record.get('groupCurrencyIso'),
+                    groupTitle:      record.get('groupTitle'),
                     isSettlement:    record.get('isSettlement'),
                     isTransfer:      record.get('isTransfer'),
                 }
