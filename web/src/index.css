@@ -671,6 +671,7 @@ body {
   margin-left: -6px;
 }
 .avatar-stack .av:first-child { margin-left: 0; }
+.avatar-stack .av-more { background: var(--surface-2); color: var(--text-2); font-size: 9px; letter-spacing: -0.02em; }
 
 /* Toggle switch */
 .toggle {

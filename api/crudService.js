@@ -695,6 +695,7 @@ const groupServiceNeo4j = {
                 success: true,
                 members: records.map(r => {
                     const { password, email, ...u } = r.get('m').properties;
+                    if (u.avatarColor != null) u.avatarColor = neo4j.integer.toNumber(u.avatarColor);
                     return { ...u, balance: Number(r.get('balance') ?? 0) };
                 })
             };

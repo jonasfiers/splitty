@@ -1,3 +1,4 @@
+const neo4j = require('neo4j-driver');
 const driver = require('./neo4j');
 const { resolveChanges } = require('./expenseHistory');
 
@@ -81,7 +82,12 @@ const dashService = {
                 success: true,
                 groups: records.map(record => ({
                     ...record.get('g').properties,
-                    members: record.get('members').map(m => ({ ...m, balance: Number(m.balance ?? 0) })),
+                    members: record.get('members').map(m => ({
+                        ...m,
+                        balance: Number(m.balance ?? 0),
+                        // Stored as a float by the app, but an integer must work too.
+                        avatarColor: m.avatarColor == null ? null : neo4j.integer.toNumber(m.avatarColor),
+                    })),
                     memberCount: record.get('memberCount').toNumber(),
                     iso: record.get('iso'),
                     lastActivity: record.get('lastActivity') ? record.get('lastActivity').toStandardDate().getTime() : null,
