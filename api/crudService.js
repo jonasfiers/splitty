@@ -1267,12 +1267,14 @@ const shareService = {
 }
 
 const passkeyService = {
-    createPasskey: async (userId, credentialId, publicKey, counter, transports) => {
+    // name: a label for the user ("iPhone · Safari"); createdAt/lastUsedAt are
+    // ISO strings. Passkeys made before 2026-11-06 have none of the three.
+    createPasskey: async (userId, credentialId, publicKey, counter, transports, name = null) => {
         try {
             await driver.executeQuery(
                 'MATCH (u:User {id: $userId}) ' +
-                'CREATE (p:Passkey {credentialId: $credentialId, publicKey: $publicKey, counter: $counter, transports: $transports})-[:BELONGS_TO]->(u)',
-                { userId, credentialId, publicKey, counter, transports }
+                'CREATE (p:Passkey {credentialId: $credentialId, publicKey: $publicKey, counter: $counter, transports: $transports, name: $name, createdAt: $now})-[:BELONGS_TO]->(u)',
+                { userId, credentialId, publicKey, counter, transports, name, now: new Date().toISOString() }
             );
             return { success: true };
         } catch (err) {
@@ -1308,8 +1310,8 @@ const passkeyService = {
     updatePasskeyCounter: async (credentialId, counter) => {
         try {
             await driver.executeQuery(
-                'MATCH (p:Passkey {credentialId: $credentialId}) SET p.counter = $counter',
-                { credentialId, counter }
+                'MATCH (p:Passkey {credentialId: $credentialId}) SET p.counter = $counter, p.lastUsedAt = $now',
+                { credentialId, counter, now: new Date().toISOString() }
             );
             return { success: true };
         } catch (err) {

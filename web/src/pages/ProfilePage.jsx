@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
 import Loading from '../components/Loading.jsx'
 import client from '../api/client'
-import { formatCurrency } from '../utils/currency.js'
+import { timeAgo } from '../utils/time.js'
 import { Avatar, PALETTE } from '../components/Avatar.jsx'
 import EmojiPicker from '../components/EmojiPicker/EmojiPicker.jsx'
 import { subscribeToPush, unsubscribeFromPush, isPushSubscribed, disablePushForLogout } from '../utils/push.js'
@@ -24,15 +24,12 @@ export default function ProfilePage() {
   const [notifications, setNotifications] = useState(false)
   const [notifError, setNotifError] = useState('')
 
-  const [showEditForm, setShowEditForm] = useState(false)
-  const [editForm, setEditForm] = useState({ name: '', email: '' })
+  // One "Edit profile" sheet for name, email, colour and emoji.
+  const [showEdit, setShowEdit] = useState(false)
+  const [editForm, setEditForm] = useState({ name: '', email: '', avatarColor: null, avatarEmoji: null })
   const [editError, setEditError] = useState('')
   const [editMessage, setEditMessage] = useState('')
   const [editSaving, setEditSaving] = useState(false)
-
-  const [avatarColor, setAvatarColor] = useState(null)
-  const [avatarEmoji, setAvatarEmoji] = useState(null)
-  const [showAvatarEditor, setShowAvatarEditor] = useState(false)
 
   const [showPasswordForm, setShowPasswordForm] = useState(false)
   const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' })
@@ -45,9 +42,7 @@ export default function ProfilePage() {
       const prof = r.data.profile || null
       setProfile(prof)
       if (prof) {
-        setEditForm({ name: prof.name, email: prof.email })
-        setAvatarColor(prof.avatarColor ?? null)
-        setAvatarEmoji(prof.avatarEmoji ?? null)
+        setEditForm({ name: prof.name, email: prof.email, avatarColor: prof.avatarColor ?? null, avatarEmoji: prof.avatarEmoji ?? null })
       }
       return prof
     })
@@ -66,21 +61,31 @@ export default function ProfilePage() {
     isPushSubscribed().then(setNotifications)
   }, [currentUser])
 
+  const openEdit = () => {
+    setEditForm({ name: profile.name, email: profile.email, avatarColor: profile.avatarColor ?? null, avatarEmoji: profile.avatarEmoji ?? null })
+    setEditError('')
+    setEditMessage('')
+    setShowEdit(true)
+  }
+
   const handleEditProfile = async e => {
     e.preventDefault()
     setEditError('')
     setEditMessage('')
     setEditSaving(true)
     try {
-      const { data } = await client.put(`/users/${currentUser.id}`, editForm)
+      const { data } = await client.put(`/users/${currentUser.id}`, {
+        name: editForm.name,
+        email: editForm.email,
+        avatarColor: editForm.avatarColor ?? undefined,
+        avatarEmoji: editForm.avatarEmoji ?? null,
+      })
       updateToken(data.token)
       await loadProfile()
-      if (data.emailChangePending) {
-        setEditMessage(`Verification email sent to ${editForm.email}. Your email will update once confirmed.`)
-      } else {
-        setEditMessage('Profile updated.')
-        setShowEditForm(false)
-      }
+      setShowEdit(false)
+      setEditMessage(data.emailChangePending
+        ? `Verification email sent to ${editForm.email}. Your email will update once confirmed.`
+        : 'Profile updated.')
     } catch (err) {
       setEditError(err?.response?.data?.error || 'Failed to update profile.')
     } finally {
@@ -172,302 +177,235 @@ export default function ProfilePage() {
     }
   };
 
-  const handleSaveAvatar = async (newColor, newEmoji) => {
-    try {
-      const { data } = await client.put(`/users/${currentUser.id}`, {
-        avatarColor: newColor,
-        avatarEmoji: newEmoji ?? null,
-      })
-      updateToken(data.token)
-    } catch {
-      // silent — the UI already updated optimistically
-    }
-  }
-
   if (loading) return <Loading />
+
+  const editAvatar = (
+    <Avatar name={editForm.name || profile.name} size={56} colorIndex={editForm.avatarColor} emoji={editForm.avatarEmoji} />
+  )
 
   return (
     <>
       <TabHeader title="Profile" avatar={false} />
-      {/* Hero */}
-      <div className="profile-hero">
-        <div
-          className="profile-av-wrap"
-          onClick={() => setShowAvatarEditor(v => !v)}
-        >
-          <Avatar
-            name={profile.name}
-            size={76}
-            colorIndex={avatarColor}
-            emoji={avatarEmoji}
-            style={{ border: '3px solid var(--border)' }}
-          />
-          <div className="profile-av-edit-badge">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-            </svg>
-          </div>
-        </div>
-        <div className="profile-name">{profile.name}</div>
-        <div className="profile-email">{profile.email}</div>
-      </div>
 
-      {showAvatarEditor && (
-        <div className="panel" style={{ marginBottom: 16, padding: '14px 16px' }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', marginBottom: 10, letterSpacing: '.06em', textTransform: 'uppercase' }}>Color</div>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
-            {PALETTE.map((p, i) => (
-              <button
-                key={i}
-                type="button"
-                onClick={() => { setAvatarColor(i); handleSaveAvatar(i, avatarEmoji) }}
-                style={{
-                  width: 28, height: 28, borderRadius: '50%',
-                  background: p.bg,
-                  border: avatarColor === i ? `3px solid ${p.fg}` : '2px solid var(--border)',
-                  cursor: 'pointer', flexShrink: 0,
-                }}
-                aria-label={`Color ${i + 1}`}
-              />
-            ))}
-          </div>
-          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', marginBottom: 10, letterSpacing: '.06em', textTransform: 'uppercase' }}>Emoji</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <EmojiPicker
-              value={avatarEmoji}
-              onChange={emoji => { setAvatarEmoji(emoji); handleSaveAvatar(avatarColor, emoji) }}
-            />
-            {avatarEmoji && (
-              <button
-                type="button"
-                className="btn btn-ghost btn-sm"
-                onClick={() => { setAvatarEmoji(null); handleSaveAvatar(avatarColor, null) }}
-              >
-                Clear
-              </button>
-            )}
-          </div>
+      {/* Who you are */}
+      <section className="set-card profile-id">
+        <Avatar name={profile.name} size={60} colorIndex={profile.avatarColor} emoji={profile.avatarEmoji} />
+        <div className="profile-id-text">
+          <div className="profile-name">{profile.name}</div>
+          <div className="profile-email">{profile.email}</div>
         </div>
-      )}
-
-      {/* Stats */}
-      <div className="stats-row">
-        <div className="stat-col">
-          <span className="stat-val">{profile.groupCount}</span>
-          <span className="stat-lbl">Groups</span>
-        </div>
-        <div className="stat-div" />
-        <div className="stat-col">
-          <span className="stat-val">{profile.expenseCount}</span>
-          <span className="stat-lbl">Expenses</span>
-        </div>
-        <div className="stat-div" />
-        <div className="stat-col">
-          <span className="stat-val" style={{ fontSize: 16 }}>{formatCurrency(profile.balance)}</span>
-          <span className="stat-lbl">Net balance</span>
-        </div>
-      </div>
-
-      {/* Edit Profile */}
-      <div className="pref-section-label">Profile</div>
-
+        <button type="button" className="btn btn-ghost btn-sm" onClick={openEdit}>Edit</button>
+      </section>
       {profile.pendingEmail && (
-        <p style={{ fontSize: 13, color: 'var(--text-3)', margin: '0 0 12px', padding: '10px 14px', background: 'var(--surface-2)', borderRadius: 8 }}>
-          Verification pending for <strong style={{ color: 'var(--text-1)' }}>{profile.pendingEmail}</strong> — check your inbox.
+        <p className="set-note">
+          Waiting for you to confirm <strong>{profile.pendingEmail}</strong>: check that inbox.
         </p>
       )}
+      {editMessage && <p className="set-ok">{editMessage}</p>}
 
-      {editMessage && !showEditForm && (
-        <p style={{ fontSize: 13, color: 'var(--green-dark)', fontWeight: 600, margin: '0 0 12px' }}>{editMessage}</p>
-      )}
-      {passwordMessage && !showPasswordForm && (
-        <p style={{ fontSize: 13, color: 'var(--green-dark)', fontWeight: 600, margin: '0 0 12px' }}>{passwordMessage}</p>
-      )}
+      <div className="profile-layout">
+        <div className="profile-col">
+          {/* Account */}
+          <SetGroup label="Account">
+            <SetRow label="Name" value={profile.name} onClick={openEdit} />
+            <SetRow label="Email" value={profile.email} onClick={openEdit} />
+            {profile.hasPassword && (
+              <SetRow label="Password" value="••••••••" onClick={() => { setShowPasswordForm(true); setPasswordMessage(''); setPasswordError('') }} />
+            )}
+          </SetGroup>
+          {passwordMessage && <p className="set-ok">{passwordMessage}</p>}
 
-      {showEditForm ? (
-        <div className="panel" style={{ marginBottom: 12 }}>
-          <form onSubmit={handleEditProfile}>
-            <div className="form-group">
-              <label>Name</label>
-              <input
-                value={editForm.name}
-                onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))}
-                required
-              />
-            </div>
-            <div className="form-group">
-              <label>Email</label>
-              <input
-                type="email"
-                value={editForm.email}
-                onChange={e => setEditForm(f => ({ ...f, email: e.target.value }))}
-                required
-              />
-              <p style={{ fontSize: 12, color: 'var(--text-3)', margin: '4px 0 0' }}>
-                Changing your email will send a verification link to the new address.
-              </p>
-            </div>
-            {editError && <p className="error">{editError}</p>}
-            {editMessage && <p style={{ fontSize: 13, color: 'var(--green-dark)', fontWeight: 600 }}>{editMessage}</p>}
-            <div className="panel-actions">
-              <button type="button" className="btn btn-ghost" onClick={() => { setShowEditForm(false); setEditError(''); setEditMessage('') }}>Cancel</button>
-              <button type="submit" className="btn btn-secondary" disabled={editSaving}>{editSaving ? 'Saving…' : 'Save'}</button>
-            </div>
-          </form>
-        </div>
-      ) : (
-        <div className="pref-row">
-          <span className="pref-label">Name &amp; email</span>
-          <button className="btn btn-ghost btn-sm" onClick={() => { setShowEditForm(true); setEditMessage(''); setEditError('') }}>Edit</button>
-        </div>
-      )}
-
-      {profile.hasPassword && (
-        showPasswordForm ? (
-          <div className="panel" style={{ marginBottom: 12 }}>
-            <form onSubmit={handleChangePassword}>
-              <div className="form-group">
-                <label>Current password</label>
-                <input
-                  type="password"
-                  value={passwordForm.currentPassword}
-                  onChange={e => setPasswordForm(f => ({ ...f, currentPassword: e.target.value }))}
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label>New password</label>
-                <input
-                  type="password"
-                  value={passwordForm.newPassword}
-                  onChange={e => setPasswordForm(f => ({ ...f, newPassword: e.target.value }))}
-                  minLength={8}
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label>Confirm new password</label>
-                <input
-                  type="password"
-                  value={passwordForm.confirmPassword}
-                  onChange={e => setPasswordForm(f => ({ ...f, confirmPassword: e.target.value }))}
-                  required
-                />
-              </div>
-              {passwordError && <p className="error">{passwordError}</p>}
-              <div className="panel-actions">
-                <button type="button" className="btn btn-ghost" onClick={() => { setShowPasswordForm(false); setPasswordError('') }}>Cancel</button>
-                <button type="submit" className="btn btn-secondary" disabled={passwordSaving}>{passwordSaving ? 'Saving…' : 'Change password'}</button>
-              </div>
-            </form>
-          </div>
-        ) : (
-          <div className="pref-row">
-            <span className="pref-label">Password</span>
-            <button className="btn btn-ghost btn-sm" onClick={() => { setShowPasswordForm(true); setPasswordMessage(''); setPasswordError('') }}>Change</button>
-          </div>
-        )
-      )}
-
-      {/* Preferences */}
-      <div className="pref-section-label">Preferences</div>
-
-      <div className="pref-row">
-        <span className="pref-label">Notifications</span>
-        <button
-          className={`toggle${notifications ? ' on' : ''}`}
-          onClick={handleNotificationsToggle}
-          aria-label="Toggle notifications"
-        />
-      </div>
-      {notifError && <p style={{ fontSize: 12, color: 'var(--red-dark)', margin: '-4px 0 8px' }}>{notifError}</p>}
-
-      <div className="pref-row">
-        <span className="pref-label">Appearance</span>
-        <div className="theme-segment">
-          {['system', 'light', 'dark'].map(opt => (
-            <button
-              key={opt}
-              className={`theme-segment-btn${theme === opt ? ' active' : ''}`}
-              onClick={() => setTheme(opt)}
-            >
-              {opt.charAt(0).toUpperCase() + opt.slice(1)}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {isAdmin && (
-        <>
-          <div className="pref-section-label">Admin</div>
-          <Link to="/admin" className="pref-row pref-link">
-            <span className="pref-label">Categories and currencies</span>
-            <svg className="pref-chev" viewBox="0 0 24 24" aria-hidden="true"><polyline points="9 6 15 12 9 18" /></svg>
-          </Link>
-        </>
-      )}
-
-      {/* Data Management */}
-      <div className="pref-section-label">Data Management</div>
-      <div className="pref-row">
-        <span className="pref-label">Export your data</span>
-        <button className="btn-amber-pill" onClick={handleExportData} style={{ padding: '6px 16px' }}>CSV</button>
-      </div>
-
-      {/* Security */}
-      <div className="pref-section-label">Security</div>
-
-      {message && <p style={{ color: 'var(--green-dark)', fontSize: 13, fontWeight: 600, padding: '0 0 8px' }}>{message}</p>}
-      {error && <p className="error" style={{ margin: '0 0 8px' }}>{error}</p>}
-
-      <div className="passkey-list">
-        {passkeys.length === 0 ? (
-          <div className="passkey-empty">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 10a4 4 0 1 0 4 4"/>
-              <path d="M12 10V4"/>
-              <path d="M12 4a2 2 0 0 1 4 0"/>
-              <path d="M20 14a8 8 0 1 1-8-8"/>
-            </svg>
-            <p className="passkey-empty-title">No passkeys yet</p>
-            <p className="passkey-empty-sub">Add one to sign in with Touch ID or Face ID.</p>
-            <button className="btn-amber-pill" onClick={handleAddPasskey}>+ Add passkey</button>
-          </div>
-        ) : (
-          <>
-            {passkeys.map((p, i) => (
-              <div key={p.credentialId} className="passkey-card">
-                <div className="passkey-card-icon">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M12 10a4 4 0 1 0 4 4"/>
-                    <path d="M12 10V4"/>
-                    <path d="M12 4a2 2 0 0 1 4 0"/>
-                    <path d="M20 14a8 8 0 1 1-8-8"/>
-                  </svg>
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div className="pref-label">Passkey {passkeys.length > 1 ? i + 1 : ''}</div>
-                  <div style={{ fontSize: 11, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', marginTop: 2 }}>
-                    {p.credentialId.slice(0, 24)}…
-                  </div>
-                </div>
-                <button className="passkey-remove-btn" onClick={() => handleDeletePasskey(p.credentialId)} title="Remove passkey">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                    <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
-                  </svg>
+          {/* Passkeys */}
+          <SetGroup label="Passkeys" hint="Sign in with Face ID, Touch ID or your phone's screen lock instead of a password.">
+            {passkeys.map(p => (
+              <div key={p.credentialId} className="set-row">
+                <span className="set-row-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24"><circle cx="8" cy="15" r="4" /><path d="M10.8 12.2L20 3M17 6l3 3M15 8l2 2" /></svg>
+                </span>
+                <span className="set-row-main">
+                  <span className="set-row-label">{p.name || 'Passkey'}</span>
+                  <span className="set-row-sub">
+                    {p.createdAt ? `Added ${new Date(p.createdAt).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}` : 'Added before Nov 2026'}
+                    {p.lastUsedAt && ` · used ${timeAgo(p.lastUsedAt)}`}
+                  </span>
+                </span>
+                <button type="button" className="set-row-remove" onClick={() => handleDeletePasskey(p.credentialId)} aria-label={`Remove ${p.name || 'passkey'}`}>
+                  Remove
                 </button>
               </div>
             ))}
-            <button className="btn-outline-amber" style={{ width: '100%', marginTop: 8 }} onClick={handleAddPasskey}>+ Add passkey</button>
-          </>
-        )}
+            <button type="button" className="set-row set-row-action" onClick={handleAddPasskey}>
+              + Add a passkey
+            </button>
+          </SetGroup>
+          {message && <p className="set-ok">{message}</p>}
+          {error && <p className="error">{error}</p>}
+        </div>
+
+        <div className="profile-col">
+          {/* People */}
+          <SetGroup label="People">
+            <SetRow label="Friends" sub="Everyone you share a group with" to="/friends" />
+          </SetGroup>
+
+          {/* Preferences */}
+          <SetGroup label="Preferences">
+            <div className="set-row">
+              <span className="set-row-main"><span className="set-row-label">Notifications</span></span>
+              <button
+                className={`toggle${notifications ? ' on' : ''}`}
+                onClick={handleNotificationsToggle}
+                aria-label="Notifications"
+                aria-pressed={notifications}
+              />
+            </div>
+            <div className="set-row">
+              <span className="set-row-main"><span className="set-row-label">Appearance</span></span>
+              <div className="theme-segment">
+                {['system', 'light', 'dark'].map(opt => (
+                  <button
+                    key={opt}
+                    className={`theme-segment-btn${theme === opt ? ' active' : ''}`}
+                    onClick={() => setTheme(opt)}
+                  >
+                    {opt.charAt(0).toUpperCase() + opt.slice(1)}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </SetGroup>
+          {notifError && <p className="error">{notifError}</p>}
+
+          {/* Your data */}
+          <SetGroup label="Your data">
+            <SetRow label="Export as CSV" sub="Every expense in your groups, with your share" onClick={handleExportData} action />
+          </SetGroup>
+
+          {isAdmin && (
+            <SetGroup label="Admin">
+              <SetRow label="Categories and currencies" to="/admin" />
+            </SetGroup>
+          )}
+        </div>
       </div>
 
-      {/* Sign out */}
-      <div style={{ paddingTop: 24 }}>
-        <button className="btn btn-danger" onClick={handleSignOut}>Sign out</button>
-      </div>
+      <button type="button" className="btn btn-ghost profile-signout" onClick={handleSignOut}>Sign out</button>
+
+      {showEdit && (
+        <Sheet title="Edit profile" onClose={() => setShowEdit(false)}>
+          <form onSubmit={handleEditProfile}>
+            <div className="edit-avatar">
+              {editAvatar}
+              <div className="edit-avatar-pick">
+                <div className="edit-avatar-colors">
+                  {PALETTE.map((c, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      className={`edit-avatar-color${editForm.avatarColor === i ? ' on' : ''}`}
+                      style={{ background: c.bg, '--ring': c.fg }}
+                      onClick={() => setEditForm(f => ({ ...f, avatarColor: i }))}
+                      aria-label={`Colour ${i + 1}`}
+                      aria-pressed={editForm.avatarColor === i}
+                    />
+                  ))}
+                </div>
+                <div className="edit-avatar-emoji">
+                  <EmojiPicker value={editForm.avatarEmoji} onChange={emoji => setEditForm(f => ({ ...f, avatarEmoji: emoji }))} />
+                  {editForm.avatarEmoji && (
+                    <button type="button" className="btn btn-ghost btn-sm" onClick={() => setEditForm(f => ({ ...f, avatarEmoji: null }))}>No emoji</button>
+                  )}
+                </div>
+              </div>
+            </div>
+            <div className="form-group">
+              <label>Name</label>
+              <input value={editForm.name} onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))} required />
+            </div>
+            <div className="form-group">
+              <label>Email</label>
+              <input type="email" value={editForm.email} onChange={e => setEditForm(f => ({ ...f, email: e.target.value }))} required />
+              <p className="form-hint">A new address only takes effect once you confirm it from that inbox.</p>
+            </div>
+            {editError && <p className="error">{editError}</p>}
+            <div className="panel-actions">
+              <button type="button" className="btn btn-ghost" onClick={() => setShowEdit(false)}>Cancel</button>
+              <button type="submit" className="btn btn-secondary" disabled={editSaving}>{editSaving ? 'Saving…' : 'Save'}</button>
+            </div>
+          </form>
+        </Sheet>
+      )}
+
+      {showPasswordForm && (
+        <Sheet title="Change password" onClose={() => { setShowPasswordForm(false); setPasswordError('') }}>
+          <form onSubmit={handleChangePassword}>
+            <div className="form-group">
+              <label>Current password</label>
+              <input type="password" autoComplete="current-password" value={passwordForm.currentPassword} onChange={e => setPasswordForm(f => ({ ...f, currentPassword: e.target.value }))} required />
+            </div>
+            <div className="form-group">
+              <label>New password</label>
+              <input type="password" autoComplete="new-password" value={passwordForm.newPassword} onChange={e => setPasswordForm(f => ({ ...f, newPassword: e.target.value }))} minLength={8} required />
+            </div>
+            <div className="form-group">
+              <label>Confirm new password</label>
+              <input type="password" autoComplete="new-password" value={passwordForm.confirmPassword} onChange={e => setPasswordForm(f => ({ ...f, confirmPassword: e.target.value }))} required />
+            </div>
+            {passwordError && <p className="error">{passwordError}</p>}
+            <div className="panel-actions">
+              <button type="button" className="btn btn-ghost" onClick={() => { setShowPasswordForm(false); setPasswordError('') }}>Cancel</button>
+              <button type="submit" className="btn btn-secondary" disabled={passwordSaving}>{passwordSaving ? 'Saving…' : 'Change password'}</button>
+            </div>
+          </form>
+        </Sheet>
+      )}
     </>
+  )
+}
+
+function SetGroup({ label, hint, children }) {
+  return (
+    <section className="set-group">
+      <h2 className="set-group-label">{label}</h2>
+      <div className="set-card">{children}</div>
+      {hint && <p className="set-group-hint">{hint}</p>}
+    </section>
+  )
+}
+
+// A settings row: a link (`to`), a button (`onClick`), or plain text.
+// `action` styles it as a command rather than a place to go.
+function SetRow({ label, value, sub, to, onClick, action = false }) {
+  const body = (
+    <>
+      <span className="set-row-main">
+        <span className="set-row-label">{label}</span>
+        {sub && <span className="set-row-sub">{sub}</span>}
+      </span>
+      {value && <span className="set-row-value">{value}</span>}
+      {!action && (to || onClick) && (
+        <svg className="set-row-chev" viewBox="0 0 24 24" aria-hidden="true"><polyline points="9 6 15 12 9 18" /></svg>
+      )}
+    </>
+  )
+  if (to) return <Link to={to} className="set-row set-row-link">{body}</Link>
+  if (onClick) return <button type="button" className={`set-row set-row-link${action ? ' set-row-action' : ''}`} onClick={onClick}>{body}</button>
+  return <div className="set-row">{body}</div>
+}
+
+function Sheet({ title, onClose, children }) {
+  useEffect(() => {
+    const onKey = e => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose])
+  return (
+    <div className="sheet-overlay" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+      <div className="sheet" role="dialog" aria-modal="true" aria-label={title}>
+        <div className="sheet-handle" />
+        <div className="sheet-title">{title}</div>
+        {children}
+      </div>
+    </div>
   )
 }

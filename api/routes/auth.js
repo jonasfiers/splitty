@@ -7,6 +7,27 @@ const { authLimiter } = require('../middleware/rateLimiter');
 const { userServiceNeo4j, passkeyService, tokenService } = require('../crudService');
 const emailService = require('../emailService');
 
+// A short, human label for the device a passkey is created on, from the
+// User-Agent: "iPhone · Safari", "Mac · Chrome", "Android · Chrome"... Only
+// a hint for the user to tell their passkeys apart; never used for security.
+function deviceLabel(ua = '') {
+    const os = /iPhone/.test(ua) ? 'iPhone'
+        : /iPad/.test(ua) ? 'iPad'
+        : /Android/.test(ua) ? 'Android'
+        : /Macintosh|Mac OS X/.test(ua) ? 'Mac'
+        : /Windows/.test(ua) ? 'Windows'
+        : /CrOS/.test(ua) ? 'Chromebook'
+        : /Linux/.test(ua) ? 'Linux'
+        : null;
+    const browser = /Edg\//.test(ua) ? 'Edge'
+        : /Firefox\/|FxiOS/.test(ua) ? 'Firefox'
+        : /SamsungBrowser/.test(ua) ? 'Samsung Internet'
+        : /Chrome\/|CriOS/.test(ua) ? 'Chrome'
+        : /Safari\//.test(ua) ? 'Safari'
+        : null;
+    return [os, browser].filter(Boolean).join(' · ') || null;
+}
+
 // lazy-load ESM-only @simplewebauthn/server
 let _webauthn;
 async function webauthn() {
@@ -212,6 +233,7 @@ router.post('/passkey/register/verify', authMiddleware, authLimiter, async (req,
             Buffer.from(credential.publicKey).toString('base64url'),
             credential.counter,
             JSON.stringify(credential.transports || []),
+            deviceLabel(req.get('user-agent')),
         );
 
         res.json({ success: true });
@@ -295,7 +317,13 @@ router.post('/passkey/login/verify', authLimiter, async (req, res) => {
 router.get('/passkey/list', authMiddleware, async (req, res) => {
     try {
         const { passkeys } = await passkeyService.getPasskeysByUserId(req.user.id);
-        res.json({ passkeys });
+        // Only what the profile page shows: not the public key or counter.
+        res.json({ passkeys: passkeys.map(p => ({
+            credentialId: p.credentialId,
+            name: p.name ?? null,
+            createdAt: p.createdAt ?? null,
+            lastUsedAt: p.lastUsedAt ?? null,
+        })) });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
