@@ -24,6 +24,14 @@ function recalculate(shares, total, payerId) {
   })
 }
 
+// True while nobody has typed their own amounts: every included share is
+// empty, or they differ by at most the rounding unit (as recalculate leaves them).
+function isEqualSplit(shares) {
+  const amounts = shares.filter(s => s.included).map(s => Number(s.amount) || 0)
+  if (amounts.length === 0 || amounts.every(a => a === 0)) return true
+  return Math.max(...amounts) - Math.min(...amounts) <= 1
+}
+
 export default function ExpenseFormPage() {
   const { id, groupId } = useParams()
   const { currentUser } = useAuth()
@@ -118,12 +126,17 @@ export default function ExpenseFormPage() {
   // edited expense has just been loaded with its own shares. Changing who
   // paid leaves the shares alone: what each person owes does not depend on
   // who paid (the payer only gets the rounding cent of an equal split).
+  //
+  // A custom split is never replaced: its shares stay as they are, the
+  // "shares don't match the total" check shows, and the user adjusts them or
+  // presses "Split equally". Only a split that is still equal follows the
+  // new total.
   useEffect(() => {
     if (shares.length === 0) return
     const l = loaded.current
     if (l && String(form.amount) === String(l.amount)) return
     loaded.current = null
-    setShares(prev => recalculate(prev, form.amount, form.paidByUserId))
+    setShares(prev => (isEqualSplit(prev) ? recalculate(prev, form.amount, form.paidByUserId) : prev))
   }, [form.amount])
 
   const toggleMember = i => {
