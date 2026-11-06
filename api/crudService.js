@@ -563,6 +563,7 @@ const groupServiceNeo4j = {
                 OPTIONAL MATCH (e)-[o:OWED_BY]->(m)
                 OPTIONAL MATCH (m)-[:PAID]->(e)-[p:OWED_BY]->(:User)
                 WITH g, u, c, m, sum(p.amount * coalesce(e.rateSnapshot, 1)) - sum(o.amount * coalesce(e.rateSnapshot, 1)) AS memberBalance
+                ORDER BY m.id = $userId, toLower(m.name)
                 WITH g, u, c, collect({id: m.id, name: m.name, balance: memberBalance, avatarColor: m.avatarColor, avatarEmoji: m.avatarEmoji}) AS members, count(m) AS memberCount
                 RETURN g, members, memberCount, c.iso AS iso, c.symbol AS symbol`,
                 {userId}
@@ -571,7 +572,11 @@ const groupServiceNeo4j = {
                 success: true,
                 groups: records.map(record => ({
                     ...record.get('g').properties,
-                    members: record.get('members').map(m => ({ ...m, balance: Number(m.balance ?? 0) })),
+                    members: record.get('members').map(m => ({
+                        ...m,
+                        balance: Number(m.balance ?? 0),
+                        avatarColor: m.avatarColor == null ? null : neo4j.integer.toNumber(m.avatarColor),
+                    })),
                     memberCount: record.get('memberCount').toNumber(),
                     iso: record.get('iso'),
                     symbol: record.get('symbol'),
@@ -595,6 +600,8 @@ const groupServiceNeo4j = {
                 OPTIONAL MATCH (e)-[o:OWED_BY]->(m)
                 OPTIONAL MATCH (m)-[:PAID]->(e)-[p:OWED_BY]->(:User)
                 WITH g, c, m, sum(p.amount * coalesce(e.rateSnapshot, 1)) - sum(o.amount * coalesce(e.rateSnapshot, 1)) AS memberBalance
+                // Same order as everywhere: the others alphabetically, the user last.
+                ORDER BY m.id = $userId, toLower(m.name)
                 WITH g, c, collect({id: m.id, name: m.name, balance: memberBalance, avatarColor: m.avatarColor, avatarEmoji: m.avatarEmoji}) AS members, count(m) AS memberCount
                 RETURN g, members, memberCount, c.iso AS iso`,
                 {id, userId}
@@ -604,7 +611,11 @@ const groupServiceNeo4j = {
                 success: true,
                 groups: records.map(record => ({
                     ...record.get('g').properties,
-                    members: record.get('members').map(m => ({ ...m, balance: Number(m.balance ?? 0) })),
+                    members: record.get('members').map(m => ({
+                        ...m,
+                        balance: Number(m.balance ?? 0),
+                        avatarColor: m.avatarColor == null ? null : neo4j.integer.toNumber(m.avatarColor),
+                    })),
                     memberCount: record.get('memberCount').toNumber(),
                     iso: record.get('iso'),
                 }))
