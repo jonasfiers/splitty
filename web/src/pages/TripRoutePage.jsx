@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo, lazy, Suspense } from 'react'
 import { useParams, useNavigate, useSearchParams, useLocation } from 'react-router'
 import client from '../api/client'
 import Loading from '../components/Loading.jsx'
-import BackLink from '../components/BackLink.jsx'
+import PageHeader from '../components/PageHeader/PageHeader.jsx'
 import PlacePicker from '../components/PlacePicker/PlacePicker.jsx'
 import ConnectionCard from '../components/TripRoute/ConnectionCard.jsx'
 import ConfirmConnection from '../components/TripRoute/ConfirmConnection.jsx'
@@ -47,6 +47,7 @@ export default function TripRoutePage() {
   const [missing, setMissing] = useState(false)
   const [prefill, setPrefill] = useState({ depart: null, arrive: null })
   const [form, setForm] = useState({ from: null, to: null, date: '', time: '', arriveBy: false, modes: 'all' })
+  const [tripTitle, setTripTitle] = useState('')
   const [result, setResult] = useState(null) // { query, itineraries, previousCursor, nextCursor }
   const [searching, setSearching] = useState(null) // 'search' | 'earlier' | 'later'
   const [error, setError] = useState('')
@@ -69,6 +70,7 @@ export default function TripRoutePage() {
   useEffect(() => {
     client.get(`/trips/${tripId}`).then(({ data }) => {
       const { trip, items = [], places: tripPlaces = [] } = data
+      setTripTitle(trip.title)
       setPlaces(tripPlaces)
 
       const now = today()
@@ -171,11 +173,7 @@ export default function TripRoutePage() {
   if (missing) return <div className="empty-state"><p className="empty-state-title">Trip not found.</p></div>
 
   const header = (
-    <div className="sub-header">
-      <BackLink to={`/trips/${tripId}`} />
-      <span className="sub-header-title">Find a route</span>
-      <span aria-hidden="true" />
-    </div>
+    <PageHeader crumbs={[{ to: '/trips', label: 'Trips' }, { to: `/trips/${tripId}`, label: tripTitle || 'Trip' }]} title="Find a route" name="Find a route" />
   )
 
   if (chosen) {

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef, useMemo, lazy, Suspense } fro
 import { useParams, useNavigate, Link } from 'react-router'
 import client from '../api/client'
 import Loading from '../components/Loading.jsx'
-import BackLink from '../components/BackLink.jsx'
+import PageHeader from '../components/PageHeader/PageHeader.jsx'
 import LinkExpenseSheet from '../components/TripForm/LinkExpenseSheet.jsx'
 import BigReference from '../components/BigReference/BigReference.jsx'
 import { useMediaQuery } from '../utils/useMediaQuery.js'
@@ -143,16 +143,15 @@ export default function TripItemDetailPage() {
 
   return (
     <>
-      <div className="sub-header">
-        <BackLink to={`/trips/${tripId}`} />
-        <span className="sub-header-title">{item.kind === 'transport' ? (mode?.label ?? 'Transport') : KINDS[item.kind].label}</span>
-        {wide ? <span aria-hidden="true" /> : (
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button className="sub-header-del" style={{ color: 'var(--accent)' }} onClick={() => navigate(`/trips/${tripId}/items/${itemId}/edit`)}>Edit</button>
-            <button className="sub-header-del" onClick={handleDelete}>Delete</button>
-          </div>
-        )}
-      </div>
+      <PageHeader
+        compact
+        crumbs={[{ to: '/trips', label: 'Trips' }, { to: `/trips/${tripId}`, label: item.tripTitle || 'Trip' }]}
+        name={item.kind === 'transport' ? (mode?.label ?? 'Transport') : KINDS[item.kind].label}
+        actions={wide ? [] : [
+          { label: 'Edit', onClick: () => navigate(`/trips/${tripId}/items/${itemId}/edit`), primary: true },
+          { label: 'Delete', onClick: handleDelete, danger: true },
+        ]}
+      />
       {error && <p className="error">{error}</p>}
 
       <div className="item-layout">

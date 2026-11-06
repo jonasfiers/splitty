@@ -9,6 +9,7 @@ import { formatCurrency } from '../utils/currency.js'
 import { Avatar, PALETTE } from '../components/Avatar.jsx'
 import EmojiPicker from '../components/EmojiPicker/EmojiPicker.jsx'
 import { subscribeToPush, unsubscribeFromPush, isPushSubscribed, disablePushForLogout } from '../utils/push.js'
+import TabHeader from '../components/PageHeader/TabHeader.jsx'
 
 export default function ProfilePage() {
   const { currentUser, logout, updateToken } = useAuth()
@@ -187,6 +188,7 @@ export default function ProfilePage() {
 
   return (
     <>
+      <TabHeader title="Profile" avatar={false} />
       {/* Hero */}
       <div className="profile-hero">
         <div

@@ -5,6 +5,7 @@ import { Link } from 'react-router'
 import { formatCurrency, formatCompactCurrency } from '../utils/currency.js'
 import Loading from '../components/Loading.jsx'
 import { COLOURS, STROKES } from '../utils/chartColors.js'
+import TabHeader from '../components/PageHeader/TabHeader.jsx'
 const DOW_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 const PERIODS = [
   { key: 'month', label: 'This month' },
@@ -230,7 +231,7 @@ export default function InsightsPage() {
 
   return (
     <>
-      <div className="page-header"><h1>Insights</h1></div>
+      <TabHeader title="Insights" />
       {controls}
       {error && <p className="error">{error}</p>}
 

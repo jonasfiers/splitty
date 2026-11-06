@@ -135,20 +135,6 @@ body {
 /* Sidebar hidden on mobile */
 .app-sidebar { display: none; }
 
-/* Mobile header */
-.app-header {
-  position: fixed;
-  top: 0; left: 0; right: 0;
-  height: var(--header-h);
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 16px;
-  z-index: 100;
-}
-
 .app-logo {
   font-family: var(--font-display);
   font-size: 22px;
@@ -178,7 +164,6 @@ body {
 /* Main content area */
 .app-content {
   flex: 1;
-  margin-top: var(--header-h);
   margin-bottom: var(--nav-h);
   overflow-y: auto;
 }
@@ -237,7 +222,6 @@ body {
     margin: auto 5vmax auto 0;
   }
 
-  .app-header  { display: none; }
   .bottom-nav  { display: none; }
 
   /* Sidebar */
@@ -1118,48 +1102,6 @@ body {
 /* ══════════════════════════════════════════
    GROUP DETAIL
 ══════════════════════════════════════════ */
-.sub-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 20px;
-}
-.sub-header-back {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--accent);
-}
-.sub-header-back:hover { opacity: .75; }
-.sub-header-title {
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--text);
-}
-.sub-header-del {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-3);
-  padding: 4px 8px;
-  border-radius: var(--r-sm);
-  transition: background .15s, color .15s;
-}
-.sub-header-del:hover {
-  background: var(--red-light);
-  color: var(--red-dark);
-}
-
-.group-info-bar {
-  margin-bottom: 16px;
-}
-.group-info-name {
-  font-size: 22px;
-  font-weight: 700;
-  color: var(--text);
-  margin-bottom: 8px;
-}
 .group-info-meta {
   display: flex;
   align-items: center;
@@ -1789,18 +1731,6 @@ body {
 /* ══════════════════════════════════════════
    FRIENDS PAGE
 ══════════════════════════════════════════ */
-.page-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 16px;
-}
-.page-title {
-  font-size: 20px;
-  font-weight: 700;
-  color: var(--text);
-}
-
 /* Trips overview from 768px: cards in a grid (3 across from 1180px). */
 .trip-cards {
   display: grid;

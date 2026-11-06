@@ -9,6 +9,7 @@ import { useAuth } from '../context/AuthContext.jsx'
 import { timeAgo } from '../utils/time.js'
 import Loading from '../components/Loading.jsx'
 import HomePanels from '../components/HomePanels.jsx'
+import TabHeader from '../components/PageHeader/TabHeader.jsx'
 
 export default function GroupsPage() {
   const navigate = useNavigate()
@@ -74,6 +75,7 @@ export default function GroupsPage() {
 
   return (
     <>
+      <TabHeader logo />
       <div className="home-layout">
         <div className="home-main">
           {/* balance */}

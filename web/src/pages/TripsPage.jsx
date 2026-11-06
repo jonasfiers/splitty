@@ -7,6 +7,7 @@ import TripList, { TripCards } from '../components/TripForm/TripList.jsx'
 import { useMediaQuery } from '../utils/useMediaQuery.js'
 import TripFormSheet from '../components/TripForm/TripFormSheet.jsx'
 import { today } from '../utils/trip.js'
+import TabHeader from '../components/PageHeader/TabHeader.jsx'
 
 export default function TripsPage() {
   const navigate = useNavigate()
@@ -38,9 +39,7 @@ export default function TripsPage() {
 
   return (
     <>
-      <div className="page-header">
-        <h1>Trips</h1>
-      </div>
+      <TabHeader title="Trips" />
 
       {error && <p className="error">{error}</p>}
 

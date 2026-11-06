@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext'
 import client from '../api/client'
 import Loading from '../components/Loading.jsx'
 import { Avatar } from '../components/Avatar.jsx'
+import TabHeader from '../components/PageHeader/TabHeader.jsx'
 
 export default function FriendsPage() {
   const { currentUser } = useAuth()
@@ -22,10 +23,7 @@ export default function FriendsPage() {
 
   return (
     <>
-      <div className="page-header">
-        <span className="page-title">Friends</span>
-        <button className="btn-pill">+ Invite</button>
-      </div>
+      <TabHeader title="Friends" aside={<button className="btn-pill">+ Invite</button>} />
 
       {users.length === 0 ? (
         <div className="empty-state">

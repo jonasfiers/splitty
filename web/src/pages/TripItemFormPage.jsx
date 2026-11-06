@@ -3,7 +3,7 @@ import { useParams, useNavigate, useSearchParams, Link } from 'react-router'
 import client from '../api/client'
 import PlacePicker from '../components/PlacePicker/PlacePicker.jsx'
 import Loading from '../components/Loading.jsx'
-import BackLink from '../components/BackLink.jsx'
+import PageHeader from '../components/PageHeader/PageHeader.jsx'
 import { KINDS, TRANSPORT_MODES, dayOf, timeOf } from '../utils/trip.js'
 
 const LABELS = {
@@ -138,16 +138,13 @@ export default function TripItemFormPage() {
   if (missing) return <div className="empty-state"><p className="empty-state-title">Trip not found.</p></div>
 
   const labels = LABELS[kind]
+  const formTitle = `${isEdit ? 'Edit' : 'New'} ${(kind === 'transport' && form.mode !== 'other'
+    ? TRANSPORT_MODES.find(m => m.value === form.mode).label
+    : KINDS[kind].label).toLowerCase()}`
 
   return (
     <>
-      <BackLink to={backPath} className="back-link" />
-
-      <div className="page-header">
-        <h1>{isEdit ? 'Edit' : 'New'} {(kind === 'transport' && form.mode !== 'other'
-          ? TRANSPORT_MODES.find(m => m.value === form.mode).label
-          : KINDS[kind].label).toLowerCase()}</h1>
-      </div>
+      <PageHeader back={{ to: backPath }} title={formTitle} name={formTitle} />
 
       <div className="card" style={{ maxWidth: 560 }}>
         <form onSubmit={handleSubmit}>

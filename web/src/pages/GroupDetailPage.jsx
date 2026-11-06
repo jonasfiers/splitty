@@ -8,7 +8,7 @@ import { useAuth } from '../context/AuthContext.jsx'
 import { Avatar, AvatarStack } from '../components/Avatar.jsx'
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
 import Loading from '../components/Loading.jsx'
-import BackLink from '../components/BackLink.jsx'
+import PageHeader from '../components/PageHeader/PageHeader.jsx'
 import ChartTooltip from '../components/ChartTooltip.jsx'
 import { COLOURS, STROKES } from '../utils/chartColors.js'
 import CategoryPicker from '../components/CategoryPicker/CategoryPicker.jsx'
@@ -342,16 +342,12 @@ export default function GroupDetailPage() {
 
   return (
     <>
-      {/* Sub-header */}
-      <div className="sub-header">
-        <BackLink to="/groups" />
-        <span className="sub-header-title">Group</span>
-        <button className="sub-header-del" onClick={handleDeleteGroup}>Delete</button>
-      </div>
-
-      {/* Group info */}
-      <div className="group-info-bar">
-        <div className="group-info-name">{group.title}</div>
+      <PageHeader
+        crumbs={[{ to: '/groups', label: 'Home' }]}
+        title={group.title}
+        name={group.title}
+        actions={[{ label: 'Delete group', onClick: handleDeleteGroup, danger: true }]}
+      >
         <div className="group-info-meta">
           <AvatarStack members={members} />
           <span className="group-info-count">
@@ -359,7 +355,7 @@ export default function GroupDetailPage() {
             {totalAmount > 0 && ` · ${formatCurrency(totalAmount, group.iso)} total`}
           </span>
         </div>
-      </div>
+      </PageHeader>
 
       {state?.notice && <p className="error" style={{ background: 'var(--accent-light)', color: 'var(--accent)', borderColor: 'var(--accent-subtle)' }}>{state.notice}</p>}
       {error && <p className="error">{error}</p>}

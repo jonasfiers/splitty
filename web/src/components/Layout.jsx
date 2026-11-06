@@ -83,16 +83,6 @@ export default function Layout() {
         </div>
       </aside>
 
-      {/* ── HEADER (mobile) ── */}
-      <header className="app-header" >
-        <Link to="/groups" className="app-logo">
-            <CatAvatar className="app-logo-icon" />
-            <span>Split<span className="app-logo-accent">ty</span></span></Link>
-        <Link to="/profile" className="app-avatar">
-          <Avatar name={currentUser?.name} size={28} colorIndex={currentUser?.avatarColor} emoji={currentUser?.avatarEmoji} />
-        </Link>
-      </header>
-
       {/* ── CONTENT ── */}
       <main className="app-content">
         <div className="page-wrap">

@@ -4,6 +4,7 @@ import client from '../api/client'
 import { formatCurrency } from '../utils/currency'
 import Loading from '../components/Loading.jsx'
 import { useMediaQuery } from '../utils/useMediaQuery.js'
+import TabHeader from '../components/PageHeader/TabHeader.jsx'
 
 const PAGE = 50
 const TYPES = [
@@ -92,9 +93,7 @@ export default function ActivityPage() {
   if (loading) return <Loading />
 
   const header = (
-    <div className="page-header">
-      <span className="page-title">Activity</span>
-    </div>
+    <TabHeader title="Activity" />
   )
 
   if (error) return (

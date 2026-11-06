@@ -3,7 +3,7 @@ import { useParams, useNavigate, useLocation, Link } from 'react-router'
 import client from '../api/client'
 import FabButton from '../components/FabButton/FabButton.jsx'
 import Loading from '../components/Loading.jsx'
-import BackLink from '../components/BackLink.jsx'
+import PageHeader from '../components/PageHeader/PageHeader.jsx'
 import TripFormSheet from '../components/TripForm/TripFormSheet.jsx'
 import DuplicateTripSheet from '../components/TripForm/DuplicateTripSheet.jsx'
 import QuickAddSheet from '../components/TripForm/QuickAddSheet.jsx'
@@ -242,27 +242,21 @@ function TripDetailPage() {
 
   return (
     <>
-      <div className="sub-header">
-        <BackLink to="/trips" />
-        <span className="sub-header-title">Trip</span>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button className="sub-header-del" style={{ color: 'var(--accent)' }} onClick={() => setShowEdit(true)}>Edit</button>
-          <button className="sub-header-del" style={{ color: 'var(--accent)' }} onClick={openCopy}>Copy</button>
-          <button className="sub-header-del" onClick={handleDelete}>Delete</button>
-        </div>
-      </div>
-
-      <div className="group-info-bar">
-        <div className="group-info-name">{trip.icon} {trip.title}</div>
-        <div className="group-info-meta">
-          <span className="group-info-count">
-            {formatDateRange(trip.startDate, trip.endDate)}
-            {nights > 0 && ` · ${nights} night${nights !== 1 ? 's' : ''}`}
-            {' · '}
-            <Link to={`/groups/${trip.groupId}`} style={{ color: 'var(--accent)' }}>{trip.groupIcon} {trip.groupTitle}</Link>
-          </span>
-        </div>
-      </div>
+      <PageHeader
+        crumbs={[{ to: '/trips', label: 'Trips' }]}
+        title={<>{trip.icon} {trip.title}</>}
+        name={trip.title}
+        actions={[
+          { label: 'Edit', onClick: () => setShowEdit(true), primary: true },
+          { label: 'Copy trip', onClick: openCopy },
+          { label: 'Delete trip', onClick: handleDelete, danger: true },
+        ]}
+      >
+        {formatDateRange(trip.startDate, trip.endDate)}
+        {nights > 0 && ` · ${nights} night${nights !== 1 ? 's' : ''}`}
+        {' · '}
+        <Link to={`/groups/${trip.groupId}`} style={{ color: 'var(--accent)' }}>{trip.groupIcon} {trip.groupTitle}</Link>
+      </PageHeader>
 
       {state?.notice && <p className="error" style={{ background: 'var(--accent-light)', color: 'var(--accent)', borderColor: 'var(--accent-subtle)' }}>{state.notice}</p>}
       {error && <p className="error">{error}</p>}

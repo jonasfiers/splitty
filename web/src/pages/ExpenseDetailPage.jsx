@@ -6,7 +6,7 @@ import { formatCurrency, formatDate } from '../utils/currency.js'
 import { Avatar, colorFor } from '../components/Avatar.jsx'
 import Loading from '../components/Loading.jsx'
 import ChartTooltip from '../components/ChartTooltip.jsx'
-import BackLink from '../components/BackLink.jsx'
+import PageHeader from '../components/PageHeader/PageHeader.jsx'
 import { useMediaQuery } from '../utils/useMediaQuery.js'
 
 export default function ExpenseDetailPage() {
@@ -104,26 +104,17 @@ export default function ExpenseDetailPage() {
 
   return (
     <>
-      <div className="sub-header">
-        <BackLink to={`/groups/${groupId}`} />
-        <span className="sub-header-title">{expense.isTransfer ? 'Transfer' : expense.isSettlement ? 'Settlement' : 'Expense'}</span>
-        {wide ? <span aria-hidden="true" /> : (
-          <div style={{ display: 'flex', gap: 8 }}>
-            {!expense.isSettlement && !expense.isTransfer && (
-              <button
-                className="sub-header-del"
-                style={{ color: 'var(--accent)' }}
-                onClick={() => navigate(`/groups/${groupId}/expenses/${id}/edit`)}
-              >
-                Edit
-              </button>
-            )}
-            <button className="sub-header-del" onClick={handleDelete}>
-              {expense.isTransfer ? 'Cancel transfer' : expense.isSettlement ? 'Cancel settlement' : 'Delete'}
-            </button>
-          </div>
-        )}
-      </div>
+      <PageHeader
+        compact
+        crumbs={[{ to: '/groups', label: 'Home' }, { to: `/groups/${groupId}`, label: expense.groupTitle || 'Group' }]}
+        name={expense.isTransfer ? 'Transfer' : expense.isSettlement ? 'Settlement' : 'Expense'}
+        actions={wide ? [] : [
+          ...(!expense.isSettlement && !expense.isTransfer
+            ? [{ label: 'Edit', onClick: () => navigate(`/groups/${groupId}/expenses/${id}/edit`), primary: true }]
+            : []),
+          { label: expense.isTransfer ? 'Cancel transfer' : expense.isSettlement ? 'Cancel settlement' : 'Delete expense', onClick: handleDelete, danger: true },
+        ]}
+      />
       {error && <p className="error">{error}</p>}
 
       <div className="expense-detail-layout">

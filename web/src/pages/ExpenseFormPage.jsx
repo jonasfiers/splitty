@@ -4,7 +4,7 @@ import client from '../api/client'
 import CurrencyInput from '../components/CurrencyInput/CurrencyInput.jsx'
 import { formatCurrency } from '../utils/currency.js'
 import Loading from '../components/Loading.jsx'
-import BackLink from '../components/BackLink.jsx'
+import PageHeader from '../components/PageHeader/PageHeader.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import CategoryPicker from '../components/CategoryPicker/CategoryPicker.jsx'
 
@@ -202,11 +202,7 @@ export default function ExpenseFormPage() {
 
   return (
     <>
-      <BackLink to={backPath} className="back-link" />
-
-      <div className="page-header">
-        <h1>{isEdit ? 'Edit expense' : 'New expense'}</h1>
-      </div>
+      <PageHeader back={{ to: backPath }} title={isEdit ? 'Edit expense' : 'New expense'} name={isEdit ? 'Edit expense' : 'New expense'} />
 
       {tripItem && !isEdit && (
         <p style={{ fontSize: 13, color: 'var(--text-3)', margin: '-8px 0 12px' }}>For “{tripItem.title}”</p>

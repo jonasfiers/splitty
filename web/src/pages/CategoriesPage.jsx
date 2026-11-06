@@ -3,6 +3,7 @@ import client from '../api/client'
 import EmojiPicker from '../components/EmojiPicker/EmojiPicker.jsx'
 import IconCard from '../components/IconCard/IconCard.jsx'
 import Loading from '../components/Loading.jsx'
+import TabHeader from '../components/PageHeader/TabHeader.jsx'
 
 export default function CategoriesPage() {
   const [categories, setCategories] = useState([])
@@ -65,15 +66,17 @@ export default function CategoriesPage() {
 
   return (
     <>
-      <div className="page-header">
-        <h1>Categories</h1>
-        <button
-          className="btn btn-secondary"
-          onClick={() => { setShowForm(s => !s); setError('') }}
-        >
-          {showForm ? 'Cancel' : '+ New category'}
-        </button>
-      </div>
+      <TabHeader
+        title="Categories"
+        aside={
+          <button
+            className="btn btn-secondary"
+            onClick={() => { setShowForm(s => !s); setError('') }}
+          >
+            {showForm ? 'Cancel' : '+ New category'}
+          </button>
+        }
+      />
 
       {showForm && (
         <div className="panel">

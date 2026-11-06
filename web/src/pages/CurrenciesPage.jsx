@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import client from '../api/client'
 import IconCard from '../components/IconCard/IconCard.jsx'
 import Loading from '../components/Loading.jsx'
+import TabHeader from '../components/PageHeader/TabHeader.jsx'
 
 function getCurrencyInfo(iso) {
   try {
@@ -57,15 +58,17 @@ export default function CurrenciesPage() {
 
   return (
     <>
-      <div className="page-header">
-        <h1>Currencies</h1>
-        <button
-          className="btn btn-secondary"
-          onClick={() => { setShowForm(s => !s); setError('') }}
-        >
-          {showForm ? 'Cancel' : '+ New currency'}
-        </button>
-      </div>
+      <TabHeader
+        title="Currencies"
+        aside={
+          <button
+            className="btn btn-secondary"
+            onClick={() => { setShowForm(s => !s); setError('') }}
+          >
+            {showForm ? 'Cancel' : '+ New currency'}
+          </button>
+        }
+      />
 
       {showForm && (
         <div className="panel">
