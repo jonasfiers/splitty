@@ -10,6 +10,7 @@ router.post('/', async (req, res) => {
         const { groupId, description, categoryId, amount, currencyIso, date, paidByUserId } = req.body;
         // Call the service
         const result = await expenseService.createExpense(groupId, description, categoryId, amount, currencyIso, date, paidByUserId, currUserId);
+        if (!result.success) return res.status(result.status || 400).json(result);
         res.status(201).json(result);
     } catch (error) {
         console.error(error);

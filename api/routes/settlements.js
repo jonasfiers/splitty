@@ -22,6 +22,7 @@ router.post('/', async (req, res) => {
             receivedByUserId, 
             currUserId
         );
+        if (!result.success) return res.status(result.status || 400).json(result);
         res.status(201).json(result);
     } catch (error) {
         console.error(error);

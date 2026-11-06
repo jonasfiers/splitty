@@ -19,6 +19,39 @@ const formatAmount = (amount, iso) => {
 // answer this with its status instead of their usual 404.
 const NOT_AN_EXPENSE = { success: false, status: 409, message: 'Settlements and balance transfers cannot be changed, only cancelled', error: 'Settlements and balance transfers cannot be changed, only cancelled' };
 
+// Before an expense or settlement is written: everything it links to must
+// exist, and the payer (and a settlement's receiver) must be members of the
+// group. Returns a 400 result naming what is wrong, or null. The write queries
+// also MATCH everything before they CREATE, so a missing link can never leave
+// a half-made expense behind; this check is what gives a clear message.
+const checkExpenseLinks = async ({ groupId, categoryId, currencyIso, paidByUserId, receivedByUserId }, needs) => {
+    const { records } = await driver.executeQuery(
+        `OPTIONAL MATCH (g:Group {id: $groupId})
+         OPTIONAL MATCH (cur:Currency {iso: $currencyIso})
+         OPTIONAL MATCH (c:Category {id: $categoryId})
+         OPTIONAL MATCH (payer:User {id: $paidByUserId})-[:MEMBER_OF]->(g)
+         OPTIONAL MATCH (rec:User {id: $receivedByUserId})-[:MEMBER_OF]->(g)
+         RETURN g IS NOT NULL AS group, cur IS NOT NULL AS currency, c IS NOT NULL AS category,
+                payer IS NOT NULL AS payer, rec IS NOT NULL AS receiver`,
+        {
+            groupId: groupId ?? null, categoryId: categoryId ?? null, currencyIso: currencyIso ?? null,
+            paidByUserId: paidByUserId ?? null, receivedByUserId: receivedByUserId ?? null,
+        }
+    );
+    const found = records[0].toObject();
+    const messages = {
+        group: 'Unknown group.',
+        currency: 'Unknown currency.',
+        category: 'Pick a category.',
+        payer: 'The payer must be a member of the group.',
+        receiver: 'The receiver must be a member of the group.',
+    };
+    const missing = needs.filter(k => !found[k]);
+    if (missing.length === 0) return null;
+    const message = missing.map(k => messages[k]).join(' ');
+    return { success: false, status: 400, message, error: message };
+};
+
 const isSettlementOrTransfer = async (expenseId, currUserId) => {
     const { records } = await driver.executeQuery(
         `MATCH (:User {id: $currUserId})-[:MEMBER_OF]->(:Group)<-[:BALANCE_IN]-(e:Expense {id: $expenseId})
@@ -683,6 +716,8 @@ const expenseService = {
                 { currUserId, groupId }
             );
             if (memberRecords.length === 0) throw new Error('Access denied: You are not a member of this group');
+            const invalid = await checkExpenseLinks({ groupId, categoryId, currencyIso, paidByUserId }, ['group', 'currency', 'category', 'payer']);
+            if (invalid) return invalid;
 
             const { records: groupRecords } = await driver.executeQuery(
                 'MATCH (g:Group {id: $groupId})-[:EXPRESSED_IN]->(c:Currency) RETURN c.iso AS iso',
@@ -693,22 +728,18 @@ const expenseService = {
             const rate = rawRate * (10 ** getDecimals(groupIso)) / (10 ** getDecimals(currencyIso));
             const amountBase = Math.round(amount * rate);
 
+            // Everything is MATCHed before anything is CREATEd: if one is
+            // missing, the query matches no row and writes nothing.
             const { records } = await driver.executeQuery(
-                `CREATE (e:Expense {id: randomUUID(), description: $description, amount: $amount, amountBase: $amountBase, rateSnapshot: $rate, date: $date})
-                WITH e
-                MATCH (c:Category) WHERE c.id = $categoryId
+                `MATCH (g:Group {id: $groupId})<-[:MEMBER_OF]-(cu:User {id: $currUserId})
+                MATCH (u:User {id: $paidByUserId})-[:MEMBER_OF]->(g)
+                MATCH (c:Category {id: $categoryId})
+                MATCH (cur:Currency {iso: $currencyIso})
+                CREATE (e:Expense {id: randomUUID(), description: $description, amount: $amount, amountBase: $amountBase, rateSnapshot: $rate, date: $date})
                 CREATE (e)-[:IN_CATEGORY]->(c)
-                WITH e, c
-                MATCH (cur:Currency) WHERE cur.iso = $currencyIso
                 CREATE (e)-[:EXPRESSED_IN]->(cur)
-                WITH e, c, cur
-                MATCH (u:User) WHERE u.id = $paidByUserId
                 CREATE (u)-[:PAID]->(e)
-                WITH e, c, cur
-                MATCH (g:Group) WHERE g.id = $groupId
                 CREATE (e)-[:BALANCE_IN]->(g)
-                WITH e, c, cur, g
-                MATCH (cu:User) WHERE cu.id = $currUserId
                 CREATE (e)-[:CREATED_BY {on: datetime()}]->(cu)
                 WITH e, c, g, cu
                 OPTIONAL MATCH (r:DailyRate {date: $date, from: $currencyIso, to: $groupIso})
@@ -718,6 +749,7 @@ const expenseService = {
                 RETURN e.id AS id, c.icon AS categoryIcon, cu.name AS creatorName, g.title AS groupName`,
                 {description, amount, amountBase, rate, date, categoryId, currencyIso, groupIso, paidByUserId, groupId, currUserId},
             )
+            if (records.length === 0) throw new Error('Expense could not be created');
             const expenseId = records[0].get('id')
             const categoryIcon = records[0].get('categoryIcon')
             const creatorName = records[0].get('creatorName')
@@ -744,6 +776,8 @@ const expenseService = {
                 { currUserId, groupId }
             );
             if (memberRecords.length === 0) throw new Error('Access denied: You are not a member of this group');
+            const invalid = await checkExpenseLinks({ groupId, currencyIso, paidByUserId, receivedByUserId }, ['group', 'currency', 'payer', 'receiver']);
+            if (invalid) return invalid;
 
             const { records: groupRecords } = await driver.executeQuery(
                 'MATCH (g:Group {id: $groupId})-[:EXPRESSED_IN]->(c:Currency) RETURN c.iso AS iso',
@@ -755,32 +789,27 @@ const expenseService = {
             const amountBase = Math.round(amount * rate);
 
             const { records } = await driver.executeQuery(
-                `CREATE (e:Expense:Settlement {
-                    id: randomUUID(), 
-                    description: 'Settlement', 
-                    amount: $amount, 
-                    amountBase: $amountBase, 
-                    rateSnapshot: $rate, 
+                `MATCH (g:Group {id: $groupId})<-[:MEMBER_OF]-(cu:User {id: $currUserId})
+                MATCH (u:User {id: $paidByUserId})-[:MEMBER_OF]->(g)
+                MATCH (receiver:User {id: $receivedByUserId})-[:MEMBER_OF]->(g)
+                MATCH (cur:Currency {iso: $currencyIso})
+                CREATE (e:Expense:Settlement {
+                    id: randomUUID(),
+                    description: 'Settlement',
+                    amount: $amount,
+                    amountBase: $amountBase,
+                    rateSnapshot: $rate,
                     date: $date
                 })
-                WITH e
-                MATCH (cur:Currency) WHERE cur.iso = $currencyIso
                 CREATE (e)-[:EXPRESSED_IN]->(cur)
-                WITH e, cur
-                MATCH (u:User) WHERE u.id = $paidByUserId
                 CREATE (u)-[:PAID]->(e)
-                WITH e, cur
-                MATCH (g:Group) WHERE g.id = $groupId
                 CREATE (e)-[:BALANCE_IN]->(g)
-                WITH e, cur, g
-                MATCH (receiver:User) WHERE receiver.id = $receivedByUserId
                 CREATE (e)-[:OWED_BY {amount: $amount}]->(receiver)
-                WITH e, cur, g
-                MATCH (cu:User) WHERE cu.id = $currUserId
                 CREATE (e)-[:CREATED_BY {on: datetime()}]->(cu)
                 RETURN e.id AS id, cu.name AS creatorName, g.title AS groupName`,
                 {amount, amountBase, rate, date, currencyIso, groupIso, paidByUserId, receivedByUserId, groupId, currUserId},
             )
+            if (records.length === 0) throw new Error('Settlement could not be created');
             const expenseId = records[0].get('id')
             const creatorName = records[0].get('creatorName')
             const groupName = records[0].get('groupName')
@@ -1092,6 +1121,8 @@ const expenseService = {
             );
             if (memberRecords.length === 0) throw new Error('Access denied: You are not a member of this group');
             if (memberRecords[0].get('fixed')) return NOT_AN_EXPENSE;
+            const invalid = await checkExpenseLinks({ groupId, categoryId, currencyIso, paidByUserId }, ['group', 'currency', 'category', 'payer']);
+            if (invalid) return invalid;
 
             const { records: groupRecords } = await driver.executeQuery(
                 'MATCH (g:Group {id: $groupId})-[:EXPRESSED_IN]->(c:Currency) RETURN c.iso AS iso',
@@ -1104,23 +1135,26 @@ const expenseService = {
 
             const { records, summary } = await driver.executeQuery(
                 `MATCH (e:Expense {id: $id})-[oldBal:BALANCE_IN]->(:Group)
-                MATCH (g:Group {id: $groupId})
-                SET e.description = $description, e.amount = $amount, e.amountBase = $amountBase, e.rateSnapshot = $rateSnapshot, e.date = $date
-                DELETE oldBal
-                CREATE (e)-[:BALANCE_IN]->(g)
-                WITH e, g
-                MATCH (c:Category) WHERE c.id = $categoryId
-                MATCH (cur:Currency) WHERE cur.iso = $currencyIso
-                MATCH (u:User) WHERE u.id = $paidByUserId
-                MATCH (cu:User) WHERE cu.id = $currUserId
+                MATCH (g:Group {id: $groupId})<-[:MEMBER_OF]-(cu:User {id: $currUserId})
+                MATCH (u:User {id: $paidByUserId})-[:MEMBER_OF]->(g)
+                MATCH (c:Category {id: $categoryId})
+                MATCH (cur:Currency {iso: $currencyIso})
+                // Only now that everything is found: replace the old links
+                // (including the old currency, which used to be kept as a
+                // second EXPRESSED_IN when the currency changed).
                 OPTIONAL MATCH (:User)-[rp:PAID]->(e)
                 OPTIONAL MATCH (e)-[oldRate:USED_RATE]->(:DailyRate)
                 OPTIONAL MATCH (e)-[oldCat:IN_CATEGORY]->(:Category)
-                DELETE rp, oldRate, oldCat
-                WITH e, c, g, cur, u, cu
-                MERGE (e)-[:IN_CATEGORY]->(c)
-                MERGE (u)-[:PAID]->(e)
-                MERGE (e)-[:EXPRESSED_IN]->(cur)
+                OPTIONAL MATCH (e)-[oldCur:EXPRESSED_IN]->(:Currency)
+                WITH e, oldBal, g, cu, u, c, cur,
+                     collect(DISTINCT rp) + collect(DISTINCT oldRate) + collect(DISTINCT oldCat) + collect(DISTINCT oldCur) AS old
+                SET e.description = $description, e.amount = $amount, e.amountBase = $amountBase, e.rateSnapshot = $rateSnapshot, e.date = $date
+                DELETE oldBal
+                FOREACH (r IN old | DELETE r)
+                CREATE (e)-[:BALANCE_IN]->(g)
+                CREATE (e)-[:IN_CATEGORY]->(c)
+                CREATE (u)-[:PAID]->(e)
+                CREATE (e)-[:EXPRESSED_IN]->(cur)
                 CREATE (e)-[:UPDATED_BY{on: datetime()}]->(cu)
                 WITH e, c, g, cu
                 OPTIONAL MATCH (r:DailyRate {date: $date, from: $currencyIso, to: $groupIso})
