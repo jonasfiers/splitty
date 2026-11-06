@@ -62,6 +62,21 @@ export default function TripItemDetailPage() {
       .finally(() => setLoading(false))
   }, [load])
 
+  // Attachment links are signed for 5 minutes (FILE_LINK_TTL in the API):
+  // refresh them while the page is open, and on coming back to it, so a tap
+  // never hits an expired link. Failures are ignored; the next round retries.
+  const loadedAt = useRef(Date.now())
+  useEffect(() => {
+    const refresh = () => {
+      if (document.visibilityState !== 'visible') return
+      load().then(() => { loadedAt.current = Date.now() }).catch(() => {})
+    }
+    const timer = setInterval(refresh, 4 * 60 * 1000)
+    const onVisible = () => { if (Date.now() - loadedAt.current > 60 * 1000) refresh() }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => { clearInterval(timer); document.removeEventListener('visibilitychange', onVisible) }
+  }, [load])
+
   const handleDelete = async () => {
     const kept = item.expenses.length > 0 ? ' Its expenses stay in the group.' : ''
     if (!window.confirm(`Delete "${item.title}"?${kept}`)) return

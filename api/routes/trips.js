@@ -9,7 +9,10 @@ const uploadStore = require('../uploadStore');
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const DATE_OR_DATETIME = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2})?$/;
-const FILE_LINK_TTL = '1h';
+// Signed attachment links are short-lived: anyone holding one can open the
+// file until it expires, also after leaving the group. The item page fetches
+// fresh links every few minutes (TripItemDetailPage), so this can stay short.
+const FILE_LINK_TTL = '5m';
 const LAT_LON = /^(-?\d{1,2}(?:\.\d+)?),(-?\d{1,3}(?:\.\d+)?)$/;
 const NEAR_METRES = 300; // a stop this close to a place of the trip is that place
 const MAX_LEGS = 12;
@@ -168,7 +171,7 @@ router.get('/files/:id', async (req, res) => {
         res.set({
             'Content-Type': attachment.mimeType,
             'Content-Disposition': `inline; filename*=UTF-8''${encodeURIComponent(attachment.filename)}`,
-            'Cache-Control': 'private, max-age=3600',
+            'Cache-Control': 'private, max-age=300',
         });
         res.sendFile(uploadStore.filePath(attachment.storedName), err => {
             if (err && !res.headersSent) res.status(404).json({ error: 'Attachment file is missing' });
