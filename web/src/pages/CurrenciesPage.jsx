@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import client from '../api/client'
 import IconCard from '../components/IconCard/IconCard.jsx'
 import Loading from '../components/Loading.jsx'
-import TabHeader from '../components/PageHeader/TabHeader.jsx'
+import PageHeader from '../components/PageHeader/PageHeader.jsx'
 
 function getCurrencyInfo(iso) {
   try {
@@ -58,8 +58,10 @@ export default function CurrenciesPage() {
 
   return (
     <>
-      <TabHeader
+      <PageHeader
+        crumbs={[{ to: '/admin', label: 'Admin' }]}
         title="Currencies"
+        name="Currencies"
         aside={
           <button
             className="btn btn-secondary"

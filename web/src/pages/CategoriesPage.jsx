@@ -3,7 +3,7 @@ import client from '../api/client'
 import EmojiPicker from '../components/EmojiPicker/EmojiPicker.jsx'
 import IconCard from '../components/IconCard/IconCard.jsx'
 import Loading from '../components/Loading.jsx'
-import TabHeader from '../components/PageHeader/TabHeader.jsx'
+import PageHeader from '../components/PageHeader/PageHeader.jsx'
 
 export default function CategoriesPage() {
   const [categories, setCategories] = useState([])
@@ -66,8 +66,10 @@ export default function CategoriesPage() {
 
   return (
     <>
-      <TabHeader
+      <PageHeader
+        crumbs={[{ to: '/admin', label: 'Admin' }]}
         title="Categories"
+        name="Categories"
         aside={
           <button
             className="btn btn-secondary"

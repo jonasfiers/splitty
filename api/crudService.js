@@ -159,6 +159,18 @@ const userServiceNeo4j = {
         }
     },
 
+    // The user's role, read fresh from the database on every call (never from
+    // the JWT), so a revoked role stops working at once. Only 'admin' exists
+    // today; a user without the property is an ordinary user.
+    getRole: async (id) => {
+        if (!id) return null;
+        const { records } = await driver.executeQuery(
+            'MATCH (u:User {id: $id}) RETURN u.role AS role',
+            { id }
+        );
+        return records.length ? (records[0].get('role') ?? null) : null;
+    },
+
     getUserByIdDirect: async (id) => {
         try {
             const { records } = await driver.executeQuery(

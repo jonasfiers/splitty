@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router'
+import { useNavigate, Link } from 'react-router'
 import { startRegistration } from '@simplewebauthn/browser'
 import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
@@ -12,7 +12,7 @@ import { subscribeToPush, unsubscribeFromPush, isPushSubscribed, disablePushForL
 import TabHeader from '../components/PageHeader/TabHeader.jsx'
 
 export default function ProfilePage() {
-  const { currentUser, logout, updateToken } = useAuth()
+  const { currentUser, isAdmin, logout, updateToken } = useAuth()
   const { theme, setTheme } = useTheme()
   const navigate = useNavigate()
 
@@ -397,6 +397,16 @@ export default function ProfilePage() {
           ))}
         </div>
       </div>
+
+      {isAdmin && (
+        <>
+          <div className="pref-section-label">Admin</div>
+          <Link to="/admin" className="pref-row pref-link">
+            <span className="pref-label">Categories and currencies</span>
+            <svg className="pref-chev" viewBox="0 0 24 24" aria-hidden="true"><polyline points="9 6 15 12 9 18" /></svg>
+          </Link>
+        </>
+      )}
 
       {/* Data Management */}
       <div className="pref-section-label">Data Management</div>

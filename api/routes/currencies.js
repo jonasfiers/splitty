@@ -1,8 +1,11 @@
+// Reads are open to every signed-in user (the expense form, groups and
+// Home need them); creating, editing and deleting are admin-only.
 const router = require('express').Router();
+const requireAdmin = require('../middleware/requireAdmin');
 const { currencyServiceNeo4j } = require('../crudService');
 
 // CREATE
-router.post('/', async (req, res) => {
+router.post('/', requireAdmin, async (req, res) => {
     try {
         const { iso } = req.body;
         // Call the service
@@ -39,7 +42,7 @@ router.get('/:iso', async (req, res) => {
 });
 
 // UPDATE
-router.put('/:iso', async (req, res) => {
+router.put('/:iso', requireAdmin, async (req, res) => {
     try {
         const { iso } = req.params;
         const { label, symbol, amountOfDecimals } = req.body;
@@ -53,7 +56,7 @@ router.put('/:iso', async (req, res) => {
 });
 
 // DELETE
-router.delete('/:iso', async (req, res) => {
+router.delete('/:iso', requireAdmin, async (req, res) => {
     try {
         const { iso } = req.params;
         const result = await currencyServiceNeo4j.deleteCurrency(iso);

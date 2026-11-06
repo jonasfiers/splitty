@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router'
 import { AuthProvider } from './context/AuthContext'
 import { ThemeProvider } from './context/ThemeContext'
 import ProtectedRoute from './components/ProtectedRoute'
+import AdminRoute from './components/AdminRoute'
 import Layout from './components/Layout'
 
 const LoginPage             = lazy(() => import('./pages/LoginPage'))
@@ -13,6 +14,7 @@ const ExpenseFormPage       = lazy(() => import('./pages/ExpenseFormPage'))
 const ExpenseDetailPage     = lazy(() => import('./pages/ExpenseDetailPage'))
 const CurrenciesPage        = lazy(() => import('./pages/CurrenciesPage'))
 const CategoriesPage        = lazy(() => import('./pages/CategoriesPage'))
+const AdminPage             = lazy(() => import('./pages/AdminPage'))
 const ProfilePage           = lazy(() => import('./pages/ProfilePage'))
 const ActivityPage          = lazy(() => import('./pages/ActivityPage'))
 const FriendsPage           = lazy(() => import('./pages/FriendsPage'))
@@ -59,8 +61,13 @@ export default function App() {
               <Route path="/activity" element={<ActivityPage />} />
               <Route path="/insights" element={<InsightsPage />} />
               <Route path="/friends" element={<FriendsPage />} />
-              <Route path="/currencies" element={<CurrenciesPage />} />
-              <Route path="/categories" element={<CategoriesPage />} />
+              <Route element={<AdminRoute />}>
+                <Route path="/admin" element={<AdminPage />} />
+                <Route path="/admin/currencies" element={<CurrenciesPage />} />
+                <Route path="/admin/categories" element={<CategoriesPage />} />
+              </Route>
+              <Route path="/currencies" element={<Navigate to="/admin/currencies" replace />} />
+              <Route path="/categories" element={<Navigate to="/admin/categories" replace />} />
               <Route path="/profile" element={<ProfilePage />} />
             </Route>
           </Route>

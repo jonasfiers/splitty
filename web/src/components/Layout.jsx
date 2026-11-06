@@ -47,8 +47,16 @@ function InsightsIcon({ size = 20 }) {
   )
 }
 
+function AdminIcon({ size = 20 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z"/>
+    </svg>
+  )
+}
+
 export default function Layout() {
-  const { currentUser, logout } = useAuth()
+  const { currentUser, isAdmin, logout } = useAuth()
   const navigate = useNavigate()
 
   return (
@@ -73,6 +81,12 @@ export default function Layout() {
               {label}
             </NavLink>
           ))}
+          {isAdmin && (
+            <NavLink to="/admin" className={({ isActive }) => 'sidebar-nav-item sidebar-nav-admin' + (isActive ? ' active' : '')}>
+              <AdminIcon size={18} />
+              Admin
+            </NavLink>
+          )}
         </nav>
 
         <div className="sidebar-footer">

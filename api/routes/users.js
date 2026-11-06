@@ -3,16 +3,7 @@ const jwt = require('jsonwebtoken');
 const { userServiceNeo4j, tokenService } = require('../crudService');
 const emailService = require('../emailService');
 
-router.post('/', async (req, res) => {
-    try {
-        const { name, email } = req.body;
-        const result = await userServiceNeo4j.createUser(name, email);
-        res.status(201).json(result);
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: error.message });
-    }
-});
+// (There is no POST /: accounts are created only through /auth/register.)
 
 // READ ALL
 router.get('/', async (req, res) => {

@@ -1,9 +1,11 @@
-// CREATE
+// Reads are open to every signed-in user (the expense form, groups and
+// Home need them); creating, editing and deleting are admin-only.
 const router = require('express').Router();
+const requireAdmin = require('../middleware/requireAdmin');
 const { categoryServiceNeo4j } = require('../crudService');
 
 // CREATE
-router.post('/', async (req, res) => {
+router.post('/', requireAdmin, async (req, res) => {
     try {
         const { name, parentId, icon } = req.body;
         // Call the service
@@ -53,7 +55,7 @@ router.get('/:id/children', async (req, res) => {
     }
 });
 // UPDATE
-router.put('/:id', async (req, res) => {
+router.put('/:id', requireAdmin, async (req, res) => {
     try {
         const { id } = req.params;
         const { name, parentId, icon } = req.body;
@@ -67,7 +69,7 @@ router.put('/:id', async (req, res) => {
 });
 
 // DELETE
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', requireAdmin, async (req, res) => {
     try {
         const { id } = req.params;
         const result = await categoryServiceNeo4j.deleteCategory(id);

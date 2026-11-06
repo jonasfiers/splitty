@@ -53,6 +53,7 @@ app.use('/shares', auth, require('./routes/shares.js'));
 app.use('/settlements', auth, require('./routes/settlements.js'));
 app.use('/dash', auth, require('./routes/dash.js'));
 app.use('/notifications', auth, require('./routes/notifications.js'));
+app.use('/admin', auth, require('./routes/admin.js'));
 app.use('/invites', require('./routes/invites'));
 // Mostly protected; the router applies auth itself, after its one public route
 // (signed attachment links, which a plain <a> has to be able to open).
