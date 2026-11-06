@@ -1,10 +1,16 @@
-/* Fixed light colours in both themes: easiest to read, and to scan. */
+/* Maximum contrast in either theme: black on white in light mode, white on
+   pure black (not the app's softer dark background) in dark mode, following
+   the app's own theme setting (data-theme on <html>). */
 .bigref {
+  --bigref-bg: #fff;
+  --bigref-fg: #000;
+  --bigref-label: #555;
+  --bigref-hint: #888;
   position: fixed;
   inset: 0;
   z-index: 1000;
-  background: #fff;
-  color: #000;
+  background: var(--bigref-bg);
+  color: var(--bigref-fg);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -24,7 +30,7 @@
 .bigref-label {
   font-family: var(--font-body);
   font-size: 16px;
-  color: #555;
+  color: var(--bigref-label);
   text-align: center;
 }
 .bigref-value {
@@ -40,7 +46,7 @@
 .bigref-hint {
   font-family: var(--font-body);
   font-size: 13px;
-  color: #888;
+  color: var(--bigref-hint);
 }
 
 /* Phone held upright: turn the content a quarter clockwise and size it to
@@ -60,4 +66,11 @@
     font-size: min(calc(132vh / var(--chars)), 26vw);
     font-size: min(calc(132dvh / var(--chars)), 26vw);
   }
+}
+
+[data-theme="dark"] .bigref {
+  --bigref-bg: #000;
+  --bigref-fg: #fff;
+  --bigref-label: #aaa;
+  --bigref-hint: #777;
 }

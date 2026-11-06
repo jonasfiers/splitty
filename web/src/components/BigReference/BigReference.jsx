@@ -2,8 +2,8 @@ import { useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import './BigReference.css'
 
-// Shows a booking reference as large as the screen allows, dark on white in
-// either theme, for holding the phone up at a check-in desk or to a conductor.
+// Shows a booking reference as large as the screen allows, at maximum
+// contrast in either theme (black on white, or white on black), for holding the phone up at a check-in desk or to a conductor.
 // On a phone held upright the content is turned sideways, so the reference
 // can use the screen's length (a page cannot force landscape on iOS).
 // Tap anywhere or press Escape to close. Keeps the screen awake while open
