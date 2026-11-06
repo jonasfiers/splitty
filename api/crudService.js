@@ -53,6 +53,7 @@ const checkExpenseLinks = async ({ groupId, categoryId, currencyIso, paidByUserI
 };
 
 const { expenseChanges, resolveChanges } = require('./expenseHistory');
+const { MEMBERS_OF_GROUP, mapMembers } = require('./groupMembers');
 const badRequest = message => ({ success: false, status: 400, message, error: message });
 
 // The shares sent with an expense ([{userId, amount}] for everyone but the
@@ -555,16 +556,9 @@ const groupServiceNeo4j = {
     getAllGroups: async (userId) => {
         try {
             const { records } = await driver.executeQuery(
-                `MATCH (g:Group)<-[:MEMBER_OF]-(u:User {id: $userId})
+                `MATCH (g:Group)<-[:MEMBER_OF]-(:User {id: $userId})
                 OPTIONAL MATCH (g)-[:EXPRESSED_IN]->(c:Currency)
-                WITH g, u, c
-                MATCH (g)<-[:MEMBER_OF]-(m:User)
-                OPTIONAL MATCH (g)<-[:BALANCE_IN]-(e:Expense)
-                OPTIONAL MATCH (e)-[o:OWED_BY]->(m)
-                OPTIONAL MATCH (m)-[:PAID]->(e)-[p:OWED_BY]->(:User)
-                WITH g, u, c, m, sum(p.amount * coalesce(e.rateSnapshot, 1)) - sum(o.amount * coalesce(e.rateSnapshot, 1)) AS memberBalance
-                ORDER BY m.id = $userId, toLower(m.name)
-                WITH g, u, c, collect({id: m.id, name: m.name, balance: memberBalance, avatarColor: m.avatarColor, avatarEmoji: m.avatarEmoji}) AS members, count(m) AS memberCount
+                ${MEMBERS_OF_GROUP}
                 RETURN g, members, memberCount, c.iso AS iso, c.symbol AS symbol`,
                 {userId}
             )
@@ -572,11 +566,7 @@ const groupServiceNeo4j = {
                 success: true,
                 groups: records.map(record => ({
                     ...record.get('g').properties,
-                    members: record.get('members').map(m => ({
-                        ...m,
-                        balance: Number(m.balance ?? 0),
-                        avatarColor: m.avatarColor == null ? null : neo4j.integer.toNumber(m.avatarColor),
-                    })),
+                    members: mapMembers(record.get('members')),
                     memberCount: record.get('memberCount').toNumber(),
                     iso: record.get('iso'),
                     symbol: record.get('symbol'),
@@ -595,14 +585,7 @@ const groupServiceNeo4j = {
                 `MATCH (g:Group)<-[:MEMBER_OF]-(:User {id: $userId})
                 WHERE g.id = $id
                 OPTIONAL MATCH (g)-[:EXPRESSED_IN]->(c:Currency)
-                OPTIONAL MATCH (g)<-[:MEMBER_OF]-(m:User)
-                OPTIONAL MATCH (g)<-[:BALANCE_IN]-(e:Expense)
-                OPTIONAL MATCH (e)-[o:OWED_BY]->(m)
-                OPTIONAL MATCH (m)-[:PAID]->(e)-[p:OWED_BY]->(:User)
-                WITH g, c, m, sum(p.amount * coalesce(e.rateSnapshot, 1)) - sum(o.amount * coalesce(e.rateSnapshot, 1)) AS memberBalance
-                // Same order as everywhere: the others alphabetically, the user last.
-                ORDER BY m.id = $userId, toLower(m.name)
-                WITH g, c, collect({id: m.id, name: m.name, balance: memberBalance, avatarColor: m.avatarColor, avatarEmoji: m.avatarEmoji}) AS members, count(m) AS memberCount
+                ${MEMBERS_OF_GROUP}
                 RETURN g, members, memberCount, c.iso AS iso`,
                 {id, userId}
             )
@@ -611,11 +594,7 @@ const groupServiceNeo4j = {
                 success: true,
                 groups: records.map(record => ({
                     ...record.get('g').properties,
-                    members: record.get('members').map(m => ({
-                        ...m,
-                        balance: Number(m.balance ?? 0),
-                        avatarColor: m.avatarColor == null ? null : neo4j.integer.toNumber(m.avatarColor),
-                    })),
+                    members: mapMembers(record.get('members')),
                     memberCount: record.get('memberCount').toNumber(),
                     iso: record.get('iso'),
                 }))
@@ -692,23 +671,14 @@ const groupServiceNeo4j = {
     getGroupMembers: async (groupId, userId) => {
         try {
             const { records } = await driver.executeQuery(
-                `MATCH (u:User {id: $userId})-[:MEMBER_OF]->(g:Group {id: $groupId})
-                MATCH (g)<-[:MEMBER_OF]-(m:User)
-                OPTIONAL MATCH (g)<-[:BALANCE_IN]-(e:Expense)
-                OPTIONAL MATCH (e)-[o:OWED_BY]->(m)
-                OPTIONAL MATCH (m)-[:PAID]->(e)-[p:OWED_BY]->(:User)
-                WITH g, m, sum(p.amount * coalesce(e.rateSnapshot, 1)) - sum(o.amount * coalesce(e.rateSnapshot, 1)) AS balance
-                RETURN m, balance
-                ORDER BY m.id = $userId, toLower(m.name)`,
+                `MATCH (:User {id: $userId})-[:MEMBER_OF]->(g:Group {id: $groupId})
+                ${MEMBERS_OF_GROUP}
+                RETURN members`,
                 { groupId, userId }
             )
             return {
                 success: true,
-                members: records.map(r => {
-                    const { password, email, ...u } = r.get('m').properties;
-                    if (u.avatarColor != null) u.avatarColor = neo4j.integer.toNumber(u.avatarColor);
-                    return { ...u, balance: Number(r.get('balance') ?? 0) };
-                })
+                members: records.length ? mapMembers(records[0].get('members')) : [],
             };
         }
         catch (err) {

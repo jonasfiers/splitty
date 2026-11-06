@@ -1,6 +1,7 @@
 const neo4j = require('neo4j-driver');
 const driver = require('./neo4j');
 const { resolveChanges } = require('./expenseHistory');
+const { MEMBERS_OF_GROUP, mapMembers } = require('./groupMembers');
 
 // The user's own part of each expense, for getInsights' "mine" scope. The payer
 // has no OWED_BY of their own: only the others' shares are stored, so what the
@@ -58,17 +59,9 @@ const dashService = {
     getGroupCards: async (userId) => {
         try {
             const {records} = await driver.executeQuery(
-                `MATCH (g:Group)<-[:MEMBER_OF]-(u:User {id: $userId})
+                `MATCH (g:Group)<-[:MEMBER_OF]-(:User {id: $userId})
                 OPTIONAL MATCH (g)-[:EXPRESSED_IN]->(c:Currency)
-                WITH g, u, c
-                MATCH (g)<-[:MEMBER_OF]-(m:User)
-                OPTIONAL MATCH (g)<-[:BALANCE_IN]-(e:Expense)
-                OPTIONAL MATCH (e)-[o:OWED_BY]->(m)
-                OPTIONAL MATCH (m)-[:PAID]->(e)-[p:OWED_BY]->(:User)
-                WITH g, u, c, m, sum(p.amount * coalesce(e.rateSnapshot, 1)) - sum(o.amount * coalesce(e.rateSnapshot, 1)) AS memberBalance
-                // Members in a fixed order: the others alphabetically, the user last.
-                ORDER BY m.id = $userId, toLower(m.name)
-                WITH g, u, c, collect({id: m.id, name: m.name, balance: memberBalance, avatarColor: m.avatarColor, avatarEmoji: m.avatarEmoji}) AS members, count(m) AS memberCount
+                ${MEMBERS_OF_GROUP}
                 OPTIONAL MATCH (g)<-[:BALANCE_IN]-(le:Expense)-[lr:UPDATED_BY|CREATED_BY]->(:User)
                 WITH g, c, members, memberCount, max(lr.on) AS lastActivity
                 RETURN g,
@@ -82,12 +75,7 @@ const dashService = {
                 success: true,
                 groups: records.map(record => ({
                     ...record.get('g').properties,
-                    members: record.get('members').map(m => ({
-                        ...m,
-                        balance: Number(m.balance ?? 0),
-                        // Stored as a float by the app, but an integer must work too.
-                        avatarColor: m.avatarColor == null ? null : neo4j.integer.toNumber(m.avatarColor),
-                    })),
+                    members: mapMembers(record.get('members')),
                     memberCount: record.get('memberCount').toNumber(),
                     iso: record.get('iso'),
                     lastActivity: record.get('lastActivity') ? record.get('lastActivity').toStandardDate().getTime() : null,
