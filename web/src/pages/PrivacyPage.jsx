@@ -54,7 +54,7 @@ export default function PrivacyPage() {
           <li><strong>The people in your groups</strong> see your name and avatar, and the expenses, balances and trips of the groups you share with them. They do not see your email address.</li>
           <li><strong>Migadu</strong>, Splitty’s email provider, handles the emails Splitty sends you (confirming your address, resetting your password, confirming a deletion).</li>
           <li><strong>Your browser’s push service</strong>, if you switch on notifications: Google for Chrome and Android, Apple for Safari, Mozilla for Firefox. It carries the notification to your device.</li>
-          <li><strong>OpenStreetMap</strong> provides the map tiles. Your browser loads them directly from openstreetmap.org, so OpenStreetMap sees your IP address when you look at a map.</li>
+          <li><strong>OpenStreetMap</strong> provides the map images. Splitty’s server fetches them and keeps copies, so your browser never contacts OpenStreetMap: it sees only that Splitty asked for a part of the map, not who looked at it.</li>
           <li><strong>Place and route search:</strong> when you search for a place, Splitty’s server asks OpenStreetMap’s Nominatim service; when you look for a public-transport route, it asks Transitous. They receive what you searched for (a place name, or the stops and times), not your name, email or IP address.</li>
           <li><strong>Directions:</strong> if you tap “Navigate here”, your device opens Apple Maps, your map app, or OpenStreetMap with that place.</li>
         </ul>

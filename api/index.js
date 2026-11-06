@@ -38,6 +38,10 @@ app.get('/health', (req, res) => {
     res.status(200).send('OK');
 });
 
+// Map tiles: before apiLimiter, since one map view is dozens of tiles. The
+// route has its own limit.
+app.use('/tiles', require('./routes/tiles.js'));
+
 app.use(apiLimiter);
 
 // PUBLIC ROUTE

@@ -4,8 +4,10 @@ import L from 'leaflet'
 // so a journey looks the same on either: OpenStreetMap tiles, journeys as
 // gentle arcs, and bare arrowheads along them showing the direction.
 
+// OpenStreetMap's tiles, fetched through Splitty's own server (api/tileProxy.js)
+// and cached by nginx, so the visitor's browser never contacts OpenStreetMap.
 export function addTiles(map) {
-  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  L.tileLayer('/api/tiles/{z}/{x}/{y}.png', {
     maxZoom: 19,
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
   }).addTo(map)

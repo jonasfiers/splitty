@@ -268,6 +268,25 @@ human-readable record of the list. Keep those mails at least 30 days.
 
 The list holds only random user ids and is kept indefinitely; never edit or truncate it.
 
+## Map tile cache
+
+The maps load their OpenStreetMap tiles from `/api/tiles/{z}/{x}/{y}.png`, never from
+openstreetmap.org, so OpenStreetMap does not see visitors (`api/tileProxy.js`). The API
+fetches a tile with an identifying User-Agent, at most 4 at a time; nginx keeps a copy as
+long as OpenStreetMap's headers allow (about a day), then revalidates it with a cheap 304.
+
+The nginx half lives outside the repo, on CT101 (1 GB) and CT116 (200 MB), under
+`/var/cache/nginx/splitty-tiles`. `scripts/setup-tile-cache.sh prod|qa` adds it; run it
+inside that container. Its `location ^~ /api/tiles/` must stay ahead of the site's
+`\.png$` static-file rule (that is what the `^~` does) and has its own rate limit, since a
+map view is dozens of tiles and the general `/api/` limit on CT101 would refuse most.
+`X-Cache-Status` (HIT, MISS, REVALIDATED, ...) on a tile response shows the cache working.
+
+Without the nginx half, tiles still work through the plain `/api/` location on QA, but
+not on production: the static-file rule answers 404. Set up the cache before deploying a
+web build that uses the proxy. The cache can be emptied at any time (`rm -rf` its
+contents, reload nginx).
+
 ## QA
 
 `scripts/deploy-qa.sh` (`--web-only`, `--api-only`) publishes **this worktree as it is**
