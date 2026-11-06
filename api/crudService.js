@@ -54,6 +54,27 @@ const checkExpenseLinks = async ({ groupId, categoryId, currencyIso, paidByUserI
 
 const badRequest = message => ({ success: false, status: 400, message, error: message });
 
+// The shares sent with an expense ([{userId, amount}] for everyone but the
+// payer; amounts in minor units). Returns { shares } cleaned up, or { invalid }
+// with a 400 result.
+async function checkShares(shares, { amount, paidByUserId, groupId }) {
+    if (!Array.isArray(shares)) return { invalid: badRequest('shares must be a list.') };
+    const list = shares
+        .map(x => ({ userId: String(x?.userId ?? ''), amount: Number(x?.amount) }))
+        .filter(x => x.userId !== paidByUserId && !(x.amount <= 0));
+    if (list.some(x => !Number.isFinite(x.amount))) return { invalid: badRequest('Every share needs an amount.') };
+    if (new Set(list.map(x => x.userId)).size !== list.length) return { invalid: badRequest('Someone appears twice in the shares.') };
+    if (list.reduce((t, x) => t + x.amount, 0) > Number(amount)) return { invalid: badRequest('The shares add up to more than the total.') };
+    if (list.length) {
+        const { records } = await driver.executeQuery(
+            'MATCH (u:User)-[:MEMBER_OF]->(:Group {id: $groupId}) WHERE u.id IN $ids RETURN count(u) AS n',
+            { groupId, ids: list.map(x => x.userId) }
+        );
+        if (records[0].get('n').toNumber() !== list.length) return { invalid: badRequest('Everyone sharing must be a member of the group.') };
+    }
+    return { shares: list };
+}
+
 // What an expense looks like right now, for its change record: the fields
 // that matter for money or meaning, and every share (the payer's own share is
 // not stored: it is the remainder).
@@ -768,7 +789,9 @@ const groupServiceNeo4j = {
 
 const expenseService = {
     // CREATE EXPENSE
-    createExpense: async (groupId, description, categoryId, amount, currencyIso, date, paidByUserId, currUserId) => {
+    // CREATE — with its shares (`shares`: [{userId, amount}] for everyone but
+    // the payer) in the same query, so an expense never exists without them.
+    createExpense: async (groupId, description, categoryId, amount, currencyIso, date, paidByUserId, currUserId, shares = []) => {
         try {
             // Check membership first
             const { records: memberRecords } = await driver.executeQuery(
@@ -778,6 +801,8 @@ const expenseService = {
             if (memberRecords.length === 0) throw new Error('Access denied: You are not a member of this group');
             const invalid = await checkExpenseLinks({ groupId, categoryId, currencyIso, paidByUserId }, ['group', 'currency', 'category', 'payer']);
             if (invalid) return invalid;
+            const checked = await checkShares(shares, { amount, paidByUserId, groupId });
+            if (checked.invalid) return checked.invalid;
 
             const { records: groupRecords } = await driver.executeQuery(
                 'MATCH (g:Group {id: $groupId})-[:EXPRESSED_IN]->(c:Currency) RETURN c.iso AS iso',
@@ -802,12 +827,18 @@ const expenseService = {
                 CREATE (e)-[:BALANCE_IN]->(g)
                 CREATE (e)-[:CREATED_BY {on: datetime()}]->(cu)
                 WITH e, c, g, cu
+                CALL (e, g) {
+                  UNWIND $shares AS s
+                  MATCH (su:User {id: s.userId})-[:MEMBER_OF]->(g)
+                  CREATE (e)-[:OWED_BY {amount: s.amount}]->(su)
+                }
+                WITH e, c, g, cu
                 OPTIONAL MATCH (r:DailyRate {date: $date, from: $currencyIso, to: $groupIso})
                 FOREACH (_ IN CASE WHEN r IS NOT NULL THEN [1] ELSE [] END |
                   CREATE (e)-[:USED_RATE]->(r)
                 )
                 RETURN e.id AS id, c.icon AS categoryIcon, cu.name AS creatorName, g.title AS groupName`,
-                {description, amount, amountBase, rate, date, categoryId, currencyIso, groupIso, paidByUserId, groupId, currUserId},
+                {description, amount, amountBase, rate, date, categoryId, currencyIso, groupIso, paidByUserId, groupId, currUserId, shares: checked.shares},
             )
             if (records.length === 0) throw new Error('Expense could not be created');
             const expenseId = records[0].get('id')
@@ -1191,18 +1222,9 @@ const expenseService = {
 
             let newShares = null;
             if (shares !== undefined) {
-                if (!Array.isArray(shares)) return badRequest('shares must be a list.');
-                newShares = shares
-                    .map(x => ({ userId: String(x?.userId ?? ''), amount: Number(x?.amount) }))
-                    .filter(x => x.userId !== paidByUserId && x.amount > 0);
-                if (newShares.some(x => !Number.isFinite(x.amount))) return badRequest('Every share needs an amount.');
-                if (new Set(newShares.map(x => x.userId)).size !== newShares.length) return badRequest('Someone appears twice in the shares.');
-                if (newShares.reduce((t, x) => t + x.amount, 0) > Number(amount)) return badRequest('The shares add up to more than the total.');
-                const { records: members } = await driver.executeQuery(
-                    'MATCH (u:User)-[:MEMBER_OF]->(:Group {id: $groupId}) WHERE u.id IN $ids RETURN count(u) AS n',
-                    { groupId, ids: newShares.map(x => x.userId) }
-                );
-                if (members[0].get('n').toNumber() !== newShares.length) return badRequest('Everyone sharing must be a member of the group.');
+                const checked = await checkShares(shares, { amount, paidByUserId, groupId });
+                if (checked.invalid) return checked.invalid;
+                newShares = checked.shares;
             }
 
             const { records: groupRecords } = await driver.executeQuery(

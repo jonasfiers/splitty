@@ -7,9 +7,8 @@ const tripService = require('../tripService');
 router.post('/', async (req, res) => {
     try {
         const currUserId = req.user.id
-        const { groupId, description, categoryId, amount, currencyIso, date, paidByUserId } = req.body;
-        // Call the service
-        const result = await expenseService.createExpense(groupId, description, categoryId, amount, currencyIso, date, paidByUserId, currUserId);
+        const { groupId, description, categoryId, amount, currencyIso, date, paidByUserId, shares } = req.body;
+        const result = await expenseService.createExpense(groupId, description, categoryId, amount, currencyIso, date, paidByUserId, currUserId, shares ?? []);
         if (!result.success) return res.status(result.status || 400).json(result);
         res.status(201).json(result);
     } catch (error) {
