@@ -87,6 +87,9 @@ export default function RegisterPage() {
             <p className="auth-footer">
               Already have an account? <Link to="/login">Sign in</Link>
             </p>
+            <p className="auth-footer auth-privacy">
+              By creating an account you agree to how Splitty handles your data: <Link to="/privacy">Privacy</Link>
+            </p>
           </>
         )}
       </div>

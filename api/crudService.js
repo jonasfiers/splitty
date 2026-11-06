@@ -211,19 +211,7 @@ const userServiceNeo4j = {
     },
 
     // DELETE
-    deleteUser: async (id) => {
-        try {
-            const {summary} = await driver.executeQuery(
-                'MATCH (u:User) WHERE u.id = $id DETACH DELETE u;',
-                {id}
-            )
-            if (summary.counters.updates().nodesDeleted === 0) return { success: false, message: 'User not found' };
-            return { success: true, message: 'User deleted successfully' };
-        }
-        catch (err) {
-            throw new Error(`Failed to delete user: ${err.message}`);
-        }
-    }
+    // (No deleteUser: accounts are anonymised by accountDeletion.js.)
 };
 
 const currencyServiceNeo4j = {

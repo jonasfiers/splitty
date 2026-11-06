@@ -2,6 +2,7 @@ const router = require('express').Router();
 const jwt = require('jsonwebtoken');
 const { userServiceNeo4j, tokenService } = require('../crudService');
 const emailService = require('../emailService');
+const accountDeletion = require('../accountDeletion');
 
 // (There is no POST /: accounts are created only through /auth/register.)
 
@@ -87,19 +88,34 @@ router.put('/:id', async (req, res) => {
     }
 });
 
-// DELETE
+// DELETE — the user's own account (GDPR erasure): see accountDeletion.js.
+// The body must repeat the account's email address ({ confirmEmail }), so a
+// stray request or a stolen token alone cannot delete an account by accident.
 router.delete('/:id', async (req, res) => {
     try {
         const { id } = req.params;
         if (req.user.id !== id) {
-            return res.status(403).json({ error: 'You can only delete your own profile' });
+            return res.status(403).json({ error: 'You can only delete your own account' });
         }
-        const result = await userServiceNeo4j.deleteUser(id);
-        if (!result.success) return res.status(404).json({ error: result.message });
-        res.json(result);
+        if (!accountDeletion.isConfigured()) {
+            return res.status(503).json({ error: 'Account deletion is not available right now. Email hello@jonasfiers.eu.' });
+        }
+        const { user } = await userServiceNeo4j.getUserByIdDirect(id);
+        const confirm = String(req.body?.confirmEmail ?? '').trim().toLowerCase();
+        if (!user?.email || confirm !== String(user.email).toLowerCase()) {
+            return res.status(400).json({ error: 'Type your email address exactly to confirm.' });
+        }
+
+        const result = await accountDeletion.deleteAccount(id);
+        if (!result) return res.status(404).json({ error: 'Account not found' });
+
+        // Best effort: the account is already gone if these fail.
+        await emailService.sendAccountDeletedEmail(result.email).catch(err => console.error('Deletion confirmation email failed:', err.message));
+        await emailService.sendDeletionNotice(id).catch(err => console.error('Deletion notice email failed:', err.message));
+        res.json({ success: true });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ error: 'Failed to delete the account' });
     }
 });
 

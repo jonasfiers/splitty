@@ -6,6 +6,7 @@ import { useTheme } from '../context/ThemeContext'
 import Loading from '../components/Loading.jsx'
 import client from '../api/client'
 import { timeAgo } from '../utils/time.js'
+import { formatCurrency } from '../utils/currency.js'
 import { Avatar, PALETTE } from '../components/Avatar.jsx'
 import EmojiPicker from '../components/EmojiPicker/EmojiPicker.jsx'
 import { subscribeToPush, unsubscribeFromPush, isPushSubscribed, disablePushForLogout } from '../utils/push.js'
@@ -26,6 +27,7 @@ export default function ProfilePage() {
 
   // One "Edit profile" sheet for name, email, colour and emoji.
   const [showEdit, setShowEdit] = useState(false)
+  const [showDelete, setShowDelete] = useState(false)
   const [editForm, setEditForm] = useState({ name: '', email: '', avatarColor: null, avatarEmoji: null })
   const [editError, setEditError] = useState('')
   const [editMessage, setEditMessage] = useState('')
@@ -279,6 +281,7 @@ export default function ProfilePage() {
           {/* Your data */}
           <SetGroup label="Your data">
             <SetRow label="Export as CSV" sub="Every expense in your groups, with your share" onClick={handleExportData} action />
+            <SetRow label="Privacy" sub="What Splitty stores and why" to="/privacy" />
           </SetGroup>
 
           {isAdmin && (
@@ -290,6 +293,7 @@ export default function ProfilePage() {
       </div>
 
       <button type="button" className="btn btn-ghost profile-signout" onClick={handleSignOut}>Sign out</button>
+      <button type="button" className="profile-delete" onClick={() => setShowDelete(true)}>Delete account…</button>
 
       {showEdit && (
         <Sheet title="Edit profile" onClose={() => setShowEdit(false)}>
@@ -336,6 +340,19 @@ export default function ProfilePage() {
         </Sheet>
       )}
 
+      {showDelete && (
+        <DeleteAccountSheet
+          email={profile.email}
+          userId={currentUser.id}
+          onClose={() => setShowDelete(false)}
+          onDeleted={async () => {
+            await disablePushForLogout().catch(() => {})
+            logout()
+            navigate('/login', { state: { notice: 'Your account has been deleted. A confirmation is on its way to your inbox.' } })
+          }}
+        />
+      )}
+
       {showPasswordForm && (
         <Sheet title="Change password" onClose={() => { setShowPasswordForm(false); setPasswordError('') }}>
           <form onSubmit={handleChangePassword}>
@@ -360,6 +377,83 @@ export default function ProfilePage() {
         </Sheet>
       )}
     </>
+  )
+}
+
+// Deleting the account: what happens, any open balances, and the address
+// typed out to confirm (the server checks it too).
+function DeleteAccountSheet({ email, userId, onClose, onDeleted }) {
+  const [open, setOpen] = useState(null) // groups with a balance, null while loading
+  const [typed, setTyped] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    client.get('/dash/groups')
+      .then(r => setOpen((r.data.groups || [])
+        .map(g => ({ id: g.id, title: g.title, iso: g.iso, balance: g.members?.find(m => m.id === userId)?.balance ?? 0 }))
+        .filter(g => Math.abs(g.balance) >= 0.005)))
+      .catch(() => setOpen([]))
+  }, [userId])
+
+  const matches = typed.trim().toLowerCase() === String(email).toLowerCase()
+
+  const handleDelete = async e => {
+    e.preventDefault()
+    if (!matches || busy) return
+    setBusy(true)
+    setError('')
+    try {
+      await client.delete(`/users/${userId}`, { data: { confirmEmail: typed.trim() } })
+      await onDeleted()
+    } catch (err) {
+      setError(err?.response?.data?.error || 'Deleting the account failed.')
+      setBusy(false)
+    }
+  }
+
+  return (
+    <Sheet title="Delete your account" onClose={onClose}>
+      <form onSubmit={handleDelete}>
+        <ul className="delete-facts">
+          <li>Your name, email address, password, passkeys, avatar and notification settings are deleted.</li>
+          <li>Expenses you shared with others stay in their groups as <strong>“Deleted user”</strong>, so their balances stay correct.</li>
+          <li>Groups where you are the only member are deleted completely, with their trips and files.</li>
+          <li>This cannot be undone. Export your data first if you want a copy.</li>
+        </ul>
+        {open && open.length > 0 && (
+          <div className="delete-open">
+            <div className="delete-open-title">You still have open balances</div>
+            {open.map(g => (
+              <div key={g.id} className="delete-open-row">
+                <span>{g.title}</span>
+                <span className={g.balance > 0 ? 'positive' : 'negative'}>
+                  {g.balance > 0 ? 'owed to you ' : 'you owe '}{formatCurrency(Math.abs(g.balance), g.iso)}
+                </span>
+              </div>
+            ))}
+            <p>You can still delete your account; these balances stay in the groups as they are.</p>
+          </div>
+        )}
+        <div className="form-group">
+          <label>Type your email address to confirm</label>
+          <input
+            type="email"
+            autoComplete="off"
+            placeholder={email}
+            value={typed}
+            onChange={e => setTyped(e.target.value)}
+          />
+        </div>
+        {error && <p className="error">{error}</p>}
+        <div className="panel-actions">
+          <button type="button" className="btn btn-ghost" onClick={onClose}>Cancel</button>
+          <button type="submit" className="btn btn-danger delete-confirm" disabled={!matches || busy}>
+            {busy ? 'Deleting…' : 'Delete my account'}
+          </button>
+        </div>
+      </form>
+    </Sheet>
   )
 }
 

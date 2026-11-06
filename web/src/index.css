@@ -2724,3 +2724,45 @@ a.expense-item { color: inherit; text-decoration: none; }
 .admin-card-sub { font-size: 12px; color: var(--text-3); }
 .admin-card-chev { width: 18px; height: 18px; fill: none; stroke: var(--text-3); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
 .sidebar-nav-admin { margin-top: 12px; }
+
+/* Delete account */
+.profile-delete {
+  display: block;
+  margin: -12px auto 32px;
+  font-size: 13px;
+  color: var(--red-dark);
+  padding: 6px 10px;
+  border-radius: var(--r-sm);
+}
+.profile-delete:hover { background: var(--red-light); }
+.delete-facts { margin: 0 0 16px; padding-left: 18px; font-size: 13px; color: var(--text-2); display: flex; flex-direction: column; gap: 6px; }
+.delete-open {
+  margin-bottom: 16px; padding: 12px 14px;
+  border: 1px solid var(--border); border-radius: var(--r-md); background: var(--surface-2);
+  font-size: 13px;
+}
+.delete-open-title { font-weight: 700; margin-bottom: 6px; color: var(--text); }
+.delete-open-row { display: flex; justify-content: space-between; gap: 12px; padding: 3px 0; }
+.delete-open-row .positive { color: var(--green-dark); }
+.delete-open-row .negative { color: var(--red-dark); }
+.delete-open p { margin: 8px 0 0; color: var(--text-3); font-size: 12px; }
+.delete-confirm { width: auto; }
+
+/* Privacy page (public) */
+.auth-privacy { margin-top: 8px; font-size: 12px; }
+.privacy-page { height: 100vh; height: 100dvh; overflow-y: auto; background: var(--bg); }
+.privacy {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 24px 20px 64px;
+  color: var(--text-2);
+  font-size: 15px;
+  line-height: 1.6;
+}
+.privacy h1 { font-size: 30px; color: var(--text); margin: 16px 0 4px; }
+.privacy h2 { font-size: 18px; color: var(--text); margin: 28px 0 8px; }
+.privacy strong { color: var(--text); }
+.privacy a { color: var(--accent); }
+.privacy ul { padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }
+.privacy-updated { font-size: 13px; color: var(--text-3); margin: 0 0 16px; }
+.privacy-back { font-size: 14px; font-weight: 600; }

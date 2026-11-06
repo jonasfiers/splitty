@@ -15,6 +15,7 @@ const ExpenseDetailPage     = lazy(() => import('./pages/ExpenseDetailPage'))
 const CurrenciesPage        = lazy(() => import('./pages/CurrenciesPage'))
 const CategoriesPage        = lazy(() => import('./pages/CategoriesPage'))
 const AdminPage             = lazy(() => import('./pages/AdminPage'))
+const PrivacyPage           = lazy(() => import('./pages/PrivacyPage'))
 const ProfilePage           = lazy(() => import('./pages/ProfilePage'))
 const ActivityPage          = lazy(() => import('./pages/ActivityPage'))
 const FriendsPage           = lazy(() => import('./pages/FriendsPage'))
@@ -44,6 +45,7 @@ export default function App() {
           <Route path="/invite/:token" element={<InvitePage />} />
           <Route path="/verify-email" element={<VerifyEmailPage />} />
           <Route path="/verify-email-change" element={<VerifyEmailChangePage />} />
+          <Route path="/privacy" element={<PrivacyPage />} />
           <Route element={<ProtectedRoute />}>
             <Route element={<Layout />}>
               <Route index element={<Navigate to="/groups" replace />} />

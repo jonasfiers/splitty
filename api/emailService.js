@@ -72,4 +72,33 @@ async function sendEmailChangeVerification(to, verifyUrl) {
     });
 }
 
-module.exports = { sendVerificationEmail, sendPasswordResetEmail, sendEmailChangeVerification, sendGroupInviteEmail, sendSettlementEmail };
+// To the address the account had, right after it was deleted.
+async function sendAccountDeletedEmail(to) {
+    await transporter.sendMail({
+        from: FROM(),
+        to,
+        subject: 'Your Splitty account has been deleted',
+        text: 'Your Splitty account and the personal data in it have been deleted, as you asked.\n\n' +
+            'Expenses you shared with other people stay in their groups under the name "Deleted user", so their balances stay correct. ' +
+            'Backups that still contain your account are overwritten within 14 days, and your account is deleted again if one is ever restored.\n\n' +
+            'If you did not ask for this, reply to this email.',
+    });
+}
+
+// To the operator (CONTACT_EMAIL): a human-readable record of each deletion.
+// The internal id only, no name or address. The deletion list on the host is
+// what actually keeps the account deleted; this is the backup of that record.
+async function sendDeletionNotice(userId) {
+    const to = process.env.CONTACT_EMAIL;
+    if (!to) return;
+    await transporter.sendMail({
+        from: FROM(),
+        to,
+        subject: 'Splitty: an account was deleted',
+        text: `Account ${userId} was deleted at ${new Date().toISOString()}.\n\n` +
+            'It is on the deletion list and is re-anonymised automatically at every API start, also after a restore. ' +
+            'Keep this email for at least 30 days (longer than the oldest backup).',
+    });
+}
+
+module.exports = { sendAccountDeletedEmail, sendDeletionNotice, sendVerificationEmail, sendPasswordResetEmail, sendEmailChangeVerification, sendGroupInviteEmail, sendSettlementEmail };

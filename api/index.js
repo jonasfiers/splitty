@@ -76,6 +76,16 @@ setInterval(purgeExpiredTokens, 24 * 60 * 60 * 1000).unref();
 
 // KEEP LISTENING ON PORTS
 
-app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-});
+// Deleted accounts first: after a restore the database may hold accounts
+// that were deleted later; they are anonymised again before anything is
+// served. A list that cannot be read stops the API (systemd restarts it).
+require('./accountDeletion').reapplyDeletions()
+    .then(() => {
+        app.listen(PORT, () => {
+            console.log(`Server running on port ${PORT}`);
+        });
+    })
+    .catch(err => {
+        console.error('Re-applying account deletions failed, not starting:', err.message);
+        process.exit(1);
+    });
