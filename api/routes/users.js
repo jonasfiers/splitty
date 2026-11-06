@@ -101,18 +101,20 @@ router.delete('/:id', async (req, res) => {
             return res.status(503).json({ error: 'Account deletion is not available right now. Email hello@jonasfiers.eu.' });
         }
         const { user } = await userServiceNeo4j.getUserByIdDirect(id);
+        if (!user) return res.status(404).json({ error: 'Account not found' });
         const confirm = String(req.body?.confirmEmail ?? '').trim().toLowerCase();
-        if (!user?.email || confirm !== String(user.email).toLowerCase()) {
+        if (!user.email || confirm !== String(user.email).toLowerCase()) {
             return res.status(400).json({ error: 'Type your email address exactly to confirm.' });
         }
 
         const result = await accountDeletion.deleteAccount(id);
         if (!result) return res.status(404).json({ error: 'Account not found' });
 
-        // Best effort: the account is already gone if these fail.
-        await emailService.sendAccountDeletedEmail(result.email).catch(err => console.error('Deletion confirmation email failed:', err.message));
-        await emailService.sendDeletionNotice(id).catch(err => console.error('Deletion notice email failed:', err.message));
-        res.json({ success: true });
+        // Answer first: the account is gone (or locked and being erased), and
+        // a slow mail server must not turn that into an apparent failure.
+        res.status(result.complete ? 200 : 202).json({ success: true, complete: result.complete });
+        emailService.sendAccountDeletedEmail(result.email).catch(err => console.error('Deletion confirmation email failed:', err.message));
+        emailService.sendDeletionNotice(id, result.complete).catch(err => console.error('Deletion notice email failed:', err.message));
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: 'Failed to delete the account' });

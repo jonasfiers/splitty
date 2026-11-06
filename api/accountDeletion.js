@@ -6,7 +6,8 @@
 //      that fails, nothing is deleted;
 //   2. deletes the groups where the user is the only member, with their trips,
 //      uploaded files, expenses and invite links;
-//   3. anonymises the user: every property is replaced by
+//   3. anonymises the user (if this step fails, the account stays locked and
+//      the hourly re-apply finishes it): every property is replaced by
 //      { id, name: 'Deleted user', deleted: true, deletedAt }, and their
 //      passkeys, push subscriptions and tokens are deleted. Memberships of
 //      shared groups, payments and shares stay, so the other members'
@@ -48,8 +49,14 @@ const isConfigured = () => WRITE_FILE !== '';
 const MARKER = '.splitty-deletion-list';
 
 function checkMount(file) {
-    if (!fs.existsSync(path.join(path.dirname(file), MARKER))) {
-        throw new Error(`${path.dirname(file)} has no ${MARKER}: the host mount for the deletion list is missing`);
+    const dir = path.dirname(file);
+    if (!fs.existsSync(path.join(dir, MARKER))) {
+        throw new Error(`${dir} has no ${MARKER}: the host mount for the deletion list is missing`);
+    }
+    // A mount point sits on another device than its parent directory; a plain
+    // directory (or a stray copy of the marker inside the container) does not.
+    if (fs.statSync(dir).dev === fs.statSync(path.dirname(dir)).dev) {
+        throw new Error(`${dir} is not a mount point: the host mount for the deletion list is missing`);
     }
 }
 
@@ -62,9 +69,10 @@ function readList(file) {
         if (err.code === 'ENOENT') return []; // nothing deleted yet
         throw new Error(`Cannot read deletion list ${file}: ${err.message}`);
     }
-    return text.split('\n')
-        .map(line => line.split('\t')[0].trim())
-        .filter(id => UUID.test(id));
+    const lines = text.split('\n').filter(l => l.trim() !== '');
+    const ids = lines.map(line => line.split('\t')[0].trim()).filter(id => UUID.test(id));
+    if (ids.length !== lines.length) console.error(`Deletion list ${file}: ${lines.length - ids.length} unreadable line(s) ignored`);
+    return ids;
 }
 
 function appendToList(userId) {
@@ -81,22 +89,38 @@ function appendToList(userId) {
     }
 }
 
-// Groups whose only member is this user: nobody else loses anything when
-// they go.
+// Groups with no live member besides this user (other members may be
+// deleted accounts already): nobody who can still see them loses anything.
 async function soloGroupIds(userId) {
     const { records } = await driver.executeQuery(
         `MATCH (u:User {id: $userId})-[:MEMBER_OF]->(g:Group)
-         WHERE NOT EXISTS { MATCH (g)<-[:MEMBER_OF]-(o:User) WHERE o <> u }
+         WHERE NOT EXISTS { MATCH (g)<-[:MEMBER_OF]-(o:User) WHERE o <> u AND o.deleted IS NULL }
          RETURN g.id AS id`,
         { userId }
     );
     return records.map(r => r.get('id'));
 }
 
+// Groups whose members are all deleted accounts (e.g. left over from before
+// the rule above, or from a restore): delete them like solo groups.
+async function abandonedGroups() {
+    const { records } = await driver.executeQuery(
+        `MATCH (g:Group)<-[:MEMBER_OF]-(:User)
+         WITH DISTINCT g
+         WHERE NOT EXISTS { MATCH (g)<-[:MEMBER_OF]-(o:User) WHERE o.deleted IS NULL }
+         MATCH (g)<-[:MEMBER_OF]-(d:User)
+         RETURN g.id AS id, collect(d.id)[0] AS memberId`
+    );
+    return records.map(r => ({ groupId: r.get('id'), memberId: r.get('memberId') }));
+}
+
 async function deleteSoloGroup(groupId, userId) {
     // Trips first, the way the group delete route does it, so their uploaded
     // files are removed from disk too.
     const storedNames = await tripService.deleteTripsOfGroup(groupId, userId);
+    // Right away: the graph no longer points at these files, and if the next
+    // query fails their names would be lost.
+    await uploadStore.remove(storedNames);
     await driver.executeQuery(
         `MATCH (g:Group {id: $groupId})
          OPTIONAL MATCH (e:Expense)-[:BALANCE_IN]->(g)
@@ -109,7 +133,6 @@ async function deleteSoloGroup(groupId, userId) {
          DETACH DELETE g`,
         { groupId }
     );
-    await uploadStore.remove(storedNames);
 }
 
 async function anonymise(userId) {
@@ -146,13 +169,22 @@ async function deleteAccount(userId) {
 
     appendToList(userId);       // first: if this fails, nothing is deleted
     deletedIds.add(userId);     // from now on, old tokens are refused
-    await erase(userId);
-    return { email };
+    try {
+        await erase(userId);
+        return { email, complete: true };
+    } catch (err) {
+        // The account is on the list and locked out; the periodic re-apply
+        // (and every start) finishes the erasure.
+        console.error(`Erasing account ${userId} failed, will retry:`, err.message);
+        return { email, complete: false };
+    }
 }
 
-// At startup, before listening. Throws (and the API must not start) if a list
-// cannot be read: serving a restored database with deleted accounts back in
-// it is worse than not serving.
+// At startup, before listening, and then every hour (catches a Neo4j-only
+// restore while the API keeps running, QA picking up production deletions,
+// and an erasure that failed half-way). Throws if a list cannot be read: at
+// startup the API must then not serve, since a restored database with deleted
+// accounts back in it is worse than not serving.
 async function reapplyDeletions() {
     const files = [...(WRITE_FILE ? [WRITE_FILE] : []), ...READ_FILES];
     const listed = new Set(files.flatMap(readList));
@@ -164,19 +196,51 @@ async function reapplyDeletions() {
     for (const id of listed) deletedIds.add(id);
 
     let reapplied = 0;
-    if (listed.size > 0) {
-        const { records: live } = await driver.executeQuery(
-            'MATCH (u:User) WHERE u.id IN $ids AND u.deleted IS NULL RETURN u.id AS id',
-            { ids: [...listed] }
-        );
-        for (const r of live) {
-            await erase(r.get('id'));
-            reapplied++;
-        }
+    // Listed but not (fully) anonymised: live again after a restore, or with
+    // properties written by a request that raced the deletion.
+    const { records: todo } = await driver.executeQuery(
+        `MATCH (u:User) WHERE (u.id IN $ids AND u.deleted IS NULL)
+            OR (u.deleted = true AND any(k IN keys(u) WHERE NOT k IN ['id', 'name', 'deleted', 'deletedAt']))
+         RETURN u.id AS id`,
+        { ids: [...listed] }
+    );
+    for (const r of todo) {
+        await erase(r.get('id'));
+        reapplied++;
     }
-    console.log(`Deletion list: ${listed.size} listed, ${reapplied} re-applied` +
-        (isConfigured() ? '' : ' (DELETION_LIST_FILE not set: account deletion disabled)'));
+    let groups = 0;
+    for (const { groupId, memberId } of await abandonedGroups()) {
+        await deleteSoloGroup(groupId, memberId);
+        groups++;
+    }
+    if (reapplied || groups || !reapplyDeletions.logged) {
+        console.log(`Deletion list: ${listed.size} listed, ${reapplied} re-applied, ${groups} abandoned group(s) removed` +
+            (isConfigured() ? '' : ' (DELETION_LIST_FILE not set: account deletion disabled)'));
+        reapplyDeletions.logged = true;
+    }
     return reapplied;
 }
 
-module.exports = { deleteAccount, reapplyDeletions, isDeleted, isConfigured };
+// Startup: Neo4j may still be coming up after a host reboot. Retry only
+// connection problems (for about two minutes); a list or marker problem
+// fails at once.
+async function reapplyAtStartup() {
+    for (let attempt = 1; ; attempt++) {
+        try {
+            return await reapplyDeletions();
+        } catch (err) {
+            const neo4jDown = err.code === 'ServiceUnavailable' || err.code === 'SessionExpired' || /ECONNREFUSED|connect/i.test(err.message);
+            if (!neo4jDown || attempt >= 24) throw err;
+            console.error(`Neo4j not reachable yet (${err.message}); retrying in 5 s`);
+            await new Promise(r => setTimeout(r, 5000));
+        }
+    }
+}
+
+function scheduleReapply() {
+    setInterval(() => {
+        reapplyDeletions().catch(err => console.error('Periodic deletion re-apply failed:', err.message));
+    }, 60 * 60 * 1000).unref();
+}
+
+module.exports = { deleteAccount, reapplyDeletions, reapplyAtStartup, scheduleReapply, isDeleted, isConfigured };

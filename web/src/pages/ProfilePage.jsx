@@ -9,7 +9,7 @@ import { timeAgo } from '../utils/time.js'
 import { formatCurrency } from '../utils/currency.js'
 import { Avatar, PALETTE } from '../components/Avatar.jsx'
 import EmojiPicker from '../components/EmojiPicker/EmojiPicker.jsx'
-import { subscribeToPush, unsubscribeFromPush, isPushSubscribed, disablePushForLogout } from '../utils/push.js'
+import { subscribeToPush, unsubscribeFromPush, isPushSubscribed, disablePushForLogout, forgetPushLocally } from '../utils/push.js'
 import TabHeader from '../components/PageHeader/TabHeader.jsx'
 
 export default function ProfilePage() {
@@ -346,7 +346,7 @@ export default function ProfilePage() {
           userId={currentUser.id}
           onClose={() => setShowDelete(false)}
           onDeleted={async () => {
-            await disablePushForLogout().catch(() => {})
+            await forgetPushLocally().catch(() => {})
             logout()
             navigate('/login', { state: { notice: 'Your account has been deleted. A confirmation is on its way to your inbox.' } })
           }}
@@ -417,8 +417,9 @@ function DeleteAccountSheet({ email, userId, onClose, onDeleted }) {
       <form onSubmit={handleDelete}>
         <ul className="delete-facts">
           <li>Your name, email address, password, passkeys, avatar and notification settings are deleted.</li>
-          <li>Expenses you shared with others stay in their groups as <strong>“Deleted user”</strong>, so their balances stay correct.</li>
-          <li>Groups where you are the only member are deleted completely, with their trips and files.</li>
+          <li>What you added to groups shared with others (expenses, trip plans, notes, files) stays there as <strong>“Deleted user”</strong>, so their balances and plans stay correct.</li>
+          <li>Groups where nobody else is left are deleted completely, with their trips and files.</li>
+          <li>You are signed out on every device.</li>
           <li>This cannot be undone. Export your data first if you want a copy.</li>
         </ul>
         {open && open.length > 0 && (

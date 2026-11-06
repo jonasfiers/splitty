@@ -34,7 +34,7 @@ export default function PrivacyPage() {
           <li><strong>Passkeys</strong>, if you add any: the public key your device creates (your device keeps the private part), a label for the device such as “iPhone · Safari”, and when it was added and last used.</li>
           <li><strong>What you enter:</strong> groups and who is in them, expenses, who paid and who owes what, settlements, and trips: places, times, booking references, notes, links, and files you upload such as tickets.</li>
           <li><strong>Notifications</strong>, if you switch them on: the address your browser’s push service gives Splitty to reach your device.</li>
-          <li><strong>Server logs:</strong> the web server records each request (your IP address, the address requested, the time, and your browser’s description of itself). These are used to keep the service running and to spot attacks.</li>
+          <li><strong>Server logs:</strong> the web server records each request (your IP address, the address requested, the time, and your browser’s description of itself), and the app logs errors, which can include your internal account number. These are used to keep the service running and to spot attacks.</li>
         </ul>
         <p>
           Splitty has no advertising, no analytics and no tracking cookies. Your browser keeps two things for it:
@@ -62,22 +62,24 @@ export default function PrivacyPage() {
         <h2>Where it is kept</h2>
         <p>
           On Jonas’s own server in Belgium, with backups on a disk in the same place. Only the services listed
-          above receive anything, and only what is described there.
+          above receive anything, and only what is described there. Jonas also runs a test copy of Splitty, which
+          only he can reach, on a copy of the same data; deleting your account deletes it there too, within an hour.
         </p>
 
         <h2>How long</h2>
         <ul>
           <li><strong>Your account and what you enter:</strong> until you delete your account.</li>
-          <li><strong>Web server logs:</strong> 30 days.</li>
+          <li><strong>Server logs</strong> (web server and app): 30 days.</li>
           <li><strong>Backups:</strong> overwritten after 7 to 14 days. After you delete your account, it can still be in a backup for up to 14 days. If a backup is ever restored, your account is deleted again automatically before Splitty is used.</li>
           <li><strong>Links in emails</strong> (password reset, email confirmation): until they expire, after 24 hours at most.</li>
+          <li><strong>After you delete your account:</strong> Splitty keeps a note of your internal account number (a random code, without your name or email) and the time of deletion, for as long as backups could hold your account, so that it stays deleted. Jonas gets an email with the same note.</li>
         </ul>
 
         <h2>Your rights</h2>
         <ul>
           <li><strong>See and take your data:</strong> Profile › Export as CSV gives you the expenses in your groups. For a copy of everything Splitty holds about you, email <a href="mailto:hello@jonasfiers.eu">hello@jonasfiers.eu</a>.</li>
           <li><strong>Correct it:</strong> change your name, email and avatar in Profile, and edit what you entered in the app.</li>
-          <li><strong>Delete it:</strong> Profile › Delete account. Your name, email, password, passkeys, avatar and notification settings are deleted at once. Expenses you shared with others stay in their groups as “Deleted user”, so their balances stay correct; groups where you were the only member are deleted completely, with their trips and files.</li>
+          <li><strong>Delete it:</strong> Profile › Delete account. Your name, email, password, passkeys, avatar and notification settings are deleted at once, and you are signed out on every device. What you added to groups you share with others (expenses, trip plans, notes and uploaded files) stays in those groups for the other members, shown as “Deleted user”, so their balances and plans stay correct. Groups where nobody else is left are deleted completely, with their trips and files.</li>
           <li><strong>Object or restrict:</strong> email <a href="mailto:hello@jonasfiers.eu">hello@jonasfiers.eu</a>.</li>
           <li><strong>Complain:</strong> you can complain to the Belgian Data Protection Authority (<a href="https://www.dataprotectionauthority.be" target="_blank" rel="noopener noreferrer">dataprotectionauthority.be</a>) or the authority where you live.</li>
         </ul>

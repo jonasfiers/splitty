@@ -79,8 +79,10 @@ setInterval(purgeExpiredTokens, 24 * 60 * 60 * 1000).unref();
 // Deleted accounts first: after a restore the database may hold accounts
 // that were deleted later; they are anonymised again before anything is
 // served. A list that cannot be read stops the API (systemd restarts it).
-require('./accountDeletion').reapplyDeletions()
+const accountDeletion = require('./accountDeletion');
+accountDeletion.reapplyAtStartup()
     .then(() => {
+        accountDeletion.scheduleReapply();
         app.listen(PORT, () => {
             console.log(`Server running on port ${PORT}`);
         });

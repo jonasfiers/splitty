@@ -88,14 +88,15 @@ async function sendAccountDeletedEmail(to) {
 // To the operator (CONTACT_EMAIL): a human-readable record of each deletion.
 // The internal id only, no name or address. The deletion list on the host is
 // what actually keeps the account deleted; this is the backup of that record.
-async function sendDeletionNotice(userId) {
+async function sendDeletionNotice(userId, complete = true) {
     const to = process.env.CONTACT_EMAIL;
     if (!to) return;
     await transporter.sendMail({
         from: FROM(),
         to,
-        subject: 'Splitty: an account was deleted',
+        subject: complete ? 'Splitty: an account was deleted' : 'Splitty: account deletion INCOMPLETE (will retry)',
         text: `Account ${userId} was deleted at ${new Date().toISOString()}.\n\n` +
+            (complete ? '' : 'Erasing its data failed part-way (see the API log). The account is locked; the hourly re-apply, or the next API start, finishes it.\n\n') +
             'It is on the deletion list and is re-anonymised automatically at every API start, also after a restore. ' +
             'Keep this email for at least 30 days (longer than the oldest backup).',
     });

@@ -97,6 +97,15 @@ export const disablePushForLogout = async () => {
 // Login: if this browser already has a push registration (e.g. from before a
 // logout), tell the server to turn it back on for whoever just logged in.
 // No-op if this device was never subscribed under this account.
+// After the account was deleted: the server already dropped the subscription
+// (and refuses the old token), so only end it in this browser.
+export const forgetPushLocally = async () => {
+    if (!('serviceWorker' in navigator)) return
+    const reg = await navigator.serviceWorker.getRegistration('/')
+    const subscription = await reg?.pushManager.getSubscription()
+    await subscription?.unsubscribe()
+}
+
 export const reactivatePushIfKnown = async () => {
     if (!('serviceWorker' in navigator)) return
     const reg = await navigator.serviceWorker.getRegistration('/')

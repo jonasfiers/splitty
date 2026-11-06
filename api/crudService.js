@@ -68,7 +68,8 @@ const userServiceNeo4j = {
                 {id, requesterId}
             )
             if (records.length === 0) return { success: false, message: 'User not found' };
-            const { password, role, ...user } = records[0].get('u').properties;
+            // Co-members see name and avatar only, never contact or account details.
+            const { password, role, email, pendingEmail, emailVerified, ...user } = records[0].get('u').properties;
             return {success:true, user};
         }
         catch (err) {
@@ -577,7 +578,7 @@ const groupServiceNeo4j = {
         try {
             const { summary } = await driver.executeQuery(
                 'MATCH (g:Group {id: $groupId})<-[:MEMBER_OF]-(cu:User {id: $currUserId}) ' +
-                'MATCH (u:User {id: $userId}) ' +
+                'MATCH (u:User {id: $userId}) WHERE u.deleted IS NULL ' +
                 'MERGE (g)<-[:MEMBER_OF]-(u)',
                 { groupId, userId, currUserId }
             );
