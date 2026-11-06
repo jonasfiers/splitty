@@ -6,15 +6,20 @@
   background: #fff;
   color: #000;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4vh;
   padding: max(24px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
            max(24px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
   cursor: pointer;
   -webkit-user-select: none;
   user-select: none;
+}
+.bigref-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4vh;
+  max-width: 100%;
 }
 .bigref-label {
   font-family: var(--font-body);
@@ -36,4 +41,23 @@
   font-family: var(--font-body);
   font-size: 13px;
   color: #888;
+}
+
+/* Phone held upright: turn the content a quarter clockwise and size it to
+   the screen's height, which is now the reading width. */
+@media (orientation: portrait) and (max-width: 767px) {
+  .bigref-content {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 92vh;
+    width: 92dvh;
+    max-width: none;
+    gap: 4vw;
+    transform: translate(-50%, -50%) rotate(90deg);
+  }
+  .bigref-value {
+    font-size: min(calc(132vh / var(--chars)), 26vw);
+    font-size: min(calc(132dvh / var(--chars)), 26vw);
+  }
 }

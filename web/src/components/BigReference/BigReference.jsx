@@ -4,6 +4,8 @@ import './BigReference.css'
 
 // Shows a booking reference as large as the screen allows, dark on white in
 // either theme, for holding the phone up at a check-in desk or to a conductor.
+// On a phone held upright the content is turned sideways, so the reference
+// can use the screen's length (a page cannot force landscape on iOS).
 // Tap anywhere or press Escape to close. Keeps the screen awake while open
 // where the browser supports it (Screen Wake Lock; iOS 16.4+ in a PWA).
 export default function BigReference({ value, label, onClose }) {
@@ -42,9 +44,11 @@ export default function BigReference({ value, label, onClose }) {
 
   return createPortal(
     <div className="bigref" role="dialog" aria-modal="true" aria-label={label} onClick={onClose}>
-      <div className="bigref-label">{label}</div>
-      <div className="bigref-value" style={{ '--chars': chars }}>{value}</div>
-      <div className="bigref-hint">Tap anywhere to close</div>
+      <div className="bigref-content">
+        <div className="bigref-label">{label}</div>
+        <div className="bigref-value" style={{ '--chars': chars }}>{value}</div>
+        <div className="bigref-hint">Tap anywhere to close</div>
+      </div>
     </div>,
     document.body,
   )
