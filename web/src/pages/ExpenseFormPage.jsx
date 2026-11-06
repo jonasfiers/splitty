@@ -154,30 +154,18 @@ export default function ExpenseFormPage() {
     setSaving(true)
     try {
       let expenseId = id
+      const otherShares = shares
+        .filter(s => s.included && s.userId !== form.paidByUserId && s.amount !== '' && parseFloat(s.amount) > 0)
+        .map(s => ({ userId: s.userId, amount: s.amount }))
       if (isEdit) {
-        await client.put(`/expenses/${id}`, payload)
-        const { data: old } = await client.get(`/shares/expense/${id}/excludePayer`)
-        await Promise.all(
-          (old.shares || []).map(s =>
-            client.delete(`/shares/expense/${id}/user/${s.userId}`)
-          )
-        )
+        // One request: the expense and its shares are saved together, and the
+        // server records what changed.
+        await client.put(`/expenses/${id}`, { ...payload, shares: otherShares })
       } else {
         const { data } = await client.post('/expenses', payload)
         expenseId = data.id
+        await Promise.all(otherShares.map(s => client.post('/shares', { expenseId, ...s })))
       }
-
-      await Promise.all(
-        shares
-          .filter(s => s.included && s.userId !== form.paidByUserId && s.amount !== '' && parseFloat(s.amount) > 0)
-          .map(s =>
-            client.post('/shares', {
-              expenseId,
-              userId: s.userId,
-              amount: s.amount
-            })
-          )
-      )
 
       if (tripItem && !isEdit) {
         await client.post(`/trips/items/${tripItem.id}/expenses`, { expenseId })

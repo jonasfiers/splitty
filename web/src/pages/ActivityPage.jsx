@@ -6,6 +6,7 @@ import Loading from '../components/Loading.jsx'
 import { useMediaQuery } from '../utils/useMediaQuery.js'
 import TabHeader from '../components/PageHeader/TabHeader.jsx'
 import { activityLink, activityVerb, activityMatches, activityIcon, activityTone, isTripActivity, isDeletedActivity, actionOf } from '../utils/activity.js'
+import { summarizeChanges } from '../utils/expenseChanges.js'
 
 const PAGE = 50
 const CONTEXTS = [
@@ -189,6 +190,7 @@ export default function ActivityPage() {
                       {g && <>{g.icon ? `${g.icon} ` : ''}{g.title} · </>}
                       {a.userName} {activityVerb(a, { settled: 'recorded a settlement' })}
                     </div>
+                    {a.changes?.length > 0 && <div className="act-changes">{summarizeChanges(a.changes)}</div>}
                   </div>
                   <div style={{ textAlign: 'right', flexShrink: 0 }}>
                     {!trip && <div className="act-amt">{formatCurrency(a.amount, a.currencyIso)}</div>}

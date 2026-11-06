@@ -8,6 +8,7 @@ import Loading from '../components/Loading.jsx'
 import ChartTooltip from '../components/ChartTooltip.jsx'
 import PageHeader from '../components/PageHeader/PageHeader.jsx'
 import { useMediaQuery } from '../utils/useMediaQuery.js'
+import ExpenseHistory from '../components/ExpenseHistory.jsx'
 
 export default function ExpenseDetailPage() {
   const { groupId, id } = useParams()
@@ -204,6 +205,7 @@ export default function ExpenseDetailPage() {
               </div>
             </>
           )}
+          {!expense.isSettlement && !expense.isTransfer && <ExpenseHistory expenseId={id} />}
         </div>
         {wide && (
           <aside className="expense-detail-aside">

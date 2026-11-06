@@ -35,6 +35,10 @@ function plain(v) {
     }
     return v;
 }
+// Change records store amounts in minor units, like the rest of the graph.
+const majorChanges = list => list.map(c => (c.field === 'amount' || c.field === 'share')
+    ? { ...c, from: major(c.from, c.fromCurrency), to: major(c.to, c.toCurrency) }
+    : c);
 const rows = records => records.map(r => plain(r.toObject()));
 
 async function q(cypher, params) {
@@ -79,7 +83,8 @@ async function collect(userId) {
                 g.id AS groupId, g.title AS groupTitle, cat.name AS category,
                 payer.id AS paidById, payer.name AS paidBy, owed,
                 CASE WHEN e:Settlement THEN 'settlement' WHEN e:Transfer THEN 'transfer' ELSE 'expense' END AS kind,
-                [(e)-[:PAYS_FOR]->(i:TripItem) | i.id] AS tripItemIds
+                [(e)-[:PAYS_FOR]->(i:TripItem) | i.id] AS tripItemIds,
+                [(e)-[h:CREATED_BY|UPDATED_BY]->(hu:User) | {action: type(h), on: h.on, by: hu.name, changes: h.changes}] AS history
          ORDER BY date DESC`,
         { userId })).map(e => {
         const owedTotal = e.owed.reduce((s, o) => s + Number(o.amount || 0), 0);
@@ -96,6 +101,9 @@ async function collect(userId) {
             group: { id: e.groupId, title: e.groupTitle }, category: e.category ?? null,
             paidBy: e.paidById ? { id: e.paidById, name: e.paidBy } : null,
             shares, myShare: mine, tripItemIds: e.tripItemIds,
+            history: e.history
+                .map(h => ({ action: h.action === 'CREATED_BY' ? 'created' : 'edited', on: h.on, by: h.by, changes: h.changes ? majorChanges(JSON.parse(h.changes)) : undefined }))
+                .sort((x, y) => String(x.on).localeCompare(String(y.on))),
         };
     });
 

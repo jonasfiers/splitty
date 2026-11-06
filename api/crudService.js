@@ -52,6 +52,63 @@ const checkExpenseLinks = async ({ groupId, categoryId, currencyIso, paidByUserI
     return { success: false, status: 400, message, error: message };
 };
 
+const badRequest = message => ({ success: false, status: 400, message, error: message });
+
+// What an expense looks like right now, for its change record: the fields
+// that matter for money or meaning, and every share (the payer's own share is
+// not stored: it is the remainder).
+async function readExpenseState(tx, id) {
+    const { records } = await tx.run(
+        `MATCH (e:Expense {id: $id})-[:BALANCE_IN]->(g:Group)
+         OPTIONAL MATCH (e)-[:EXPRESSED_IN]->(cur:Currency)
+         OPTIONAL MATCH (e)-[:IN_CATEGORY]->(c:Category)
+         OPTIONAL MATCH (p:User)-[:PAID]->(e)
+         OPTIONAL MATCH (e)-[o:OWED_BY]->(ou:User)
+         RETURN e.description AS description, e.amount AS amount, e.date AS date, cur.iso AS currencyIso,
+                g.id AS groupId, g.title AS groupTitle, c.id AS categoryId, c.name AS category,
+                p.id AS payerId, p.name AS payer,
+                [x IN collect(CASE WHEN ou IS NULL THEN null ELSE {userId: ou.id, name: ou.name, amount: o.amount} END) WHERE x IS NOT NULL] AS others`,
+        { id }
+    );
+    const r = records[0];
+    return {
+        description: r.get('description'), amount: Number(r.get('amount')), date: r.get('date'), currencyIso: r.get('currencyIso'),
+        groupId: r.get('groupId'), groupTitle: r.get('groupTitle'), categoryId: r.get('categoryId'), category: r.get('category'),
+        payerId: r.get('payerId'), payer: r.get('payer'),
+        others: r.get('others').map(o => ({ userId: o.userId, name: o.name, amount: Number(o.amount) })),
+    };
+}
+
+// Field-level differences between two expense states, as a small list the
+// app can show: [{ field, from, to }] for description/amount/currency/date/
+// category/group/paidBy, and { field: 'share', name, from, to } per person
+// whose share changed (amounts in minor units, with the currency of each side).
+function expenseChanges(b, a) {
+    const out = [];
+    if (b.description !== a.description) out.push({ field: 'description', from: b.description, to: a.description });
+    if (b.amount !== a.amount || b.currencyIso !== a.currencyIso) {
+        out.push({ field: 'amount', from: b.amount, to: a.amount, fromCurrency: b.currencyIso, toCurrency: a.currencyIso });
+    }
+    if (b.date !== a.date) out.push({ field: 'date', from: b.date, to: a.date });
+    if (b.categoryId !== a.categoryId) out.push({ field: 'category', from: b.category, to: a.category });
+    if (b.groupId !== a.groupId) out.push({ field: 'group', from: b.groupTitle, to: a.groupTitle });
+    if (b.payerId !== a.payerId) out.push({ field: 'paidBy', from: b.payer, to: a.payer });
+    const full = s => {
+        const m = new Map(s.others.map(o => [o.userId, { name: o.name, amount: o.amount }]));
+        if (s.payerId) m.set(s.payerId, { name: s.payer, amount: s.amount - s.others.reduce((t, o) => t + o.amount, 0) });
+        return m;
+    };
+    const fb = full(b), fa = full(a);
+    for (const userId of new Set([...fb.keys(), ...fa.keys()])) {
+        const x = fb.get(userId), y = fa.get(userId);
+        const from = x?.amount ?? 0, to = y?.amount ?? 0;
+        if (Math.abs(from - to) > 1e-9) {
+            out.push({ field: 'share', name: (y || x).name, from, to, fromCurrency: b.currencyIso, toCurrency: a.currencyIso });
+        }
+    }
+    return out;
+}
+
 const isSettlementOrTransfer = async (expenseId, currUserId) => {
     const { records } = await driver.executeQuery(
         `MATCH (:User {id: $currUserId})-[:MEMBER_OF]->(:Group)<-[:BALANCE_IN]-(e:Expense {id: $expenseId})
@@ -1114,7 +1171,12 @@ const expenseService = {
     // in, which moves it there — same access rule as everywhere else: the
     // current user must be a member of both the expense's current group and
     // the target group)
-    updateExpense: async (id, groupId, description, categoryId, amount, currencyIso, date, paidByUserId, currUserId) => {
+    // UPDATE — the expense and (when `shares` is given: [{userId, amount}] for
+    // everyone but the payer) its shares, in ONE transaction, so an edit can
+    // never leave an expense with half its shares. The UPDATED_BY record keeps
+    // what changed (`changes`, JSON: see expenseChanges); an edit that changes
+    // nothing records nothing.
+    updateExpense: async (id, groupId, description, categoryId, amount, currencyIso, date, paidByUserId, currUserId, shares) => {
         try {
             const { records: memberRecords } = await driver.executeQuery(
                 `MATCH (e:Expense {id: $id})-[:BALANCE_IN]->(:Group)<-[:MEMBER_OF]-(:User {id: $currUserId})
@@ -1127,6 +1189,22 @@ const expenseService = {
             const invalid = await checkExpenseLinks({ groupId, categoryId, currencyIso, paidByUserId }, ['group', 'currency', 'category', 'payer']);
             if (invalid) return invalid;
 
+            let newShares = null;
+            if (shares !== undefined) {
+                if (!Array.isArray(shares)) return badRequest('shares must be a list.');
+                newShares = shares
+                    .map(x => ({ userId: String(x?.userId ?? ''), amount: Number(x?.amount) }))
+                    .filter(x => x.userId !== paidByUserId && x.amount > 0);
+                if (newShares.some(x => !Number.isFinite(x.amount))) return badRequest('Every share needs an amount.');
+                if (new Set(newShares.map(x => x.userId)).size !== newShares.length) return badRequest('Someone appears twice in the shares.');
+                if (newShares.reduce((t, x) => t + x.amount, 0) > Number(amount)) return badRequest('The shares add up to more than the total.');
+                const { records: members } = await driver.executeQuery(
+                    'MATCH (u:User)-[:MEMBER_OF]->(:Group {id: $groupId}) WHERE u.id IN $ids RETURN count(u) AS n',
+                    { groupId, ids: newShares.map(x => x.userId) }
+                );
+                if (members[0].get('n').toNumber() !== newShares.length) return badRequest('Everyone sharing must be a member of the group.');
+            }
+
             const { records: groupRecords } = await driver.executeQuery(
                 'MATCH (g:Group {id: $groupId})-[:EXPRESSED_IN]->(c:Currency) RETURN c.iso AS iso',
                 { groupId }
@@ -1136,54 +1214,114 @@ const expenseService = {
             const rateSnapshot = rawRate * (10 ** getDecimals(groupIso)) / (10 ** getDecimals(currencyIso));
             const amountBase = Math.round(amount * rateSnapshot);
 
-            const { records, summary } = await driver.executeQuery(
-                `MATCH (e:Expense {id: $id})-[oldBal:BALANCE_IN]->(:Group)
-                MATCH (g:Group {id: $groupId})<-[:MEMBER_OF]-(cu:User {id: $currUserId})
-                MATCH (u:User {id: $paidByUserId})-[:MEMBER_OF]->(g)
-                MATCH (c:Category {id: $categoryId})
-                MATCH (cur:Currency {iso: $currencyIso})
-                // Only now that everything is found: replace the old links
-                // (including the old currency, which used to be kept as a
-                // second EXPRESSED_IN when the currency changed).
-                OPTIONAL MATCH (:User)-[rp:PAID]->(e)
-                OPTIONAL MATCH (e)-[oldRate:USED_RATE]->(:DailyRate)
-                OPTIONAL MATCH (e)-[oldCat:IN_CATEGORY]->(:Category)
-                OPTIONAL MATCH (e)-[oldCur:EXPRESSED_IN]->(:Currency)
-                WITH e, oldBal, g, cu, u, c, cur,
-                     collect(DISTINCT rp) + collect(DISTINCT oldRate) + collect(DISTINCT oldCat) + collect(DISTINCT oldCur) AS old
-                SET e.description = $description, e.amount = $amount, e.amountBase = $amountBase, e.rateSnapshot = $rateSnapshot, e.date = $date
-                DELETE oldBal
-                FOREACH (r IN old | DELETE r)
-                CREATE (e)-[:BALANCE_IN]->(g)
-                CREATE (e)-[:IN_CATEGORY]->(c)
-                CREATE (u)-[:PAID]->(e)
-                CREATE (e)-[:EXPRESSED_IN]->(cur)
-                CREATE (e)-[:UPDATED_BY{on: datetime()}]->(cu)
-                WITH e, c, g, cu
-                OPTIONAL MATCH (r:DailyRate {date: $date, from: $currencyIso, to: $groupIso})
-                FOREACH (_ IN CASE WHEN r IS NOT NULL THEN [1] ELSE [] END |
-                  CREATE (e)-[:USED_RATE]->(r)
-                )
-                RETURN c.icon AS categoryIcon, cu.name AS creatorName, g.title AS groupName`,
-                {id, description, amount, amountBase, rateSnapshot, date, categoryId, groupId, groupIso, currencyIso, paidByUserId, currUserId},
-            )
-            if (summary.counters.containsUpdates()) {
-                const categoryIcon = records[0]?.get('categoryIcon')
-                const creatorName = records[0]?.get('creatorName')
-                const groupName = records[0]?.get('groupName')
+            const session = driver.session();
+            let result;
+            try {
+                result = await session.executeWrite(async tx => {
+                    const before = await readExpenseState(tx, id);
+                    const { records: nameRecords } = await tx.run(
+                        `OPTIONAL MATCH (c:Category {id: $categoryId})
+                         OPTIONAL MATCH (g:Group {id: $groupId})
+                         OPTIONAL MATCH (u:User) WHERE u.id IN $userIds
+                         RETURN c.name AS category, g.title AS groupTitle, collect({id: u.id, name: u.name}) AS users`,
+                        { categoryId, groupId, userIds: [paidByUserId, ...(newShares || []).map(x => x.userId)] }
+                    );
+                    const nm = nameRecords[0];
+                    const names = Object.fromEntries(nm.get('users').filter(u => u.id).map(u => [u.id, u.name]));
+                    const after = {
+                        description, amount: Number(amount), currencyIso, date,
+                        groupId, groupTitle: nm.get('groupTitle'),
+                        categoryId, category: nm.get('category'),
+                        payerId: paidByUserId, payer: names[paidByUserId],
+                        others: newShares
+                            ? newShares.map(x => ({ userId: x.userId, name: names[x.userId], amount: x.amount }))
+                            : before.others.filter(o => o.userId !== paidByUserId),
+                    };
+                    const changes = expenseChanges(before, after);
+
+                    const { records, summary } = await tx.run(
+                        `MATCH (e:Expense {id: $id})-[oldBal:BALANCE_IN]->(:Group)
+                        MATCH (g:Group {id: $groupId})<-[:MEMBER_OF]-(cu:User {id: $currUserId})
+                        MATCH (u:User {id: $paidByUserId})-[:MEMBER_OF]->(g)
+                        MATCH (c:Category {id: $categoryId})
+                        MATCH (cur:Currency {iso: $currencyIso})
+                        // Only now that everything is found: replace the old links.
+                        OPTIONAL MATCH (:User)-[rp:PAID]->(e)
+                        OPTIONAL MATCH (e)-[oldRate:USED_RATE]->(:DailyRate)
+                        OPTIONAL MATCH (e)-[oldCat:IN_CATEGORY]->(:Category)
+                        OPTIONAL MATCH (e)-[oldCur:EXPRESSED_IN]->(:Currency)
+                        WITH e, oldBal, g, cu, u, c, cur,
+                             collect(DISTINCT rp) + collect(DISTINCT oldRate) + collect(DISTINCT oldCat) + collect(DISTINCT oldCur) AS old
+                        SET e.description = $description, e.amount = $amount, e.amountBase = $amountBase, e.rateSnapshot = $rateSnapshot, e.date = $date
+                        DELETE oldBal
+                        FOREACH (r IN old | DELETE r)
+                        CREATE (e)-[:BALANCE_IN]->(g)
+                        CREATE (e)-[:IN_CATEGORY]->(c)
+                        CREATE (u)-[:PAID]->(e)
+                        CREATE (e)-[:EXPRESSED_IN]->(cur)
+                        FOREACH (_ IN CASE WHEN $changes IS NULL THEN [] ELSE [1] END |
+                          CREATE (e)-[:UPDATED_BY {on: datetime(), changes: $changes}]->(cu)
+                        )
+                        WITH e, c, g, cu
+                        OPTIONAL MATCH (r:DailyRate {date: $date, from: $currencyIso, to: $groupIso})
+                        FOREACH (_ IN CASE WHEN r IS NOT NULL THEN [1] ELSE [] END |
+                          CREATE (e)-[:USED_RATE]->(r)
+                        )
+                        RETURN c.icon AS categoryIcon, cu.name AS creatorName, g.title AS groupName`,
+                        { id, description, amount, amountBase, rateSnapshot, date, categoryId, groupId, groupIso, currencyIso, paidByUserId, currUserId,
+                          changes: changes.length ? JSON.stringify(changes) : null },
+                    );
+                    if (records.length === 0) return null;
+                    if (newShares) {
+                        await tx.run(
+                            `MATCH (e:Expense {id: $id})
+                             OPTIONAL MATCH (e)-[o:OWED_BY]->(:User)
+                             WITH e, collect(o) AS old
+                             FOREACH (o IN old | DELETE o)
+                             WITH e
+                             UNWIND $shares AS s
+                             MATCH (u:User {id: s.userId})
+                             CREATE (e)-[:OWED_BY {amount: s.amount}]->(u)`,
+                            { id, shares: newShares }
+                        );
+                    }
+                    return { record: records[0], changed: changes.length > 0, updated: summary.counters.containsUpdates() };
+                });
+            } finally {
+                await session.close();
+            }
+
+            if (!result) return { success: false, message: 'Expense not found or access denied' };
+            if (result.changed) {
                 pushService.notifyGroupMembers(groupId, currUserId, {
-                    title: `${creatorName} updated "${description}"`,
-                    body: `${formatAmount(amount, currencyIso)} · ${groupName}`,
-                    icon: categoryIcon || null,
+                    title: `${result.record.get('creatorName')} updated "${description}"`,
+                    body: `${formatAmount(amount, currencyIso)} · ${result.record.get('groupName')}`,
+                    icon: result.record.get('categoryIcon') || null,
                     url: `/groups/${groupId}/expenses/${id}`
                 })
-                return {success: true, message: 'Expense has been successfully updated'};
             }
-                return {success: false, message: 'Expense not found or access denied' };
+            return { success: true, changed: result.changed, message: 'Expense has been successfully updated' };
         }
         catch (err) {
             throw new Error(`Failed to update expense: ${err.message}`);
         }
+    },
+
+    // HISTORY — created, then every edit with what changed, oldest first.
+    getExpenseHistory: async (id, currUserId) => {
+        const { records } = await driver.executeQuery(
+            `MATCH (e:Expense {id: $id})-[:BALANCE_IN]->(:Group)<-[:MEMBER_OF]-(:User {id: $currUserId})
+             MATCH (e)-[r:CREATED_BY|UPDATED_BY]->(u:User)
+             RETURN type(r) AS action, r.on AS on, u.name AS userName, r.changes AS changes
+             ORDER BY on`,
+            { id, currUserId }
+        );
+        return records.map(r => ({
+            action: r.get('action'),
+            on: r.get('on').toStandardDate().getTime(),
+            userName: r.get('userName'),
+            changes: r.get('changes') ? JSON.parse(r.get('changes')) : null,
+        }));
     },
 
     // DELETE

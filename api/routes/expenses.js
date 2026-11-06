@@ -31,13 +31,23 @@ router.get('/:id', async (req, res) => {
     }
 });
 
+// HISTORY — who created it and every edit, with what changed.
+router.get('/:id/history', async (req, res) => {
+    try {
+        res.json({ history: await expenseService.getExpenseHistory(req.params.id, req.user.id) });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Failed to load the history' });
+    }
+});
+
 // UPDATE
 router.put('/:id', async (req, res) => {
     try {
         const  currUserId  = req.user.id;
         const { id } = req.params;
-        const { groupId, description, categoryId, amount, currencyIso, date, paidByUserId } = req.body;
-        const result = await expenseService.updateExpense(id,groupId, description, categoryId, amount, currencyIso, date, paidByUserId, currUserId);
+        const { groupId, description, categoryId, amount, currencyIso, date, paidByUserId, shares } = req.body;
+        const result = await expenseService.updateExpense(id, groupId, description, categoryId, amount, currencyIso, date, paidByUserId, currUserId, shares);
         if (!result.success) return res.status(result.status || 404).json(result);
         res.json(result);
     }
