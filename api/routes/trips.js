@@ -318,8 +318,13 @@ router.post('/items/:itemId/attachments', (req, res) => {
             }
             res.status(201).json(result);
         } catch (error) {
+            if (error.code === 'STORAGE_FULL') {
+                console.error(`Upload refused: less than ${uploadStore.MIN_FREE_BYTES / 1024 / 1024} MB would be left free in ${uploadStore.UPLOAD_DIR}`);
+                return res.status(507).json({ error: 'Splitty’s storage is full, so files cannot be uploaded right now. Please tell the admin.' });
+            }
             console.error(error);
-            res.status(500).json({ error: error.message });
+            // Not error.message: it can carry server paths.
+            res.status(500).json({ error: 'Upload failed.' });
         }
     });
 });

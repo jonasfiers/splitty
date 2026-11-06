@@ -11,6 +11,20 @@ const UPLOAD_DIR = path.resolve(process.env.UPLOAD_DIR || path.join(__dirname, '
 const MAX_BYTES = 10 * 1024 * 1024;
 const MAX_PER_ITEM = 10;
 
+// Uploads share the container's disk with Neo4j, its logs and its own
+// backups. Keep this much free for them: a full disk stops the database, not
+// just the upload. UPLOAD_MIN_FREE_MB overrides it (e.g. to test the refusal).
+const MIN_FREE_BYTES = (Number(process.env.UPLOAD_MIN_FREE_MB) || 2048) * 1024 * 1024;
+
+// The upload would not fit, or the disk ran out while writing.
+class StorageFullError extends Error {
+    constructor() {
+        super('Storage is full');
+        this.code = 'STORAGE_FULL';
+    }
+}
+const isDiskFull = err => err?.code === 'ENOSPC' || err?.code === 'EDQUOT';
+
 // Only types a browser renders inertly. No HTML, no SVG: an attachment is
 // served from the app's own origin, so anything scriptable would run as it.
 const SIGNATURES = {
@@ -30,10 +44,23 @@ const filePath = storedName => {
     return path.join(UPLOAD_DIR, storedName);
 };
 
+// Free bytes on the upload disk for an unprivileged writer.
+async function freeBytes() {
+    const s = await fs.statfs(UPLOAD_DIR);
+    return s.bavail * s.bsize;
+}
+
 async function save(buffer) {
     await fs.mkdir(UPLOAD_DIR, { recursive: true });
+    if (await freeBytes() - buffer.length < MIN_FREE_BYTES) throw new StorageFullError();
     const storedName = crypto.randomUUID();
-    await fs.writeFile(filePath(storedName), buffer, { mode: 0o600, flag: 'wx' });
+    try {
+        await fs.writeFile(filePath(storedName), buffer, { mode: 0o600, flag: 'wx' });
+    } catch (err) {
+        // writeFile creates the file before writing: never leave a partial one.
+        await fs.unlink(filePath(storedName)).catch(() => {});
+        throw isDiskFull(err) ? new StorageFullError() : err;
+    }
     return storedName;
 }
 
@@ -49,4 +76,4 @@ async function remove(storedNames = []) {
     }));
 }
 
-module.exports = { UPLOAD_DIR, MAX_BYTES, MAX_PER_ITEM, ALLOWED_TYPES: Object.keys(SIGNATURES), isAllowed, filePath, save, remove };
+module.exports = { UPLOAD_DIR, MAX_BYTES, MAX_PER_ITEM, MIN_FREE_BYTES, ALLOWED_TYPES: Object.keys(SIGNATURES), StorageFullError, isAllowed, filePath, freeBytes, save, remove };
