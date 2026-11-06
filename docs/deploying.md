@@ -232,6 +232,42 @@ Uploaded tickets are files on CT104, not data in Neo4j, and none of what they ne
 
 The files are covered by the nightly `vzdump` of CT104, not by `scripts/backup-neo4j.sh`: a Neo4j tarball restored on its own brings back `Attachment` nodes whose files are missing.
 
+## Account deletion and restores
+
+Deleting an account (Profile › Delete account) anonymises the user and deletes their
+solo groups; see `api/accountDeletion.js`. Before anything is deleted, the user id is
+appended to a **deletion list** that lives outside every backup:
+
+| | CT104 (production) | CT116 (QA) |
+|---|---|---|
+| Host folder (HDD) | `/mnt/hdd/splitty-deletions/prod` | `/mnt/hdd/splitty-deletions/qa` |
+| Mounted at | `/var/lib/splitty-deletions` (mp0) | same (mp0), plus prod's folder read-only at `/var/lib/splitty-deletions-prod` (mp1) |
+| `/etc/splitty-api.env` | `DELETION_LIST_FILE=/var/lib/splitty-deletions/deleted-users.log` | same, plus `DELETION_LIST_READ_FILES=/var/lib/splitty-deletions-prod/deleted-users.log` |
+| Write access | drop-in `splitty-api.service.d/deletion-list.conf` (`[Service]` + `ReadWritePaths=`) | same |
+
+`scripts/setup-deletion-list.sh qa|prod` (run on pve) sets all of this up. Bind mounts
+are never included in `vzdump`, so **no backup contains the list**, and restoring a
+container or a Neo4j tarball cannot roll it back.
+
+**At every API start, before it listens**, the API reads the list(s) and erases again
+every listed account that is not anonymised. So after any restore, starting the API is
+enough: deleted accounts are wiped before anything is served (the log says
+`Deletion list: N listed, M re-applied`). QA reads production's list because its data is
+a copy of production.
+
+The API **refuses to start** if a list folder lacks its `.splitty-deletion-list` marker
+(created on the host). That is the sign the bind mount is missing — e.g. a restore that
+dropped `mp0` — and an empty folder would otherwise silently skip every re-deletion.
+**After restoring CT104 or CT116, check that `mp0` (and on QA `mp1`) is still in
+`/etc/pve/lxc/<id>.conf`** and the drop-in is still there; re-run the setup script if not.
+
+Without `DELETION_LIST_FILE` the API runs, but account deletion answers 503.
+
+Every deletion also mails `CONTACT_EMAIL` a notice with the internal id only: a
+human-readable record of the list. Keep those mails at least 30 days.
+
+The list holds only random user ids and is kept indefinitely; never edit or truncate it.
+
 ## QA
 
 `scripts/deploy-qa.sh` (`--web-only`, `--api-only`) publishes **this worktree as it is**
