@@ -33,6 +33,7 @@ export default function PrivacyPage() {
           <li><strong>Your account:</strong> name, email address, your password (only as a one-way hash, never the password itself), the colour and emoji of your avatar, and whether you confirmed your email address.</li>
           <li><strong>Passkeys</strong>, if you add any: the public key your device creates (your device keeps the private part), a label for the device such as “iPhone · Safari”, and when it was added and last used.</li>
           <li><strong>What you enter:</strong> groups and who is in them, expenses, who paid and who owes what, settlements, and trips: places, times, booking references, notes, links, and files you upload such as tickets.</li>
+          <li><strong>Who did what:</strong> who added or changed an expense, trip, trip item or file in a group, and when. Other members see this, for example on the Activity page.</li>
           <li><strong>Notifications</strong>, if you switch them on: the address your browser’s push service gives Splitty to reach your device.</li>
           <li><strong>Server logs:</strong> the web server records each request (your IP address, the address requested, the time, and your browser’s description of itself), and the app logs errors, which can include your internal account number. These are used to keep the service running and to spot attacks.</li>
         </ul>
@@ -77,7 +78,7 @@ export default function PrivacyPage() {
 
         <h2>Your rights</h2>
         <ul>
-          <li><strong>See and take your data:</strong> Profile › Export as CSV gives you the expenses in your groups. For a copy of everything Splitty holds about you, email <a href="mailto:hello@jonasfiers.eu">hello@jonasfiers.eu</a>.</li>
+          <li><strong>See and take your data:</strong> Profile › Download all my data gives you a ZIP with your account, your groups, every expense, your trips and the files you uploaded, as JSON and CSV files that other apps can read. For anything else, email <a href="mailto:hello@jonasfiers.eu">hello@jonasfiers.eu</a>.</li>
           <li><strong>Correct it:</strong> change your name, email and avatar in Profile, and edit what you entered in the app.</li>
           <li><strong>Delete it:</strong> Profile › Delete account. Your name, email, password, passkeys, avatar and notification settings are deleted at once, and you are signed out on every device. What you added to groups you share with others (expenses, trip plans, notes and uploaded files) stays in those groups for the other members, shown as “Deleted user”, so their balances and plans stay correct. Groups where nobody else is left are deleted completely, with their trips and files.</li>
           <li><strong>Object or restrict:</strong> email <a href="mailto:hello@jonasfiers.eu">hello@jonasfiers.eu</a>.</li>

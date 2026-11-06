@@ -28,6 +28,7 @@ export default function ProfilePage() {
   // One "Edit profile" sheet for name, email, colour and emoji.
   const [showEdit, setShowEdit] = useState(false)
   const [showDelete, setShowDelete] = useState(false)
+  const [exporting, setExporting] = useState(false)
   const [editForm, setEditForm] = useState({ name: '', email: '', avatarColor: null, avatarEmoji: null })
   const [editError, setEditError] = useState('')
   const [editMessage, setEditMessage] = useState('')
@@ -166,16 +167,20 @@ export default function ProfilePage() {
 
   const handleExportData = async () => {
     try {
+      setExporting(true)
       const response = await client.get('/dash/export', { responseType: 'blob' });
-      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/zip' }));
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', 'splitty_export.csv');
+      link.setAttribute('download', `splitty-export-${new Date().toISOString().slice(0, 10)}.zip`);
       document.body.appendChild(link);
       link.click();
       link.remove();
+      setTimeout(() => window.URL.revokeObjectURL(url), 10000)
     } catch (err) {
       setError('Failed to export data.');
+    } finally {
+      setExporting(false)
     }
   };
 
@@ -280,7 +285,12 @@ export default function ProfilePage() {
 
           {/* Your data */}
           <SetGroup label="Your data">
-            <SetRow label="Export as CSV" sub="Every expense in your groups, with your share" onClick={handleExportData} action />
+            <SetRow
+              label={exporting ? 'Preparing your data…' : 'Download all my data'}
+              sub="Account, groups, expenses, trips and your files, as a ZIP"
+              onClick={exporting ? undefined : handleExportData}
+              action
+            />
             <SetRow label="Privacy" sub="What Splitty stores and why" to="/privacy" />
           </SetGroup>
 
@@ -420,7 +430,7 @@ function DeleteAccountSheet({ email, userId, onClose, onDeleted }) {
           <li>What you added to groups shared with others (expenses, trip plans, notes, files) stays there as <strong>“Deleted user”</strong>, so their balances and plans stay correct.</li>
           <li>Groups where nobody else is left are deleted completely, with their trips and files.</li>
           <li>You are signed out on every device.</li>
-          <li>This cannot be undone. Export your data first if you want a copy.</li>
+          <li>This cannot be undone. Use “Download all my data” first if you want a copy.</li>
         </ul>
         {open && open.length > 0 && (
           <div className="delete-open">

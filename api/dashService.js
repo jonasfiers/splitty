@@ -286,46 +286,6 @@ const dashService = {
         }
     },
 
-    getExportData: async (userId) => {
-        try {
-            const { records } = await driver.executeQuery(
-                `MATCH (u:User {id: $userId})-[:MEMBER_OF]->(g:Group)
-                MATCH (e:Expense)-[:BALANCE_IN]->(g)
-                OPTIONAL MATCH (e)<-[:PAID]-(payer:User)
-                OPTIONAL MATCH (e)-[:IN_CATEGORY]->(cat:Category)
-                OPTIONAL MATCH (e)-[:EXPRESSED_IN]->(cur:Currency)
-                OPTIONAL MATCH (e)-[o:OWED_BY]->(:User {id: $userId})
-                RETURN 
-                    e.date AS date,
-                    e.description AS description,
-                    e.amount AS amount,
-                    cur.iso AS currency,
-                    cat.name AS category,
-                    g.title AS group,
-                    payer.name AS paidBy,
-                    o.amount AS myShare,
-                    e:Settlement AS isSettlement
-                ORDER BY e.date DESC`,
-                { userId }
-            );
-            return {
-                success: true,
-                data: records.map(r => ({
-                    date: r.get('date'),
-                    description: r.get('description'),
-                    amount: Number(r.get('amount')),
-                    currency: r.get('currency'),
-                    category: r.get('category') || 'Uncategorized',
-                    group: r.get('group'),
-                    paidBy: r.get('paidBy'),
-                    myShare: Number(r.get('myShare') || 0),
-                    isSettlement: r.get('isSettlement') || false
-                }))
-            };
-        } catch (err) {
-            throw new Error(`Failed to get export data: ${err.message}`);
-        }
-    },
 }
 
 module.exports = {dashService};
