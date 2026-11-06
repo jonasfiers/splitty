@@ -5,15 +5,19 @@ import { formatCurrency } from '../utils/currency'
 import Loading from '../components/Loading.jsx'
 import { useMediaQuery } from '../utils/useMediaQuery.js'
 import TabHeader from '../components/PageHeader/TabHeader.jsx'
-import { activityLink, activityVerb, activityMatches, activityIcon, activityTone, isTripActivity } from '../utils/activity.js'
+import { activityLink, activityVerb, activityMatches, activityIcon, activityTone, isTripActivity, isDeletedActivity, actionOf } from '../utils/activity.js'
 
 const PAGE = 50
-const TYPES = [
+const CONTEXTS = [
   { key: 'all', label: 'All' },
+  { key: 'expenses', label: 'Expenses' },
+  { key: 'trips', label: 'Trips' },
+]
+const ACTIONS = [
+  { key: 'all', label: 'Any change' },
   { key: 'added', label: 'Added' },
   { key: 'edited', label: 'Edited' },
-  { key: 'settlements', label: 'Settlements' },
-  { key: 'trips', label: 'Trips' },
+  { key: 'deleted', label: 'Deleted' },
 ]
 
 const dayKey = ts => {
@@ -40,7 +44,8 @@ export default function ActivityPage() {
   const [groups, setGroups] = useState(new Map())
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [type, setType] = useState('all')
+  const [context, setContext] = useState('all')
+  const [action, setAction] = useState('all')
   const [groupId, setGroupId] = useState('')
   const [shown, setShown] = useState(PAGE)
   const navigate = useNavigate()
@@ -59,8 +64,8 @@ export default function ActivityPage() {
   }, [])
 
   const filtered = useMemo(
-    () => activities.filter(a => activityMatches(a, type) && (!groupId || a.groupId === groupId)),
-    [activities, type, groupId],
+    () => activities.filter(a => activityMatches(a, context, action) && (!groupId || a.groupId === groupId)),
+    [activities, context, action, groupId],
   )
 
   const days = useMemo(() => {
@@ -81,13 +86,14 @@ export default function ActivityPage() {
     const [topName, topCount] = [...people].sort((x, y) => y[1] - x[1])[0] || []
     return {
       total: recent.length,
-      added: recent.filter(a => activityMatches(a, 'added')).length,
-      settlements: recent.filter(a => activityMatches(a, 'settlements')).length,
+      added: recent.filter(a => actionOf(a) === 'added').length,
+      deleted: recent.filter(a => actionOf(a) === 'deleted').length,
       topName, topCount,
     }
   }, [activities])
 
-  const pickType = key => { setType(key); setShown(PAGE) }
+  const pickContext = key => { setContext(key); setShown(PAGE) }
+  const pickAction = key => { setAction(key); setShown(PAGE) }
   const pickGroup = id => { setGroupId(id); setShown(PAGE) }
 
   if (loading) return <Loading />
@@ -116,9 +122,14 @@ export default function ActivityPage() {
 
   const filters = (
     <div className="act-filters">
-      <div className="filter-chips">
-        {TYPES.map(t => (
-          <button key={t.key} className={`chip${type === t.key ? ' active' : ''}`} onClick={() => pickType(t.key)}>{t.label}</button>
+      <div className="filter-chips" role="group" aria-label="Show">
+        {CONTEXTS.map(t => (
+          <button key={t.key} className={`chip${context === t.key ? ' active' : ''}`} aria-pressed={context === t.key} onClick={() => pickContext(t.key)}>{t.label}</button>
+        ))}
+      </div>
+      <div className="filter-chips act-actions" role="group" aria-label="Change">
+        {ACTIONS.map(t => (
+          <button key={t.key} className={`chip chip-sm${action === t.key ? ' active' : ''}`} aria-pressed={action === t.key} onClick={() => pickAction(t.key)}>{t.label}</button>
         ))}
       </div>
       {groups.size > 1 && (
@@ -141,7 +152,7 @@ export default function ActivityPage() {
         <>
           <div className="act-summary-big">{week.total} change{week.total !== 1 ? 's' : ''}</div>
           <div className="act-summary-line">
-            {week.added} added{week.settlements > 0 && ` · ${week.settlements} settlement${week.settlements !== 1 ? 's' : ''}`}
+            {week.added} added{week.deleted > 0 && ` · ${week.deleted} deleted`}
           </div>
           {week.topName && <div className="act-summary-line">Most active: {week.topName} ({week.topCount})</div>}
         </>
@@ -165,8 +176,8 @@ export default function ActivityPage() {
               return (
                 <div
                   key={`${a.kind}-${a.expenseId || a.itemId || a.tripId}-${a.timestamp}-${i}`}
-                  className="act-row"
-                  onClick={() => navigate(activityLink(a))}
+                  className={`act-row${isDeletedActivity(a) ? ' act-row-deleted' : ''}`}
+                  onClick={() => { const to = activityLink(a); if (to) navigate(to) }}
                 >
                   <div className={`act-icon ${activityTone(a)}${trip ? ' trip' : ''}`}>{activityIcon(a)}</div>
                   <div style={{ flex: 1, minWidth: 0 }}>

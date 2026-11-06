@@ -593,10 +593,13 @@ const groupServiceNeo4j = {
         try {
             const { summary } = await driver.executeQuery(
                 'MATCH (u:User {id: $userId})-[:MEMBER_OF]->(g:Group {id: $id}) ' +
+                'OPTIONAL MATCH (d:Deletion)-[:IN_GROUP]->(g) ' +
+                'WITH g, collect(d) AS deletions ' +
+                'FOREACH (d IN deletions | DETACH DELETE d) ' +
                 'DETACH DELETE g', 
                 {id, userId}
             )
-            if (summary.counters.updates().nodesDeleted === 1) {
+            if (summary.counters.updates().nodesDeleted >= 1) {
                 return { success: true, message: 'Group deleted successfully'};
             }
             return { success: false, message: 'Group not found or access denied' };
@@ -1196,9 +1199,22 @@ const expenseService = {
             if (infoRecords.length === 0) return { success: false, message: 'Expense not found or access denied' }
             const info = infoRecords[0]
 
+            // A (:Deletion) record per removed expense (a transfer's two halves
+            // live in two groups), for the Activity feed, in the same query.
             const { summary } = await driver.executeQuery(
-                'MATCH (e:Expense {id: $id})' +
-                'OPTIONAL MATCH (e)-[:TRANSFER_PAIR]-(t) DETACH DELETE e, t', { id }
+                `MATCH (e:Expense {id: $id})-[:BALANCE_IN]->(:Group)<-[:MEMBER_OF]-(u:User {id: $currUserId})
+                 OPTIONAL MATCH (e)-[:TRANSFER_PAIR]-(t:Expense)
+                 WITH u, [x IN [e, t] WHERE x IS NOT NULL] AS gone
+                 UNWIND gone AS x
+                 MATCH (x)-[:BALANCE_IN]->(g:Group)
+                 OPTIONAL MATCH (x)-[:EXPRESSED_IN]->(cur:Currency)
+                 CREATE (d:Deletion {
+                     id: randomUUID(), on: datetime(), title: x.description, amount: x.amount, currencyIso: cur.iso,
+                     kind: CASE WHEN x:Settlement THEN 'settlement' WHEN x:Transfer THEN 'transfer' ELSE 'expense' END
+                 })-[:IN_GROUP]->(g)
+                 CREATE (d)-[:DELETED_BY]->(u)
+                 DETACH DELETE x`,
+                { id, currUserId }
             )
             if (summary.counters.updates().nodesDeleted > 0) {
                 if (info) {

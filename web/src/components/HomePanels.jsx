@@ -113,7 +113,7 @@ function RecentActivity({ activity }) {
       {activity.slice(0, RECENT).map((a, i) => (
         <Link
           key={i}
-          to={activityLink(a)}
+          to={activityLink(a) || '/activity'}
           className="home-activity-row"
         >
           <div style={{ flex: 1, minWidth: 0 }}>

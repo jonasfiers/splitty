@@ -117,7 +117,15 @@ const dashService = {
                 RETURN 'file' AS kind, u.name AS userName, g.id AS groupId, 'UPLOADED_BY' AS action, r.on AS timestamp,
                        null AS expenseId, a.filename AS description, null AS amount, null AS currencyIso, false AS isSettlement,
                        t.id AS tripId, t.title AS tripTitle, i.id AS itemId,
-                       [l IN labels(i) WHERE l <> 'TripItem'][0] AS itemKind, i.mode AS itemMode, i.title AS itemTitle`,
+                       [l IN labels(i) WHERE l <> 'TripItem'][0] AS itemKind, i.mode AS itemMode, i.title AS itemTitle
+                UNION ALL
+                MATCH (u:User)<-[:DELETED_BY]-(d:Deletion)-[:IN_GROUP]->(g:Group)<-[:MEMBER_OF]-(:User {id: $userId})
+                RETURN CASE WHEN d.kind IN ['expense', 'settlement', 'transfer'] THEN 'expense' ELSE d.kind END AS kind,
+                       u.name AS userName, g.id AS groupId, 'DELETED_BY' AS action, d.on AS timestamp,
+                       null AS expenseId, d.title AS description, d.amount AS amount, d.currencyIso AS currencyIso,
+                       d.kind = 'settlement' AS isSettlement,
+                       d.tripId AS tripId, d.tripTitle AS tripTitle, d.itemId AS itemId, d.itemKind AS itemKind,
+                       d.itemMode AS itemMode, d.itemTitle AS itemTitle`,
                 {userId}
             )
             const activities = records.map(record => {

@@ -345,6 +345,10 @@ const tripService = {
                  OPTIONAL MATCH (p:Place)-[:PLACE_OF]->(t)
                  WITH t, attachments, storedNames, items, collect(p) AS places
                  FOREACH (n IN attachments + items + places | DETACH DELETE n)
+                 WITH t, storedNames
+                 MATCH (t)-[:PLANNED_IN]->(g:Group), (u:User {id: $userId})
+                 CREATE (d:Deletion {id: randomUUID(), on: datetime(), kind: 'trip', title: t.title})-[:IN_GROUP]->(g)
+                 CREATE (d)-[:DELETED_BY]->(u)
                  DETACH DELETE t
                  RETURN storedNames`,
                 { tripId, userId }
@@ -527,8 +531,16 @@ const tripService = {
                 const { records } = await tx.run(
                     `MATCH ${ITEM_ACCESS}
                      OPTIONAL MATCH (a:Attachment)-[:ATTACHED_TO]->(i)
-                     WITH t.id AS tripId, i, collect(a) AS attachments, collect(a.storedName) AS storedNames
+                     WITH t, g, i, collect(a) AS attachments, collect(a.storedName) AS storedNames
                      FOREACH (a IN attachments | DETACH DELETE a)
+                     WITH t.id AS tripId, t, g, i, storedNames
+                     MATCH (u:User {id: $userId})
+                     CREATE (d:Deletion {
+                         id: randomUUID(), on: datetime(), kind: 'tripItem', title: i.title,
+                         itemKind: toLower([l IN labels(i) WHERE l <> 'TripItem'][0]), itemMode: i.mode,
+                         tripId: t.id, tripTitle: t.title
+                     })-[:IN_GROUP]->(g)
+                     CREATE (d)-[:DELETED_BY]->(u)
                      DETACH DELETE i
                      RETURN tripId, storedNames`,
                     { itemId, userId }
@@ -665,8 +677,13 @@ const tripService = {
     deleteAttachment: async (id, userId) => {
         try {
             const { records } = await driver.executeQuery(
-                `MATCH (:User {id: $userId})-[:MEMBER_OF]->(:Group)<-[:PLANNED_IN]-(:Trip)<-[:PART_OF]-(:TripItem)<-[:ATTACHED_TO]-(a:Attachment {id: $id})
-                 WITH a, a.storedName AS storedName
+                `MATCH (u:User {id: $userId})-[:MEMBER_OF]->(g:Group)<-[:PLANNED_IN]-(t:Trip)<-[:PART_OF]-(i:TripItem)<-[:ATTACHED_TO]-(a:Attachment {id: $id})
+                 WITH u, g, t, i, a, a.storedName AS storedName
+                 CREATE (d:Deletion {
+                     id: randomUUID(), on: datetime(), kind: 'file', title: a.filename,
+                     tripId: t.id, tripTitle: t.title, itemId: i.id, itemTitle: i.title
+                 })-[:IN_GROUP]->(g)
+                 CREATE (d)-[:DELETED_BY]->(u)
                  DETACH DELETE a
                  RETURN storedName`,
                 { id, userId }

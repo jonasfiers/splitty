@@ -5,38 +5,45 @@ import { itemIcon } from './trip.js'
 
 export const isTripActivity = a => a.kind && a.kind !== 'expense'
 
+// Deleted things have nothing left to open.
+export const isDeletedActivity = a => a.action === 'DELETED_BY'
+
 export const activityLink = a => {
+  if (isDeletedActivity(a)) return null
   if (a.kind === 'trip') return `/trips/${a.tripId}`
   if (a.kind === 'tripItem' || a.kind === 'file') return `/trips/${a.tripId}/items/${a.itemId}`
   return a.groupId ? `/groups/${a.groupId}/expenses/${a.expenseId}` : '/activity'
 }
 
-// "added", "updated", "settled up", "added to Taiwan", "uploaded a file to Flight"...
+export const actionOf = a =>
+  a.action === 'DELETED_BY' ? 'deleted' : a.action === 'UPDATED_BY' ? 'edited' : 'added'
+
+// "added", "updated", "deleted", "settled up", "added in Taiwan", "uploaded a file to Flight"...
 export const activityVerb = (a, { settled = 'settled up' } = {}) => {
-  const edited = a.action === 'UPDATED_BY'
+  const action = actionOf(a)
   switch (a.kind) {
-    case 'trip': return edited ? 'updated the trip' : 'created the trip'
-    case 'tripItem': return `${edited ? 'updated' : 'added'} in ${a.tripTitle}`
-    case 'file': return `uploaded a file to ${a.itemTitle}`
-    default: return a.isSettlement ? settled : edited ? 'updated' : 'added'
+    case 'trip': return { added: 'created the trip', edited: 'updated the trip', deleted: 'deleted the trip' }[action]
+    case 'tripItem': return `${{ added: 'added', edited: 'updated', deleted: 'deleted' }[action]} in ${a.tripTitle}`
+    case 'file': return action === 'deleted' ? `removed a file from ${a.itemTitle}` : `uploaded a file to ${a.itemTitle}`
+    default:
+      if (a.isSettlement) return action === 'deleted' ? 'cancelled a settlement' : settled
+      return { added: 'added', edited: 'updated', deleted: 'deleted' }[action]
   }
 }
 
-// For the Activity page's type chips.
-export const activityMatches = (a, type) => {
-  if (type === 'all') return true
-  if (type === 'trips') return isTripActivity(a)
-  if (type === 'settlements') return a.isSettlement
-  if (type === 'edited') return a.action === 'UPDATED_BY'
-  if (type === 'added') return !a.isSettlement && a.action !== 'UPDATED_BY'
-  return false
-}
+// The Activity page's two filters: context (all | expenses | trips) and
+// action (all | added | edited | deleted). Settlements count as expenses.
+export const activityMatches = (a, context, action) =>
+  (context === 'all' || (context === 'trips') === isTripActivity(a)) &&
+  (action === 'all' || actionOf(a) === action)
 
 // The icon box: + / ✎ / ✓ for expenses, the item's own icon for trip events.
 export const activityIcon = a => {
+  if (isDeletedActivity(a)) return '🗑'
   if (a.kind === 'trip') return '🧳'
   if (a.kind === 'file') return '📎'
   if (a.kind === 'tripItem') return itemIcon({ kind: a.itemKind, mode: a.itemMode })
   return a.isSettlement ? '✓' : a.action === 'CREATED_BY' ? '＋' : '✎'
 }
-export const activityTone = a => (a.isSettlement ? 'settlements' : a.action === 'UPDATED_BY' ? 'edited' : 'added')
+export const activityTone = a =>
+  isDeletedActivity(a) ? 'deleted' : a.isSettlement ? 'settlements' : a.action === 'UPDATED_BY' ? 'edited' : 'added'

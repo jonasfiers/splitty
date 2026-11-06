@@ -130,6 +130,10 @@ async function deleteSoloGroup(groupId, userId) {
          OPTIONAL MATCH (t:Token:Invite {groupId: $groupId})
          WITH g, collect(t) AS invites
          FOREACH (t IN invites | DETACH DELETE t)
+         WITH g
+         OPTIONAL MATCH (d:Deletion)-[:IN_GROUP]->(g)
+         WITH g, collect(d) AS deletions
+         FOREACH (d IN deletions | DETACH DELETE d)
          DETACH DELETE g`,
         { groupId }
     );
