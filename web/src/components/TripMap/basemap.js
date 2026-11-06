@@ -48,13 +48,19 @@ function style(dark) {
   }
 }
 
+// Checked once: each check creates a WebGL context, and browsers allow only
+// a handful at a time (MapLibre needs one per map).
+let webgl = null
 function webglWorks() {
+  if (webgl !== null) return webgl
   try {
-    const canvas = document.createElement('canvas')
-    return !!(canvas.getContext('webgl2') || canvas.getContext('webgl'))
+    const gl = document.createElement('canvas').getContext('webgl2')
+    webgl = !!gl
+    gl?.getExtension('WEBGL_lose_context')?.loseContext()
   } catch {
-    return false
+    webgl = false
   }
+  return webgl
 }
 
 function addRaster(map) {
@@ -79,6 +85,10 @@ export function addBasemap(map) {
   // Leaflet calls the layer's onAdd (which creates the MapLibre map) only
   // once the map has a view, so everything that needs the MapLibre map waits
   // for the layer's 'add'. The attribution comes and goes with the layer.
+  // The raster layer limited Leaflet's zoom to 19; this layer does not (only
+  // tile layers do), so the map gets the same limit. The planet goes to 15
+  // and MapLibre stretches it; beyond 19 there is nothing more to see.
+  map.setMaxZoom(19)
   const layer = maplibreGL({ style: style(dark), attribution: ATTRIBUTION, interactive: false })
   layer.once('add', () => {
     const gl = layer.getMaplibreMap()
