@@ -287,6 +287,25 @@ not on production: the static-file rule answers 404. Set up the cache before dep
 web build that uses the proxy. The cache can be emptied at any time (`rm -rf` its
 contents, reload nginx).
 
+## Security headers and the Content Security Policy
+
+nginx (CT101, CT116) sends X-Frame-Options, X-Content-Type-Options, Referrer-Policy and a
+Content-Security-Policy from one snippet, `/etc/nginx/snippets/splitty-security-headers.conf`,
+included at server level **and in every location that has its own `add_header`**: nginx
+drops an enclosing level's `add_header` lines in such a location. Before this, the app's own
+page (index.html, which sets Cache-Control) got none of the headers. A new location with an
+`add_header` needs the include too.
+
+`scripts/setup-security-headers.sh prod|qa` sets this up; rerun it to change the policy (it
+then only rewrites the snippet). The policy allows only Splitty's own origin: scripts strictly
+`'self'`, inline styles allowed (emoji-mart inserts a `<style>`, the map code sets style
+attributes), `data:` for fonts and images that the build inlines. Anything new loaded from
+elsewhere (a CDN script, an outside image or font, an API called from the browser) is blocked
+until added there.
+
+Browsers report what was blocked to `/api/csp-report`; the API logs each kind once an hour:
+`journalctl -u splitty-api | grep 'CSP blocked'`.
+
 ## QA
 
 `scripts/deploy-qa.sh` (`--web-only`, `--api-only`) publishes **this worktree as it is**
