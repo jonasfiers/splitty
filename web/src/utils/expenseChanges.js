@@ -6,6 +6,7 @@ export function describeChange(c) {
   const money = (v, iso) => formatCurrency(v, iso)
   switch (c.field) {
     case 'description': return `name “${c.from}” → “${c.to}”`
+    case 'currency': return `currency ${c.from} → ${c.to}`
     case 'amount': return `amount ${money(c.from, c.fromCurrency)} → ${money(c.to, c.toCurrency)}`
     case 'date': return `date ${formatDate(c.from)} → ${formatDate(c.to)}`
     case 'category': return `category ${c.from ?? 'none'} → ${c.to ?? 'none'}`

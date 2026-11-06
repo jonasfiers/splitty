@@ -16,6 +16,7 @@ const fs = require('fs/promises');
 const neo4j = require('neo4j-driver');
 const { zipSync, strToU8 } = require('fflate');
 const driver = require('./neo4j');
+const { resolveChanges } = require('./expenseHistory');
 const uploadStore = require('./uploadStore');
 
 const decimalsOf = iso => {
@@ -102,10 +103,15 @@ async function collect(userId) {
             paidBy: e.paidById ? { id: e.paidById, name: e.paidBy } : null,
             shares, myShare: mine, tripItemIds: e.tripItemIds,
             history: e.history
-                .map(h => ({ action: h.action === 'CREATED_BY' ? 'created' : 'edited', on: h.on, by: h.by, changes: h.changes ? majorChanges(JSON.parse(h.changes)) : undefined }))
+                .map(h => ({ action: h.action === 'CREATED_BY' ? 'created' : 'edited', on: h.on, by: h.by, changes: h.changes ?? undefined }))
                 .sort((x, y) => String(x.on).localeCompare(String(y.on))),
         };
     });
+
+    // Change records name people by id; resolve them to current names.
+    const flat = expenses.flatMap(e => e.history);
+    const resolved = await resolveChanges(flat.map(h => h.changes ?? null));
+    flat.forEach((h, i) => { if (h.changes !== undefined) h.changes = resolved[i] ? majorChanges(resolved[i]) : undefined; });
 
     const trips = await q(
         `MATCH (:User {id: $userId})-[:MEMBER_OF]->(g:Group)<-[:PLANNED_IN]-(t:Trip)

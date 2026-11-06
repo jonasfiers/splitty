@@ -52,6 +52,7 @@ const checkExpenseLinks = async ({ groupId, categoryId, currencyIso, paidByUserI
     return { success: false, status: 400, message, error: message };
 };
 
+const { expenseChanges, resolveChanges } = require('./expenseHistory');
 const badRequest = message => ({ success: false, status: 400, message, error: message });
 
 // The shares sent with an expense ([{userId, amount}] for everyone but the
@@ -100,35 +101,6 @@ async function readExpenseState(tx, id) {
     };
 }
 
-// Field-level differences between two expense states, as a small list the
-// app can show: [{ field, from, to }] for description/amount/currency/date/
-// category/group/paidBy, and { field: 'share', name, from, to } per person
-// whose share changed (amounts in minor units, with the currency of each side).
-function expenseChanges(b, a) {
-    const out = [];
-    if (b.description !== a.description) out.push({ field: 'description', from: b.description, to: a.description });
-    if (b.amount !== a.amount || b.currencyIso !== a.currencyIso) {
-        out.push({ field: 'amount', from: b.amount, to: a.amount, fromCurrency: b.currencyIso, toCurrency: a.currencyIso });
-    }
-    if (b.date !== a.date) out.push({ field: 'date', from: b.date, to: a.date });
-    if (b.categoryId !== a.categoryId) out.push({ field: 'category', from: b.category, to: a.category });
-    if (b.groupId !== a.groupId) out.push({ field: 'group', from: b.groupTitle, to: a.groupTitle });
-    if (b.payerId !== a.payerId) out.push({ field: 'paidBy', from: b.payer, to: a.payer });
-    const full = s => {
-        const m = new Map(s.others.map(o => [o.userId, { name: o.name, amount: o.amount }]));
-        if (s.payerId) m.set(s.payerId, { name: s.payer, amount: s.amount - s.others.reduce((t, o) => t + o.amount, 0) });
-        return m;
-    };
-    const fb = full(b), fa = full(a);
-    for (const userId of new Set([...fb.keys(), ...fa.keys()])) {
-        const x = fb.get(userId), y = fa.get(userId);
-        const from = x?.amount ?? 0, to = y?.amount ?? 0;
-        if (Math.abs(from - to) > 1e-9) {
-            out.push({ field: 'share', name: (y || x).name, from, to, fromCurrency: b.currencyIso, toCurrency: a.currencyIso });
-        }
-    }
-    return out;
-}
 
 const isSettlementOrTransfer = async (expenseId, currUserId) => {
     const { records } = await driver.executeQuery(
@@ -1291,7 +1263,7 @@ const expenseService = {
                         )
                         RETURN c.icon AS categoryIcon, cu.name AS creatorName, g.title AS groupName`,
                         { id, description, amount, amountBase, rateSnapshot, date, categoryId, groupId, groupIso, currencyIso, paidByUserId, currUserId,
-                          changes: changes.length ? JSON.stringify(changes) : null },
+                          changes: changes ? JSON.stringify(changes) : null },
                     );
                     if (records.length === 0) return null;
                     if (newShares) {
@@ -1307,7 +1279,7 @@ const expenseService = {
                             { id, shares: newShares }
                         );
                     }
-                    return { record: records[0], changed: changes.length > 0, updated: summary.counters.containsUpdates() };
+                    return { record: records[0], changed: changes !== null, updated: summary.counters.containsUpdates() };
                 });
             } finally {
                 await session.close();
@@ -1338,11 +1310,12 @@ const expenseService = {
              ORDER BY on`,
             { id, currUserId }
         );
-        return records.map(r => ({
+        const changes = await resolveChanges(records.map(r => r.get('changes') ?? null));
+        return records.map((r, i) => ({
             action: r.get('action'),
             on: r.get('on').toStandardDate().getTime(),
             userName: r.get('userName'),
-            changes: r.get('changes') ? JSON.parse(r.get('changes')) : null,
+            changes: changes[i],
         }));
     },
 

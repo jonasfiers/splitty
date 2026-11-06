@@ -1,4 +1,5 @@
 const driver = require('./neo4j');
+const { resolveChanges } = require('./expenseHistory');
 
 // The user's own part of each expense, for getInsights' "mine" scope. The payer
 // has no OWED_BY of their own: only the others' shares are stored, so what the
@@ -155,7 +156,7 @@ const dashService = {
                     isSettlement: record.get('isSettlement') || false,
                     isTransfer: record.get('isTransfer') || false,
                     categoryIcon: record.get('categoryIcon') || null,
-                    changes: record.get('changes') ? JSON.parse(record.get('changes')) : null,
+                    changesRaw: record.get('changes') ?? null,
                 }
                 return {
                     ...base,
@@ -168,6 +169,8 @@ const dashService = {
                     itemTitle: record.get('itemTitle'),
                 }
             }).sort((x, y) => y.timestamp - x.timestamp)
+            const resolved = await resolveChanges(activities.map(a => a.changesRaw ?? null));
+            activities.forEach((a, i) => { delete a.changesRaw; if (a.kind === 'expense') a.changes = resolved[i]; });
             return { success: true, activities };
         } catch (err) {
             throw new Error(`Failed to get activity: ${err.message}`);
