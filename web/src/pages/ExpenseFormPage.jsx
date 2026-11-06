@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate, useLocation, Link } from 'react-router'
 import client from '../api/client'
 import CurrencyInput from '../components/CurrencyInput/CurrencyInput.jsx'
@@ -50,6 +50,9 @@ export default function ExpenseFormPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  // The amount and payer an edited expense was loaded with: filling those in
+  // is not a change by the user and must not re-split the loaded shares.
+  const loaded = useRef(null)
 
   useEffect(() => {
     const fetches = [
@@ -78,6 +81,7 @@ export default function ExpenseFormPage() {
 
       if (isEdit && expData?.expense) {
         const e = expData.expense
+        loaded.current = { amount: e.amount, paidByUserId: e.paidByUserId || '' }
         setForm(f => ({
           ...f,
           description:  e.description  || '',
@@ -110,9 +114,13 @@ export default function ExpenseFormPage() {
     }).finally(() => setLoading(false))
   }, [id, groupId, isEdit])
 
-  // Recalculate equal split whenever total amount changes
+  // Split equally again when the user changes the total or the payer, but not
+  // when an edited expense has just been loaded with its own shares.
   useEffect(() => {
     if (shares.length === 0) return
+    const l = loaded.current
+    if (l && String(form.amount) === String(l.amount) && form.paidByUserId === l.paidByUserId) return
+    loaded.current = null
     setShares(prev => recalculate(prev, form.amount, form.paidByUserId))
   }, [form.amount, form.paidByUserId])
 
