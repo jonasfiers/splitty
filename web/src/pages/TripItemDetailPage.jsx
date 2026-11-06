@@ -190,7 +190,7 @@ export default function TripItemDetailPage() {
               {item.confirmationRef && (
                 <Row label="Booking reference">
                   <span className="trip-ref">
-                    <button type="button" className="trip-ref-code" onClick={copyReference} title="Copy">
+                    <button type="button" className="trip-ref-code" onClick={() => setShowBigRef(true)} aria-label={`Show booking reference ${item.confirmationRef} full screen`} title="Show big">
                       {item.confirmationRef}
                     </button>
                     <button type="button" className="trip-ref-icon" onClick={copyReference} aria-label="Copy booking reference" title={copied ? 'Copied' : 'Copy'}>
@@ -199,9 +199,6 @@ export default function TripItemDetailPage() {
                       ) : (
                         <svg viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2" /><path d="M5 15V6a2 2 0 0 1 2-2h8" /></svg>
                       )}
-                    </button>
-                    <button type="button" className="trip-ref-icon" onClick={() => setShowBigRef(true)} aria-label="Show booking reference full screen" title="Show big">
-                      <svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" /></svg>
                     </button>
                   </span>
                   {showBigRef && (

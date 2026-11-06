@@ -2412,7 +2412,8 @@ body {
 }
 .trip-ref button + button { border-left: 1px solid var(--border); }
 .trip-ref button:hover { background: var(--border); }
-.trip-ref-code {
+.trip-ref .trip-ref-code {
+  color: var(--accent);
   font-family: var(--font-mono);
   font-size: 13px;
   font-weight: 600;
