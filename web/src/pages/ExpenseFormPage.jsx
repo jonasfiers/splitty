@@ -50,8 +50,8 @@ export default function ExpenseFormPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
-  // The amount and payer an edited expense was loaded with: filling those in
-  // is not a change by the user and must not re-split the loaded shares.
+  // The amount an edited expense was loaded with: filling it in is not a
+  // change by the user and must not re-split the loaded shares.
   const loaded = useRef(null)
 
   useEffect(() => {
@@ -81,7 +81,7 @@ export default function ExpenseFormPage() {
 
       if (isEdit && expData?.expense) {
         const e = expData.expense
-        loaded.current = { amount: e.amount, paidByUserId: e.paidByUserId || '' }
+        loaded.current = { amount: e.amount }
         setForm(f => ({
           ...f,
           description:  e.description  || '',
@@ -114,15 +114,17 @@ export default function ExpenseFormPage() {
     }).finally(() => setLoading(false))
   }, [id, groupId, isEdit])
 
-  // Split equally again when the user changes the total or the payer, but not
-  // when an edited expense has just been loaded with its own shares.
+  // Split equally again when the user changes the total, but not when an
+  // edited expense has just been loaded with its own shares. Changing who
+  // paid leaves the shares alone: what each person owes does not depend on
+  // who paid (the payer only gets the rounding cent of an equal split).
   useEffect(() => {
     if (shares.length === 0) return
     const l = loaded.current
-    if (l && String(form.amount) === String(l.amount) && form.paidByUserId === l.paidByUserId) return
+    if (l && String(form.amount) === String(l.amount)) return
     loaded.current = null
     setShares(prev => recalculate(prev, form.amount, form.paidByUserId))
-  }, [form.amount, form.paidByUserId])
+  }, [form.amount])
 
   const toggleMember = i => {
     setShares(prev => {
