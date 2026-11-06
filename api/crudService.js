@@ -687,7 +687,8 @@ const groupServiceNeo4j = {
                 OPTIONAL MATCH (e)-[o:OWED_BY]->(m)
                 OPTIONAL MATCH (m)-[:PAID]->(e)-[p:OWED_BY]->(:User)
                 WITH g, m, sum(p.amount * coalesce(e.rateSnapshot, 1)) - sum(o.amount * coalesce(e.rateSnapshot, 1)) AS balance
-                RETURN m, balance`,
+                RETURN m, balance
+                ORDER BY m.id = $userId, toLower(m.name)`,
                 { groupId, userId }
             )
             return {

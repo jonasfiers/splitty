@@ -65,6 +65,8 @@ const dashService = {
                 OPTIONAL MATCH (e)-[o:OWED_BY]->(m)
                 OPTIONAL MATCH (m)-[:PAID]->(e)-[p:OWED_BY]->(:User)
                 WITH g, u, c, m, sum(p.amount * coalesce(e.rateSnapshot, 1)) - sum(o.amount * coalesce(e.rateSnapshot, 1)) AS memberBalance
+                // Members in a fixed order: the others alphabetically, the user last.
+                ORDER BY m.id = $userId, toLower(m.name)
                 WITH g, u, c, collect({id: m.id, name: m.name, balance: memberBalance, avatarColor: m.avatarColor, avatarEmoji: m.avatarEmoji}) AS members, count(m) AS memberCount
                 OPTIONAL MATCH (g)<-[:BALANCE_IN]-(le:Expense)-[lr:UPDATED_BY|CREATED_BY]->(:User)
                 WITH g, c, members, memberCount, max(lr.on) AS lastActivity
