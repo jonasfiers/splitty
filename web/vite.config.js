@@ -18,8 +18,13 @@ export default defineConfig(({ mode }) => {
           name: 'Splitty',
           short_name: 'Splitty',
           description: 'Split expenses with friends',
-          theme_color: '#F5F1EB',
-          background_color: '#F5F1EB',
+          // The app's dark background, in both themes: Android colours its
+          // bottom navigation bar (and the launch splash) from these, and a
+          // manifest cannot hold a light and a dark variant. A dark bar under
+          // light mode looks fine; a white one under dark mode does not.
+          // The status bar follows the page's live theme-color meta instead.
+          theme_color: '#1C1714',
+          background_color: '#1C1714',
           display: 'standalone',
           viewport: 'width=device-width, initial-scale=1.0, viewport-fit=cover',
           start_url: '/',
