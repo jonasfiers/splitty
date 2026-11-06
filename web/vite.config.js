@@ -58,6 +58,19 @@ export default defineConfig(({ mode }) => {
       }),
     ],
 
+    build: {
+      rolldownOptions: {
+        output: {
+          // MapLibre's worker (imported with ?url in basemap.js) is an .mjs
+          // file. nginx's mime.types has no .mjs, and a module worker served
+          // as application/octet-stream is refused (nosniff), so it ships as .js.
+          assetFileNames: info => (info.names?.[0] ?? '').endsWith('.mjs')
+            ? 'assets/[name]-[hash].js'
+            : 'assets/[name]-[hash][extname]',
+        },
+      },
+    },
+
     server: {
       host: '0.0.0.0',
       port: 5173,

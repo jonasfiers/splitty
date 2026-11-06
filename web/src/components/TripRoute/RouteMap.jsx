@@ -2,7 +2,7 @@ import { useContext, useEffect, useRef } from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { ExpandedContext } from '../Expandable/Expandable.jsx'
-import { addTiles, arcBetween, arrowIcon, arrowsAlong, keepFramed } from '../TripMap/mapParts.js'
+import { addBasemap, arcBetween, arrowIcon, arrowsAlong, keepFramed } from '../TripMap/mapParts.js'
 import { legIcon } from './ConnectionCard.jsx'
 
 // A stop is where a vehicle is boarded or left; the same platform in several
@@ -48,7 +48,7 @@ function RouteMap({ itineraries, highlight = null, skip = null, onHover = () => 
       map.on('click', () => map.scrollWheelZoom.enable())
       map.on('mouseout', () => map.scrollWheelZoom.disable())
     }
-    addTiles(map)
+    const removeBasemap = addBasemap(map)
 
     // A view first: Leaflet only draws the lines once the map has one.
     const bounds = L.latLngBounds(itineraries.flatMap(it => it.legs.flatMap(l => [[l.from.lat, l.from.lon], [l.to.lat, l.to.lon]])))
@@ -108,7 +108,7 @@ function RouteMap({ itineraries, highlight = null, skip = null, onHover = () => 
     redraw()
     const unframe = keepFramed(map, el.current, frame)
 
-    return () => { unframe(); drawn.current = null; map.remove() }
+    return () => { unframe(); removeBasemap(); drawn.current = null; map.remove() }
   }, [itineraries, expanded])
 
   // Fading, numbering and arrows for the current highlight and skipped legs.

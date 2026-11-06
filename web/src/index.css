@@ -2433,10 +2433,15 @@ a.expense-item { color: inherit; text-decoration: none; }
   z-index: 0;
 }
 
-/* Dark theme: the standard tiles are inverted (hue turned back so water stays
-   blue), only the tile layer, so markers, arcs and pop-ups keep their colours. */
+/* Dark theme: the vector map has its own dark style (basemap.js). The raster
+   fallback's tiles are inverted instead (hue turned back so water stays blue),
+   only the tile layer, so markers, arcs and pop-ups keep their colours. */
 [data-theme="dark"] .leaflet-container { background: #1b1b1b; }
-[data-theme="dark"] .leaflet-tile-pane {
+/* Vector map (basemap.js): past 85° north and south, where Web Mercator ends,
+   Leaflet's own background shows; in the map's water colour it reads as sea. */
+.leaflet-container:has(.leaflet-gl-layer) { background: #80deea; }
+[data-theme="dark"] .leaflet-container:has(.leaflet-gl-layer) { background: #31353f; }
+[data-theme="dark"] .basemap-raster .leaflet-tile-pane {
   filter: invert(1) hue-rotate(180deg) brightness(.92) contrast(.88) saturate(.8);
 }
 /* Pins and Leaflet's own white chrome (zoom buttons, pop-ups, attribution) follow the theme. */

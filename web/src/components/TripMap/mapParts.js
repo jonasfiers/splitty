@@ -1,17 +1,10 @@
 import L from 'leaflet'
 
 // The pieces both maps draw with — the trip map and the route finder's —
-// so a journey looks the same on either: OpenStreetMap tiles, journeys as
-// gentle arcs, and bare arrowheads along them showing the direction.
+// so a journey looks the same on either: the base map (basemap.js), journeys
+// as gentle arcs, and bare arrowheads along them showing the direction.
 
-// OpenStreetMap's tiles, fetched through Splitty's own server (api/tileProxy.js)
-// and cached by nginx, so the visitor's browser never contacts OpenStreetMap.
-export function addTiles(map) {
-  L.tileLayer('/api/tiles/{z}/{x}/{y}.png', {
-    maxZoom: 19,
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-  }).addTo(map)
-}
+export { addBasemap } from './basemap.js'
 
 // A gentle arc from `from` to `to` ({lat, lon}), bending to the right of its
 // direction, so a trip out and back draws two separate lines. It is computed

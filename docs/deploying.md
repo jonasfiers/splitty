@@ -287,6 +287,37 @@ not on production: the static-file rule answers 404. Set up the cache before dep
 web build that uses the proxy. The cache can be emptied at any time (`rm -rf` its
 contents, reload nginx).
 
+## Vector base map
+
+The maps draw a vector base map in the browser (`web/src/components/TripMap/basemap.js`):
+MapLibre inside Leaflet, from Splitty's own copy of the Protomaps planet (about 140 GB,
+zoom 0–15, OpenStreetMap data, ODbL), so labels can be English and dark mode has a real
+dark style. Leaflet still draws everything on top (pins, arcs, arrows, pop-ups).
+
+**Files**, on the pve HDD, mounted read-only at `/srv/maps` in the nginx containers:
+
+| Path under `/mnt/hdd/protomaps` | |
+|---|---|
+| `planet.pmtiles` | relative link to the build in use, e.g. `20261106.pmtiles` |
+| `assets/fonts`, `assets/sprites` | label glyphs and icons, protomaps/basemaps-assets (commit in `assets/VERSION`) |
+
+nginx serves only `/maps/planet.pmtiles` and `/maps/assets/`; the browser reads the planet
+in pieces with range requests (5–20 ms each from the HDD). Set up per container with
+`scripts/setup-vector-map.sh qa|prod`, run on pve: it adds the bind mount (live, no restart)
+and the two locations.
+
+**Refreshing the map:** `scripts/update-basemap.sh` on pve, as a service (see its header).
+It downloads the newest build next to the current one, checks its md5, moves the link and
+deletes the old build. Every few months is plenty.
+
+**Fallback:** if the planet cannot be loaded at all (no mount, missing link, no WebGL), the map
+uses the OpenStreetMap raster tiles through the tile proxy (above) instead, with the inverted
+dark style. A single tile failing later does not switch it.
+
+**CSP:** MapLibre's worker ships as a separate same-origin `.js` file (`setWorkerUrl`, renamed
+from `.mjs` in `vite.config.js`, since nginx's mime.types has no `.mjs`), so `worker-src
+'self'` is enough; no `blob:`.
+
 ## Security headers and the Content Security Policy
 
 nginx (CT101, CT116) sends X-Frame-Options, X-Content-Type-Options, Referrer-Policy and a

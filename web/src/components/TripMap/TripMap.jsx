@@ -4,7 +4,7 @@ import { ExpandedContext } from '../Expandable/Expandable.jsx'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { itemIcon, linkTarget, mapsLink } from '../../utils/trip.js'
-import { addTiles, arcBetween, arrowIcon, arrowsAlong, keepFramed } from './mapParts.js'
+import { addBasemap, arcBetween, arrowIcon, arrowsAlong, keepFramed } from './mapParts.js'
 
 // Places numbered in the order the trip reaches them: walk the items by start
 // time and number each place the first time it comes up (a journey reaches its
@@ -50,7 +50,7 @@ function TripMap({ places, items, onOpenItem, highlight = null, onHover = () => 
       map.on('click', () => map.scrollWheelZoom.enable())
       map.on('mouseout', () => map.scrollWheelZoom.disable())
     }
-    addTiles(map)
+    const removeBasemap = addBasemap(map)
 
     const byId = new Map(located.map(p => [p.id, p]))
     const itemsAt = placeId => items.filter(i => [i.placeId, i.fromPlaceId, i.toPlaceId].includes(placeId))
@@ -144,7 +144,7 @@ function TripMap({ places, items, onOpenItem, highlight = null, onHover = () => 
     // Framed again whenever the box changes size, until the user moves the map.
     const unframe = keepFramed(map, el.current, frame)
 
-    return () => { unframe(); map.remove() }
+    return () => { unframe(); removeBasemap(); map.remove() }
   }, [places, items, onOpenItem, expanded])
 
   const applyHighlight = useRef(() => {})
