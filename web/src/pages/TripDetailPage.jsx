@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react'
+import LoadFailed from '../components/LoadFailed.jsx'
 import { useParams, useNavigate, useLocation, Link } from 'react-router'
 import { syncTrip } from '../utils/offlineDocs.js'
 import client from '../api/client'
@@ -80,9 +81,14 @@ function TripDetailPage() {
     setPlaces(data.places || [])
   }, [id])
 
+  // Loading failed (not "no such trip": that is a 404): the "couldn't load"
+  // state, not "Trip not found.".
+  const [loadError, setLoadError] = useState(null)
+  const [attempt, setAttempt] = useState(0)
+  const retry = useCallback(() => { setLoadError(null); setLoading(true); setAttempt(n => n + 1) }, [])
   useEffect(() => {
-    load().catch(() => setTrip(null)).finally(() => setLoading(false))
-  }, [load])
+    load().catch(err => { setTrip(null); if (err.response?.status !== 404) setLoadError(err) }).finally(() => setLoading(false))
+  }, [load, attempt])
 
   const openItem = useCallback(item => navigate(`/trips/${id}/items/${item.id}`), [navigate, id])
 
@@ -189,6 +195,7 @@ function TripDetailPage() {
   }
 
   if (loading) return <Loading />
+  if (loadError) return <LoadFailed error={loadError} what="this trip" onRetry={retry} />
   if (!trip) return <div className="empty-state"><p className="empty-state-title">Trip not found.</p></div>
 
   const placeById = new Map(places.map(p => [p.id, p]))

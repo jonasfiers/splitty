@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
+import LoadFailed from '../components/LoadFailed.jsx'
 import { useAuth } from '../context/AuthContext'
 import client from '../api/client'
 import Loading from '../components/Loading.jsx'
@@ -9,6 +10,9 @@ export default function FriendsPage() {
   const { currentUser } = useAuth()
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(null)
+  const [attempt, setAttempt] = useState(0)
+  const retry = useCallback(() => { setLoadError(null); setLoading(true); setAttempt(n => n + 1) }, [])
 
   useEffect(() => {
     client.get('/users')
@@ -16,10 +20,12 @@ export default function FriendsPage() {
         const all = r.data.users || []
         setUsers(all.filter(u => u.id !== currentUser?.id))
       })
+      .catch(err => setLoadError(err))
       .finally(() => setLoading(false))
-  }, [currentUser])
+  }, [currentUser, attempt])
 
   if (loading) return <Loading />
+  if (loadError) return <LoadFailed error={loadError} what="your friends" onRetry={retry} />
 
   return (
     <>

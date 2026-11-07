@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
+import LoadFailed from '../components/LoadFailed.jsx'
 import { Link, useNavigate } from 'react-router'
 import client from '../api/client'
 import FabButton from '../components/FabButton/FabButton.jsx'
@@ -18,7 +19,9 @@ export default function TripsPage() {
   const [groups, setGroups] = useState([])
   const [showNew, setShowNew] = useState(false)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
+  const [error, setError] = useState(null)
+  const [attempt, setAttempt] = useState(0)
+  const retry = useCallback(() => { setError(null); setLoading(true); setAttempt(n => n + 1) }, [])
 
   useEffect(() => {
     Promise.all([client.get('/trips'), client.get('/groups')])
@@ -26,11 +29,9 @@ export default function TripsPage() {
         setTrips(tr.data.trips || [])
         setGroups(gr.data.groups || [])
       })
-      .catch(err => setError(navigator.onLine === false || !err?.response
-        ? 'No connection, so your trips cannot load. Documents kept on this device still open.'
-        : 'Failed to load trips. Please refresh the page.'))
+      .catch(err => setError(err))
       .finally(() => setLoading(false))
-  }, [])
+  }, [attempt])
 
   // From tablet width up, trips are shown as cards.
   const cards = useMediaQuery('(min-width: 768px)')
@@ -59,7 +60,7 @@ export default function TripsPage() {
         </Link>
       )}
 
-      {error && <p className="error">{error}</p>}
+      {error && <LoadFailed error={error} what="your trips" onRetry={retry} docs={false} />}
       {/* Below the offline documents: they must not wait for the trips. */}
       {loading && <Loading />}
 

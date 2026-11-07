@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo, Fragment } from 'react'
+import { useState, useEffect, useMemo, Fragment, useCallback } from 'react'
+import LoadFailed from '../components/LoadFailed.jsx'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, Label } from 'recharts'
 import client from '../api/client'
 import { Link } from 'react-router'
@@ -53,16 +54,21 @@ export default function InsightsPage() {
   }, [])
 
   // Refetch on every filter change; the previous figures stay up (dimmed) meanwhile.
+  // The first load failing (nothing to show yet): the "couldn't load" state.
+  const [loadError, setLoadError] = useState(null)
+  const [attempt, setAttempt] = useState(0)
+  const retry = useCallback(() => { setLoadError(null); setLoading(true); setAttempt(n => n + 1) }, [])
+
   useEffect(() => {
     let current = true
     const from = periodStart(period)
     setRefreshing(true)
     client.get('/dash/insights', { params: { ...(from && { from }), ...(groupId && { groupId }), ...(scope === 'mine' && { scope }) } })
       .then(r => { if (current) { setData(r.data); setError(''); setActiveCategory(null); setHiddenPie([]) } })
-      .catch(() => { if (current) setError('Insights could not be loaded. Please try again.') })
+      .catch(err => { if (current) { setError('Insights could not be loaded. Please try again.'); setLoadError(err) } })
       .finally(() => { if (current) { setLoading(false); setRefreshing(false) } })
     return () => { current = false }
-  }, [period, groupId, scope])
+  }, [period, groupId, scope, attempt])
 
   const { monthly, categories, chartData, stackKeys, members, dowMatrix, dowMax } = useMemo(() => {
     if (!data) return { monthly: [], categories: [], chartData: [], stackKeys: [], members: [], dowMatrix: [], dowMax: 1 }
@@ -190,6 +196,7 @@ export default function InsightsPage() {
   }
 
   if (loading) return <Loading />
+  if (!data && loadError) return <LoadFailed error={loadError} what="the insights" onRetry={retry} />
 
   const iso = 'EUR'
   const mine = scope === 'mine'

@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
+import LoadFailed from '../components/LoadFailed.jsx'
 import { useParams } from 'react-router'
 import client from '../api/client'
 import Loading from '../components/Loading.jsx'
@@ -11,15 +12,18 @@ import TripDocuments from '../components/TripDocuments/TripDocuments.jsx'
 export default function TripDocumentsPage() {
   const { tripId } = useParams()
   const [trip, setTrip] = useState(null)
-  const [error, setError] = useState('')
+  const [error, setError] = useState(null)
+  const [attempt, setAttempt] = useState(0)
+  const retry = useCallback(() => { setError(null); setTrip(null); setAttempt(n => n + 1) }, [])
 
   useEffect(() => {
     client.get(`/trips/${tripId}`)
       .then(({ data }) => setTrip(data.trip))
-      .catch(err => setError(err.response?.status === 404 ? 'This trip no longer exists.' : 'Could not load the trip.'))
-  }, [tripId])
+      .catch(err => setError(err))
+  }, [tripId, attempt])
 
-  if (error) return <p className="error">{error}</p>
+  if (error?.response?.status === 404) return <p className="error">This trip no longer exists.</p>
+  if (error) return <LoadFailed error={error} what="this trip’s documents" onRetry={retry} />
   if (!trip) return <Loading />
 
   return (

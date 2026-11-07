@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
+import LoadFailed from '../components/LoadFailed.jsx'
 import { Link, useNavigate } from 'react-router'
 import client from '../api/client'
 import FabButton from '../components/FabButton/FabButton.jsx'
@@ -22,6 +23,11 @@ export default function GroupsPage() {
   const [form, setForm] = useState({ title: '', currencyIso: '' })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  // The first load's failure: shown instead of the page (an empty page would
+  // say "You're all settled up!" and "No groups yet", untrue).
+  const [loadError, setLoadError] = useState(null)
+  const [attempt, setAttempt] = useState(0)
+  const retry = useCallback(() => { setLoadError(null); setLoading(true); setAttempt(n => n + 1) }, [])
 
   useEffect(() => {
     Promise.all([client.get('/dash/groups'), client.get('/currencies'), client.get('/dash/balance')])
@@ -37,12 +43,9 @@ export default function GroupsPage() {
           grossLent: Number(bal.data.grossLent ?? 0)
         })
       })
-        .catch((err) => {
-          setError('Failed to load data. Please refresh the page.');
-          console.error(err);
-        })
+      .catch(err => setLoadError(err))
       .finally(() => setLoading(false))
-  }, [])
+  }, [attempt])
 
   const handleCreate = async e => {
     e.preventDefault()
@@ -72,6 +75,12 @@ export default function GroupsPage() {
   }
 
   if (loading) return <Loading />
+  if (loadError) return (
+    <>
+      <TabHeader logo />
+      <LoadFailed error={loadError} what="your groups and balances" onRetry={retry} />
+    </>
+  )
 
   return (
     <>

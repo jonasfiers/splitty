@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import LoadFailed from '../components/LoadFailed.jsx'
 import { useParams, Link, useNavigate, useLocation } from 'react-router'
 import client from '../api/client'
 import CurrencyInput from '../components/CurrencyInput/CurrencyInput.jsx'
@@ -111,7 +112,16 @@ export default function GroupDetailPage() {
     }
   }
 
-  useEffect(() => { load().finally(() => setLoading(false)) }, [load])
+  // Loading failed (not "no such group": that is a 404): the "couldn't load"
+  // state, not "Group not found.".
+  // (load also reruns on every filter or search change: those keep the page.)
+  const [loadError, setLoadError] = useState(null)
+  const fetchAll = useCallback(() => load()
+    .then(() => setLoadError(null))
+    .catch(err => { if (err.response?.status !== 404) setLoadError(err) })
+    .finally(() => setLoading(false)), [load])
+  useEffect(() => { fetchAll() }, [fetchAll])
+  const retry = useCallback(() => { setLoading(true); fetchAll() }, [fetchAll])
 
   const handleRemoveMember = async userId => {
     const isSelf = userId === currentUser?.id
@@ -225,6 +235,7 @@ export default function GroupDetailPage() {
   }
 
   if (loading) return <Loading />
+  if (loadError) return <LoadFailed error={loadError} what="this group" onRetry={retry} />
   if (!group) return <div className="empty-state"><p className="empty-state-title">Group not found.</p></div>
 
   // Expense icon: use emoji field if present, otherwise first letter of description

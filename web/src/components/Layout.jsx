@@ -1,4 +1,6 @@
 import { Outlet, NavLink, Link, useNavigate } from 'react-router'
+import { useOffline } from '../utils/connection.js'
+import { useOfflineDocs } from '../utils/useOfflineDocs.js'
 import { useAuth } from '../context/AuthContext'
 import { Avatar } from './Avatar.jsx'
 import CatAvatar from './CatAvatar/CatAvatar'
@@ -56,6 +58,8 @@ function AdminIcon({ size = 20 }) {
 }
 
 export default function Layout() {
+  const offline = useOffline()
+  const kept = useOfflineDocs()
   const { currentUser, isAdmin, logout } = useAuth()
   const navigate = useNavigate()
 
@@ -99,6 +103,12 @@ export default function Layout() {
 
       {/* ── CONTENT ── */}
       <main className="app-content">
+        {offline && (
+          <div className="offline-bar" role="status">
+            <span>You’re offline. Nothing new can load.</span>
+            {kept?.length > 0 && <Link to="/offline-documents">Offline documents ›</Link>}
+          </div>
+        )}
         <div className="page-wrap">
           <Outlet />
         </div>

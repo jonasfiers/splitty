@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { reportReachable } from '../utils/connection.js'
 
 // A time limit: without a connection a request does not always fail at once
 // (on a phone with a VPN in airplane mode it just never gets an answer), and
@@ -13,8 +14,11 @@ client.interceptors.request.use(config => {
 })
 
 client.interceptors.response.use(
-  res => res,
+  res => { reportReachable(true); return res },
   err => {
+    // Any answer, even an error, means the server is reachable.
+    if (err.response) reportReachable(true)
+    else if (err.code !== 'ERR_CANCELED') reportReachable(false)
     if (err.response?.status === 401 && !err.config?.url?.includes('/auth/')) {
       localStorage.removeItem('token')
       window.location.href = '/login'

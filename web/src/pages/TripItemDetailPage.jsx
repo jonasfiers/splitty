@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef, useMemo, lazy, Suspense } from 'react'
+import LoadFailed from '../components/LoadFailed.jsx'
 import { useParams, useNavigate, Link } from 'react-router'
 import client from '../api/client'
 import Loading from '../components/Loading.jsx'
@@ -58,11 +59,19 @@ export default function TripItemDetailPage() {
     setItem(data.item)
   }, [itemId])
 
+  // Loading failed (not "no such item": that is a 404): the "couldn't load" state.
+  const [loadError, setLoadError] = useState(null)
+  const [attempt, setAttempt] = useState(0)
+  const retry = useCallback(() => { setLoading(true); setAttempt(n => n + 1) }, [])
   useEffect(() => {
+    setLoadError(null)
     load()
-      .catch(() => navigate(`/trips/${tripId}`, { state: { notice: 'This item no longer exists.' }, replace: true }))
+      .catch(err => {
+        if (err.response?.status === 404) navigate(`/trips/${tripId}`, { state: { notice: 'This item no longer exists.' }, replace: true })
+        else setLoadError(err)
+      })
       .finally(() => setLoading(false))
-  }, [load])
+  }, [load, attempt])
 
   // Attachment links are signed for 5 minutes (FILE_LINK_TTL in the API):
   // refresh them while the page is open, and on coming back to it, so a tap
@@ -167,6 +176,7 @@ export default function TripItemDetailPage() {
   }, [item])
 
   if (loading) return <Loading />
+  if (loadError) return <LoadFailed error={loadError} what="this item" onRetry={retry} />
   if (!item) return null
 
   const mode = TRANSPORT_MODES.find(m => m.value === item.mode)

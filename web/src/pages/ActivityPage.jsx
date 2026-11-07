@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
+import LoadFailed from '../components/LoadFailed.jsx'
 import { useNavigate } from 'react-router'
 import client from '../api/client'
 import { formatCurrency } from '../utils/currency'
@@ -53,16 +54,19 @@ export default function ActivityPage() {
   // Same breakpoint as the other two-column pages (see index.css).
   const wide = useMediaQuery('(min-width: 1180px)')
 
+  const [attempt, setAttempt] = useState(0)
+  const retry = useCallback(() => { setError(null); setLoading(true); setAttempt(n => n + 1) }, [])
+
   useEffect(() => {
     client.get('/dash/activity')
       .then(r => setActivities(r.data.activities || []))
-      .catch(() => setError('Activity could not be loaded. Please refresh the page.'))
+      .catch(err => setError(err))
       .finally(() => setLoading(false))
     // Group names and icons are a nice-to-have: without them the rows just omit the group.
     client.get('/dash/groups')
       .then(r => setGroups(new Map((r.data.groups || []).map(g => [g.id, g]))))
       .catch(() => {})
-  }, [])
+  }, [attempt])
 
   const filtered = useMemo(
     () => activities.filter(a => activityMatches(a, context, action) && (!groupId || a.groupId === groupId)),
@@ -106,7 +110,7 @@ export default function ActivityPage() {
   if (error) return (
     <>
       {header}
-      <p className="error">{error}</p>
+      <LoadFailed error={error} what="the activity" onRetry={retry} />
     </>
   )
 
