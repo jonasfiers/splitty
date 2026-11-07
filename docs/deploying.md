@@ -306,7 +306,14 @@ in pieces with range requests (5–20 ms each from the HDD). Set up per containe
 `scripts/setup-vector-map.sh qa|prod`, run on pve: it adds the bind mount (live, no restart)
 and the two locations.
 
-**Refreshing the map:** `scripts/update-basemap.sh` on pve, as a service (see its header).
+**Refreshing the map:** automatic, monthly. `update-basemap.timer` on pve runs
+`/root/update-basemap.sh` on the first Sunday of each month at 03:00 (about 2.5 hours at
+the 15 MB/s cap; needs ~140 GB free on the HDD next to the build in use). On failure the map
+in use stays, and `update-basemap-failed.service` mails root the end of the log. Installed
+with `scripts/install-basemap-timer.sh` (run it on pve next to `update-basemap.sh`; rerun it
+after changing either). By hand: `systemctl start update-basemap` (newest build) or
+`systemd-run --unit=update-basemap-manual bash /root/update-basemap.sh YYYYMMDD`;
+watch with `journalctl -u update-basemap -f`.
 It downloads the newest build next to the current one, checks its md5, moves the link and
 deletes the old build. Every few months is plenty.
 
