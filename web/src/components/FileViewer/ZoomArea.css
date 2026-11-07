@@ -1,25 +1,17 @@
 /* See ZoomArea.jsx. touch-action without pinch-zoom: the browser scrolls this
    pane with one finger but leaves pinches (and double-taps) to the pane. */
 .zoom-area {
+  position: relative;  /* the content's offsetLeft/Top are relative to the pane */
+  flex: 1;
+  min-height: 0;
   overflow: auto;
   touch-action: pan-x pan-y;
   overscroll-behavior: contain;
-  border-radius: var(--r-md);
+  padding: 12px;
 }
+/* At 1× the document is the pane's width, at most FIT (ZoomArea.jsx) and
+   centred: on a desktop a page is not 1,500 px wide. Zooming multiplies it. */
 .zoom-content {
-  width: 100%;
-  min-width: 100%;
+  width: min(100%, var(--zoom-fit));
+  margin: 0 auto;
 }
-
-/* The viewer page fills the content area (the shell is 100dvh, the content
-   area its flexible part), and the pane takes what the header leaves. Plain
-   CSS, so a rotation, an unfolded Fold or a resized window re-lays it out
-   without any measuring. The bottom padding is the gap between the pages. */
-.page-wrap:has(.zoom-area) {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  padding-bottom: 12px;
-}
-.page-wrap:has(.zoom-area) > .file-viewer { flex: 1; min-height: 0; }
-.page-wrap:has(.zoom-area) .zoom-area { flex: 1; min-height: 0; }

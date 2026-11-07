@@ -48,6 +48,8 @@ export default function App() {
           <Route path="/verify-email-change" element={<VerifyEmailChangePage />} />
           <Route path="/privacy" element={<PrivacyPage />} />
           <Route element={<ProtectedRoute />}>
+            {/* Full screen, outside the Layout: no sidebar, no bottom bar. */}
+            <Route path="/trips/:tripId/items/:itemId/files/:fileId" element={<FileViewerPage />} />
             <Route element={<Layout />}>
               <Route index element={<Navigate to="/groups" replace />} />
               <Route path="/groups" element={<GroupsPage />} />
@@ -61,7 +63,6 @@ export default function App() {
               <Route path="/trips/:tripId/route" element={<TripRoutePage />} />
               <Route path="/trips/:tripId/items/:itemId" element={<TripItemDetailPage />} />
               <Route path="/trips/:tripId/items/:itemId/edit" element={<TripItemFormPage />} />
-              <Route path="/trips/:tripId/items/:itemId/files/:fileId" element={<FileViewerPage />} />
               <Route path="/activity" element={<ActivityPage />} />
               <Route path="/insights" element={<InsightsPage />} />
               <Route path="/friends" element={<FriendsPage />} />

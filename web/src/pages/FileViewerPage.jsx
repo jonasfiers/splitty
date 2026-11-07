@@ -1,16 +1,15 @@
 import { useState, useEffect, useRef } from 'react'
-import { useParams } from 'react-router'
+import { useParams, useNavigate, useLocation } from 'react-router'
 import client from '../api/client'
 import Loading from '../components/Loading.jsx'
-import PageHeader from '../components/PageHeader/PageHeader.jsx'
 import ZoomArea from '../components/FileViewer/ZoomArea.jsx'
-import { useMediaQuery } from '../utils/useMediaQuery.js'
 
-// A trip item's file (ticket, booking...) inside Splitty, for the installed
-// app (utils/standalone.js): images as they are, PDFs drawn by pdf.js, with
-// Splitty's header so there is always a way back, and a Download button for
-// saving the file or opening it in another app. In a browser tab files still
-// open in a new tab with the browser's own viewer.
+// A trip item's file (ticket, booking...) full screen inside Splitty, for the
+// installed app (utils/standalone.js): no sidebar, no bottom bar, only a slim
+// bar ("‹ Back", the name, Download) over the document. Images as they are,
+// PDFs drawn by pdf.js; Download saves the file or opens it in another app.
+// In a browser tab files still open in a new tab with the browser's viewer.
+// Its route sits outside the app's Layout (App.jsx) for the full screen.
 //
 // The file comes from the item's signed link (5 minutes, api/routes/trips.js),
 // fetched fresh with the item, so a reload or a later visit works too.
@@ -25,9 +24,10 @@ const PAGE_PIXELS = 16e6
 
 export default function FileViewerPage() {
   const { tripId, itemId, fileId } = useParams()
+  const navigate = useNavigate()
+  const location = useLocation()
   const [item, setItem] = useState(null)
   const [error, setError] = useState('')
-  const wide = useMediaQuery('(min-width: 768px)')
 
   useEffect(() => {
     client.get(`/trips/items/${itemId}`)
@@ -39,7 +39,14 @@ export default function FileViewerPage() {
   }, [itemId, fileId])
 
   const file = item?.attachments.find(a => a.id === fileId)
-  if (!item && !error) return <Loading />
+
+  // Back in history when the viewer was opened from the app, so the Back
+  // button and Android's back gesture agree and do not pile up pages;
+  // otherwise (a reload, an opened link) to the item, in place of the viewer.
+  const back = () => {
+    if (location.key !== 'default') navigate(-1)
+    else navigate(`/trips/${tripId}/items/${itemId}`, { replace: true })
+  }
 
   const download = async () => {
     try {
@@ -62,29 +69,25 @@ export default function FileViewerPage() {
   }
 
   return (
-    <>
-      <PageHeader
-        // Phone: the bar ("‹ Back", the name, Download). Wider: a title row
-        // with Download beside it, under "‹ Back".
-        compact={!wide}
-        // "‹ Back", not the item's title: a journey's title ("Brussels
-        // National Airport → Schiphol Airport") wraps over three lines.
-        back={{ to: `/trips/${tripId}/items/${itemId}` }}
-        title={wide ? file?.filename : undefined}
-        name={file?.filename || 'File'}
-        actions={file ? [{ label: 'Download', onClick: download, primary: true }] : []}
-      />
-      {error && <p className="error">{error}</p>}
+    <div className="file-viewer">
+      <header className="file-viewer-bar">
+        <button type="button" className="file-viewer-back" onClick={back}>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="15 18 9 12 15 6" /></svg>
+          Back
+        </button>
+        <div className="file-viewer-name">{file?.filename ?? ''}</div>
+        {file && <button type="button" className="file-viewer-action" onClick={download}>Download</button>}
+      </header>
+      {error && <p className="error file-viewer-error">{error}</p>}
+      {!item && !error && <Loading />}
       {file && (
-        <div className="file-viewer">
-          <ZoomArea>
-            {file.mimeType === 'application/pdf'
-              ? <PdfView url={`/api${file.url}`} onError={() => setError('This PDF could not be shown here. Use Download to open it in another app.')} />
-              : <img className="file-viewer-page" src={`/api${file.url}`} alt={file.filename} />}
-          </ZoomArea>
-        </div>
+        <ZoomArea>
+          {file.mimeType === 'application/pdf'
+            ? <PdfView url={`/api${file.url}`} onError={() => setError('This PDF could not be shown here. Use Download to open it in another app.')} />
+            : <img className="file-viewer-page" src={`/api${file.url}`} alt={file.filename} />}
+        </ZoomArea>
       )}
-    </>
+    </div>
   )
 }
 
