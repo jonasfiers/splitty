@@ -34,12 +34,14 @@ export default function ZoomArea({ children }) {
     }
     const local = t => { const r = el.getBoundingClientRect(); return [t.clientX - r.left, t.clientY - r.top] }
 
-    // Fill the height left between this pane's top and the bottom bar (or
-    // the window's bottom where there is none).
+    // Fill the height left between this pane's top and the bottom bar's top
+    // edge (or the window's bottom where there is none), less the gap the
+    // pages have between them. Measured from the bar itself: in the installed
+    // app innerHeight also counts the strip under Android's gesture bar.
     const fit = () => {
       const nav = document.querySelector('.bottom-nav')
-      const navH = nav && getComputedStyle(nav).display !== 'none' ? nav.offsetHeight : 0
-      el.style.height = `${Math.max(240, window.innerHeight - el.getBoundingClientRect().top - navH - 12)}px`
+      const bottom = nav && getComputedStyle(nav).display !== 'none' ? nav.getBoundingClientRect().top : window.innerHeight
+      el.style.height = `${Math.max(240, bottom - el.getBoundingClientRect().top - 12)}px`
     }
     fit()
     window.addEventListener('resize', fit)
