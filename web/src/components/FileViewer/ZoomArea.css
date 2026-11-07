@@ -10,3 +10,8 @@
   width: 100%;
   min-width: 100%;
 }
+
+/* The pane fills the page down to the bottom bar: the usual 24 px under a
+   page would only make the page around it scroll. 12 px, the gap between the
+   document's pages. */
+.page-wrap:has(.zoom-area) { padding-bottom: 12px; }
