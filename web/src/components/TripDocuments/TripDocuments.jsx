@@ -128,19 +128,24 @@ export default function TripDocuments({ tripId }) {
                   <div className="trip-docs-actions">
                     <button
                       type="button"
-                      className="trip-unlink"
+                      className={`trip-docs-icon${doc.shared ? ' on' : ''}`}
                       disabled={busy === doc.id}
+                      aria-pressed={doc.shared}
+                      aria-label={doc.shared ? `Make “${doc.filename}” private` : `Share “${doc.filename}” with the trip`}
+                      title={doc.shared ? 'Shared with the trip · tap to make private' : 'Only you · tap to share with the trip'}
                       onClick={event => { event.preventDefault(); event.stopPropagation(); setShared(doc, !doc.shared) }}
                     >
-                      {doc.shared ? 'make private' : 'share'}
+                      <PeopleIcon />
                     </button>
                     <button
                       type="button"
-                      className="trip-unlink"
+                      className="trip-docs-icon danger"
                       disabled={busy === doc.id}
+                      aria-label={`Delete “${doc.filename}”`}
+                      title="Delete"
                       onClick={event => { event.preventDefault(); event.stopPropagation(); remove(doc) }}
                     >
-                      delete
+                      <TrashIcon />
                     </button>
                   </div>
                 )}
@@ -157,5 +162,29 @@ export default function TripDocuments({ tripId }) {
         Arrival cards, visas, insurance, a copy of your passport. Only you see what you add, until you share it with the trip.
       </p>
     </section>
+  )
+}
+
+// Line icons in the style of the navigation's (Layout.jsx).
+function PeopleIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <circle cx="9" cy="8" r="3.2" />
+      <path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6" />
+      <path d="M16 4.6a3.2 3.2 0 010 6.3" />
+      <path d="M18 14.3c1.8.8 3 2.7 3 4.9" />
+    </svg>
+  )
+}
+
+function TrashIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <polyline points="4 7 20 7" />
+      <path d="M9 7V4.8c0-.4.4-.8.8-.8h4.4c.4 0 .8.4.8.8V7" />
+      <path d="M6 7l1 12.2c.1 1 .9 1.8 1.9 1.8h6.2c1 0 1.8-.8 1.9-1.8L18 7" />
+      <line x1="10" y1="11" x2="10" y2="17" />
+      <line x1="14" y1="11" x2="14" y2="17" />
+    </svg>
   )
 }
