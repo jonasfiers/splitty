@@ -404,3 +404,8 @@ means: run `rollback` first, then restore the previous API from
 `/opt/splitty-api-node24.prev`.
 
 No index is needed for the labels; the repo creates no indexes or constraints.
+
+## Compression
+
+nginx compresses JavaScript, CSS, JSON and SVG (`/etc/nginx/conf.d/splitty-gzip.conf`, written by
+`scripts/setup-gzip.sh`, run inside CT101 and CT116). Debian's default compresses only HTML.

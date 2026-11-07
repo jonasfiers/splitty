@@ -12,6 +12,12 @@ pdfjs.GlobalWorkerOptions.workerSrc = workerUrl
 
 const ASSETS = '/pdfjs/'
 
+// Fetches the worker ahead of time (into the browser's cache), so a tap on a
+// PDF does not wait for it: called while an item with a PDF is open.
+export function warmUp() {
+  fetch(workerUrl, { priority: 'low' }).catch(() => {})
+}
+
 // The whole file at once, not in ranges: the signed link expires after five
 // minutes, and a ticket is at most 10 MB (the upload limit). Returns pdf.js's
 // loading task: `.promise` is the document, `.destroy()` frees it all.

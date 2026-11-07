@@ -79,6 +79,21 @@ export default function TripItemDetailPage() {
     return () => { clearInterval(timer); document.removeEventListener('visibilitychange', onVisible) }
   }, [load])
 
+  // In the installed app files open in Splitty's viewer: with a PDF on this
+  // item, fetch the viewer and pdf.js while the phone is idle, so the tap is
+  // instant instead of waiting for about half a megabyte.
+  const hasPdf = !!item?.attachments?.some(a => a.mimeType === 'application/pdf')
+  useEffect(() => {
+    if (!standalone || !hasPdf) return
+    const idle = window.requestIdleCallback ?? (fn => setTimeout(fn, 1500))
+    const cancel = window.cancelIdleCallback ?? clearTimeout
+    const handle = idle(() => {
+      import('./FileViewerPage.jsx').catch(() => {})
+      import('../utils/pdf.js').then(m => m.warmUp()).catch(() => {})
+    })
+    return () => cancel(handle)
+  }, [standalone, hasPdf])
+
   const handleDelete = async () => {
     const kept = item.expenses.length > 0 ? ' Its expenses stay in the group.' : ''
     if (!window.confirm(`Delete "${item.title}"?${kept}`)) return
