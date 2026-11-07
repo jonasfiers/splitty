@@ -271,7 +271,7 @@ function TripDetailPage() {
           <span aria-hidden="true">📄</span> Documents{docCount ? ` · ${docCount}` : ''} <span className="trip-chip-chevron" aria-hidden="true">›</span>
         </Link>
         {paid > 0 && (
-          <span className="trip-chip trip-chip-static" title="Paid so far, in the group's currency">
+          <span className="trip-paid" title="Paid so far, in the group's currency">
             {formatCurrency(paid, trip.groupIso)} paid
           </span>
         )}

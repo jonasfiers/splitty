@@ -2845,14 +2845,16 @@ a.expense-item { color: inherit; text-decoration: none; }
 .offline-docs-trip { margin-top: 20px; }
 .file-viewer-drawing { padding: 24px 0; text-align: center; font-size: 14px; color: var(--text-3); }
 
-/* Trip page: documents and money as chips under the title (TripDetailPage). */
-.trip-chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 16px; }
+/* Trip page, under the title (TripDetailPage): Documents is a link, so in
+   the app's link colour, with a faint border to be an easy target; what was
+   paid is information, so plain grey text, no chip. */
+.trip-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin: 0 0 16px; }
 .trip-chip {
   display: inline-flex; align-items: center; gap: 6px;
   padding: 6px 12px; border-radius: 999px;
-  border: 1px solid var(--border); background: var(--surface);
-  font-size: 13px; font-weight: 600; color: var(--text); text-decoration: none;
+  border: 1px solid var(--accent-subtle); background: var(--accent-light);
+  font-size: 13px; font-weight: 600; color: var(--accent); text-decoration: none;
 }
-a.trip-chip:hover { border-color: var(--accent-subtle); }
-.trip-chip-static { font-family: var(--font-mono); font-weight: 500; color: var(--text-2, var(--text)); }
-.trip-chip-chevron { color: var(--text-3); font-size: 15px; line-height: 1; }
+a.trip-chip:hover { border-color: var(--accent); }
+.trip-chip-chevron { font-size: 15px; line-height: 1; }
+.trip-paid { font-family: var(--font-mono); font-size: 13px; color: var(--text-3); }
