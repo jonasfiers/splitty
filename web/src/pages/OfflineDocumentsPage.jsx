@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { useAuth } from '../context/AuthContext'
 import Loading from '../components/Loading.jsx'
-import { removeOffline } from '../utils/offlineDocs.js'
+import { removeOffline, pruneOffline } from '../utils/offlineDocs.js'
 import { useOfflineDocs } from '../utils/useOfflineDocs.js'
 import { formatBytes } from '../utils/trip.js'
 import '../components/TripDocuments/TripDocuments.css'
@@ -27,6 +27,10 @@ export default function OfflineDocumentsPage() {
     for (const t of byTrip.values()) t.docs.sort((a, b) => a.filename.localeCompare(b.filename))
     return [...byTrip.values()].sort((a, b) => (a.title || '').localeCompare(b.title || ''))
   }, [docs])
+
+  // Online and signed in: drop copies of documents that were deleted or made
+  // private since they were kept.
+  useEffect(() => { pruneOffline() }, [])
 
   // As on the trip page: with a PDF here, load the viewer and pdf.js while
   // the phone is idle, so opening one does not wait for them.

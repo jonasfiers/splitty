@@ -405,6 +405,22 @@ router.post('/:id/documents', (req, res) => {
     });
 });
 
+// {ids: [...]} -> {ids: [...]}: those still visible to this user, for the
+// copies kept on a phone (utils/offlineDocs.js). Ids only, nothing else.
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+router.post('/documents/visible', async (req, res) => {
+    try {
+        const ids = req.body?.ids;
+        if (!Array.isArray(ids) || ids.length > 500 || !ids.every(id => typeof id === 'string' && UUID.test(id))) {
+            return res.status(400).json({ error: 'ids must be a list of document ids.' });
+        }
+        res.json({ success: true, ids: ids.length ? await tripService.visibleDocumentIds(ids, req.user.id) : [] });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // {shared: true|false}
 router.patch('/documents/:docId', async (req, res) => {
     try {

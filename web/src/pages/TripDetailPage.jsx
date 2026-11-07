@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react'
 import { useParams, useNavigate, useLocation, Link } from 'react-router'
+import { syncTrip } from '../utils/offlineDocs.js'
 import client from '../api/client'
 import FabButton from '../components/FabButton/FabButton.jsx'
 import Loading from '../components/Loading.jsx'
@@ -61,10 +62,16 @@ function TripDetailPage() {
 
   // How many documents this user sees here, for the chip (the list itself
   // is on the Documents page). Quiet on failure: the chip just has no count.
-  const [docCount, setDocCount] = useState(0)
+  // The same list also tidies this trip's copies kept on the device: one
+  // deleted or made private by its owner goes (utils/offlineDocs.js).
+  const [docIds, setDocIds] = useState(null)
   useEffect(() => {
-    client.get(`/trips/${id}/documents`).then(({ data }) => setDocCount(data.documents.length)).catch(() => {})
+    client.get(`/trips/${id}/documents`).then(({ data }) => setDocIds(data.documents.map(d => d.id))).catch(() => {})
   }, [id])
+  const docCount = docIds?.length ?? 0
+  useEffect(() => {
+    if (docIds && trip?.title) syncTrip({ id, title: trip.title }, docIds).catch(() => {})
+  }, [docIds, trip?.title, id])
 
   const load = useCallback(async () => {
     const { data } = await client.get(`/trips/${id}`)

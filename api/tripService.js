@@ -732,6 +732,19 @@ const tripService = {
         });
     },
 
+    // Which of these document ids the user may still see (theirs, or shared
+    // in a trip of one of their groups): for the copies kept on a phone,
+    // whose documents may since have been deleted or made private.
+    visibleDocumentIds: async (ids, userId) => {
+        const { records } = await driver.executeQuery(
+            `MATCH (:User {id: $userId})-[:MEMBER_OF]->(:Group)<-[:PLANNED_IN]-(:Trip)<-[:DOCUMENT_OF]-(d:Document)-[:UPLOADED_BY]->(o:User)
+             WHERE d.id IN $ids AND (d.shared = true OR o.id = $userId)
+             RETURN collect(DISTINCT d.id) AS ids`,
+            { ids, userId }
+        );
+        return records[0]?.get('ids') ?? [];
+    },
+
     countOwnDocuments: async (tripId, userId) => {
         const { records } = await driver.executeQuery(
             `MATCH (:User {id: $userId})<-[:UPLOADED_BY]-(d:Document)-[:DOCUMENT_OF]->(:Trip {id: $tripId})
