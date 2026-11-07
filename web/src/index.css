@@ -2803,8 +2803,10 @@ a.expense-item { color: inherit; text-decoration: none; }
 .eh-changes { margin: 4px 0 0; padding-left: 16px; color: var(--text); }
 .eh-none { font-size: 12px; color: var(--text-3); margin-top: 2px; }
 
-/* In-app file viewer (pages/FileViewerPage.jsx): pages fill the width. */
-.file-viewer { display: flex; flex-direction: column; gap: 12px; padding-bottom: 24px; }
+/* In-app file viewer (pages/FileViewerPage.jsx): pages fill the width, up to
+   about a printed page on a screen, so an open Fold or a desktop is not two
+   screens per page. */
+.file-viewer { display: flex; flex-direction: column; gap: 12px; padding-bottom: 24px; max-width: 720px; }
 .file-viewer-meta { font-size: 13px; color: var(--text-3); overflow-wrap: anywhere; }
 .file-viewer-pages { display: flex; flex-direction: column; gap: 12px; }
 .file-viewer-page {
