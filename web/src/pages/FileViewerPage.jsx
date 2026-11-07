@@ -61,6 +61,35 @@ function sourceOf(tripId, itemId) {
   }
 }
 
+// QA only: a line at the bottom with how long each step took, and the step
+// it is waiting in. For a viewer that sometimes hangs on a phone but never
+// while the screen is being recorded: a screenshot then shows the step.
+const SHOW_TIMINGS = window.location.hostname.startsWith('splitty-qa')
+
+function useTimings() {
+  const start = useRef(performance.now())
+  const [steps, setSteps] = useState([])
+  const [waiting, setWaiting] = useState('file list')
+  const [, tick] = useState(0)
+  const last = useRef(start.current)
+  useEffect(() => {
+    if (!SHOW_TIMINGS || !waiting) return
+    const t = setInterval(() => tick(n => n + 1), 250)
+    return () => clearInterval(t)
+  }, [waiting])
+  const mark = useRef((name, next) => {
+    if (!SHOW_TIMINGS) return
+    const now = performance.now()
+    const ms = Math.round(now - last.current)
+    last.current = now
+    setSteps(list => [...list, `${name} ${ms}`])
+    setWaiting(next)
+  }).current
+  const line = !SHOW_TIMINGS ? null
+    : `${steps.join(' · ')}${waiting ? `${steps.length ? ' · ' : ''}waiting: ${waiting} ${Math.round((performance.now() - last.current) / 100) / 10}s` : ` · total ${Math.round(last.current - start.current)} ms`}`
+  return { mark, line }
+}
+
 export default function FileViewerPage() {
   const { tripId, itemId, fileId } = useParams()
   const navigate = useNavigate()
@@ -68,11 +97,14 @@ export default function FileViewerPage() {
   const [files, setFiles] = useState(null)
   const [error, setError] = useState('')
   const source = sourceOf(tripId, itemId)
+  const { mark, line } = useTimings()
 
   useEffect(() => {
     source.load()
       .then(list => {
         if (!list.some(a => a.id === fileId)) setError(source.gone)
+        const f = list.find(a => a.id === fileId)
+        mark('list', f ? (f.mimeType === 'application/pdf' ? 'pdf.js' : 'image') : null)
         setFiles(list)
       })
       .catch(() => setError('Could not load this file. Go back and try again.'))
@@ -122,15 +154,16 @@ export default function FileViewerPage() {
       {file && (
         <ZoomArea>
           {file.mimeType === 'application/pdf'
-            ? <PdfView url={file.src} onError={() => setError('This PDF could not be shown here. Use Download to open it in another app.')} />
-            : <img className="file-viewer-page" src={file.src} alt={file.filename} />}
+            ? <PdfView url={file.src} mark={mark} onError={() => setError('This PDF could not be shown here. Use Download to open it in another app.')} />
+            : <img className="file-viewer-page" src={file.src} alt={file.filename} onLoad={() => mark('image', null)} />}
         </ZoomArea>
       )}
+      {line && <div className="file-viewer-timings">{line}</div>}
     </div>
   )
 }
 
-function PdfView({ url, onError }) {
+function PdfView({ url, onError, mark = () => {} }) {
   const box = useRef(null)
   const [state, setState] = useState({ loading: true, pages: 0, shown: 0 })
 
@@ -148,6 +181,7 @@ function PdfView({ url, onError }) {
     let pass = 0          // a newer drawing pass stops an older one
     let drawnWidth = 0
     let timer = null
+    let drawn = false     // timings: only the first drawing counts
 
     // Draws every page for the box's current width, sharp on this screen
     // (CSS width × device pixel ratio). Each new canvas replaces the old one
@@ -158,6 +192,8 @@ function PdfView({ url, onError }) {
       const cssWidth = el?.clientWidth
       if (!doc || !cssWidth || cssWidth === drawnWidth) return
       drawnWidth = cssWidth
+      const first = !drawn
+      drawn = true
       const mine = ++pass
       const shown = Math.min(doc.numPages, MAX_PAGES)
       let ratio = Math.min(window.devicePixelRatio || 1, 3)
@@ -181,6 +217,8 @@ function PdfView({ url, onError }) {
         const old = el.children[n - 1]
         if (old) { old.replaceWith(canvas); release(old) }
         else el.appendChild(canvas)
+        if (first && n === 1) mark('page 1', shown > 1 ? 'other pages' : null)
+        if (first && n === shown && shown > 1) mark('rest', null)
       }
     }
 
@@ -192,9 +230,12 @@ function PdfView({ url, onError }) {
     ;(async () => {
       try {
         const { loadPdf } = await import('../utils/pdf.js')
+        mark('pdf.js', 'file')
         task = await loadPdf(url)
+        mark('file', 'reading the PDF')
         if (cancelled) { task.destroy(); return }
         doc = await task.promise
+        mark('read', 'page 1')
         if (cancelled) return
         setState({ loading: false, pages: doc.numPages, shown: Math.min(doc.numPages, MAX_PAGES) })
         await draw()
