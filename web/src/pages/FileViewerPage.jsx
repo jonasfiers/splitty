@@ -73,7 +73,7 @@ function useTimings() {
   const tap = SHOW_TIMINGS && performance.now() - (window.__splittyFileTap ?? -1e9) < 15000 ? window.__splittyFileTap : null
   const mounted = performance.now()
   const start = useRef(tap ?? mounted)
-  const [steps, setSteps] = useState(() => (tap != null ? [`open ${Math.round(mounted - tap)}`] : []))
+  const [steps, setSteps] = useState(() => (tap != null ? [`from ${window.__splittyFileTapFrom} · open ${Math.round(mounted - tap)}`] : []))
   const [waiting, setWaiting] = useState('file list')
   const [, tick] = useState(0)
   const last = useRef(mounted)
@@ -100,9 +100,25 @@ function useTimings() {
       setWaiting(null)
     }))
   }).current
+  const [notes, setNotes] = useState([])
+  const note = useRef(text => { if (SHOW_TIMINGS) setNotes(list => [...list, text]) }).current
+  // The longest time the main thread was blocked while this viewer is open
+  // (Chrome's long tasks: 50 ms or more).
+  const [longest, setLongest] = useState(0)
+  useEffect(() => {
+    if (!SHOW_TIMINGS || typeof PerformanceObserver === 'undefined') return
+    try {
+      const po = new PerformanceObserver(list => {
+        for (const e of list.getEntries()) setLongest(m => Math.max(m, Math.round(e.duration)))
+      })
+      po.observe({ type: 'longtask', buffered: true })
+      return () => po.disconnect()
+    } catch { /* not supported */ }
+  }, [])
+  const extra = [longest ? `longest block ${longest} ms` : '', ...notes].filter(Boolean)
   const line = !SHOW_TIMINGS ? null
-    : `${steps.join(' · ')}${waiting ? `${steps.length ? ' · ' : ''}waiting: ${waiting} ${Math.round((performance.now() - last.current) / 100) / 10}s` : ` · total ${Math.round(last.current - start.current)} ms`}`
-  return { mark, line }
+    : `${steps.join(' · ')}${waiting ? `${steps.length ? ' · ' : ''}waiting: ${waiting} ${Math.round((performance.now() - last.current) / 100) / 10}s` : ` · total ${Math.round(last.current - start.current)} ms`}${extra.length ? `\n${extra.join(' · ')}` : ''}`
+  return { mark, note, line }
 }
 
 export default function FileViewerPage() {
@@ -112,7 +128,7 @@ export default function FileViewerPage() {
   const [files, setFiles] = useState(null)
   const [error, setError] = useState('')
   const source = sourceOf(tripId, itemId)
-  const { mark, line } = useTimings()
+  const { mark, note, line } = useTimings()
 
   useEffect(() => {
     source.load()
@@ -169,7 +185,7 @@ export default function FileViewerPage() {
       {file && (
         <ZoomArea>
           {file.mimeType === 'application/pdf'
-            ? <PdfView id={file.id} url={file.src} mark={mark} onError={() => setError('This PDF could not be shown here. Use Download to open it in another app.')} />
+            ? <PdfView id={file.id} url={file.src} mark={mark} note={note} onError={() => setError('This PDF could not be shown here. Use Download to open it in another app.')} />
             : <img className="file-viewer-page" src={file.src} alt={file.filename} onLoad={() => mark('image', null)} />}
         </ZoomArea>
       )}
@@ -183,19 +199,25 @@ export default function FileViewerPage() {
 // in JavaScript), showing the kept copy is instant. PNG (lossless: barcodes
 // and QR codes stay exact), ~100-300 kB a page. Only the fit-to-width drawing,
 // for the width it was drawn at; zooming in still draws with pdf.js.
-const snapshots = new Map()   // file id -> { width, pages: [{ blob, w, h }] }
+const snapshots = new Map()   // file id -> { width, pages: [{ dataUrl, w, h }] }
 const MAX_SNAPSHOTS = 8
 
 async function saveSnapshot(id, width, canvases) {
+  const asDataUrl = blob => new Promise((resolve, reject) => {
+    const r = new FileReader()
+    r.onload = () => resolve(r.result)
+    r.onerror = reject
+    r.readAsDataURL(blob)
+  })
   const pages = await Promise.all(canvases.map(c => new Promise(resolve =>
-    c.toBlob(blob => resolve(blob && { blob, w: c.width, h: c.height }), 'image/png'))))
+    c.toBlob(blob => (blob ? asDataUrl(blob).then(dataUrl => resolve({ dataUrl, w: c.width, h: c.height }), () => resolve(null)) : resolve(null)), 'image/png'))))
   if (pages.some(p => !p)) return
   snapshots.delete(id)
   snapshots.set(id, { width, pages })
   while (snapshots.size > MAX_SNAPSHOTS) snapshots.delete(snapshots.keys().next().value)
 }
 
-function PdfView({ id, url, onError, mark = () => {} }) {
+function PdfView({ id, url, onError, mark = () => {}, note = () => {} }) {
   const box = useRef(null)
   const [state, setState] = useState({ loading: true, drawing: true, pages: 0, shown: 0 })
 
@@ -209,7 +231,7 @@ function PdfView({ id, url, onError, mark = () => {} }) {
     // the browser gets round to collecting it; on a phone, opening a ticket a
     // few times in a row then ran out of memory and slowed down. Emptying it
     // frees them at once.
-    const release = canvas => { canvas.width = 0; canvas.height = 0 }
+    const release = el => { if (el.tagName === 'CANVAS') { el.width = 0; el.height = 0 } else el.removeAttribute('src') }
     let pass = 0          // a newer drawing pass stops an older one
     let drawnWidth = 0
     let timer = null
@@ -264,18 +286,22 @@ function PdfView({ id, url, onError, mark = () => {} }) {
       const snap = id && snapshots.get(id)
       const cssWidth = host?.clientWidth
       if (!snap || snap.width !== cssWidth) return false
-      for (const { blob, w, h } of snap.pages) {
-        const bitmap = await createImageBitmap(blob)
-        if (cancelled) { bitmap.close(); return true }
-        const canvas = document.createElement('canvas')
-        canvas.className = 'file-viewer-page'
-        canvas.width = w
-        canvas.height = h
-        canvas.style.aspectRatio = `${w} / ${h}`
-        canvas.getContext('2d').drawImage(bitmap, 0, 0)
-        bitmap.close()
-        host.appendChild(canvas)
-      }
+      // As images, not canvases: the browser decodes them off the main thread
+      // (img.decode) and paints them along its most optimised path. data:
+      // URLs, which the Content Security Policy's img-src allows (blob: not).
+      const imgs = await Promise.all(snap.pages.map(async ({ dataUrl, w, h }) => {
+        const img = new Image()
+        img.className = 'file-viewer-page'
+        img.alt = ''
+        img.width = w
+        img.height = h
+        img.style.aspectRatio = `${w} / ${h}`
+        img.src = dataUrl
+        await img.decode().catch(() => {})
+        return img
+      }))
+      if (cancelled) return true
+      host.append(...imgs)
       drawnWidth = cssWidth
       drawn = true
       setState(st => ({ ...st, loading: false, drawing: false, pages: snap.pages.length, shown: snap.pages.length }))
@@ -289,8 +315,11 @@ function PdfView({ id, url, onError, mark = () => {} }) {
     // and the kept drawing waited that long to be painted.
     let loading = null
     const loadDoc = () => loading ??= (async () => {
-      // Timed only when it is what the viewer waits for (no kept drawing).
+      // Timed only when it is what the viewer waits for (no kept drawing);
+      // in the background, reported as one note.
       const step = drawn ? () => {} : mark
+      const bgStart = performance.now()
+      const background = drawn
       const { loadPdf } = await import('../utils/pdf.js')
       step('pdf.js', 'file')
       task = await loadPdf(url)
@@ -298,6 +327,7 @@ function PdfView({ id, url, onError, mark = () => {} }) {
       if (cancelled) { task.destroy(); throw new Error('closed') }
       doc = await task.promise
       step('read', 'page 1')
+      if (background) note(`pdf.js loaded in background ${Math.round(performance.now() - bgStart)} ms (width ${host?.clientWidth} vs ${drawnWidth})`)
       if (cancelled) throw new Error('closed')
       setState(st => ({ ...st, loading: false, pages: doc.numPages, shown: Math.min(doc.numPages, MAX_PAGES) }))
     })()
@@ -331,7 +361,7 @@ function PdfView({ id, url, onError, mark = () => {} }) {
       clearTimeout(timer)
       watch.disconnect()
       task?.destroy()
-      for (const canvas of host?.querySelectorAll('canvas') ?? []) release(canvas)
+      for (const page of host?.querySelectorAll('canvas, img') ?? []) release(page)
       host?.replaceChildren()
     }
   }, [url]) // eslint-disable-line react-hooks/exhaustive-deps

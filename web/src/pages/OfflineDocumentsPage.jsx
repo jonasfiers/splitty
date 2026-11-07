@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { markFileTap } from '../utils/fileTap.js'
 import { Link, useNavigate } from 'react-router'
 import { useAuth } from '../context/AuthContext'
@@ -28,6 +28,20 @@ export default function OfflineDocumentsPage() {
     for (const t of byTrip.values()) t.docs.sort((a, b) => a.filename.localeCompare(b.filename))
     return [...byTrip.values()].sort((a, b) => (a.title || '').localeCompare(b.title || ''))
   }, [docs])
+
+  // As on the trip page: with a PDF here, load the viewer and pdf.js while
+  // the phone is idle, so opening one does not wait for them.
+  const hasPdf = !!docs?.some(d => d.mimeType === 'application/pdf')
+  useEffect(() => {
+    if (!hasPdf) return
+    const idle = window.requestIdleCallback ?? (fn => setTimeout(fn, 1500))
+    const cancel = window.cancelIdleCallback ?? clearTimeout
+    const handle = idle(() => {
+      import('./FileViewerPage.jsx').catch(() => {})
+      import('../utils/pdf.js').then(m => m.warmUp()).catch(() => {})
+    })
+    return () => cancel(handle)
+  }, [hasPdf])
 
   const remove = async doc => {
     if (!window.confirm(`Remove “${doc.filename}” from this device? It stays in the trip.`)) return
