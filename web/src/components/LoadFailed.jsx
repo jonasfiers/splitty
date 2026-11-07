@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { Link } from 'react-router'
-import { isNetworkError, onReconnect } from '../utils/connection.js'
+import { isNetworkError, onReconnect, reportReachable } from '../utils/connection.js'
 import { useOfflineDocs } from '../utils/useOfflineDocs.js'
 
 // What a page shows when its data could not be loaded, instead of an empty
@@ -17,6 +17,19 @@ export default function LoadFailed({ error, what, onRetry, docs = true }) {
   const kept = useOfflineDocs()
 
   useEffect(() => (noConnection ? onReconnect(onRetry) : undefined), [noConnection, onRetry])
+
+  // The browser does not always say when the connection is back (with a VPN
+  // it never thought it was gone), so ask the server quietly every 10 s; only
+  // an answer reloads the page, so it does not flicker between loading and
+  // failing meanwhile.
+  useEffect(() => {
+    if (!noConnection) return
+    const probe = () => fetch('/api/health', { cache: 'no-store', signal: AbortSignal.timeout(5000) })
+      .then(res => { if (res.ok) reportReachable(true) })
+      .catch(() => {})
+    const timer = setInterval(probe, 10000)
+    return () => clearInterval(timer)
+  }, [noConnection])
 
   return (
     <div className="empty-state load-failed" role="alert">
