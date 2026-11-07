@@ -62,12 +62,13 @@ export default function PrivacyPage() {
           Maps are drawn from Splitty’s own copy of OpenStreetMap’s map data (prepared by Protomaps), so showing a
           map sends nothing to anyone else. If that copy is unavailable, Splitty’s server fetches map images from
           OpenStreetMap instead; OpenStreetMap then sees only that Splitty asked for part of the map, not who is
-          looking at it.
+          looking at it. For exchange rates, Splitty’s server asks Frankfurter (frankfurter.app) for the rate
+          between two currencies on a day; nothing about you is sent.
         </p>
 
         <h2>Where it is kept</h2>
         <p>
-          On Jonas’s own server in Belgium, with backups on a disk in the same place. Only the services listed
+          On Jonas’s own server in Belgium, with backups on a disk in the same place. Only the services named
           above receive anything, and only what is described there. Jonas also runs a test copy of Splitty, which
           only he can reach, on a copy of the same data; deleting your account deletes it there too, within an hour.
         </p>

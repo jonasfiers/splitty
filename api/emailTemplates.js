@@ -39,7 +39,8 @@ function baseTemplate({ title, previewText, body }) {
   <title>${e(title)}</title>
   <!--[if mso]><noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript><![endif]-->
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap');
+    /* No web fonts: loading them from Google would tell Google who opened the email.
+       Plus Jakarta Sans and DM Serif Display show where installed; else Arial and Georgia. */
     body,html{margin:0;padding:0;background-color:#F5F1EB;-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;}
     table{border-collapse:collapse;}
     @media only screen and (max-width:600px){
