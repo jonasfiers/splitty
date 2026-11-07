@@ -66,12 +66,18 @@ function sourceOf(tripId, itemId) {
 // while the screen is being recorded: a screenshot then shows the step.
 const SHOW_TIMINGS = window.location.hostname.startsWith('splitty-qa')
 
+// Timings start at the tap that opened the viewer (utils/fileTap.js), so
+// leaving the previous page and loading the viewer count too ("open").
+
 function useTimings() {
-  const start = useRef(performance.now())
-  const [steps, setSteps] = useState([])
+  const tap = SHOW_TIMINGS && performance.now() - (window.__splittyFileTap ?? -1e9) < 15000 ? window.__splittyFileTap : null
+  const mounted = performance.now()
+  const start = useRef(tap ?? mounted)
+  const [steps, setSteps] = useState(() => (tap != null ? [`open ${Math.round(mounted - tap)}`] : []))
   const [waiting, setWaiting] = useState('file list')
   const [, tick] = useState(0)
-  const last = useRef(start.current)
+  const last = useRef(mounted)
+  useEffect(() => { window.__splittyFileTap = undefined }, [])
   useEffect(() => {
     if (!SHOW_TIMINGS || !waiting) return
     const t = setInterval(() => tick(n => n + 1), 250)
@@ -83,7 +89,15 @@ function useTimings() {
     const ms = Math.round(now - last.current)
     last.current = now
     setSteps(list => [...list, `${name} ${ms}`])
-    setWaiting(next)
+    if (next !== null) { setWaiting(next); return }
+    // Done drawing: until the browser has painted it (two frames later).
+    setWaiting('shown')
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      const t = performance.now()
+      setSteps(list => [...list, `shown ${Math.round(t - last.current)}`])
+      last.current = t
+      setWaiting(null)
+    }))
   }).current
   const line = !SHOW_TIMINGS ? null
     : `${steps.join(' · ')}${waiting ? `${steps.length ? ' · ' : ''}waiting: ${waiting} ${Math.round((performance.now() - last.current) / 100) / 10}s` : ` · total ${Math.round(last.current - start.current)} ms`}`

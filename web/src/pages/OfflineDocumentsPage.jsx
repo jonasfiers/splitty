@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { markFileTap } from '../utils/fileTap.js'
 import { Link, useNavigate } from 'react-router'
 import { useAuth } from '../context/AuthContext'
 import Loading from '../components/Loading.jsx'
@@ -61,7 +62,7 @@ export default function OfflineDocumentsPage() {
                   key={doc.id}
                   className="expense-item"
                   href={`/offline-documents/${doc.id}`}
-                  onClick={event => { event.preventDefault(); navigate(`/offline-documents/${doc.id}`) }}
+                  onClick={event => { event.preventDefault(); markFileTap(); navigate(`/offline-documents/${doc.id}`) }}
                 >
                   <div className="expense-icon">{doc.mimeType === 'application/pdf' ? '📄' : '🖼️'}</div>
                   <div className="expense-info">
