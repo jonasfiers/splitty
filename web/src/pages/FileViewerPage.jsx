@@ -192,7 +192,7 @@ function PdfView({ url, onError, mark = () => {} }) {
       const cssWidth = el?.clientWidth
       if (!doc || !cssWidth || cssWidth === drawnWidth) return
       drawnWidth = cssWidth
-      const first = !drawn
+      const firstDraw = !drawn
       drawn = true
       const mine = ++pass
       const shown = Math.min(doc.numPages, MAX_PAGES)
@@ -217,8 +217,8 @@ function PdfView({ url, onError, mark = () => {} }) {
         const old = el.children[n - 1]
         if (old) { old.replaceWith(canvas); release(old) }
         else el.appendChild(canvas)
-        if (first && n === 1) mark('page 1', shown > 1 ? 'other pages' : null)
-        if (first && n === shown && shown > 1) mark('rest', null)
+        if (firstDraw && n === 1) mark('page 1', shown > 1 ? 'other pages' : null)
+        if (firstDraw && n === shown && shown > 1) mark('rest', null)
       }
     }
 
