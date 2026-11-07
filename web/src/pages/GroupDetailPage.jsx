@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import LoadFailed from '../components/LoadFailed.jsx'
 import { useParams, Link, useNavigate, useLocation } from 'react-router'
 import client from '../api/client'
@@ -77,11 +77,26 @@ export default function GroupDetailPage() {
     return p.toString()
   }, [])
 
+  // The expenses query for the current search and filters. Built from the
+  // debounced keyword, so typing does not reload on every letter.
+  const query = buildQuery(0, { ...filters, keyword: debouncedKeyword })
+  const queryRef = useRef(query)
+  queryRef.current = query
+  // Which query the list shows, and a counter so a slow older answer cannot
+  // replace a newer one.
+  const loadedQuery = useRef(null)
+  const expensesSeq = useRef(0)
+
+  // Everything on the page: on opening it, on Try again, and after a change
+  // (member removed, settlement). Search and filters reload only the
+  // expenses (below): six requests per letter typed ran into the server's
+  // rate limit.
   const load = useCallback(async () => {
-    const activeFilters = { ...filters, keyword: debouncedKeyword }
+    const seq = ++expensesSeq.current
+    loadedQuery.current = queryRef.current
     const [groupRes, expensesRes, membersRes, catRes, catsRes, tripsRes] = await Promise.all([
       client.get(`/groups/${id}`),
-      client.get(`/groups/${id}/expenses?${buildQuery(0, activeFilters)}`),
+      client.get(`/groups/${id}/expenses?${queryRef.current}`),
       client.get(`/groups/${id}/members`),
       client.get(`/groups/${id}/category-totals`),
       client.get('/categories'),
@@ -89,8 +104,10 @@ export default function GroupDetailPage() {
     ])
     const g = groupRes.data.groups?.[0] ?? null
     setGroup(g)
-    setExpenses(expensesRes.data.expenses || [])
-    setHasMore(expensesRes.data.hasMore || false)
+    if (seq === expensesSeq.current) {
+      setExpenses(expensesRes.data.expenses || [])
+      setHasMore(expensesRes.data.hasMore || false)
+    }
     const mbs = g?.members || membersRes.data.members || []
     setMembers(mbs)
     const me = mbs.find(m => m.id === currentUser?.id)
@@ -98,13 +115,15 @@ export default function GroupDetailPage() {
     setCategoryTotals(catRes.data.categories || [])
     setCategories(catsRes.data.categories || [])
     setTrips(tripsRes.data.trips || [])
-  }, [id, filters, debouncedKeyword, buildQuery])
+  }, [id])
 
   const loadMore = async () => {
     setLoadingMore(true)
     try {
       const qs = buildQuery(expenses.length, { ...filters, keyword: debouncedKeyword })
+      const seq = expensesSeq.current
       const res = await client.get(`/groups/${id}/expenses?${qs}`)
+      if (seq !== expensesSeq.current) return
       setExpenses(prev => [...prev, ...(res.data.expenses || [])])
       setHasMore(res.data.hasMore || false)
     } finally {
@@ -114,13 +133,27 @@ export default function GroupDetailPage() {
 
   // Loading failed (not "no such group": that is a 404): the "couldn't load"
   // state, not "Group not found.".
-  // (load also reruns on every filter or search change: those keep the page.)
   const [loadError, setLoadError] = useState(null)
   const fetchAll = useCallback(() => load()
     .then(() => setLoadError(null))
     .catch(err => { if (err.response?.status !== 404) setLoadError(err) })
     .finally(() => setLoading(false)), [load])
   useEffect(() => { fetchAll() }, [fetchAll])
+
+  // A search or filter change: only the expenses, and the page stays as it
+  // is if that fails (a message instead of "Couldn't load this group").
+  useEffect(() => {
+    if (loadedQuery.current === null || loadedQuery.current === query) return
+    loadedQuery.current = query
+    const seq = ++expensesSeq.current
+    client.get(`/groups/${id}/expenses?${query}`)
+      .then(res => {
+        if (seq !== expensesSeq.current) return
+        setExpenses(res.data.expenses || [])
+        setHasMore(res.data.hasMore || false)
+      })
+      .catch(() => { if (seq === expensesSeq.current) setError('Couldn’t load the expenses for this search. Try again.') })
+  }, [id, query])
   const retry = useCallback(() => { setLoading(true); fetchAll() }, [fetchAll])
 
   const handleRemoveMember = async userId => {
