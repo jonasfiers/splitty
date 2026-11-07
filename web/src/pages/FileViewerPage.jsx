@@ -94,8 +94,9 @@ function useTimings() {
     setWaiting('shown')
     requestAnimationFrame(() => requestAnimationFrame(() => {
       const t = performance.now()
-      setSteps(list => [...list, `shown ${Math.round(t - last.current)}`])
+      const shownMs = Math.round(t - last.current)   // before last moves on
       last.current = t
+      setSteps(list => [...list, `shown ${shownMs}`])
       setWaiting(null)
     }))
   }).current
@@ -282,27 +283,41 @@ function PdfView({ id, url, onError, mark = () => {} }) {
       return true
     }
 
+    // pdf.js and the document, loaded once, when first needed: at once
+    // without a kept drawing, else only for zooming or a new width. Loading
+    // it (430 kB of code, a worker) kept a phone's slow cores busy for ~3 s,
+    // and the kept drawing waited that long to be painted.
+    let loading = null
+    const loadDoc = () => loading ??= (async () => {
+      const { loadPdf } = await import('../utils/pdf.js')
+      mark('pdf.js', 'file')
+      task = await loadPdf(url)
+      mark('file', 'reading the PDF')
+      if (cancelled) { task.destroy(); throw new Error('closed') }
+      doc = await task.promise
+      mark('read', 'page 1')
+      if (cancelled) throw new Error('closed')
+      setState(st => ({ ...st, loading: false, pages: doc.numPages, shown: Math.min(doc.numPages, MAX_PAGES) }))
+    })()
+
     const watch = new ResizeObserver(() => {
       clearTimeout(timer)
-      timer = setTimeout(() => draw().catch(() => {}), 200)
+      timer = setTimeout(() => {
+        if (host?.clientWidth === drawnWidth) return
+        loadDoc().then(draw).catch(() => {})
+      }, 200)
     })
 
     ;(async () => {
       try {
         const kept = await showSnapshot().catch(() => false)
-        const { loadPdf } = await import('../utils/pdf.js')
-        if (!kept) mark('pdf.js', 'file')
-        task = await loadPdf(url)
-        if (!kept) mark('file', 'reading the PDF')
-        if (cancelled) { task.destroy(); return }
-        doc = await task.promise
-        if (!kept) mark('read', 'page 1')
-        if (cancelled) return
-        setState(st => ({ ...st, loading: false, pages: doc.numPages, shown: Math.min(doc.numPages, MAX_PAGES) }))
-        await draw()   // nothing to do when the kept drawing fits this width
+        if (!kept) {
+          await loadDoc()
+          await draw()
+        }
         if (host) watch.observe(host)
       } catch (err) {
-        if (!cancelled) {
+        if (!cancelled && err?.message !== 'closed') {
           console.warn('PDF not shown:', err?.message || err)
           setState(s => ({ ...s, loading: false }))
           onError()
