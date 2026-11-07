@@ -11,7 +11,10 @@ set -e
 # while git still tracked the obsolete Docker-era version at this path.
 
 BACKUP_DIR="/opt/backups/neo4j"
-RETENTION_DAYS=14
+# 7 days here; the nightly vzdump of this CT (kept 7 days) and pve's HDD copy
+# (sync-neo4j-backups.sh, kept 14 days) hold them longer. Together that is the
+# privacy page's promise: a deleted account is in no backup after 14 days.
+RETENTION_DAYS=7
 TIMESTAMP=$(date +%F_%H%M)
 export JAVA_HOME=/opt/java21
 export PATH=/opt/java21/bin:$PATH
@@ -90,5 +93,5 @@ cypher "MATCH (payer:User)-[:PAID]->(e:Expense)-[o:OWED_BY]->(u:User) RETURN cou
 # --- nudge the API so its Bolt pool is rebuilt before a user arrives ------------
 curl -fsS -m 10 http://127.0.0.1:3000/health >/dev/null 2>&1 || true
 
-# delete backups older than RETENTION_DAYS
-find "$BACKUP_DIR" -name "neo4j-*.tar.gz" -mtime +$RETENTION_DAYS -delete
+# delete backups RETENTION_DAYS old (find's -mtime +N means N+1 days or more)
+find "$BACKUP_DIR" -name "neo4j-*.tar.gz" -mtime +$((RETENTION_DAYS - 1)) -delete

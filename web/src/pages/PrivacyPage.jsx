@@ -92,7 +92,7 @@ export default function PrivacyPage() {
         </ul>
 
         <h2>Changes</h2>
-        <p>If this page changes in a way that matters, Splitty will tell you in the app. The date at the top shows the last change.</p>
+        <p>If this page changes in a way that matters, Jonas will email you about it. The date at the top shows the last change.</p>
       </article>
     </div>
   )
