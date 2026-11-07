@@ -65,6 +65,7 @@ function sourceOf(tripId, itemId) {
 // it is waiting in. For a viewer that sometimes hangs on a phone but never
 // while the screen is being recorded: a screenshot then shows the step.
 const SHOW_TIMINGS = window.location.hostname.startsWith('splitty-qa')
+  || (() => { try { return localStorage.getItem('splitty-timings') === '1' } catch { return false } })()
 
 // Timings start at the tap that opened the viewer (utils/fileTap.js), so
 // leaving the previous page and loading the viewer count too ("open").
