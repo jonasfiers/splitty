@@ -4,7 +4,6 @@ import client from '../api/client'
 import Loading from '../components/Loading.jsx'
 import PageHeader from '../components/PageHeader/PageHeader.jsx'
 import ZoomArea from '../components/FileViewer/ZoomArea.jsx'
-import { formatBytes } from '../utils/trip.js'
 import { useMediaQuery } from '../utils/useMediaQuery.js'
 
 // A trip item's file (ticket, booking...) inside Splitty, for the installed
@@ -78,7 +77,6 @@ export default function FileViewerPage() {
       {error && <p className="error">{error}</p>}
       {file && (
         <div className="file-viewer">
-          <div className="file-viewer-meta">{wide ? '' : `${file.filename} · `}{formatBytes(file.size)}</div>
           <ZoomArea>
             {file.mimeType === 'application/pdf'
               ? <PdfView url={`/api${file.url}`} onError={() => setError('This PDF could not be shown here. Use Download to open it in another app.')} />
