@@ -15,3 +15,15 @@
   width: min(100%, var(--zoom-fit));
   margin: 0 auto;
 }
+
+/* A short fade-in as the viewer opens. Mostly for the phone: with power
+   saving on, a still screen drops to a low refresh rate and the finished page
+   could wait seconds to be painted (seen on a Galaxy Fold); something moving
+   makes it pick up again at once. */
+@media (prefers-reduced-motion: no-preference) {
+  .zoom-content { animation: zoom-content-in 240ms ease-out; }
+}
+@keyframes zoom-content-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: none; }
+}
