@@ -58,11 +58,9 @@ export default function FileViewerPage() {
     <>
       <PageHeader
         compact
-        crumbs={[
-          { to: '/trips', label: 'Trips' },
-          { to: `/trips/${tripId}`, label: item?.tripTitle || 'Trip' },
-          { to: `/trips/${tripId}/items/${itemId}`, label: item?.title || 'Item' },
-        ]}
+        // "‹ Back", not the item's title: a journey's title ("Brussels
+        // National Airport → Schiphol Airport") wraps over three lines.
+        back={{ to: `/trips/${tripId}/items/${itemId}` }}
         name={file?.filename || 'File'}
         actions={file ? [{ label: 'Download', onClick: download, primary: true }] : []}
       />
