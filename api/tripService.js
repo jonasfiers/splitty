@@ -341,7 +341,8 @@ const tripService = {
                  OPTIONAL MATCH (a:Attachment)-[:ATTACHED_TO]->(:TripItem)-[:PART_OF]->(t)
                  WITH t, collect(a) AS files, collect(a.storedName) AS fileNames
                  OPTIONAL MATCH (doc:Document)-[:DOCUMENT_OF]->(t)
-                 WITH t, files + collect(doc) AS attachments, fileNames + collect(doc.storedName) AS storedNames
+                 WITH t, files, fileNames, collect(doc) AS docs, collect(doc.storedName) AS docNames
+                 WITH t, files + docs AS attachments, fileNames + docNames AS storedNames
                  OPTIONAL MATCH (i:TripItem)-[:PART_OF]->(t)
                  WITH t, attachments, storedNames, collect(i) AS items
                  OPTIONAL MATCH (p:Place)-[:PLACE_OF]->(t)
