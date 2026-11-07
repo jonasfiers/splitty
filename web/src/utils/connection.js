@@ -16,6 +16,19 @@ export function reportReachable(ok) {
 }
 
 export const isOffline = () => navigator.onLine === false || unreachable
+export const isUnreachable = () => unreachable
+
+// Requests to the server still waiting for an answer (api/client.js), so the
+// loading indicator can say when one takes long (components/Loading).
+const pending = new Map()
+let nextId = 0
+export function requestStarted() { const id = ++nextId; pending.set(id, performance.now()); return id }
+export function requestEnded(id) { pending.delete(id) }
+export function longestWaitMs() {
+  let oldest = Infinity
+  for (const t of pending.values()) oldest = Math.min(oldest, t)
+  return oldest === Infinity ? 0 : performance.now() - oldest
+}
 
 // A failed request that never got an answer from the server.
 export const isNetworkError = err => !!err && !err.response && err.code !== 'ERR_CANCELED'
