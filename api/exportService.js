@@ -138,6 +138,15 @@ async function collect(userId) {
                 i.id AS itemId, t.id AS tripId, u.id AS uploadedById, u.name AS uploadedBy, up.on AS uploadedAt`,
         { userId });
 
+    // Trip documents: the user's own (shared or not) and those shared with
+    // them; someone else's private documents are not theirs to see.
+    const documents = await q(
+        `MATCH (:User {id: $userId})-[:MEMBER_OF]->(:Group)<-[:PLANNED_IN]-(t:Trip)<-[:DOCUMENT_OF]-(d:Document)-[up:UPLOADED_BY]->(u:User)
+         WHERE d.shared = true OR u.id = $userId
+         RETURN d.id AS id, d.filename AS filename, d.mimeType AS mimeType, d.size AS size, d.storedName AS storedName,
+                d.shared = true AS shared, t.id AS tripId, u.id AS uploadedById, u.name AS uploadedBy, up.on AS uploadedAt`,
+        { userId });
+
     const placeRole = { AT: 'place', DEPARTS_FROM: 'from', ARRIVES_AT: 'to' };
     const tripList = trips.map(({ trip, groupId, groupTitle }) => ({
         ...trip,
@@ -154,9 +163,15 @@ async function collect(userId) {
                 includedAs: a.uploadedById === userId ? fileName(a) : null,
             })),
         })),
+        documents: documents.filter(d => d.tripId === trip.id).map(d => ({
+            id: d.id, filename: d.filename, mimeType: d.mimeType, size: d.size,
+            sharedWithTrip: d.shared, uploadedBy: d.uploadedBy ?? null, uploadedAt: d.uploadedAt ?? null,
+            includedAs: d.uploadedById === userId ? fileName(d) : null,
+        })),
     }));
 
-    return { account, passkeys, groups, expenses, trips: tripList, ownFiles: attachments.filter(a => a.uploadedById === userId) };
+    const own = list => list.filter(a => a.uploadedById === userId);
+    return { account, passkeys, groups, expenses, trips: tripList, ownFiles: [...own(attachments), ...own(documents)] };
 }
 
 const safe = s => String(s || 'file').replace(/[\\/:*?"<>|\x00-\x1f]/g, '_').slice(0, 120);
@@ -189,12 +204,13 @@ const README = generated => `Your Splitty data, exported ${generated}.
 
 data.json     Everything Splitty holds that you can see: your account, passkeys,
               your groups and their members, every expense with its shares,
-              and your trips with their items, places and attachments.
+              and your trips with their items, places, attachments and travel
+              documents (yours, and those others shared with the trip).
 expenses.csv  One row per expense in your groups (amounts in normal units,
               e.g. 12.50; "My share" is your part of it).
 trips.csv     One row per trip item.
-files/        The files you uploaded to trips. Files other people uploaded are
-              listed in data.json but not included.
+files/        The files and travel documents you uploaded to trips. Files other
+              people uploaded are listed in data.json but not included.
 
 Not included: your password (Splitty only stores a one-way hash of it) and the
 private part of your passkeys (it never leaves your device).

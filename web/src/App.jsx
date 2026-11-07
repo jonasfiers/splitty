@@ -50,6 +50,7 @@ export default function App() {
           <Route element={<ProtectedRoute />}>
             {/* Full screen, outside the Layout: no sidebar, no bottom bar. */}
             <Route path="/trips/:tripId/items/:itemId/files/:fileId" element={<FileViewerPage />} />
+            <Route path="/trips/:tripId/documents/:fileId" element={<FileViewerPage />} />
             <Route element={<Layout />}>
               <Route index element={<Navigate to="/groups" replace />} />
               <Route path="/groups" element={<GroupsPage />} />

@@ -331,15 +331,17 @@ const tripService = {
         }
     },
 
-    // DELETE — takes the items, places and attachments with it, leaves the
-    // expenses in the group. Returns the stored file names so the caller can
+    // DELETE — takes the items, places, attachments and documents with it,
+    // leaves the expenses in the group. Returns the stored file names so the caller can
     // remove them from disk once the graph no longer references them.
     deleteTrip: async (tripId, userId) => {
         try {
             const { records } = await driver.executeQuery(
                 `MATCH ${TRIP_ACCESS}
                  OPTIONAL MATCH (a:Attachment)-[:ATTACHED_TO]->(:TripItem)-[:PART_OF]->(t)
-                 WITH t, collect(a) AS attachments, collect(a.storedName) AS storedNames
+                 WITH t, collect(a) AS files, collect(a.storedName) AS fileNames
+                 OPTIONAL MATCH (doc:Document)-[:DOCUMENT_OF]->(t)
+                 WITH t, files + collect(doc) AS attachments, fileNames + collect(doc.storedName) AS storedNames
                  OPTIONAL MATCH (i:TripItem)-[:PART_OF]->(t)
                  WITH t, attachments, storedNames, collect(i) AS items
                  OPTIONAL MATCH (p:Place)-[:PLACE_OF]->(t)
@@ -667,9 +669,11 @@ const tripService = {
 
     // No user here on purpose: the download route authorises with a signed,
     // short-lived link instead of the bearer token (see routes/trips.js).
+    // Item attachments and trip documents alike (one download route).
     getAttachmentById: async (id) => {
         const { records } = await driver.executeQuery(
-            'MATCH (a:Attachment {id: $id}) RETURN a', { id }
+            `CALL { MATCH (a:Attachment {id: $id}) RETURN a UNION MATCH (a:Document {id: $id}) RETURN a }
+             RETURN a LIMIT 1`, { id }
         );
         return records.length ? records[0].get('a').properties : null;
     },
@@ -693,6 +697,111 @@ const tripService = {
         } catch (err) {
             throw new Error(`Failed to delete attachment: ${err.message}`);
         }
+    },
+
+    // DOCUMENTS — a trip's travel documents (arrival cards, visas, insurance,
+    // passport copies): files of the trip, not of one item. Each is private
+    // to whoever uploaded it unless they share it with the trip
+    // (`shared: true`); only the uploader can share, unshare or delete it.
+    // Unlike everything else in a group they leave no trace in its Activity:
+    // the name of a private document is no one else's business.
+    // A member's private documents go when they leave the group (they could
+    // no longer reach them) and all of them go with their account
+    // (accountDeletion.js).
+    listDocuments: async (tripId, userId) => {
+        const { records } = await driver.executeQuery(
+            `MATCH ${TRIP_ACCESS}
+             MATCH (d:Document)-[:DOCUMENT_OF]->(t)
+             MATCH (d)-[up:UPLOADED_BY]->(o:User)
+             WHERE d.shared = true OR o.id = $userId
+             RETURN d, o.id AS ownerId, o.name AS ownerName, up.on AS uploadedAt
+             ORDER BY toLower(d.filename)`,
+            { tripId, userId }
+        );
+        return records.map(r => {
+            const { storedName, ...d } = r.get('d').properties;
+            return {
+                ...d,
+                size: num(d.size),
+                shared: d.shared === true,
+                mine: r.get('ownerId') === userId,
+                ownerName: r.get('ownerName'),
+                uploadedAt: r.get('uploadedAt')?.toString() ?? null,
+            };
+        });
+    },
+
+    countOwnDocuments: async (tripId, userId) => {
+        const { records } = await driver.executeQuery(
+            `MATCH (:User {id: $userId})<-[:UPLOADED_BY]-(d:Document)-[:DOCUMENT_OF]->(:Trip {id: $tripId})
+             RETURN count(d) AS n`,
+            { tripId, userId }
+        );
+        return num(records[0].get('n'));
+    },
+
+    createDocument: async (tripId, userId, { filename, mimeType, size, storedName, shared }) => {
+        const { records } = await driver.executeQuery(
+            `MATCH ${TRIP_ACCESS}
+             MATCH (u:User {id: $userId})
+             CREATE (d:Document {id: randomUUID(), filename: $filename, mimeType: $mimeType, size: $size,
+                                 storedName: $storedName, shared: $shared})-[:DOCUMENT_OF]->(t)
+             CREATE (d)-[:UPLOADED_BY {on: datetime()}]->(u)
+             RETURN d.id AS id`,
+            { tripId, userId, filename, mimeType, size: neo4j.int(size), storedName, shared: shared === true }
+        );
+        if (records.length === 0) return { success: false, message: 'Trip not found or access denied' };
+        return { success: true, id: records[0].get('id') };
+    },
+
+    // Only the uploader, and only while still in the trip's group.
+    setDocumentShared: async (id, userId, shared) => {
+        const { records } = await driver.executeQuery(
+            `MATCH (u:User {id: $userId})-[:MEMBER_OF]->(:Group)<-[:PLANNED_IN]-(:Trip)<-[:DOCUMENT_OF]-(d:Document {id: $id})-[:UPLOADED_BY]->(u)
+             SET d.shared = $shared
+             RETURN d.id AS id`,
+            { id, userId, shared: shared === true }
+        );
+        if (records.length === 0) return { success: false, message: 'Document not found or not yours' };
+        return { success: true };
+    },
+
+    deleteDocument: async (id, userId) => {
+        const { records } = await driver.executeQuery(
+            `MATCH (u:User {id: $userId})-[:MEMBER_OF]->(:Group)<-[:PLANNED_IN]-(:Trip)<-[:DOCUMENT_OF]-(d:Document {id: $id})-[:UPLOADED_BY]->(u)
+             WITH d, d.storedName AS storedName
+             DETACH DELETE d
+             RETURN storedName`,
+            { id, userId }
+        );
+        if (records.length === 0) return { success: false, message: 'Document not found or not yours' };
+        return { success: true, storedNames: [records[0].get('storedName')] };
+    },
+
+    // Leaving (or being removed from) a group: that member's private
+    // documents in its trips. Returns the stored names to remove from disk.
+    deletePrivateDocumentsInGroup: async (groupId, userId) => {
+        const { records } = await driver.executeQuery(
+            `MATCH (:Group {id: $groupId})<-[:PLANNED_IN]-(:Trip)<-[:DOCUMENT_OF]-(d:Document)-[:UPLOADED_BY]->(:User {id: $userId})
+             WHERE d.shared IS NULL OR d.shared = false
+             WITH d, d.storedName AS storedName
+             DETACH DELETE d
+             RETURN collect(storedName) AS storedNames`,
+            { groupId, userId }
+        );
+        return records[0]?.get('storedNames') ?? [];
+    },
+
+    // Account deletion: every document the user uploaded, shared or not.
+    deleteAllDocumentsOf: async (userId) => {
+        const { records } = await driver.executeQuery(
+            `MATCH (d:Document)-[:UPLOADED_BY]->(:User {id: $userId})
+             WITH d, d.storedName AS storedName
+             DETACH DELETE d
+             RETURN collect(storedName) AS storedNames`,
+            { userId }
+        );
+        return records[0]?.get('storedNames') ?? [];
     },
 };
 

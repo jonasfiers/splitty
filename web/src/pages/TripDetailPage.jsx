@@ -4,6 +4,7 @@ import client from '../api/client'
 import FabButton from '../components/FabButton/FabButton.jsx'
 import Loading from '../components/Loading.jsx'
 import PageHeader from '../components/PageHeader/PageHeader.jsx'
+import TripDocuments from '../components/TripDocuments/TripDocuments.jsx'
 import TripFormSheet from '../components/TripForm/TripFormSheet.jsx'
 import DuplicateTripSheet from '../components/TripForm/DuplicateTripSheet.jsx'
 import QuickAddSheet from '../components/TripForm/QuickAddSheet.jsx'
@@ -271,6 +272,8 @@ function TripDetailPage() {
           </div>
         </div>
       )}
+
+      <TripDocuments tripId={id} />
 
       {items.length === 0 ? (
         <div className="empty-state" style={{ padding: '32px 24px' }}>

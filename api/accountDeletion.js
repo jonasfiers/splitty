@@ -5,7 +5,8 @@
 //   1. appends "<userId>\t<ISO date>" to DELETION_LIST_FILE (fsynced) — if
 //      that fails, nothing is deleted;
 //   2. deletes the groups where the user is the only member, with their trips,
-//      uploaded files, expenses and invite links;
+//      uploaded files, expenses and invite links, and every trip document the
+//      user uploaded anywhere (shared ones too);
 //   3. anonymises the user (if this step fails, the account stays locked and
 //      the hourly re-apply finishes it): every property is replaced by
 //      { id, name: 'Deleted user', deleted: true, deletedAt }, and their
@@ -158,6 +159,9 @@ async function erase(userId) {
     for (const groupId of await soloGroupIds(userId)) {
         await deleteSoloGroup(groupId, userId);
     }
+    // Their trip documents (passport copies, arrival cards...), shared or
+    // not: unlike expenses and plans, nobody else needs them to stay correct.
+    await uploadStore.remove(await tripService.deleteAllDocumentsOf(userId));
     await anonymise(userId);
 }
 

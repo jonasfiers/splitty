@@ -345,6 +345,91 @@ router.delete('/attachments/:id', async (req, res) => {
     }
 });
 
+// ── DOCUMENTS ── a trip's travel documents (tripService, "DOCUMENTS"):
+// private to the uploader unless shared with the trip.
+const MAX_DOCUMENTS = 30; // per person per trip
+
+const withLinks = docs => docs.map(d => ({ ...d, url: signFileLink(d.id) }));
+
+router.get('/:id/documents', async (req, res) => {
+    try {
+        const trip = await tripService.getTripById(req.params.id, req.user.id);
+        if (!trip.success) return res.status(404).json(trip);
+        res.json({ success: true, documents: withLinks(await tripService.listDocuments(req.params.id, req.user.id)) });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// multipart: file, and shared ("true" to share with the trip; private otherwise)
+router.post('/:id/documents', (req, res) => {
+    upload(req, res, async uploadError => {
+        try {
+            if (uploadError) {
+                const tooBig = uploadError.code === 'LIMIT_FILE_SIZE';
+                return res.status(tooBig ? 413 : 400).json({
+                    error: tooBig ? `The file is larger than ${uploadStore.MAX_BYTES / 1024 / 1024} MB.` : 'Upload failed.',
+                });
+            }
+            if (!req.file) return res.status(400).json({ error: 'No file was sent.' });
+            if (!uploadStore.isAllowed(req.file.mimetype, req.file.buffer)) {
+                return res.status(415).json({ error: 'Only PDF, JPEG, PNG and WebP files can be added.' });
+            }
+            const tripId = req.params.id;
+            const trip = await tripService.getTripById(tripId, req.user.id);
+            if (!trip.success) return res.status(404).json(trip);
+            if (await tripService.countOwnDocuments(tripId, req.user.id) >= MAX_DOCUMENTS) {
+                return res.status(400).json({ error: `You can add at most ${MAX_DOCUMENTS} documents to a trip.` });
+            }
+            const filename = Buffer.from(req.file.originalname, 'latin1').toString('utf8')
+                .replace(/[\u0000-\u001f\u007f/\\]/g, '').trim().slice(0, 150) || 'document';
+            const storedName = await uploadStore.save(req.file.buffer);
+            const result = await tripService.createDocument(tripId, req.user.id, {
+                filename, mimeType: req.file.mimetype, size: req.file.size, storedName,
+                shared: req.body?.shared === 'true',
+            });
+            if (!result.success) {
+                await uploadStore.remove([storedName]);
+                return res.status(404).json(result);
+            }
+            res.status(201).json(result);
+        } catch (error) {
+            if (error.code === 'STORAGE_FULL') {
+                console.error(`Upload refused: less than ${uploadStore.MIN_FREE_BYTES / 1024 / 1024} MB would be left free in ${uploadStore.UPLOAD_DIR}`);
+                return res.status(507).json({ error: 'Splitty’s storage is full, so files cannot be uploaded right now. Please tell the admin.' });
+            }
+            console.error(error);
+            res.status(500).json({ error: 'Upload failed.' });
+        }
+    });
+});
+
+// {shared: true|false}
+router.patch('/documents/:docId', async (req, res) => {
+    try {
+        if (typeof req.body?.shared !== 'boolean') return res.status(400).json({ error: 'shared must be true or false.' });
+        const result = await tripService.setDocumentShared(req.params.docId, req.user.id, req.body.shared);
+        if (!result.success) return res.status(404).json(result);
+        res.json(result);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+router.delete('/documents/:docId', async (req, res) => {
+    try {
+        const { storedNames, ...result } = await tripService.deleteDocument(req.params.docId, req.user.id);
+        if (!result.success) return res.status(404).json(result);
+        await uploadStore.remove(storedNames);
+        res.json(result);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // UPDATE PLACE
 router.put('/places/:placeId', async (req, res) => {
     try {

@@ -4,15 +4,17 @@ import client from '../api/client'
 import Loading from '../components/Loading.jsx'
 import ZoomArea from '../components/FileViewer/ZoomArea.jsx'
 
-// A trip item's file (ticket, booking...) full screen inside Splitty, for the
+// A trip item's file (ticket, booking...) or a trip document (arrival card,
+// passport copy...) full screen inside Splitty, for the
 // installed app (utils/standalone.js): no sidebar, no bottom bar, only a slim
 // bar ("‹ Back", the name, Download) over the document. Images as they are,
 // PDFs drawn by pdf.js; Download saves the file or opens it in another app.
 // In a browser tab files still open in a new tab with the browser's viewer.
 // Its route sits outside the app's Layout (App.jsx) for the full screen.
 //
-// The file comes from the item's signed link (5 minutes, api/routes/trips.js),
-// fetched fresh with the item, so a reload or a later visit works too.
+// The file comes from its signed link (5 minutes, api/routes/trips.js),
+// fetched fresh with the item or the trip's documents, so a reload or a
+// later visit works too.
 
 // pages beyond this are left to Download: each page is a canvas of a few MB
 const MAX_PAGES = 30
@@ -22,37 +24,54 @@ const MAX_PAGES = 30
 const PIXEL_BUDGET = 24e6
 const PAGE_PIXELS = 16e6
 
+// Where the file comes from: an item's attachment (/trips/:tripId/items/
+// :itemId/files/:fileId) or a trip document (/trips/:tripId/documents/:fileId).
+// Each load returns the files with fresh signed links.
+function sourceOf(tripId, itemId) {
+  return itemId
+    ? {
+        load: async () => (await client.get(`/trips/items/${itemId}`)).data.item.attachments,
+        page: `/trips/${tripId}/items/${itemId}`,
+        gone: 'This file is no longer attached to the item.',
+      }
+    : {
+        load: async () => (await client.get(`/trips/${tripId}/documents`)).data.documents,
+        page: `/trips/${tripId}`,
+        gone: 'This document was deleted, or is no longer shared with you.',
+      }
+}
+
 export default function FileViewerPage() {
   const { tripId, itemId, fileId } = useParams()
   const navigate = useNavigate()
   const location = useLocation()
-  const [item, setItem] = useState(null)
+  const [files, setFiles] = useState(null)
   const [error, setError] = useState('')
+  const source = sourceOf(tripId, itemId)
 
   useEffect(() => {
-    client.get(`/trips/items/${itemId}`)
-      .then(({ data }) => {
-        if (!data.item.attachments.some(a => a.id === fileId)) setError('This file is no longer attached to the item.')
-        setItem(data.item)
+    source.load()
+      .then(list => {
+        if (!list.some(a => a.id === fileId)) setError(source.gone)
+        setFiles(list)
       })
       .catch(() => setError('Could not load this file. Go back and try again.'))
-  }, [itemId, fileId])
+  }, [tripId, itemId, fileId]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const file = item?.attachments.find(a => a.id === fileId)
+  const file = files?.find(a => a.id === fileId)
 
   // Back in history when the viewer was opened from the app, so the Back
   // button and Android's back gesture agree and do not pile up pages;
-  // otherwise (a reload, an opened link) to the item, in place of the viewer.
+  // otherwise (a reload, an opened link) to the item or trip, in its place.
   const back = () => {
     if (location.key !== 'default') navigate(-1)
-    else navigate(`/trips/${tripId}/items/${itemId}`, { replace: true })
+    else navigate(source.page, { replace: true })
   }
 
   const download = async () => {
     try {
       // A fresh link: the one loaded with the page may have expired.
-      const { data } = await client.get(`/trips/items/${itemId}`)
-      const fresh = data.item.attachments.find(a => a.id === fileId)
+      const fresh = (await source.load()).find(a => a.id === fileId)
       const res = await fetch(`/api${fresh.url}`)
       if (!res.ok) throw new Error()
       const url = URL.createObjectURL(await res.blob())
@@ -79,7 +98,7 @@ export default function FileViewerPage() {
         {file && <button type="button" className="file-viewer-action" onClick={download}>Download</button>}
       </header>
       {error && <p className="error file-viewer-error">{error}</p>}
-      {!item && !error && <Loading />}
+      {!files && !error && <Loading />}
       {file && (
         <ZoomArea>
           {file.mimeType === 'application/pdf'

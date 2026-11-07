@@ -146,6 +146,9 @@ router.delete('/:id/:userId', async (req, res) => {
         const { id, userId } = req.params;
         const result = await groupServiceNeo4j.deleteGroupUser(id, userId, req.user.id);
         if (!result.success) return res.status(404).json(result);
+        // Their private trip documents go with the membership: they could no
+        // longer reach them, and nobody else may (tripService, "DOCUMENTS").
+        await uploadStore.remove(await tripService.deletePrivateDocumentsInGroup(id, userId));
         res.json(result);
     }
     catch (error) {
