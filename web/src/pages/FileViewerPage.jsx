@@ -154,7 +154,7 @@ export default function FileViewerPage() {
       {file && (
         <ZoomArea>
           {file.mimeType === 'application/pdf'
-            ? <PdfView url={file.src} mark={mark} onError={() => setError('This PDF could not be shown here. Use Download to open it in another app.')} />
+            ? <PdfView id={file.id} url={file.src} mark={mark} onError={() => setError('This PDF could not be shown here. Use Download to open it in another app.')} />
             : <img className="file-viewer-page" src={file.src} alt={file.filename} onLoad={() => mark('image', null)} />}
         </ZoomArea>
       )}
@@ -163,9 +163,26 @@ export default function FileViewerPage() {
   )
 }
 
-function PdfView({ url, onError, mark = () => {} }) {
+// Drawn pages kept for reopening, in memory while the app runs: drawing can
+// take seconds on a phone (a ticket's 3610 × 520 banner is unpacked by pdf.js
+// in JavaScript), showing the kept copy is instant. PNG (lossless: barcodes
+// and QR codes stay exact), ~100-300 kB a page. Only the fit-to-width drawing,
+// for the width it was drawn at; zooming in still draws with pdf.js.
+const snapshots = new Map()   // file id -> { width, pages: [{ blob, w, h }] }
+const MAX_SNAPSHOTS = 8
+
+async function saveSnapshot(id, width, canvases) {
+  const pages = await Promise.all(canvases.map(c => new Promise(resolve =>
+    c.toBlob(blob => resolve(blob && { blob, w: c.width, h: c.height }), 'image/png'))))
+  if (pages.some(p => !p)) return
+  snapshots.delete(id)
+  snapshots.set(id, { width, pages })
+  while (snapshots.size > MAX_SNAPSHOTS) snapshots.delete(snapshots.keys().next().value)
+}
+
+function PdfView({ id, url, onError, mark = () => {} }) {
   const box = useRef(null)
-  const [state, setState] = useState({ loading: true, pages: 0, shown: 0 })
+  const [state, setState] = useState({ loading: true, drawing: true, pages: 0, shown: 0 })
 
   useEffect(() => {
     let cancelled = false
@@ -211,15 +228,44 @@ function PdfView({ url, onError, mark = () => {} }) {
         canvas.width = Math.floor(viewport.width)
         canvas.height = Math.floor(viewport.height)
         canvas.style.aspectRatio = `${viewport.width} / ${viewport.height}`
+        // No page.cleanup(): pdf.js keeps the page's unpacked images, so a
+        // redraw after zooming does not unpack them again (freed with the
+        // document when the viewer closes).
         await page.render({ canvas, canvasContext: canvas.getContext('2d'), viewport, annotationMode: 0 }).promise
-        page.cleanup()
         if (cancelled || mine !== pass) { release(canvas); return }
         const old = el.children[n - 1]
         if (old) { old.replaceWith(canvas); release(old) }
         else el.appendChild(canvas)
+        if (n === 1) setState(st => (st.drawing ? { ...st, drawing: false } : st))
         if (firstDraw && n === 1) mark('page 1', shown > 1 ? 'other pages' : null)
         if (firstDraw && n === shown && shown > 1) mark('rest', null)
       }
+      if (firstDraw && id) saveSnapshot(id, cssWidth, [...el.children]).catch(() => {})
+    }
+
+    // A kept drawing of this file at this width: shown at once, pdf.js then
+    // loads behind it for zooming. Returns whether it was shown.
+    const showSnapshot = async () => {
+      const snap = id && snapshots.get(id)
+      const cssWidth = host?.clientWidth
+      if (!snap || snap.width !== cssWidth) return false
+      for (const { blob, w, h } of snap.pages) {
+        const bitmap = await createImageBitmap(blob)
+        if (cancelled) { bitmap.close(); return true }
+        const canvas = document.createElement('canvas')
+        canvas.className = 'file-viewer-page'
+        canvas.width = w
+        canvas.height = h
+        canvas.style.aspectRatio = `${w} / ${h}`
+        canvas.getContext('2d').drawImage(bitmap, 0, 0)
+        bitmap.close()
+        host.appendChild(canvas)
+      }
+      drawnWidth = cssWidth
+      drawn = true
+      setState(st => ({ ...st, loading: false, drawing: false, pages: snap.pages.length, shown: snap.pages.length }))
+      mark('kept drawing', null)
+      return true
     }
 
     const watch = new ResizeObserver(() => {
@@ -229,16 +275,17 @@ function PdfView({ url, onError, mark = () => {} }) {
 
     ;(async () => {
       try {
+        const kept = await showSnapshot().catch(() => false)
         const { loadPdf } = await import('../utils/pdf.js')
-        mark('pdf.js', 'file')
+        if (!kept) mark('pdf.js', 'file')
         task = await loadPdf(url)
-        mark('file', 'reading the PDF')
+        if (!kept) mark('file', 'reading the PDF')
         if (cancelled) { task.destroy(); return }
         doc = await task.promise
-        mark('read', 'page 1')
+        if (!kept) mark('read', 'page 1')
         if (cancelled) return
-        setState({ loading: false, pages: doc.numPages, shown: Math.min(doc.numPages, MAX_PAGES) })
-        await draw()
+        setState(st => ({ ...st, loading: false, pages: doc.numPages, shown: Math.min(doc.numPages, MAX_PAGES) }))
+        await draw()   // nothing to do when the kept drawing fits this width
         if (host) watch.observe(host)
       } catch (err) {
         if (!cancelled) {
@@ -261,6 +308,7 @@ function PdfView({ url, onError, mark = () => {} }) {
   return (
     <>
       {state.loading && <Loading />}
+      {!state.loading && state.drawing && <p className="file-viewer-drawing">Drawing the page…</p>}
       <div ref={box} className="file-viewer-pages" />
       {state.pages > state.shown && (
         <p className="file-viewer-meta">Showing the first {state.shown} of {state.pages} pages. Use Download for the rest.</p>
