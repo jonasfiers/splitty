@@ -99,6 +99,13 @@ function PdfView({ url, onError }) {
     let cancelled = false
     let task = null
     let doc = null
+    // React clears box.current before this effect's cleanup runs: keep it.
+    const host = box.current
+    // A canvas holds its pixels (6 MB a page here, ~50 MB zoomed in) until
+    // the browser gets round to collecting it; on a phone, opening a ticket a
+    // few times in a row then ran out of memory and slowed down. Emptying it
+    // frees them at once.
+    const release = canvas => { canvas.width = 0; canvas.height = 0 }
     let pass = 0          // a newer drawing pass stops an older one
     let drawnWidth = 0
     let timer = null
@@ -108,7 +115,7 @@ function PdfView({ url, onError }) {
     // only once drawn, so redrawing (a Fold unfolded, a window resized, a
     // phone turned) does not flash.
     const draw = async () => {
-      const el = box.current
+      const el = host
       const cssWidth = el?.clientWidth
       if (!doc || !cssWidth || cssWidth === drawnWidth) return
       drawnWidth = cssWidth
@@ -131,9 +138,9 @@ function PdfView({ url, onError }) {
         canvas.style.aspectRatio = `${viewport.width} / ${viewport.height}`
         await page.render({ canvas, canvasContext: canvas.getContext('2d'), viewport, annotationMode: 0 }).promise
         page.cleanup()
-        if (cancelled || mine !== pass) return
+        if (cancelled || mine !== pass) { release(canvas); return }
         const old = el.children[n - 1]
-        if (old) old.replaceWith(canvas)
+        if (old) { old.replaceWith(canvas); release(old) }
         else el.appendChild(canvas)
       }
     }
@@ -152,7 +159,7 @@ function PdfView({ url, onError }) {
         if (cancelled) return
         setState({ loading: false, pages: doc.numPages, shown: Math.min(doc.numPages, MAX_PAGES) })
         await draw()
-        if (box.current) watch.observe(box.current)
+        if (host) watch.observe(host)
       } catch (err) {
         if (!cancelled) {
           console.warn('PDF not shown:', err?.message || err)
@@ -166,7 +173,8 @@ function PdfView({ url, onError }) {
       clearTimeout(timer)
       watch.disconnect()
       task?.destroy()
-      if (box.current) box.current.replaceChildren()
+      for (const canvas of host?.querySelectorAll('canvas') ?? []) release(canvas)
+      host?.replaceChildren()
     }
   }, [url]) // eslint-disable-line react-hooks/exhaustive-deps
 
