@@ -61,67 +61,6 @@ function sourceOf(tripId, itemId) {
   }
 }
 
-// QA only: a line at the bottom with how long each step took, and the step
-// it is waiting in. For a viewer that sometimes hangs on a phone but never
-// while the screen is being recorded: a screenshot then shows the step.
-const SHOW_TIMINGS = window.location.hostname.startsWith('splitty-qa')
-  || (() => { try { return localStorage.getItem('splitty-timings') === '1' } catch { return false } })()
-
-// Timings start at the tap that opened the viewer (utils/fileTap.js), so
-// leaving the previous page and loading the viewer count too ("open").
-
-function useTimings() {
-  const tap = SHOW_TIMINGS && performance.now() - (window.__splittyFileTap ?? -1e9) < 15000 ? window.__splittyFileTap : null
-  const mounted = performance.now()
-  const start = useRef(tap ?? mounted)
-  const [steps, setSteps] = useState(() => (tap != null ? [`from ${window.__splittyFileTapFrom} · open ${Math.round(mounted - tap)}`] : []))
-  const [waiting, setWaiting] = useState('file list')
-  const [, tick] = useState(0)
-  const last = useRef(mounted)
-  useEffect(() => { window.__splittyFileTap = undefined }, [])
-  useEffect(() => {
-    if (!SHOW_TIMINGS || !waiting) return
-    const t = setInterval(() => tick(n => n + 1), 250)
-    return () => clearInterval(t)
-  }, [waiting])
-  const mark = useRef((name, next) => {
-    if (!SHOW_TIMINGS) return
-    const now = performance.now()
-    const ms = Math.round(now - last.current)
-    last.current = now
-    setSteps(list => [...list, `${name} ${ms}`])
-    if (next !== null) { setWaiting(next); return }
-    // Done drawing: until the browser has painted it (two frames later).
-    setWaiting('shown')
-    requestAnimationFrame(() => requestAnimationFrame(() => {
-      const t = performance.now()
-      const shownMs = Math.round(t - last.current)   // before last moves on
-      last.current = t
-      setSteps(list => [...list, `shown ${shownMs}`])
-      setWaiting(null)
-    }))
-  }).current
-  const [notes, setNotes] = useState([])
-  const note = useRef(text => { if (SHOW_TIMINGS) setNotes(list => [...list, text]) }).current
-  // The longest time the main thread was blocked while this viewer is open
-  // (Chrome's long tasks: 50 ms or more).
-  const [longest, setLongest] = useState(0)
-  useEffect(() => {
-    if (!SHOW_TIMINGS || typeof PerformanceObserver === 'undefined') return
-    try {
-      const po = new PerformanceObserver(list => {
-        for (const e of list.getEntries()) setLongest(m => Math.max(m, Math.round(e.duration)))
-      })
-      po.observe({ type: 'longtask', buffered: true })
-      return () => po.disconnect()
-    } catch { /* not supported */ }
-  }, [])
-  const extra = [longest ? `longest block ${longest} ms` : '', ...notes].filter(Boolean)
-  const line = !SHOW_TIMINGS ? null
-    : `${steps.join(' · ')}${waiting ? `${steps.length ? ' · ' : ''}waiting: ${waiting} ${Math.round((performance.now() - last.current) / 100) / 10}s` : ` · total ${Math.round(last.current - start.current)} ms`}${extra.length ? `\n${extra.join(' · ')}` : ''}`
-  return { mark, note, line }
-}
-
 export default function FileViewerPage() {
   const { tripId, itemId, fileId } = useParams()
   const navigate = useNavigate()
@@ -129,14 +68,11 @@ export default function FileViewerPage() {
   const [files, setFiles] = useState(null)
   const [error, setError] = useState('')
   const source = sourceOf(tripId, itemId)
-  const { mark, note, line } = useTimings()
 
   useEffect(() => {
     source.load()
       .then(list => {
         if (!list.some(a => a.id === fileId)) setError(source.gone)
-        const f = list.find(a => a.id === fileId)
-        mark('list', f ? (f.mimeType === 'application/pdf' ? 'pdf.js' : 'image') : null)
         setFiles(list)
       })
       .catch(() => setError('Could not load this file. Go back and try again.'))
@@ -186,11 +122,10 @@ export default function FileViewerPage() {
       {file && (
         <ZoomArea>
           {file.mimeType === 'application/pdf'
-            ? <PdfView id={file.id} url={file.src} mark={mark} note={note} onError={() => setError('This PDF could not be shown here. Use Download to open it in another app.')} />
-            : <img className="file-viewer-page" src={file.src} alt={file.filename} onLoad={() => mark('image', null)} />}
+            ? <PdfView id={file.id} url={file.src} onError={() => setError('This PDF could not be shown here. Use Download to open it in another app.')} />
+            : <img className="file-viewer-page" src={file.src} alt={file.filename} />}
         </ZoomArea>
       )}
-      {line && <div className="file-viewer-timings">{line}</div>}
     </div>
   )
 }
@@ -218,7 +153,7 @@ async function saveSnapshot(id, width, canvases) {
   while (snapshots.size > MAX_SNAPSHOTS) snapshots.delete(snapshots.keys().next().value)
 }
 
-function PdfView({ id, url, onError, mark = () => {}, note = () => {} }) {
+function PdfView({ id, url, onError }) {
   const box = useRef(null)
   const [state, setState] = useState({ loading: true, drawing: true, pages: 0, shown: 0 })
 
@@ -236,7 +171,7 @@ function PdfView({ id, url, onError, mark = () => {}, note = () => {} }) {
     let pass = 0          // a newer drawing pass stops an older one
     let drawnWidth = 0
     let timer = null
-    let drawn = false     // timings: only the first drawing counts
+    let drawn = false     // the first drawing (or a kept one) has been shown
 
     // Draws every page for the box's current width, sharp on this screen
     // (CSS width × device pixel ratio). Each new canvas replaces the old one
@@ -275,8 +210,6 @@ function PdfView({ id, url, onError, mark = () => {}, note = () => {} }) {
         if (old) { old.replaceWith(canvas); release(old) }
         else el.appendChild(canvas)
         if (n === 1) setState(st => (st.drawing ? { ...st, drawing: false } : st))
-        if (firstDraw && n === 1) mark('page 1', shown > 1 ? 'other pages' : null)
-        if (firstDraw && n === shown && shown > 1) mark('rest', null)
       }
       if (firstDraw && id) saveSnapshot(id, cssWidth, [...el.children]).catch(() => {})
     }
@@ -306,7 +239,6 @@ function PdfView({ id, url, onError, mark = () => {}, note = () => {} }) {
       drawnWidth = cssWidth
       drawn = true
       setState(st => ({ ...st, loading: false, drawing: false, pages: snap.pages.length, shown: snap.pages.length }))
-      mark('kept drawing', null)
       return true
     }
 
@@ -316,19 +248,10 @@ function PdfView({ id, url, onError, mark = () => {}, note = () => {} }) {
     // and the kept drawing waited that long to be painted.
     let loading = null
     const loadDoc = () => loading ??= (async () => {
-      // Timed only when it is what the viewer waits for (no kept drawing);
-      // in the background, reported as one note.
-      const step = drawn ? () => {} : mark
-      const bgStart = performance.now()
-      const background = drawn
       const { loadPdf } = await import('../utils/pdf.js')
-      step('pdf.js', 'file')
       task = await loadPdf(url)
-      step('file', 'reading the PDF')
       if (cancelled) { task.destroy(); throw new Error('closed') }
       doc = await task.promise
-      step('read', 'page 1')
-      if (background) note(`pdf.js loaded in background ${Math.round(performance.now() - bgStart)} ms (width ${host?.clientWidth} vs ${drawnWidth})`)
       if (cancelled) throw new Error('closed')
       setState(st => ({ ...st, loading: false, pages: doc.numPages, shown: Math.min(doc.numPages, MAX_PAGES) }))
     })()

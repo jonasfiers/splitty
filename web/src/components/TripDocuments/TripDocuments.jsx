@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
-import { markFileTap } from '../../utils/fileTap.js'
 import { useNavigate } from 'react-router'
 import client from '../../api/client'
 import { isStandalone } from '../../utils/standalone.js'
@@ -141,7 +140,7 @@ export default function TripDocuments({ tripId, tripTitle }) {
                 className="expense-item"
                 href={standalone ? viewer : `/api${doc.url}`}
                 {...(standalone
-                  ? { onClick: event => { event.preventDefault(); markFileTap(); navigate(viewer) } }
+                  ? { onClick: event => { event.preventDefault(); navigate(viewer) } }
                   : { target: '_blank', rel: 'noopener noreferrer' })}
               >
                 <div className="expense-icon">{doc.mimeType === 'application/pdf' ? '📄' : '🖼️'}</div>

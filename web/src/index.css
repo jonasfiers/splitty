@@ -2868,13 +2868,4 @@ a.expense-item { color: inherit; text-decoration: none; }
 .offline-docs-link-icon svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .offline-docs-link-chevron { margin-left: auto; font-size: 22px; color: var(--text-3); }
 .offline-docs-trip { margin-top: 20px; }
-/* QA only (FileViewerPage SHOW_TIMINGS): which step the viewer is in. */
-.file-viewer-timings {
-  flex: none;
-  white-space: pre-line;
-  padding: 4px 10px;
-  font: 11px/1.4 var(--font-mono, monospace);
-  color: var(--text-3);
-  border-top: 1px solid var(--border);
-}
 .file-viewer-drawing { padding: 24px 0; text-align: center; font-size: 14px; color: var(--text-3); }

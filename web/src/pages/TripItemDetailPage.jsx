@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback, useRef, useMemo, lazy, Suspense } from 'react'
-import { markFileTap } from '../utils/fileTap.js'
 import { useParams, useNavigate, Link } from 'react-router'
 import client from '../api/client'
 import Loading from '../components/Loading.jsx'
@@ -318,7 +317,7 @@ export default function TripItemDetailPage() {
                   className="expense-item"
                   href={standalone ? `/trips/${tripId}/items/${itemId}/files/${a.id}` : `/api${a.url}`}
                   {...(standalone
-                    ? { onClick: event => { event.preventDefault(); markFileTap(); navigate(`/trips/${tripId}/items/${itemId}/files/${a.id}`) } }
+                    ? { onClick: event => { event.preventDefault(); navigate(`/trips/${tripId}/items/${itemId}/files/${a.id}`) } }
                     : { target: '_blank', rel: 'noopener noreferrer' })}
                 >
                   <div className="expense-icon">{a.mimeType === 'application/pdf' ? '📄' : '🖼️'}</div>
