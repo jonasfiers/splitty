@@ -289,13 +289,15 @@ function PdfView({ id, url, onError, mark = () => {} }) {
     // and the kept drawing waited that long to be painted.
     let loading = null
     const loadDoc = () => loading ??= (async () => {
+      // Timed only when it is what the viewer waits for (no kept drawing).
+      const step = drawn ? () => {} : mark
       const { loadPdf } = await import('../utils/pdf.js')
-      mark('pdf.js', 'file')
+      step('pdf.js', 'file')
       task = await loadPdf(url)
-      mark('file', 'reading the PDF')
+      step('file', 'reading the PDF')
       if (cancelled) { task.destroy(); throw new Error('closed') }
       doc = await task.promise
-      mark('read', 'page 1')
+      step('read', 'page 1')
       if (cancelled) throw new Error('closed')
       setState(st => ({ ...st, loading: false, pages: doc.numPages, shown: Math.min(doc.numPages, MAX_PAGES) }))
     })()
