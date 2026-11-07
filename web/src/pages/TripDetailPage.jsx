@@ -273,7 +273,7 @@ function TripDetailPage() {
         </div>
       )}
 
-      <TripDocuments tripId={id} />
+      <TripDocuments tripId={id} tripTitle={trip.title} />
 
       {items.length === 0 ? (
         <div className="empty-state" style={{ padding: '32px 24px' }}>

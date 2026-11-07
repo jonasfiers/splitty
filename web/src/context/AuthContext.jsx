@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useCallback, useEffect } from 'react'
 import { startAuthentication } from '@simplewebauthn/browser'
 import client from '../api/client'
+import { clearOffline } from '../utils/offlineDocs.js'
 import { reactivatePushIfKnown } from '../utils/push.js'
 
 const AuthContext = createContext(null)
@@ -66,7 +67,10 @@ export function AuthProvider({ children }) {
     setToken(newToken)
   }, [])
 
+  // Signing out (or deleting the account) also removes the documents kept on
+  // this device; an expired session does not (utils/offlineDocs.js).
   const logout = useCallback(() => {
+    clearOffline()
     localStorage.removeItem('token')
     forgetAdmin()
     setToken(null)

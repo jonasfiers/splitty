@@ -4,7 +4,10 @@ import { useAuth } from '../context/AuthContext'
 import client from '../api/client'
 import CatAvatar from '../components/CatAvatar/CatAvatar'
 
+import { useOfflineDocs } from '../utils/useOfflineDocs.js'
+
 export default function LoginPage() {
+  const offline = useOfflineDocs()
   const [form, setForm] = useState({ email: '', password: '' })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -140,6 +143,9 @@ export default function LoginPage() {
         <p className="auth-footer">
           No account? <Link to="/register">Register</Link>
         </p>
+        {offline?.length > 0 && (
+          <p className="auth-footer"><Link to="/offline-documents">Offline documents ({offline.length})</Link></p>
+        )}
         <p className="auth-footer auth-privacy"><Link to="/privacy">Privacy</Link></p>
       </div>
     </div>

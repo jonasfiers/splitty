@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router'
+import { Link, useNavigate } from 'react-router'
 import client from '../api/client'
 import FabButton from '../components/FabButton/FabButton.jsx'
 import Loading from '../components/Loading.jsx'
@@ -9,7 +9,10 @@ import TripFormSheet from '../components/TripForm/TripFormSheet.jsx'
 import { today } from '../utils/trip.js'
 import TabHeader from '../components/PageHeader/TabHeader.jsx'
 
+import { useOfflineDocs } from '../utils/useOfflineDocs.js'
+
 export default function TripsPage() {
+  const offline = useOfflineDocs()
   const navigate = useNavigate()
   const [trips, setTrips] = useState([])
   const [groups, setGroups] = useState([])
@@ -23,7 +26,9 @@ export default function TripsPage() {
         setTrips(tr.data.trips || [])
         setGroups(gr.data.groups || [])
       })
-      .catch(() => setError('Failed to load trips. Please refresh the page.'))
+      .catch(() => setError(navigator.onLine === false
+        ? 'No connection, so your trips cannot load. Documents kept on this device still open.'
+        : 'Failed to load trips. Please refresh the page.'))
       .finally(() => setLoading(false))
   }, [])
 
@@ -40,6 +45,20 @@ export default function TripsPage() {
   return (
     <>
       <TabHeader title="Trips" />
+
+      {/* Before the error on purpose: offline, this is what still works. */}
+      {offline?.length > 0 && (
+        <Link to="/offline-documents" className="offline-docs-link">
+          <span className="offline-docs-link-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><polyline points="7.5 10 10.5 13 16.5 7" /><path d="M4 15v3a2 2 0 002 2h12a2 2 0 002-2v-3" /></svg>
+          </span>
+          <span>
+            <strong>Offline documents</strong>
+            <span className="offline-docs-link-sub">{offline.length} on this device · open without a connection</span>
+          </span>
+          <span className="offline-docs-link-chevron" aria-hidden="true">›</span>
+        </Link>
+      )}
 
       {error && <p className="error">{error}</p>}
 

@@ -33,13 +33,16 @@ export default function PrivacyPage() {
           <li><strong>Your account:</strong> name, email address, your password (only as a one-way hash, never the password itself), the colour and emoji of your avatar, and whether you confirmed your email address.</li>
           <li><strong>Passkeys</strong>, if you add any: the public key your device creates (your device keeps the private part), a label for the device such as “iPhone · Safari”, and when it was added and last used.</li>
           <li><strong>What you enter:</strong> groups and who is in them, expenses, who paid and who owes what, settlements, and trips: places, times, booking references, notes, links, and files you upload such as tickets.</li>
+          <li><strong>Travel documents</strong>, if you add any to a trip (arrival cards, visas, insurance, a copy of your passport): the file, its name, and when you added it. Only you see them, unless you share one with everyone on the trip. They are not shown on the Activity page.</li>
           <li><strong>Who did what:</strong> who added, changed or deleted an expense, trip, trip item or file in a group, and when; for expenses also what was changed (for example the amount from €40 to €45). Other members see this on the Activity page. When something is deleted, its content is erased; only its name (and amount, for an expense), who deleted it and when are kept, until the group itself is deleted.</li>
           <li><strong>Notifications</strong>, if you switch them on: the address your browser’s push service gives Splitty to reach your device.</li>
           <li><strong>Server logs:</strong> the web server records each request (your IP address, the address requested, the time, and your browser’s description of itself), and the app logs errors, which can include your internal account number. These are used to keep the service running and to spot attacks.</li>
         </ul>
         <p>
-          Splitty has no advertising, no analytics and no tracking cookies. Your browser keeps two things for it:
-          your sign-in (so you stay signed in) and your light/dark choice.
+          Splitty has no advertising, no analytics and no tracking cookies. Your browser keeps, for Splitty: your
+          sign-in (so you stay signed in), your light/dark choice, a copy of Splitty’s own program files (so the
+          installed app opens without a connection), and the travel documents you choose to keep on that device.
+          Those documents stay on the device until you remove them or sign out.
         </p>
 
         <h2>Why</h2>
@@ -86,7 +89,7 @@ export default function PrivacyPage() {
         <ul>
           <li><strong>See and take your data:</strong> Profile › Download all my data gives you a ZIP with your account, your groups, every expense, your trips and the files you uploaded, as JSON and CSV files that other apps can read. For anything else, email <a href="mailto:hello@jonasfiers.eu">hello@jonasfiers.eu</a>.</li>
           <li><strong>Correct it:</strong> change your name, email and avatar in Profile, and edit what you entered in the app.</li>
-          <li><strong>Delete it:</strong> Profile › Delete account. Your name, email, password, passkeys, avatar and notification settings are deleted at once, and you are signed out on every device. What you added to groups you share with others (expenses, trip plans, notes and uploaded files) stays in those groups for the other members, shown as “Deleted user”, so their balances and plans stay correct. Groups where nobody else is left are deleted completely, with their trips and files.</li>
+          <li><strong>Delete it:</strong> Profile › Delete account. Your name, email, password, passkeys, avatar and notification settings are deleted at once, and you are signed out on every device. What you added to groups you share with others (expenses, trip plans, notes and uploaded files) stays in those groups for the other members, shown as “Deleted user”, so their balances and plans stay correct. Groups where nobody else is left are deleted completely, with their trips and files. Your travel documents are deleted everywhere, also the ones you shared with a trip.</li>
           <li><strong>Object or restrict:</strong> email <a href="mailto:hello@jonasfiers.eu">hello@jonasfiers.eu</a>.</li>
           <li><strong>Complain:</strong> you can complain to the Belgian Data Protection Authority (<a href="https://www.dataprotectionauthority.be" target="_blank" rel="noopener noreferrer">dataprotectionauthority.be</a>) or the authority where you live.</li>
         </ul>

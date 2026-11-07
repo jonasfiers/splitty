@@ -36,6 +36,14 @@ export default defineConfig(({ mode }) => {
         filename: 'sw.js',
         registerType: 'autoUpdate',
         injectRegister: 'script',
+        // The app's own files, saved by the service worker so Splitty opens
+        // without a connection (src/sw.js). pdf.js's fonts and character maps
+        // (4 MB) are saved only once used.
+        injectManifest: {
+          globPatterns: ['**/*.{js,css,html,woff2,svg,png,ico,webmanifest}'],
+          globIgnores: ['pdfjs/**', 'cat-avatar-poc.html'],
+          maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
+        },
         manifest: {
           name: 'Splitty',
           short_name: 'Splitty',

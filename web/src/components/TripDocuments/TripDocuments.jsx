@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router'
 import client from '../../api/client'
 import { isStandalone } from '../../utils/standalone.js'
 import { formatBytes } from '../../utils/trip.js'
+import { keepOffline, removeOffline, syncTrip, offlineSupported } from '../../utils/offlineDocs.js'
+import { useOfflineDocs } from '../../utils/useOfflineDocs.js'
 import './TripDocuments.css'
 
 // A trip's travel documents: arrival cards, visas, insurance, passport copies.
@@ -12,9 +14,12 @@ import './TripDocuments.css'
 // like item files: Splitty's viewer in the installed app, a new tab in a
 // browser.
 //
+// Any of them can be kept on this device to open without a connection
+// (utils/offlineDocs.js, the Offline documents page).
+//
 // Links are signed for 5 minutes: refreshed while the page is open and on
 // coming back to it, as on the item page.
-export default function TripDocuments({ tripId }) {
+export default function TripDocuments({ tripId, tripTitle }) {
   const navigate = useNavigate()
   const standalone = useMemo(isStandalone, [])
   const [documents, setDocuments] = useState(null)
@@ -24,11 +29,17 @@ export default function TripDocuments({ tripId }) {
   const fileInput = useRef(null)
   const loadedAt = useRef(0)
 
+  const offline = useOfflineDocs()
+  const kept = useMemo(() => new Set((offline ?? []).map(d => d.id)), [offline])
+  const canKeep = useMemo(offlineSupported, [])
+
   const load = useCallback(async () => {
     const { data } = await client.get(`/trips/${tripId}/documents`)
     setDocuments(data.documents)
     loadedAt.current = Date.now()
-  }, [tripId])
+    // Kept copies of documents that are gone (deleted, made private) go too.
+    syncTrip({ id: tripId, title: tripTitle }, data.documents.map(d => d.id)).catch(() => {})
+  }, [tripId, tripTitle])
 
   useEffect(() => {
     load().catch(() => setDocuments([]))
@@ -84,6 +95,19 @@ export default function TripDocuments({ tripId }) {
     }
   }
 
+  const toggleOffline = async doc => {
+    setBusy(doc.id)
+    setError('')
+    try {
+      if (kept.has(doc.id)) await removeOffline([doc.id])
+      else await keepOffline(doc, { id: tripId, title: tripTitle })
+    } catch {
+      setError('Could not keep it on this device. Is there room left on the phone?')
+    } finally {
+      setBusy(null)
+    }
+  }
+
   const remove = async doc => {
     if (!window.confirm(`Delete “${doc.filename}”?`)) return
     setBusy(doc.id)
@@ -98,8 +122,8 @@ export default function TripDocuments({ tripId }) {
   }
 
   const who = doc => {
-    if (!doc.shared) return '🔒 Only you'
-    return doc.mine ? 'Shared with the trip' : `Shared by ${doc.ownerName}`
+    const base = !doc.shared ? '🔒 Only you' : doc.mine ? 'Shared with the trip' : `Shared by ${doc.ownerName}`
+    return kept.has(doc.id) ? `${base} · on this device` : base
   }
 
   return (
@@ -124,8 +148,21 @@ export default function TripDocuments({ tripId }) {
                   <div className="expense-name">{doc.filename}</div>
                   <div className="expense-meta">{who(doc)} · {formatBytes(doc.size)}</div>
                 </div>
-                {doc.mine && (
-                  <div className="trip-docs-actions">
+                <div className="trip-docs-actions">
+                  {canKeep && (
+                    <button
+                      type="button"
+                      className={`trip-docs-icon${kept.has(doc.id) ? ' on' : ''}`}
+                      disabled={busy === doc.id}
+                      aria-pressed={kept.has(doc.id)}
+                      aria-label={kept.has(doc.id) ? `Remove “${doc.filename}” from this device` : `Keep “${doc.filename}” on this device`}
+                      title={kept.has(doc.id) ? 'On this device, opens offline · tap to remove' : 'Keep on this device, to open offline'}
+                      onClick={event => { event.preventDefault(); event.stopPropagation(); toggleOffline(doc) }}
+                    >
+                      {kept.has(doc.id) ? <OnDeviceIcon /> : <KeepIcon />}
+                    </button>
+                  )}
+                  {doc.mine && (<>
                     <button
                       type="button"
                       className={`trip-docs-icon${doc.shared ? ' on' : ''}`}
@@ -147,8 +184,8 @@ export default function TripDocuments({ tripId }) {
                     >
                       <TrashIcon />
                     </button>
-                  </div>
-                )}
+                  </>)}
+                </div>
               </a>
             )
           })}
@@ -160,6 +197,7 @@ export default function TripDocuments({ tripId }) {
       </button>
       <p className="trip-docs-hint">
         Arrival cards, visas, insurance, a copy of your passport. Only you see what you add, until you share it with the trip.
+        {canKeep && ' Keep one on this device to open it without a connection, under Trips › Offline documents.'}
       </p>
     </section>
   )
@@ -185,6 +223,27 @@ function TrashIcon() {
       <path d="M6 7l1 12.2c.1 1 .9 1.8 1.9 1.8h6.2c1 0 1.8-.8 1.9-1.8L18 7" />
       <line x1="10" y1="11" x2="10" y2="17" />
       <line x1="14" y1="11" x2="14" y2="17" />
+    </svg>
+  )
+}
+
+// Arrow into a tray: keep on this device.
+function KeepIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M12 4v11" />
+      <polyline points="7.5 10.5 12 15 16.5 10.5" />
+      <path d="M4 15v3a2 2 0 002 2h12a2 2 0 002-2v-3" />
+    </svg>
+  )
+}
+
+// Tick in a tray: kept on this device.
+function OnDeviceIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <polyline points="7.5 10 10.5 13 16.5 7" />
+      <path d="M4 15v3a2 2 0 002 2h12a2 2 0 002-2v-3" />
     </svg>
   )
 }

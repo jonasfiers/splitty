@@ -3,6 +3,7 @@ import { useParams, useNavigate, useLocation } from 'react-router'
 import client from '../api/client'
 import Loading from '../components/Loading.jsx'
 import ZoomArea from '../components/FileViewer/ZoomArea.jsx'
+import { listOffline, offlineSrc } from '../utils/offlineDocs.js'
 
 // A trip item's file (ticket, booking...) or a trip document (arrival card,
 // passport copy...) full screen inside Splitty, for the
@@ -24,21 +25,40 @@ const MAX_PAGES = 30
 const PIXEL_BUDGET = 24e6
 const PAGE_PIXELS = 16e6
 
-// Where the file comes from: an item's attachment (/trips/:tripId/items/
-// :itemId/files/:fileId) or a trip document (/trips/:tripId/documents/:fileId).
-// Each load returns the files with fresh signed links.
+// Where the file comes from, each load returning the files with `src`, the
+// address to read it from (fresh signed links for the server's):
+//   /trips/:tripId/items/:itemId/files/:fileId   an item's attachment
+//   /trips/:tripId/documents/:fileId             a trip document; without a
+//                                                connection, the copy kept on
+//                                                this device if there is one
+//   /offline-documents/:fileId                   a document kept on this device
+//                                                (works offline and signed out)
+const fromServer = list => list.map(f => ({ ...f, src: `/api${f.url}` }))
+const fromDevice = list => list.map(f => ({ ...f, src: offlineSrc(f.id) }))
+
 function sourceOf(tripId, itemId) {
-  return itemId
-    ? {
-        load: async () => (await client.get(`/trips/items/${itemId}`)).data.item.attachments,
-        page: `/trips/${tripId}/items/${itemId}`,
-        gone: 'This file is no longer attached to the item.',
+  if (itemId) return {
+    load: async () => fromServer((await client.get(`/trips/items/${itemId}`)).data.item.attachments),
+    page: `/trips/${tripId}/items/${itemId}`,
+    gone: 'This file is no longer attached to the item.',
+  }
+  if (tripId) return {
+    load: async () => {
+      try {
+        return fromServer((await client.get(`/trips/${tripId}/documents`)).data.documents)
+      } catch (err) {
+        if (err.response) throw err   // the server answered: no fallback
+        return fromDevice(await listOffline())
       }
-    : {
-        load: async () => (await client.get(`/trips/${tripId}/documents`)).data.documents,
-        page: `/trips/${tripId}`,
-        gone: 'This document was deleted, or is no longer shared with you.',
-      }
+    },
+    page: `/trips/${tripId}`,
+    gone: 'This document was deleted, or is no longer shared with you.',
+  }
+  return {
+    load: async () => fromDevice(await listOffline()),
+    page: '/offline-documents',
+    gone: 'This document is no longer kept on this device.',
+  }
 }
 
 export default function FileViewerPage() {
@@ -72,7 +92,7 @@ export default function FileViewerPage() {
     try {
       // A fresh link: the one loaded with the page may have expired.
       const fresh = (await source.load()).find(a => a.id === fileId)
-      const res = await fetch(`/api${fresh.url}`)
+      const res = await fetch(fresh.src)
       if (!res.ok) throw new Error()
       const url = URL.createObjectURL(await res.blob())
       const a = document.createElement('a')
@@ -102,8 +122,8 @@ export default function FileViewerPage() {
       {file && (
         <ZoomArea>
           {file.mimeType === 'application/pdf'
-            ? <PdfView url={`/api${file.url}`} onError={() => setError('This PDF could not be shown here. Use Download to open it in another app.')} />
-            : <img className="file-viewer-page" src={`/api${file.url}`} alt={file.filename} />}
+            ? <PdfView url={file.src} onError={() => setError('This PDF could not be shown here. Use Download to open it in another app.')} />
+            : <img className="file-viewer-page" src={file.src} alt={file.filename} />}
         </ZoomArea>
       )}
     </div>

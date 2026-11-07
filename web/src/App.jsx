@@ -26,6 +26,7 @@ const TripItemFormPage      = lazy(() => import('./pages/TripItemFormPage'))
 const TripItemDetailPage    = lazy(() => import('./pages/TripItemDetailPage'))
 const TripRoutePage         = lazy(() => import('./pages/TripRoutePage'))
 const FileViewerPage        = lazy(() => import('./pages/FileViewerPage'))
+const OfflineDocumentsPage  = lazy(() => import('./pages/OfflineDocumentsPage'))
 const InvitePage            = lazy(() => import('./pages/InvitePage'))
 const ForgotPasswordPage    = lazy(() => import('./pages/ForgotPasswordPage'))
 const ResetPasswordPage     = lazy(() => import('./pages/ResetPasswordPage'))
@@ -47,6 +48,9 @@ export default function App() {
           <Route path="/verify-email" element={<VerifyEmailPage />} />
           <Route path="/verify-email-change" element={<VerifyEmailChangePage />} />
           <Route path="/privacy" element={<PrivacyPage />} />
+          {/* Kept on this device: offline and signed out too (utils/offlineDocs.js). */}
+          <Route path="/offline-documents" element={<OfflineDocumentsPage />} />
+          <Route path="/offline-documents/:fileId" element={<FileViewerPage />} />
           <Route element={<ProtectedRoute />}>
             {/* Full screen, outside the Layout: no sidebar, no bottom bar. */}
             <Route path="/trips/:tripId/items/:itemId/files/:fileId" element={<FileViewerPage />} />
