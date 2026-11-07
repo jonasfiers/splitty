@@ -1,6 +1,10 @@
 import axios from 'axios'
 
-const client = axios.create({ baseURL: '/api' })
+// A time limit: without a connection a request does not always fail at once
+// (on a phone with a VPN in airplane mode it just never gets an answer), and
+// a page would show "Loading…" forever. Slow ones set their own: uploads and
+// the export 2 minutes, the route finder 45 s.
+const client = axios.create({ baseURL: '/api', timeout: 12000 })
 
 client.interceptors.request.use(config => {
   const token = localStorage.getItem('token')

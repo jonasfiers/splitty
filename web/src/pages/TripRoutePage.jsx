@@ -117,6 +117,7 @@ export default function TripRoutePage() {
       const cursor = direction === 'earlier' ? result?.previousCursor : direction === 'later' ? result?.nextCursor : null
       // Pages continue the search as it was answered, widened or not.
       const { data } = await client.get(`/trips/${tripId}/routes`, {
+        timeout: 45000, // the timetable search and stop names take a while
         params: { ...query, ...(cursor && { cursor, ...(result.widened && { wide: 1 }) }) },
       })
       if (!direction) {

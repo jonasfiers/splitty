@@ -73,7 +73,7 @@ export default function TripDocuments({ tripId, tripTitle }) {
     try {
       const body = new FormData()
       body.append('file', file)
-      await client.post(`/trips/${tripId}/documents`, body) // private until shared
+      await client.post(`/trips/${tripId}/documents`, body, { timeout: 120000 }) // private until shared
       await load()
     } catch (err) {
       setError(err.response?.data?.error || 'Upload failed.')

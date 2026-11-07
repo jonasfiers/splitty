@@ -132,7 +132,7 @@ export default function TripItemDetailPage() {
     try {
       const body = new FormData()
       body.append('file', file)
-      await client.post(`/trips/items/${itemId}/attachments`, body)
+      await client.post(`/trips/items/${itemId}/attachments`, body, { timeout: 120000 })
       await load()
     } catch (err) {
       setError(err?.response?.status === 413

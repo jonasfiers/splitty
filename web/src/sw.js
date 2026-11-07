@@ -24,11 +24,28 @@ const APP_URLS = [...new Set(MANIFEST.map(e => new URL(e.url, self.location).pat
 const INDEX = '/index.html'
 const NAVIGATION_TIMEOUT_MS = 4000
 
+// Three files at a time and at low priority, so the app's own requests (the
+// trips, the groups) are not stuck behind ~2 MB of program files on a slow
+// connection. All or nothing, as cache.addAll: one missing file and this
+// version does not install (the previous one keeps working).
 self.addEventListener('install', event => {
     event.waitUntil((async () => {
         const cache = await caches.open(APP_CACHE)
-        // 'reload': past the browser's HTTP cache, so index.html is current.
-        await cache.addAll(APP_URLS.map(url => new Request(url, { cache: 'reload' })))
+        const queue = [...APP_URLS]
+        const worker = async () => {
+            for (let url; (url = queue.shift()); ) {
+                // 'reload': past the browser's HTTP cache, so index.html is current.
+                const res = await fetch(new Request(url, { cache: 'reload', priority: 'low' }))
+                if (!res.ok) throw new Error(`${url}: HTTP ${res.status}`)
+                await cache.put(url, res)
+            }
+        }
+        try {
+            await Promise.all([worker(), worker(), worker()])
+        } catch (err) {
+            await caches.delete(APP_CACHE)
+            throw err
+        }
         await self.skipWaiting()
     })())
 })

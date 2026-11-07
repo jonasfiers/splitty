@@ -26,7 +26,7 @@ export default function TripsPage() {
         setTrips(tr.data.trips || [])
         setGroups(gr.data.groups || [])
       })
-      .catch(() => setError(navigator.onLine === false
+      .catch(err => setError(navigator.onLine === false || !err?.response
         ? 'No connection, so your trips cannot load. Documents kept on this device still open.'
         : 'Failed to load trips. Please refresh the page.'))
       .finally(() => setLoading(false))
@@ -35,7 +35,6 @@ export default function TripsPage() {
   // From tablet width up, trips are shown as cards.
   const cards = useMediaQuery('(min-width: 768px)')
 
-  if (loading) return <Loading />
 
   const now = today()
   const upcoming = trips.filter(t => t.endDate >= now)
@@ -61,8 +60,10 @@ export default function TripsPage() {
       )}
 
       {error && <p className="error">{error}</p>}
+      {/* Below the offline documents: they must not wait for the trips. */}
+      {loading && <Loading />}
 
-      {trips.length === 0 && !error && (
+      {!loading && trips.length === 0 && !error && (
         <div className="empty-state">
           <img src="/cat-empty.svg" alt="" style={{ width: 80, height: 80 }} />
           <p className="empty-state-title">No trips yet</p>

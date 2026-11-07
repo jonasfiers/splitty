@@ -45,7 +45,7 @@ function ConfirmConnection({ tripId, itinerary, onBack, onSaved }) {
       setLegs(prev => prev.map((leg, i) => ({ ...leg, fromKey: keys[2 * i], toKey: keys[2 * i + 1] })))
     }
     const stops = itinerary.legs.flatMap(l => [l.from, l.to]).map(({ name, lat, lon }) => ({ name, lat, lon }))
-    client.post(`/trips/${tripId}/routes/places`, { stops })
+    client.post(`/trips/${tripId}/routes/places`, { stops }, { timeout: 45000 })
       .then(({ data }) => apply(data))
       .catch(err => {
         apply(unmatched(itinerary))
@@ -117,7 +117,7 @@ function ConfirmConnection({ tripId, itinerary, onBack, onSaved }) {
     }
     setSaving(true)
     try {
-      await client.post(`/trips/${tripId}/routes`, payload)
+      await client.post(`/trips/${tripId}/routes`, payload, { timeout: 45000 })
       onSaved(chosen.length)
     } catch (err) {
       setError(err?.response?.data?.error || 'Failed to add the connection.')

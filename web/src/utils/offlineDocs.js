@@ -41,7 +41,7 @@ export async function listOffline() {
 
 // doc: as from GET /trips/:id/documents (with its signed `url`).
 export async function keepOffline(doc, trip) {
-  const res = await fetch(`/api${doc.url}`)
+  const res = await fetch(`/api${doc.url}`, { signal: AbortSignal.timeout(120000) })
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   const blob = await res.blob()
   const cache = await open()
