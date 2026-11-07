@@ -1,0 +1,12 @@
+/* See ZoomArea.jsx. touch-action without pinch-zoom: the browser scrolls this
+   pane with one finger but leaves pinches (and double-taps) to the pane. */
+.zoom-area {
+  overflow: auto;
+  touch-action: pan-x pan-y;
+  overscroll-behavior: contain;
+  border-radius: var(--r-md);
+}
+.zoom-content {
+  width: 100%;
+  min-width: 100%;
+}

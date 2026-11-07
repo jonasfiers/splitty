@@ -3,6 +3,7 @@ import { useParams } from 'react-router'
 import client from '../api/client'
 import Loading from '../components/Loading.jsx'
 import PageHeader from '../components/PageHeader/PageHeader.jsx'
+import ZoomArea from '../components/FileViewer/ZoomArea.jsx'
 import { formatBytes } from '../utils/trip.js'
 import { useMediaQuery } from '../utils/useMediaQuery.js'
 
@@ -17,6 +18,11 @@ import { useMediaQuery } from '../utils/useMediaQuery.js'
 
 // pages beyond this are left to Download: each page is a canvas of a few MB
 const MAX_PAGES = 30
+// Canvas pixels for all pages together, and for one page: zoomed in 5× on a
+// phone a page would be ~20 million pixels (80 MB). Beyond these the pages are
+// drawn a little less sharp instead (iOS refuses canvases over ~16.7 Mpx).
+const PIXEL_BUDGET = 24e6
+const PAGE_PIXELS = 16e6
 
 export default function FileViewerPage() {
   const { tripId, itemId, fileId } = useParams()
@@ -73,9 +79,11 @@ export default function FileViewerPage() {
       {file && (
         <div className="file-viewer">
           <div className="file-viewer-meta">{wide ? '' : `${file.filename} · `}{formatBytes(file.size)}</div>
-          {file.mimeType === 'application/pdf'
-            ? <PdfView url={`/api${file.url}`} onError={() => setError('This PDF could not be shown here. Use Download to open it in another app.')} />
-            : <img className="file-viewer-page" src={`/api${file.url}`} alt={file.filename} />}
+          <ZoomArea>
+            {file.mimeType === 'application/pdf'
+              ? <PdfView url={`/api${file.url}`} onError={() => setError('This PDF could not be shown here. Use Download to open it in another app.')} />
+              : <img className="file-viewer-page" src={`/api${file.url}`} alt={file.filename} />}
+          </ZoomArea>
         </div>
       )}
     </>
@@ -104,8 +112,12 @@ function PdfView({ url, onError }) {
       if (!doc || !cssWidth || cssWidth === drawnWidth) return
       drawnWidth = cssWidth
       const mine = ++pass
-      const ratio = Math.min(window.devicePixelRatio || 1, 3)
       const shown = Math.min(doc.numPages, MAX_PAGES)
+      let ratio = Math.min(window.devicePixelRatio || 1, 3)
+      // The budget, from the first page's shape (tickets' pages are alike).
+      const first = (await doc.getPage(1)).getViewport({ scale: 1 })
+      const pagePx = (cssWidth * ratio) ** 2 * (first.height / first.width)
+      ratio *= Math.min(1, Math.sqrt(PIXEL_BUDGET / (pagePx * shown)), Math.sqrt(PAGE_PIXELS / pagePx))
       for (let n = 1; n <= shown; n++) {
         const page = await doc.getPage(n)
         if (cancelled || mine !== pass) return
