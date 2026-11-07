@@ -20,6 +20,7 @@
     "emoji-mart": "^5.6.0",
     "leaflet": "^1.9.4",
     "maplibre-gl": "^6.15.0",
+    "pdfjs-dist": "6.4.299",
     "pmtiles": "^4.5.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",

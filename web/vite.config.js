@@ -1,6 +1,27 @@
 import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
+import { cpSync } from 'node:fs'
+import { createRequire } from 'node:module'
+import { dirname, join } from 'node:path'
+
+// pdf.js (the in-app file viewer, src/utils/pdf.js) loads fonts, character
+// maps, colour profiles and image decoders at run time from /pdfjs/: copied
+// from the package into the build, so they always match its version.
+function copyPdfjsAssets() {
+  let outDir
+  return {
+    name: 'copy-pdfjs-assets',
+    apply: 'build',
+    configResolved(config) { outDir = config.build.outDir },
+    writeBundle() {
+      const pkg = dirname(createRequire(import.meta.url).resolve('pdfjs-dist/package.json'))
+      for (const dir of ['cmaps', 'standard_fonts', 'iccs', 'wasm']) {
+        cpSync(join(pkg, dir), join(outDir, 'pdfjs', dir), { recursive: true })
+      }
+    },
+  }
+}
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
@@ -8,6 +29,7 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [
       react(),
+      copyPdfjsAssets(),
       VitePWA({
         strategies: 'injectManifest',
         srcDir: 'src',
@@ -61,8 +83,8 @@ export default defineConfig(({ mode }) => {
     build: {
       rolldownOptions: {
         output: {
-          // MapLibre's worker (imported with ?url in basemap.js) is an .mjs
-          // file. nginx's mime.types has no .mjs, and a module worker served
+          // MapLibre's and pdf.js's workers (imported with ?url) are .mjs
+          // files. nginx's mime.types has no .mjs, and a module worker served
           // as application/octet-stream is refused (nosniff), so it ships as .js.
           assetFileNames: info => (info.names?.[0] ?? '').endsWith('.mjs')
             ? 'assets/[name]-[hash].js'

@@ -6,6 +6,7 @@ import PageHeader from '../components/PageHeader/PageHeader.jsx'
 import LinkExpenseSheet from '../components/TripForm/LinkExpenseSheet.jsx'
 import BigReference from '../components/BigReference/BigReference.jsx'
 import { useMediaQuery } from '../utils/useMediaQuery.js'
+import { isStandalone } from '../utils/standalone.js'
 
 // Leaflet is only worth downloading when the map is shown (wide screens).
 const TripMap = lazy(() => import('../components/TripMap/TripMap.jsx'))
@@ -49,6 +50,7 @@ export default function TripItemDetailPage() {
   const [linking, setLinking] = useState(false)
   // Same breakpoint as the other two-column pages (see index.css).
   const wide = useMediaQuery('(min-width: 1180px)')
+  const standalone = useMemo(isStandalone, [])
   const [error, setError] = useState('')
 
   const load = useCallback(async () => {
@@ -292,8 +294,17 @@ export default function TripItemDetailPage() {
           {item.attachments.length > 0 && (
             <div className="expense-list">
               {item.attachments.map(a => (
-                // A plain link, so the browser's own PDF and image viewers open it.
-                <a key={a.id} className="expense-item" href={`/api${a.url}`} target="_blank" rel="noopener noreferrer">
+                // In a browser tab: a plain link, so the browser's own PDF and
+                // image viewers open it in a new tab. In the installed app that
+                // would fill the window with no way back: Splitty's viewer.
+                <a
+                  key={a.id}
+                  className="expense-item"
+                  href={standalone ? `/trips/${tripId}/items/${itemId}/files/${a.id}` : `/api${a.url}`}
+                  {...(standalone
+                    ? { onClick: event => { event.preventDefault(); navigate(`/trips/${tripId}/items/${itemId}/files/${a.id}`) } }
+                    : { target: '_blank', rel: 'noopener noreferrer' })}
+                >
                   <div className="expense-icon">{a.mimeType === 'application/pdf' ? '📄' : '🖼️'}</div>
                   <div className="expense-info">
                     <div className="expense-name">{a.filename}</div>
