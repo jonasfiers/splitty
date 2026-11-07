@@ -13,7 +13,8 @@ pdfjs.GlobalWorkerOptions.workerSrc = workerUrl
 const ASSETS = '/pdfjs/'
 
 // The whole file at once, not in ranges: the signed link expires after five
-// minutes, and a ticket is at most 10 MB (the upload limit).
+// minutes, and a ticket is at most 10 MB (the upload limit). Returns pdf.js's
+// loading task: `.promise` is the document, `.destroy()` frees it all.
 export async function loadPdf(url) {
   const res = await fetch(url)
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
@@ -30,5 +31,5 @@ export async function loadPdf(url) {
     iccUrl: `${ASSETS}iccs/`,
     // No links, forms or scripts: a ticket is only looked at.
     enableXfa: false,
-  }).promise
+  })
 }

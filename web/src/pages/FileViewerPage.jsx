@@ -85,11 +85,13 @@ function PdfView({ url, onError }) {
 
   useEffect(() => {
     let cancelled = false
-    let doc = null
+    let task = null
     ;(async () => {
       try {
         const { loadPdf } = await import('../utils/pdf.js')
-        doc = await loadPdf(url)
+        task = await loadPdf(url)
+        if (cancelled) { task.destroy(); return }
+        const doc = await task.promise
         if (cancelled) return
         const shown = Math.min(doc.numPages, MAX_PAGES)
         setState({ loading: false, pages: doc.numPages, shown })
@@ -120,7 +122,7 @@ function PdfView({ url, onError }) {
     })()
     return () => {
       cancelled = true
-      doc?.destroy()
+      task?.destroy()
       if (box.current) box.current.replaceChildren()
     }
   }, [url]) // eslint-disable-line react-hooks/exhaustive-deps
