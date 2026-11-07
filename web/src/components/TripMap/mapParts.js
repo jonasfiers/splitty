@@ -21,10 +21,16 @@ export function arcBetween(map, from, to) {
 
 // Direction arrows along each journey: every ARROW_SPACING px on screen, kept
 // ARROW_END_GAP px clear of the pins at both ends; a short journey gets one in
-// the middle. Only arrows within ARROW_MARGIN px of the view are placed.
+// the middle. Only arrows in the area the lines are drawn in are placed.
 const ARROW_SPACING = 140
 const ARROW_END_GAP = 28
-const ARROW_MARGIN = 80
+
+// Leaflet draws lines, and Splitty places arrows, only in and around the view,
+// and redoes both once a pan or zoom ends. With Leaflet's default 10% around
+// it, panning showed half-drawn arcs until the map stopped; one whole view on
+// every side covers any ordinary pan. A few arcs: cheap to draw that large.
+export const OVERSCAN = 1
+export const mapOptions = () => ({ renderer: L.svg({ padding: OVERSCAN }) })
 export const arrowIcon = angle => L.divIcon({
   className: '',
   html: `<div class="trip-leg"><svg viewBox="0 0 24 24" style="transform: rotate(${angle}deg)"><path d="M5 5 L20 12 L5 19 L9 12 Z" /></svg></div>`,
@@ -58,13 +64,14 @@ function pointsAlong(pts, spacing, gap) {
 }
 
 // Where the arrows along `curve` go at the map's current zoom and position:
-// [{ latLng, angle }], only those in or near the view. Placed in screen
+// [{ latLng, angle }], only those in or near the view (OVERSCAN). Placed in screen
 // pixels, so they are redone after every zoom, pan or resize.
 export function arrowsAlong(map, curve) {
   const size = map.getSize()
+  const mx = size.x * OVERSCAN, my = size.y * OVERSCAN
   const inView = p => {
     const c = map.layerPointToContainerPoint(p)
-    return c.x > -ARROW_MARGIN && c.y > -ARROW_MARGIN && c.x < size.x + ARROW_MARGIN && c.y < size.y + ARROW_MARGIN
+    return c.x > -mx && c.y > -my && c.x < size.x + mx && c.y < size.y + my
   }
   const pts = curve.map(ll => map.latLngToLayerPoint(ll))
   return pointsAlong(pts, ARROW_SPACING, ARROW_END_GAP)

@@ -4,7 +4,7 @@ import { ExpandedContext } from '../Expandable/Expandable.jsx'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { itemIcon, linkTarget, mapsLink } from '../../utils/trip.js'
-import { addBasemap, arcBetween, arrowIcon, arrowsAlong, keepFramed } from './mapParts.js'
+import { addBasemap, arcBetween, arrowIcon, arrowsAlong, keepFramed, mapOptions } from './mapParts.js'
 
 // Places numbered in the order the trip reaches them: walk the items by start
 // time and number each place the first time it comes up (a journey reaches its
@@ -45,7 +45,7 @@ function TripMap({ places, items, onOpenItem, highlight = null, onHover = () => 
 
     // In the page the wheel scrolls the page until the map is clicked; full
     // screen there is nothing else to scroll.
-    const map = L.map(el.current, { scrollWheelZoom: expanded })
+    const map = L.map(el.current, { ...mapOptions(), scrollWheelZoom: expanded })
     if (!expanded) {
       map.on('click', () => map.scrollWheelZoom.enable())
       map.on('mouseout', () => map.scrollWheelZoom.disable())

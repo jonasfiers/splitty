@@ -2,7 +2,7 @@ import { useContext, useEffect, useRef } from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { ExpandedContext } from '../Expandable/Expandable.jsx'
-import { addBasemap, arcBetween, arrowIcon, arrowsAlong, keepFramed } from '../TripMap/mapParts.js'
+import { addBasemap, arcBetween, arrowIcon, arrowsAlong, keepFramed, mapOptions } from '../TripMap/mapParts.js'
 import { legIcon } from './ConnectionCard.jsx'
 
 // A stop is where a vehicle is boarded or left; the same platform in several
@@ -43,7 +43,7 @@ function RouteMap({ itineraries, highlight = null, skip = null, onHover = () => 
   useEffect(() => {
     if (!el.current || itineraries.length === 0) return
 
-    const map = L.map(el.current, { scrollWheelZoom: expanded })
+    const map = L.map(el.current, { ...mapOptions(), scrollWheelZoom: expanded })
     if (!expanded) {
       map.on('click', () => map.scrollWheelZoom.enable())
       map.on('mouseout', () => map.scrollWheelZoom.disable())
