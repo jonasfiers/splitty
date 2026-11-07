@@ -53,18 +53,21 @@ assert s.count(anchor) == 1, 'expected exactly one "location /api/ {"'
 block = '''    # Vector base map (scripts/setup-vector-map.sh): the Protomaps planet and
     # its fonts and icons, from the host HDD (read-only bind mount). Only the
     # current build and the assets are served; ^~ keeps the .png rule away.
+    # Cache-Control without "always": only successful answers are cached. A
+    # cached 404 (asked before the file was there) would keep a browser on
+    # the raster fallback for a day without it ever asking again.
     location = /maps/planet.pmtiles {
         include snippets/splitty-security-headers.conf;
         alias /srv/maps/planet.pmtiles;
         default_type application/octet-stream;
-        add_header Cache-Control "public, max-age=86400" always;
+        add_header Cache-Control "public, max-age=86400";
     }
     location ^~ /maps/assets/ {
         include snippets/splitty-security-headers.conf;
         alias /srv/maps/assets/;
         types { application/x-protobuf pbf; application/json json; image/png png; }
         default_type application/octet-stream;
-        add_header Cache-Control "public, max-age=604800" always;
+        add_header Cache-Control "public, max-age=604800";
     }
 
 '''
