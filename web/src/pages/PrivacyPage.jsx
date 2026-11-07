@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext'
 // Public: linked from the sign-in and register pages and from Profile.
 // Keep it true: when Splitty starts storing something new, sending data to a
 // new service, or keeping something longer, update this page and its date.
-const UPDATED = '6 November 2026'
+const UPDATED = '7 November 2026'
 
 export default function PrivacyPage() {
   const { token } = useAuth()
@@ -54,11 +54,16 @@ export default function PrivacyPage() {
           <li><strong>The people in your groups</strong> see your name and avatar, and the expenses, balances and trips of the groups you share with them. They do not see your email address.</li>
           <li><strong>Migadu</strong>, Splitty’s email provider, handles the emails Splitty sends you (confirming your address, resetting your password, confirming a deletion).</li>
           <li><strong>Your browser’s push service</strong>, if you switch on notifications: Google for Chrome and Android, Apple for Safari, Mozilla for Firefox. It carries the notification to your device.</li>
-          <li><strong>Maps:</strong> Splitty serves its own copy of OpenStreetMap’s map data (prepared by Protomaps), so your browser contacts nobody else to show a map. If that copy is unavailable, Splitty’s server fetches map images from OpenStreetMap instead and keeps copies; OpenStreetMap then sees only that Splitty asked for a part of the map, not who looked at it.</li>
           <li><strong>Place and route search:</strong> when you search for a place, Splitty’s server asks OpenStreetMap’s Nominatim service; when you look for a public-transport route, it asks Transitous. They receive what you searched for (a place name, or the stops and times), not your name, email or IP address.</li>
           <li><strong>Directions:</strong> if you tap “Navigate here”, your device opens Apple Maps, your map app, or OpenStreetMap with that place.</li>
         </ul>
         <p>Splitty does not sell or share your data with anyone else.</p>
+        <p>
+          Maps are drawn from Splitty’s own copy of OpenStreetMap’s map data (prepared by Protomaps), so showing a
+          map sends nothing to anyone else. If that copy is unavailable, Splitty’s server fetches map images from
+          OpenStreetMap instead; OpenStreetMap then sees only that Splitty asked for part of the map, not who is
+          looking at it.
+        </p>
 
         <h2>Where it is kept</h2>
         <p>
