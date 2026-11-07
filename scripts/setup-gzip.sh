@@ -21,7 +21,12 @@ if ! nginx -t 2>/dev/null; then
 fi
 nginx -s reload
 sleep 1
-JS=$(ls /var/www/splitty/assets | grep -E '^index-.*\.js$' | head -1)
-plain=$(curl -s -o /dev/null -w '%{size_download}' "http://127.0.0.1/assets/$JS")
-packed=$(curl -s -o /dev/null -H 'Accept-Encoding: gzip' -w '%{size_download}' "http://127.0.0.1/assets/$JS")
+# The biggest script, asked for under Splitty's own name: a bare 127.0.0.1
+# request lands on nginx's default site, not Splitty's.
+JS=$(ls -S /var/www/splitty/assets | grep -E '\.js$' | head -1)
+HOST=$(grep -h -o -E 'server_name [a-z0-9.-]+' /etc/nginx/sites-enabled/* | awk '{print $2}' | grep -m1 splitty)
+# Prod redirects http to https; both names point at this container.
+GET=(curl -sk -L -o /dev/null --resolve "$HOST:80:127.0.0.1" --resolve "$HOST:443:127.0.0.1" -w '%{size_download}')
+plain=$("${GET[@]}" "http://$HOST/assets/$JS")
+packed=$("${GET[@]}" -H 'Accept-Encoding: gzip' "http://$HOST/assets/$JS")
 echo "== $JS: $plain bytes plain, $packed with gzip"
