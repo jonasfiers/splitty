@@ -11,7 +11,15 @@
   min-width: 100%;
 }
 
-/* The pane fills the page down to the bottom bar: the usual 24 px under a
-   page would only make the page around it scroll. 12 px, the gap between the
-   document's pages. */
-.page-wrap:has(.zoom-area) { padding-bottom: 12px; }
+/* The viewer page fills the content area (the shell is 100dvh, the content
+   area its flexible part), and the pane takes what the header leaves. Plain
+   CSS, so a rotation, an unfolded Fold or a resized window re-lays it out
+   without any measuring. The bottom padding is the gap between the pages. */
+.page-wrap:has(.zoom-area) {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 12px;
+}
+.page-wrap:has(.zoom-area) > .file-viewer { flex: 1; min-height: 0; }
+.page-wrap:has(.zoom-area) .zoom-area { flex: 1; min-height: 0; }

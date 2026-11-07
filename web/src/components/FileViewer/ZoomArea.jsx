@@ -2,7 +2,8 @@ import { useEffect, useRef } from 'react'
 import './ZoomArea.css'
 
 // The file viewer's document pane (pages/FileViewerPage.jsx): fills the space
-// between the header and the bottom bar, scrolls both ways, and zooms on its
+// between the header and the bottom bar (by CSS, ZoomArea.css, so it follows
+// rotating, unfolding and resizing by itself), scrolls both ways, and zooms on its
 // own, so the header and navigation stay where they are. Without it a pinch
 // zoomed the browser's whole page, navigation included.
 //
@@ -33,22 +34,6 @@ export default function ZoomArea({ children }) {
       el.scrollTop = py * scale - ty
     }
     const local = t => { const r = el.getBoundingClientRect(); return [t.clientX - r.left, t.clientY - r.top] }
-
-    // Fill the height left between this pane's top and the bottom bar's top
-    // edge (or the window's bottom where there is none), less the page's
-    // bottom padding. Measured from the bar itself: in the installed
-    // app innerHeight also counts the strip under Android's gesture bar.
-    const fit = () => {
-      const nav = document.querySelector('.bottom-nav')
-      const bottom = nav && getComputedStyle(nav).display !== 'none' ? nav.getBoundingClientRect().top : window.innerHeight
-      // The page's own bottom padding (ZoomArea.css sets it to 12 px here),
-      // so the page around the pane has nothing left to scroll.
-      const wrap = el.closest('.page-wrap')
-      const pad = wrap ? parseFloat(getComputedStyle(wrap).paddingBottom) || 0 : 12
-      el.style.height = `${Math.max(240, bottom - el.getBoundingClientRect().top - pad)}px`
-    }
-    fit()
-    window.addEventListener('resize', fit)
 
     // Touch events, not pointer events: once the browser starts scrolling a
     // finger it cancels that pointer, and a pinch would stop halfway.
@@ -102,7 +87,6 @@ export default function ZoomArea({ children }) {
     el.addEventListener('touchcancel', onEnd, { passive: false })
     el.addEventListener('wheel', onWheel, { passive: false })
     return () => {
-      window.removeEventListener('resize', fit)
       el.removeEventListener('touchstart', onStart)
       el.removeEventListener('touchmove', onMove)
       el.removeEventListener('touchend', onEnd)
