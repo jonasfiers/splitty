@@ -51,7 +51,7 @@ function sourceOf(tripId, itemId) {
         return fromDevice(await listOffline())
       }
     },
-    page: `/trips/${tripId}`,
+    page: `/trips/${tripId}/documents`,
     gone: 'This document was deleted, or is no longer shared with you.',
   }
   return {

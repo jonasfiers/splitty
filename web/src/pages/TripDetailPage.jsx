@@ -4,7 +4,6 @@ import client from '../api/client'
 import FabButton from '../components/FabButton/FabButton.jsx'
 import Loading from '../components/Loading.jsx'
 import PageHeader from '../components/PageHeader/PageHeader.jsx'
-import TripDocuments from '../components/TripDocuments/TripDocuments.jsx'
 import TripFormSheet from '../components/TripForm/TripFormSheet.jsx'
 import DuplicateTripSheet from '../components/TripForm/DuplicateTripSheet.jsx'
 import QuickAddSheet from '../components/TripForm/QuickAddSheet.jsx'
@@ -59,6 +58,13 @@ function TripDetailPage() {
   const [showCopy, setShowCopy] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+
+  // How many documents this user sees here, for the chip (the list itself
+  // is on the Documents page). Quiet on failure: the chip just has no count.
+  const [docCount, setDocCount] = useState(0)
+  useEffect(() => {
+    client.get(`/trips/${id}/documents`).then(({ data }) => setDocCount(data.documents.length)).catch(() => {})
+  }, [id])
 
   const load = useCallback(async () => {
     const { data } = await client.get(`/trips/${id}`)
@@ -259,21 +265,23 @@ function TripDetailPage() {
         <Link to={`/groups/${trip.groupId}`} style={{ color: 'var(--accent)' }}>{trip.groupIcon} {trip.groupTitle}</Link>
       </PageHeader>
 
+      {/* Documents and money: a row of chips, so the page opens on the plan. */}
+      <div className="trip-chips">
+        <Link to={`/trips/${id}/documents`} className="trip-chip">
+          <span aria-hidden="true">📄</span> Documents{docCount ? ` · ${docCount}` : ''} <span className="trip-chip-chevron" aria-hidden="true">›</span>
+        </Link>
+        {paid > 0 && (
+          <span className="trip-chip trip-chip-static" title="Paid so far, in the group's currency">
+            {formatCurrency(paid, trip.groupIso)} paid
+          </span>
+        )}
+      </div>
+
       {state?.notice && <p className="error" style={{ background: 'var(--accent-light)', color: 'var(--accent)', borderColor: 'var(--accent-subtle)' }}>{state.notice}</p>}
       {error && <p className="error">{error}</p>}
 
       {trip.notes && <p className="trip-notes">{trip.notes}</p>}
 
-      {paid > 0 && (
-        <div className="trip-costs">
-          <div>
-            <div className="trip-costs-label">Paid so far</div>
-            <div className="trip-costs-value">{formatCurrency(paid, trip.groupIso)}</div>
-          </div>
-        </div>
-      )}
-
-      <TripDocuments tripId={id} tripTitle={trip.title} />
 
       {items.length === 0 ? (
         <div className="empty-state" style={{ padding: '32px 24px' }}>

@@ -7,7 +7,8 @@ import { keepOffline, removeOffline, syncTrip, offlineSupported } from '../../ut
 import { useOfflineDocs } from '../../utils/useOfflineDocs.js'
 import './TripDocuments.css'
 
-// A trip's travel documents: arrival cards, visas, insurance, passport copies.
+// A trip's travel documents: arrival cards, visas, insurance, passport copies
+// (on their own page, pages/TripDocumentsPage, from the trip's Documents chip).
 // Files of the trip as a whole, not of one item (api: tripService "DOCUMENTS").
 // Each is private to whoever added it ("Only you") unless they share it with
 // everyone on the trip; only they can share, unshare or delete it. They open
@@ -19,7 +20,7 @@ import './TripDocuments.css'
 //
 // Links are signed for 5 minutes: refreshed while the page is open and on
 // coming back to it, as on the item page.
-export default function TripDocuments({ tripId, tripTitle }) {
+export default function TripDocuments({ tripId, tripTitle, heading = true }) {
   const navigate = useNavigate()
   const standalone = useMemo(isStandalone, [])
   const [documents, setDocuments] = useState(null)
@@ -128,7 +129,7 @@ export default function TripDocuments({ tripId, tripTitle }) {
 
   return (
     <section className="trip-docs">
-      <div className="section-label">Documents{documents?.length ? ` · ${documents.length}` : ''}</div>
+      {heading && <div className="section-label">Documents{documents?.length ? ` · ${documents.length}` : ''}</div>}
       {error && <p className="error">{error}</p>}
       {documents?.length > 0 && (
         <div className="expense-list">
