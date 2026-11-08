@@ -128,10 +128,32 @@
     font-size: 11px;
     color: var(--text-3);
 }
+.gantt-hint-dismiss {
+    font: inherit;
+    font-weight: 600;
+    color: var(--accent);
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+}
+.gantt-help-btn svg {
+    width: 16px;
+    height: 16px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    vertical-align: middle;
+}
+.gantt-help { margin: 0 0 20px; padding-left: 18px; font-size: 14px; line-height: 1.5; color: var(--text-2); }
+.gantt-help li { margin-bottom: 8px; }
+.gantt-help b { color: var(--text); font-weight: 600; }
 .gantt-hint-touch { display: none; }
 @media (hover: none) {
     .gantt-hint-pointer { display: none; }
     .gantt-hint-touch { display: inline; }
+    ul.gantt-help.gantt-hint-touch { display: block; }
 }
 /* The range being dragged out, as a tag beside the ghost so it reads over other bars. */
 .gantt-ghost span {
@@ -232,7 +254,7 @@
     border-left: 1px solid var(--border);
 }
 .gantt-zoom button:first-child { border-left: none; font-size: 16px; }
-.gantt-zoom button:last-child { font-size: 16px; }
+.gantt-zoom button:nth-child(3) { font-size: 16px; }
 .gantt-zoom button:hover:not(:disabled) { color: var(--accent); }
 .gantt-zoom button:disabled { opacity: .35; cursor: default; }
 .gantt-zoom button.active { color: var(--accent); }

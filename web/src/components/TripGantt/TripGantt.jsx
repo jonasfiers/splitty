@@ -1,7 +1,13 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { addDays, daysBetween, dayOf, timeOf, formatDay, itemIcon, today } from '../../utils/trip.js'
+import Sheet from '../Sheet/Sheet.jsx'
 import './TripGantt.css'
+
+// The how-to line under the timeline shows until "Got it", once per browser;
+// after that the ⓘ button by the zoom controls opens the same help as a sheet.
+const HINT_KEY = 'gantt-hint-dismissed'
+const hintDismissed = () => { try { return localStorage.getItem(HINT_KEY) === '1' } catch { return false } }
 
 // The trip at a glance: days run left to right, with one lane each for where
 // you sleep, how you travel and what you do. Bars sit at their real date and
@@ -151,6 +157,12 @@ export default function TripGantt({ trip, items: allItems, placeName, onOpenItem
   const [boxWidth, setBoxWidth] = useState(0)
   const [ghost, setGhost] = useState(null) // { kind, from, to } while dragging
   const press = useRef(null)
+  const [showHint, setShowHint] = useState(() => !hintDismissed())
+  const [showHelp, setShowHelp] = useState(false)
+  const dismissHint = () => {
+    setShowHint(false)
+    try { localStorage.setItem(HINT_KEY, '1') } catch { /* private window: shows again next time */ }
+  }
   const tap = useRef(null) // a finished touch press, waiting for its click
   const [preview, setPreview] = useState(null) // { id, start, end } while a bar is dragged
   const barDrag = useRef(null)
@@ -440,6 +452,9 @@ export default function TripGantt({ trip, items: allItems, placeName, onOpenItem
       <button type="button" onClick={() => zoomTo(dayWidth / ZOOM_STEP)} disabled={dayWidth <= minWidth} title="Zoom out" aria-label="Zoom timeline out">−</button>
       <button type="button" className={fitted ? 'active' : ''} onClick={() => zoomTo(minWidth)} title="Fit the whole trip" aria-label="Fit the whole trip">Fit</button>
       <button type="button" onClick={() => zoomTo(dayWidth * ZOOM_STEP)} disabled={dayWidth >= ZOOM_MAX_W} title="Zoom in (or Ctrl/⌘ + scroll, or pinch)" aria-label="Zoom timeline in">+</button>
+      <button type="button" className="gantt-help-btn" onClick={() => setShowHelp(true)} title="How to use the timeline" aria-label="How to use the timeline">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 11v6M12 7.5v.01" /></svg>
+      </button>
     </div>
     <div className="gantt" ref={scroller} data-expand-scroller>
       <div className="gantt-inner" style={{ width: width + LABEL_W }}>
@@ -562,13 +577,37 @@ export default function TripGantt({ trip, items: allItems, placeName, onOpenItem
         </div>,
         document.body,
       )}
-      {onCreate && (
+      {/* Only until "Got it". Then the zoom buttons float over the bottom-right
+          corner of the last lane (Jonas: the trip's last day is mostly travel). */}
+      {onCreate && showHint && (
         <div className="gantt-hint">
-          <span className="gantt-hint-pointer">
-            Drag across a lane to add something there{onReschedule && ' · drag a bar, or its ends, to change when it happens'}{onDelete && ' · right-click a bar for more'} · Ctrl/⌘ + scroll or pinch to zoom
-          </span>
-          <span className="gantt-hint-touch">Tap an empty spot in a lane to add something on that day · pinch to zoom</span>
+          <>
+            <span className="gantt-hint-pointer">
+              Drag across a lane to add something there{onReschedule && ' · drag a bar, or its ends, to change when it happens'}{onDelete && ' · right-click a bar for more'} · Ctrl/⌘ + scroll or pinch to zoom
+            </span>
+            <span className="gantt-hint-touch">Tap an empty spot in a lane to add something on that day · pinch to zoom</span>
+            {' · '}
+            <button type="button" className="gantt-hint-dismiss" onClick={dismissHint}>Got it</button>
+          </>
         </div>
+      )}
+      {showHelp && (
+        <Sheet title="Using the timeline" onClose={() => setShowHelp(false)} zIndex={1100}>
+          <ul className="gantt-help gantt-hint-pointer">
+            {onCreate && <li><b>Add</b>: drag across a lane, from start to end.</li>}
+            <li><b>Open</b>: click a bar.</li>
+            {onReschedule && <li><b>Move</b>: drag a bar. <b>Change start or end</b>: drag one of its ends. Undo appears for a few seconds.</li>}
+            {onDelete && <li><b>More</b>: right-click a bar.</li>}
+            <li><b>Zoom</b>: − and +, Ctrl/⌘ + scroll, or pinch on a trackpad. <b>Fit</b> shows the whole trip.</li>
+          </ul>
+          <ul className="gantt-help gantt-hint-touch">
+            {onCreate && <li><b>Add</b>: tap an empty spot in a lane to add something on that day.</li>}
+            <li><b>Open</b>: tap a bar.</li>
+            <li><b>Zoom</b>: pinch, or − and +. <b>Fit</b> shows the whole trip.</li>
+            {onReschedule && <li><b>Move or resize</b>: with a mouse only, on a computer or tablet.</li>}
+          </ul>
+          <button type="button" className="btn btn-primary" style={{ width: '100%' }} onClick={() => setShowHelp(false)}>Close</button>
+        </Sheet>
       )}
     </div>
     </div>
