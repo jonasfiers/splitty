@@ -16,6 +16,7 @@ import CategoryPicker from '../components/CategoryPicker/CategoryPicker.jsx'
 import TripList from '../components/TripForm/TripList.jsx'
 import TripFormSheet from '../components/TripForm/TripFormSheet.jsx'
 import { useMediaQuery } from '../utils/useMediaQuery.js'
+import Sheet from '../components/Sheet/Sheet.jsx'
 
 const FILTERS = ['All', 'You paid', 'You owe']
 // Keep in sync with the .group-layout breakpoint in index.css.
@@ -635,121 +636,109 @@ export default function GroupDetailPage() {
 
       {/* Invite sheet */}
       {inviteLink && (
-        <div className="sheet-overlay" onClick={e => { if (e.target === e.currentTarget) setInviteLink(null) }}>
-          <div className="sheet">
-            <div className="sheet-handle" />
-            <p className="sheet-title">Invite to group</p>
-            <p style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 16 }}>Share this link. It expires in 7 days and can only be used once.</p>
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center', background: 'var(--surface-2)', borderRadius: 8, padding: '10px 12px', marginBottom: 16, wordBreak: 'break-all', fontSize: 13 }}>
-              <span style={{ flex: 1 }}>{inviteLink}</span>
-            </div>
-            <button className="btn btn-primary" style={{ width: '100%' }} onClick={() => { navigator.clipboard.writeText(inviteLink); setCopied(true); setTimeout(() => setCopied(false), 2000) }}>
-              {copied ? 'Link copied!' : 'Copy link'}
-            </button>
-            <button className="btn btn-ghost" style={{ width: '100%', marginTop: 8 }} onClick={() => { setInviteLink(null); setCopied(false) }}>Close</button>
+        <Sheet title="Invite to group" onClose={() => setInviteLink(null)}>
+          <p style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 16 }}>Share this link. It expires in 7 days and can only be used once.</p>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', background: 'var(--surface-2)', borderRadius: 8, padding: '10px 12px', marginBottom: 16, wordBreak: 'break-all', fontSize: 13 }}>
+            <span style={{ flex: 1 }}>{inviteLink}</span>
           </div>
-        </div>
+          <button className="btn btn-primary" style={{ width: '100%' }} onClick={() => { navigator.clipboard.writeText(inviteLink); setCopied(true); setTimeout(() => setCopied(false), 2000) }}>
+            {copied ? 'Link copied!' : 'Copy link'}
+          </button>
+          <button className="btn btn-ghost" style={{ width: '100%', marginTop: 8 }} onClick={() => { setInviteLink(null); setCopied(false) }}>Close</button>
+        </Sheet>
       )}
 
       {/* Balance transfer sheet */}
       {showTransfer && (
-        <div className="sheet-overlay" onClick={e => { if (e.target === e.currentTarget) setShowTransfer(false) }}>
-          <div className="sheet">
-            <div className="sheet-handle" />
-            <p className="sheet-title">Transfer balance</p>
-            {sharedGroups.length === 0 ? (
-              <>
-                <p style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 16 }}>
-                  You and {transferTarget?.name} don't share any other groups to transfer the balance to.
-                </p>
-                <button className="btn btn-ghost" style={{ width: '100%' }} onClick={() => setShowTransfer(false)}>Close</button>
-              </>
-            ) : transferBilateral === 0 ? (
-              <>
-                <p style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 16 }}>
-                  You have no direct balance with {transferTarget?.name} in this group to transfer.
-                </p>
-                <button className="btn btn-ghost" style={{ width: '100%' }} onClick={() => setShowTransfer(false)}>Close</button>
-              </>
-            ) : (
-              <form onSubmit={handleTransfer}>
-                <p style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 16 }}>
-                  Move the full balance of {formatCurrency(Math.abs(transferBilateral), balance?.iso)} with {transferTarget?.name} from this group to:
-                </p>
-                <div className="form-group">
-                  <label>Destination group</label>
-                  <select
-                    value={transferGroupId}
-                    onChange={e => setTransferGroupId(e.target.value)}
-                    required
-                  >
-                    {sharedGroups.map(g => (
-                      <option key={g.id} value={g.id}>{g.icon} {g.title}</option>
-                    ))}
-                  </select>
-                </div>
-                <button type="submit" className="btn btn-primary" style={{ width: '100%' }}>Transfer balance</button>
-                <button type="button" className="btn btn-ghost" style={{ width: '100%', marginTop: 8 }} onClick={() => setShowTransfer(false)}>Cancel</button>
-              </form>
-            )}
-          </div>
-        </div>
+        <Sheet title="Transfer balance" onClose={() => setShowTransfer(false)}>
+          {sharedGroups.length === 0 ? (
+            <>
+              <p style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 16 }}>
+                You and {transferTarget?.name} don't share any other groups to transfer the balance to.
+              </p>
+              <button className="btn btn-ghost" style={{ width: '100%' }} onClick={() => setShowTransfer(false)}>Close</button>
+            </>
+          ) : transferBilateral === 0 ? (
+            <>
+              <p style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 16 }}>
+                You have no direct balance with {transferTarget?.name} in this group to transfer.
+              </p>
+              <button className="btn btn-ghost" style={{ width: '100%' }} onClick={() => setShowTransfer(false)}>Close</button>
+            </>
+          ) : (
+            <form onSubmit={handleTransfer}>
+              <p style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 16 }}>
+                Move the full balance of {formatCurrency(Math.abs(transferBilateral), balance?.iso)} with {transferTarget?.name} from this group to:
+              </p>
+              <div className="form-group">
+                <label>Destination group</label>
+                <select
+                  value={transferGroupId}
+                  onChange={e => setTransferGroupId(e.target.value)}
+                  required
+                >
+                  {sharedGroups.map(g => (
+                    <option key={g.id} value={g.id}>{g.icon} {g.title}</option>
+                  ))}
+                </select>
+              </div>
+              <button type="submit" className="btn btn-primary" style={{ width: '100%' }}>Transfer balance</button>
+              <button type="button" className="btn btn-ghost" style={{ width: '100%', marginTop: 8 }} onClick={() => setShowTransfer(false)}>Cancel</button>
+            </form>
+          )}
+        </Sheet>
       )}
 
       {/* Settlement sheet */}
       {showSettlement && (
-        <div className="sheet-overlay" onClick={e => { if (e.target === e.currentTarget) setShowSettlement(false) }}>
-          <div className="sheet">
-            <div className="sheet-handle" />
-            <p className="sheet-title">Record a settlement</p>
-            <form onSubmit={handleSettlement}>
-              <div className="form-group">
-                <label>Who paid?</label>
-                <select
-                  value={settlementForm.paidByUserId}
-                  onChange={e => setSettlementForm(f => ({ ...f, paidByUserId: e.target.value }))}
-                  required
-                >
-                  <option value="">Select user…</option>
-                  {members.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
-                </select>
-              </div>
-              <div className="form-group">
-                <label>Who received?</label>
-                <select
-                  value={settlementForm.receivedByUserId}
-                  onChange={e => setSettlementForm(f => ({ ...f, receivedByUserId: e.target.value }))}
-                  required
-                >
-                  <option value="">Select user…</option>
-                  {members.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
-                </select>
-              </div>
-              <div className="form-group">
-                <label>Amount</label>
-                <CurrencyInput
-                  iso={group.iso}
-                  value={settlementForm.amount}
-                  onChange={val => setSettlementForm(f => ({ ...f, amount: val }))}
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label>Date</label>
-                <input
-                  type="date"
-                  value={settlementForm.date}
-                  onChange={e => setSettlementForm(f => ({ ...f, date: e.target.value }))}
-                  required
-                />
-              </div>
-              <button type="submit" className="btn btn-primary" style={{ width: '100%' }}>Record settlement</button>
-              <button type="button" className="btn btn-ghost" style={{ width: '100%', marginTop: 8 }} onClick={() => setShowSettlement(false)}>
-                Cancel
-              </button>
-            </form>
-          </div>
-        </div>
+        <Sheet title="Record a settlement" onClose={() => setShowSettlement(false)}>
+          <form onSubmit={handleSettlement}>
+            <div className="form-group">
+              <label>Who paid?</label>
+              <select
+                value={settlementForm.paidByUserId}
+                onChange={e => setSettlementForm(f => ({ ...f, paidByUserId: e.target.value }))}
+                required
+              >
+                <option value="">Select user…</option>
+                {members.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+              </select>
+            </div>
+            <div className="form-group">
+              <label>Who received?</label>
+              <select
+                value={settlementForm.receivedByUserId}
+                onChange={e => setSettlementForm(f => ({ ...f, receivedByUserId: e.target.value }))}
+                required
+              >
+                <option value="">Select user…</option>
+                {members.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+              </select>
+            </div>
+            <div className="form-group">
+              <label>Amount</label>
+              <CurrencyInput
+                iso={group.iso}
+                value={settlementForm.amount}
+                onChange={val => setSettlementForm(f => ({ ...f, amount: val }))}
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label>Date</label>
+              <input
+                type="date"
+                value={settlementForm.date}
+                onChange={e => setSettlementForm(f => ({ ...f, date: e.target.value }))}
+                required
+              />
+            </div>
+            <button type="submit" className="btn btn-primary" style={{ width: '100%' }}>Record settlement</button>
+            <button type="button" className="btn btn-ghost" style={{ width: '100%', marginTop: 8 }} onClick={() => setShowSettlement(false)}>
+              Cancel
+            </button>
+          </form>
+        </Sheet>
       )}
     </>
   )

@@ -11,6 +11,7 @@ import { timeAgo } from '../utils/time.js'
 import Loading from '../components/Loading.jsx'
 import HomePanels from '../components/HomePanels.jsx'
 import TabHeader from '../components/PageHeader/TabHeader.jsx'
+import Sheet from '../components/Sheet/Sheet.jsx'
 
 export default function GroupsPage() {
   const navigate = useNavigate()
@@ -252,89 +253,81 @@ export default function GroupsPage() {
 
       {/* Group picker sheet (when multiple groups) */}
       {showExpensePicker && (
-        <div className="sheet-overlay" onClick={e => { if (e.target === e.currentTarget) setShowExpensePicker(false) }}>
-          <div className="sheet">
-            <div className="sheet-handle" />
-            <p className="sheet-title">Add expense to…</p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {groups.map(g => (
-                <button
-                  key={g.id}
-                  onClick={() => { setShowExpensePicker(false); navigate(`/groups/${g.id}/expenses/new`) }}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 12,
-                    padding: '12px 14px', borderRadius: 'var(--r-md)',
-                    background: 'var(--surface-2)', border: '1px solid var(--border)',
-                    textAlign: 'left', cursor: 'pointer',
-                    font: '500 14px var(--font-body)', color: 'var(--text)',
-                    transition: 'background .12s',
-                  }}
-                  onMouseEnter={e => e.currentTarget.style.background = 'var(--accent-light)'}
-                  onMouseLeave={e => e.currentTarget.style.background = 'var(--surface-2)'}
-                >
-                  <span style={{
-                    width: 32, height: 32, borderRadius: 8,
-                    background: 'var(--accent-subtle)', color: 'var(--accent)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 13, fontWeight: 700, flexShrink: 0,
-                  }}>
-                    {g.icon}
-                  </span>
-                  {g.title}
-                </button>
-              ))}
-            </div>
-            <button className="btn btn-ghost" style={{ width: '100%', marginTop: 12 }} onClick={() => setShowExpensePicker(false)}>
-              Cancel
-            </button>
+        <Sheet title="Add expense to…" onClose={() => setShowExpensePicker(false)}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {groups.map(g => (
+              <button
+                key={g.id}
+                onClick={() => { setShowExpensePicker(false); navigate(`/groups/${g.id}/expenses/new`) }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 12,
+                  padding: '12px 14px', borderRadius: 'var(--r-md)',
+                  background: 'var(--surface-2)', border: '1px solid var(--border)',
+                  textAlign: 'left', cursor: 'pointer',
+                  font: '500 14px var(--font-body)', color: 'var(--text)',
+                  transition: 'background .12s',
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = 'var(--accent-light)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'var(--surface-2)'}
+              >
+                <span style={{
+                  width: 32, height: 32, borderRadius: 8,
+                  background: 'var(--accent-subtle)', color: 'var(--accent)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 13, fontWeight: 700, flexShrink: 0,
+                }}>
+                  {g.icon}
+                </span>
+                {g.title}
+              </button>
+            ))}
           </div>
-        </div>
+          <button className="btn btn-ghost" style={{ width: '100%', marginTop: 12 }} onClick={() => setShowExpensePicker(false)}>
+            Cancel
+          </button>
+        </Sheet>
       )}
 
       {/* New group sheet */}
       {showNewGroup && (
-        <div className="sheet-overlay" onClick={e => { if (e.target === e.currentTarget) setShowNewGroup(false) }}>
-          <div className="sheet">
-            <div className="sheet-handle" />
-            <p className="sheet-title">New group</p>
-            <form onSubmit={handleCreate}>
-              <div className="form-row form-row-compact">
-                <div className="form-group">
-                    <label>Icon</label>
-                  <EmojiPicker value={form.icon} onChange={icon => setForm(f => ({ ...f, icon }))}/>
-                </div>
-                <div className="form-group">
-
-                  <label>Group name</label>
-                  <input
-                    value={form.title}
-                    onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
-                    placeholder="e.g. Weekend trip"
-                    autoFocus
-                    required
-                  />
-                </div>
+        <Sheet title="New group" onClose={() => setShowNewGroup(false)}>
+          <form onSubmit={handleCreate}>
+            <div className="form-row form-row-compact">
+              <div className="form-group">
+                  <label>Icon</label>
+                <EmojiPicker value={form.icon} onChange={icon => setForm(f => ({ ...f, icon }))}/>
               </div>
               <div className="form-group">
-                <label>Currency</label>
-                <select
-                  value={form.currencyIso}
-                  onChange={e => setForm(f => ({ ...f, currencyIso: e.target.value }))}
+
+                <label>Group name</label>
+                <input
+                  value={form.title}
+                  onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
+                  placeholder="e.g. Weekend trip"
+                  autoFocus
                   required
-                >
-                  {currencies.map(c => (
-                    <option key={c.iso} value={c.iso}>{c.iso}</option>
-                  ))}
-                </select>
+                />
               </div>
-              {error && <p className="error">{error}</p>}
-              <button type="submit" className="btn btn-primary">Create group</button>
-              <button type="button" className="btn btn-ghost" style={{ width: '100%', marginTop: 8 }} onClick={() => setShowNewGroup(false)}>
-                Cancel
-              </button>
-            </form>
-          </div>
-        </div>
+            </div>
+            <div className="form-group">
+              <label>Currency</label>
+              <select
+                value={form.currencyIso}
+                onChange={e => setForm(f => ({ ...f, currencyIso: e.target.value }))}
+                required
+              >
+                {currencies.map(c => (
+                  <option key={c.iso} value={c.iso}>{c.iso}</option>
+                ))}
+              </select>
+            </div>
+            {error && <p className="error">{error}</p>}
+            <button type="submit" className="btn btn-primary">Create group</button>
+            <button type="button" className="btn btn-ghost" style={{ width: '100%', marginTop: 8 }} onClick={() => setShowNewGroup(false)}>
+              Cancel
+            </button>
+          </form>
+        </Sheet>
       )}
     </>
   )

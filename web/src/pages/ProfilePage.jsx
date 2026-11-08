@@ -11,6 +11,7 @@ import { Avatar, PALETTE } from '../components/Avatar.jsx'
 import EmojiPicker from '../components/EmojiPicker/EmojiPicker.jsx'
 import { subscribeToPush, unsubscribeFromPush, isPushSubscribed, disablePushForLogout, forgetPushLocally } from '../utils/push.js'
 import TabHeader from '../components/PageHeader/TabHeader.jsx'
+import Sheet from '../components/Sheet/Sheet.jsx'
 
 export default function ProfilePage() {
   const { currentUser, isAdmin, logout, updateToken } = useAuth()
@@ -498,19 +499,3 @@ function SetRow({ label, value, sub, to, onClick, action = false }) {
   return <div className="set-row">{body}</div>
 }
 
-function Sheet({ title, onClose, children }) {
-  useEffect(() => {
-    const onKey = e => { if (e.key === 'Escape') onClose() }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [onClose])
-  return (
-    <div className="sheet-overlay" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
-      <div className="sheet" role="dialog" aria-modal="true" aria-label={title}>
-        <div className="sheet-handle" />
-        <div className="sheet-title">{title}</div>
-        {children}
-      </div>
-    </div>
-  )
-}

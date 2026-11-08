@@ -14,6 +14,7 @@ import { KINDS, TRANSPORT_MODES, itemIcon, buildTimeline, formatDay, formatDateR
 import TripGantt from '../components/TripGantt/TripGantt.jsx'
 import Expandable from '../components/Expandable/Expandable.jsx'
 import { useMediaQuery } from '../utils/useMediaQuery.js'
+import Sheet from '../components/Sheet/Sheet.jsx'
 
 // Leaflet is only worth downloading once someone opens the map.
 const TripMap = lazy(() => import('../components/TripMap/TripMap.jsx'))
@@ -303,7 +304,15 @@ function TripDetailPage() {
           <p style={{ color: 'var(--text-3)', fontSize: 14 }}>Nothing planned yet. Add a flight, a stay or something to do.</p>
         </div>
       ) : (
-        <Expandable label={`${trip.title} · Timeline`}>
+        <Expandable
+          label={`${trip.title} · Timeline`}
+          splitKey="trip-timeline"
+          extra={places.some(p => p.lat != null) && (
+            <Suspense fallback={<Loading />}>
+              <TripMap places={places} items={items} onOpenItem={openItem} highlight={highlight} onHover={setHighlight} />
+            </Suspense>
+          )}
+        >
           <TripGantt trip={trip} items={items} placeName={placeName} onOpenItem={openItem} onCreate={createFromTimeline} onReschedule={reschedule} onDelete={removeItem} highlight={highlight} onHover={setHighlight} />
         </Expandable>
       )}
@@ -365,32 +374,28 @@ function TripDetailPage() {
       )}
 
       {showKinds && (
-        <div className="sheet-overlay" onClick={e => { if (e.target === e.currentTarget) setShowKinds(false) }}>
-          <div className="sheet">
-            <div className="sheet-handle" />
-            <p className="sheet-title">Add to trip</p>
-            <div className="trip-kind-grid">
-              <button className="trip-kind trip-kind-wide" onClick={() => findRoute()}>
-                <span>🔎</span>Find a public-transport route
+        <Sheet title="Add to trip" onClose={() => setShowKinds(false)}>
+          <div className="trip-kind-grid">
+            <button className="trip-kind trip-kind-wide" onClick={() => findRoute()}>
+              <span>🔎</span>Find a public-transport route
+            </button>
+            {TRANSPORT_MODES.filter(m => m.value !== 'other').map(m => (
+              <button key={m.value} className="trip-kind" onClick={() => navigate(`/trips/${id}/items/new?kind=transport&mode=${m.value}`)}>
+                <span>{m.icon}</span>{m.label}
               </button>
-              {TRANSPORT_MODES.filter(m => m.value !== 'other').map(m => (
-                <button key={m.value} className="trip-kind" onClick={() => navigate(`/trips/${id}/items/new?kind=transport&mode=${m.value}`)}>
-                  <span>{m.icon}</span>{m.label}
-                </button>
-              ))}
-              <button className="trip-kind" onClick={() => navigate(`/trips/${id}/items/new?kind=transport&mode=other`)}>
-                <span>{KINDS.transport.icon}</span>Other transport
-              </button>
-              <button className="trip-kind" onClick={() => navigate(`/trips/${id}/items/new?kind=stay`)}>
-                <span>{KINDS.stay.icon}</span>Stay
-              </button>
-              <button className="trip-kind" onClick={() => navigate(`/trips/${id}/items/new?kind=activity`)}>
-                <span>{KINDS.activity.icon}</span>Activity
-              </button>
-            </div>
-            <button className="btn btn-ghost" style={{ width: '100%', marginTop: 8 }} onClick={() => setShowKinds(false)}>Cancel</button>
+            ))}
+            <button className="trip-kind" onClick={() => navigate(`/trips/${id}/items/new?kind=transport&mode=other`)}>
+              <span>{KINDS.transport.icon}</span>Other transport
+            </button>
+            <button className="trip-kind" onClick={() => navigate(`/trips/${id}/items/new?kind=stay`)}>
+              <span>{KINDS.stay.icon}</span>Stay
+            </button>
+            <button className="trip-kind" onClick={() => navigate(`/trips/${id}/items/new?kind=activity`)}>
+              <span>{KINDS.activity.icon}</span>Activity
+            </button>
           </div>
-        </div>
+          <button className="btn btn-ghost" style={{ width: '100%', marginTop: 8 }} onClick={() => setShowKinds(false)}>Cancel</button>
+        </Sheet>
       )}
 
       {showCopy && (

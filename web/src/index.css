@@ -757,10 +757,19 @@ body {
   overscroll-behavior: contain;
 }
 .sheet-handle {
+  position: relative;
   width: 36px; height: 4px;
   border-radius: 2px;
   background: var(--border-strong);
   margin: 0 auto 16px;
+  cursor: grab;
+  touch-action: none;
+}
+/* A finger-sized area to grab, much bigger than the bar itself. */
+.sheet-handle::before {
+  content: '';
+  position: absolute;
+  inset: -16px -60px -12px;
 }
 .sheet-title {
   font-size: 17px;

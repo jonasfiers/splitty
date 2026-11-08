@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import client from '../../api/client'
+import Sheet from '../Sheet/Sheet.jsx'
 
 // Copy a trip under a new name: same group, dates, places and items; the
 // expenses and files stay with the original.
@@ -23,28 +24,24 @@ function DuplicateTripSheet({ trip, onClose, onCopied }) {
   }
 
   return (
-    <div className="sheet-overlay" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
-      <div className="sheet">
-        <div className="sheet-handle" />
-        <p className="sheet-title">Copy trip</p>
-        <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label>Name of the copy</label>
-            <input value={title} onChange={e => setTitle(e.target.value)} maxLength={120} required autoFocus onFocus={e => e.target.select()} />
-          </div>
-          <p style={{ fontSize: 12, color: 'var(--text-3)', margin: '0 0 12px' }}>
-            Dates, stays, travel, activities and places are copied. Expenses and attached files stay with the original.
-          </p>
+    <Sheet title="Copy trip" onClose={onClose}>
+      <form onSubmit={handleSubmit}>
+        <div className="form-group">
+          <label>Name of the copy</label>
+          <input value={title} onChange={e => setTitle(e.target.value)} maxLength={120} required autoFocus onFocus={e => e.target.select()} />
+        </div>
+        <p style={{ fontSize: 12, color: 'var(--text-3)', margin: '0 0 12px' }}>
+          Dates, stays, travel, activities and places are copied. Expenses and attached files stay with the original.
+        </p>
 
-          {error && <p className="error">{error}</p>}
+        {error && <p className="error">{error}</p>}
 
-          <button type="submit" className="btn btn-primary" style={{ width: '100%' }} disabled={saving}>
-            {saving ? 'Copying…' : 'Copy trip'}
-          </button>
-          <button type="button" className="btn btn-ghost" style={{ width: '100%', marginTop: 8 }} onClick={onClose}>Cancel</button>
-        </form>
-      </div>
-    </div>
+        <button type="submit" className="btn btn-primary" style={{ width: '100%' }} disabled={saving}>
+          {saving ? 'Copying…' : 'Copy trip'}
+        </button>
+        <button type="button" className="btn btn-ghost" style={{ width: '100%', marginTop: 8 }} onClick={onClose}>Cancel</button>
+      </form>
+    </Sheet>
   )
 }
 

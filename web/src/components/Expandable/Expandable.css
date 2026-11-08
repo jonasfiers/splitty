@@ -61,3 +61,37 @@
 .expandable.expanded .gantt-wrap { flex: 1; min-height: 0; display: flex; flex-direction: column; margin-bottom: 0; }
 .expandable.expanded .gantt { flex: 1; min-height: 0; overflow: auto; }
 .expandable.expanded .trip-map { flex: 1; height: auto; }
+/* With something below it, the timeline keeps its own height and the rest goes to that. */
+.expandable.expanded.with-extra .gantt-wrap,
+.expandable.expanded.with-extra .gantt { flex: 0 1 auto; }
+
+/* After the grip is dragged: the view gets the chosen height and its scroller fills it. */
+.expandable.expanded.with-extra.sized .expandable-body > :first-child { flex: 0 0 var(--view-h); min-height: 0; }
+.expandable.expanded.with-extra.sized .gantt { flex: 1; }
+
+/* The grip between the view and the extra: a wide strip to hit, a short bar to see. */
+.expandable-grip {
+    flex: 0 0 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: row-resize;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+}
+.expandable-grip span {
+    width: 40px;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--border);
+}
+
+/* Whatever fills the rest of the window under the view. */
+.expandable-extra {
+    flex: 1;
+    min-height: 120px;
+    display: flex;
+    flex-direction: column;
+}
+.expandable-extra .trip-map { flex: 1; height: auto; }

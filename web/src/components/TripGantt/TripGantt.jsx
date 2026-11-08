@@ -441,7 +441,7 @@ export default function TripGantt({ trip, items: allItems, placeName, onOpenItem
       <button type="button" className={fitted ? 'active' : ''} onClick={() => zoomTo(minWidth)} title="Fit the whole trip" aria-label="Fit the whole trip">Fit</button>
       <button type="button" onClick={() => zoomTo(dayWidth * ZOOM_STEP)} disabled={dayWidth >= ZOOM_MAX_W} title="Zoom in (or Ctrl/⌘ + scroll, or pinch)" aria-label="Zoom timeline in">+</button>
     </div>
-    <div className="gantt" ref={scroller}>
+    <div className="gantt" ref={scroller} data-expand-scroller>
       <div className="gantt-inner" style={{ width: width + LABEL_W }}>
         <div className="gantt-head">
           <div className="gantt-label" />

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import client from '../../api/client'
 import { formatCurrency, formatDate } from '../../utils/currency.js'
+import Sheet from '../Sheet/Sheet.jsx'
 
 const LIMIT = 50
 
@@ -43,41 +44,37 @@ function LinkExpenseSheet({ itemId, groupId, linkedIds, onClose, onLinked }) {
   }
 
   return (
-    <div className="sheet-overlay" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
-      <div className="sheet link-expense">
-        <div className="sheet-handle" />
-        <p className="sheet-title">Link an existing expense</p>
-        <div className="form-group">
-          <input type="search" value={query} onChange={e => setQuery(e.target.value)} placeholder="Search the group’s expenses…" autoFocus />
-        </div>
-        {error && <p className="error">{error}</p>}
-        <div className="link-expense-list">
-          {expenses === null ? (
-            <p className="link-expense-empty">Loading…</p>
-          ) : expenses.length === 0 ? (
-            <p className="link-expense-empty">{query ? 'No expenses match.' : 'This group has no expenses yet.'}</p>
-          ) : expenses.map(e => {
-            const linked = linkedIds.includes(e.id)
-            return (
-              <button key={e.id} type="button" className="link-expense-row" disabled={linked || linking} onClick={() => link(e)}>
-                <span className="link-expense-info">
-                  <span className="link-expense-name">{e.description}</span>
-                  <span className="link-expense-meta">
-                    {e.paidByName ? `Paid by ${e.paidByName}` : 'Paid by —'}{e.date ? ` · ${formatDate(e.date)}` : ''}
-                  </span>
-                </span>
-                <span className="link-expense-amount">
-                  {formatCurrency(e.amount, e.currencyIso)}
-                  {linked && <span className="link-expense-tag">linked</span>}
-                  {linking === e.id && <span className="link-expense-tag">linking…</span>}
-                </span>
-              </button>
-            )
-          })}
-        </div>
-        <button type="button" className="btn btn-ghost" style={{ width: '100%', marginTop: 8 }} onClick={onClose}>Cancel</button>
+    <Sheet title="Link an existing expense" onClose={onClose} className="link-expense">
+      <div className="form-group">
+        <input type="search" value={query} onChange={e => setQuery(e.target.value)} placeholder="Search the group’s expenses…" autoFocus />
       </div>
-    </div>
+      {error && <p className="error">{error}</p>}
+      <div className="link-expense-list">
+        {expenses === null ? (
+          <p className="link-expense-empty">Loading…</p>
+        ) : expenses.length === 0 ? (
+          <p className="link-expense-empty">{query ? 'No expenses match.' : 'This group has no expenses yet.'}</p>
+        ) : expenses.map(e => {
+          const linked = linkedIds.includes(e.id)
+          return (
+            <button key={e.id} type="button" className="link-expense-row" disabled={linked || linking} onClick={() => link(e)}>
+              <span className="link-expense-info">
+                <span className="link-expense-name">{e.description}</span>
+                <span className="link-expense-meta">
+                  {e.paidByName ? `Paid by ${e.paidByName}` : 'Paid by —'}{e.date ? ` · ${formatDate(e.date)}` : ''}
+                </span>
+              </span>
+              <span className="link-expense-amount">
+                {formatCurrency(e.amount, e.currencyIso)}
+                {linked && <span className="link-expense-tag">linked</span>}
+                {linking === e.id && <span className="link-expense-tag">linking…</span>}
+              </span>
+            </button>
+          )
+        })}
+      </div>
+      <button type="button" className="btn btn-ghost" style={{ width: '100%', marginTop: 8 }} onClick={onClose}>Cancel</button>
+    </Sheet>
   )
 }
 

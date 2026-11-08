@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import client from '../../api/client'
 import PlacePicker from '../PlacePicker/PlacePicker.jsx'
 import { KINDS, TRANSPORT_MODES, dayOf, timeOf } from '../../utils/trip.js'
+import Sheet from '../Sheet/Sheet.jsx'
 
 const LABELS = {
   transport: { start: 'Departure', end: 'Arrival', title: 'Title', titleHint: 'Leave empty to use the route' },
@@ -79,74 +80,70 @@ function QuickAddSheet({ tripId, kind, start, end, places, onClose, onSaved, onM
 
   return (
     // Above the full-screen timeline too, where this can also be started.
-    <div className="sheet-overlay" style={{ zIndex: 1100 }} onClick={e => { if (e.target === e.currentTarget) onClose() }}>
-      <div className="sheet quick-add">
-        <div className="sheet-handle" />
-        <p className="sheet-title">{KINDS[kind].icon} Add {kind === 'transport' ? 'travel' : KINDS[kind].label.toLowerCase()}</p>
-        <form onSubmit={handleSubmit}>
-          {kind === 'transport' && onFindRoute && (
-            <button type="button" className="btn btn-pill-outline quick-add-route" onClick={findRoute}>
-              🔎 Find a train or bus connection
-            </button>
-          )}
-          {kind === 'transport' && (
-            <div className="filter-chips" style={{ paddingTop: 0, flexWrap: 'wrap' }}>
-              {TRANSPORT_MODES.map(m => (
-                <button key={m.value} type="button" className={`chip${form.mode === m.value ? ' active' : ''}`} onClick={() => set({ mode: m.value })}>
-                  {m.icon} {m.label}
-                </button>
-              ))}
-            </div>
-          )}
-
-          <div className="form-group">
-            <label>{labels.title}</label>
-            <input value={form.title} onChange={e => set({ title: e.target.value })} placeholder={labels.titleHint} autoFocus />
+    <Sheet title={<>{KINDS[kind].icon} Add {kind === 'transport' ? 'travel' : KINDS[kind].label.toLowerCase()}</>} onClose={onClose} className="quick-add" zIndex={1100}>
+      <form onSubmit={handleSubmit}>
+        {kind === 'transport' && onFindRoute && (
+          <button type="button" className="btn btn-pill-outline quick-add-route" onClick={findRoute}>
+            🔎 Find a train or bus connection
+          </button>
+        )}
+        {kind === 'transport' && (
+          <div className="filter-chips" style={{ paddingTop: 0, flexWrap: 'wrap' }}>
+            {TRANSPORT_MODES.map(m => (
+              <button key={m.value} type="button" className={`chip${form.mode === m.value ? ' active' : ''}`} onClick={() => set({ mode: m.value })}>
+                {m.icon} {m.label}
+              </button>
+            ))}
           </div>
+        )}
 
-          {kind === 'transport' ? (
-            <div className="form-row">
-              <div className="form-group">
-                <label>From</label>
-                <PlacePicker value={form.from} onChange={from => set({ from })} places={places} placeholder="Airport, station…" />
-              </div>
-              <div className="form-group">
-                <label>To</label>
-                <PlacePicker value={form.to} onChange={to => set({ to })} places={places} placeholder="Airport, station…" />
-              </div>
-            </div>
-          ) : (
-            <div className="form-group">
-              <label>Where</label>
-              <PlacePicker value={form.place} onChange={place => set({ place })} places={places} />
-            </div>
-          )}
+        <div className="form-group">
+          <label>{labels.title}</label>
+          <input value={form.title} onChange={e => set({ title: e.target.value })} placeholder={labels.titleHint} autoFocus />
+        </div>
 
+        {kind === 'transport' ? (
           <div className="form-row">
             <div className="form-group">
-              <label>{labels.start}</label>
-              <input type="date" value={form.startDate} onChange={e => set({ startDate: e.target.value })} required />
-              {kind !== 'stay' && <input type="time" value={form.startTime} onChange={e => set({ startTime: e.target.value })} style={{ marginTop: 6 }} />}
+              <label>From</label>
+              <PlacePicker value={form.from} onChange={from => set({ from })} places={places} placeholder="Airport, station…" />
             </div>
             <div className="form-group">
-              <label>{labels.end}</label>
-              <input type="date" value={form.endDate} min={form.startDate} onChange={e => set({ endDate: e.target.value })} />
-              {kind !== 'stay' && <input type="time" value={form.endTime} onChange={e => set({ endTime: e.target.value })} style={{ marginTop: 6 }} />}
+              <label>To</label>
+              <PlacePicker value={form.to} onChange={to => set({ to })} places={places} placeholder="Airport, station…" />
             </div>
           </div>
-
-          {error && <p className="error">{error}</p>}
-
-          <button type="submit" className="btn btn-primary" style={{ width: '100%' }} disabled={saving}>
-            {saving ? 'Adding…' : 'Add to trip'}
-          </button>
-          <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-            <button type="button" className="btn btn-ghost" style={{ flex: 1 }} onClick={more}>More details…</button>
-            <button type="button" className="btn btn-ghost" style={{ flex: 1 }} onClick={onClose}>Cancel</button>
+        ) : (
+          <div className="form-group">
+            <label>Where</label>
+            <PlacePicker value={form.place} onChange={place => set({ place })} places={places} />
           </div>
-        </form>
-      </div>
-    </div>
+        )}
+
+        <div className="form-row">
+          <div className="form-group">
+            <label>{labels.start}</label>
+            <input type="date" value={form.startDate} onChange={e => set({ startDate: e.target.value })} required />
+            {kind !== 'stay' && <input type="time" value={form.startTime} onChange={e => set({ startTime: e.target.value })} style={{ marginTop: 6 }} />}
+          </div>
+          <div className="form-group">
+            <label>{labels.end}</label>
+            <input type="date" value={form.endDate} min={form.startDate} onChange={e => set({ endDate: e.target.value })} />
+            {kind !== 'stay' && <input type="time" value={form.endTime} onChange={e => set({ endTime: e.target.value })} style={{ marginTop: 6 }} />}
+          </div>
+        </div>
+
+        {error && <p className="error">{error}</p>}
+
+        <button type="submit" className="btn btn-primary" style={{ width: '100%' }} disabled={saving}>
+          {saving ? 'Adding…' : 'Add to trip'}
+        </button>
+        <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+          <button type="button" className="btn btn-ghost" style={{ flex: 1 }} onClick={more}>More details…</button>
+          <button type="button" className="btn btn-ghost" style={{ flex: 1 }} onClick={onClose}>Cancel</button>
+        </div>
+      </form>
+    </Sheet>
   )
 }
 
