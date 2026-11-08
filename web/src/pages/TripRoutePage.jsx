@@ -8,6 +8,7 @@ import ConnectionCard from '../components/TripRoute/ConnectionCard.jsx'
 import ConfirmConnection from '../components/TripRoute/ConfirmConnection.jsx'
 import Expandable from '../components/Expandable/Expandable.jsx'
 import { dayOf, timeOf, today, daysBetween, formatDay } from '../utils/trip.js'
+import Segmented from '../components/Segmented/Segmented.jsx'
 import { useMediaQuery } from '../utils/useMediaQuery.js'
 
 const RouteMap = lazy(() => import('../components/TripRoute/RouteMap.jsx'))
@@ -300,10 +301,15 @@ export default function TripRoutePage() {
   const results = result && (
     <div ref={resultsRef} className="route-results">
       {!wide && showMap ? (
-        <div className="filter-chips route-view-chips">
-          <button type="button" className={`chip${view === 'list' ? ' active' : ''}`} onClick={() => setView('list')}>List · {itineraries.length}</button>
-          <button type="button" className={`chip${view === 'map' ? ' active' : ''}`} onClick={() => setView('map')}>Map</button>
-        </div>
+        <Segmented
+          label="Show"
+          value={view}
+          onChange={setView}
+          options={[
+            { value: 'list', label: `List · ${itineraries.length}` },
+            { value: 'map', label: 'Map' },
+          ]}
+        />
       ) : (
         <div className="section-label">Connections</div>
       )}

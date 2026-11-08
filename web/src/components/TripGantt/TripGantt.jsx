@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { addDays, daysBetween, dayOf, timeOf, formatDay, itemIcon, today } from '../../utils/trip.js'
-import Sheet from '../Sheet/Sheet.jsx'
+import Sheet, { SheetActions } from '../Sheet/Sheet.jsx'
 import './TripGantt.css'
 
 // The how-to line under the timeline shows until "Got it", once per browser;
@@ -606,7 +606,7 @@ export default function TripGantt({ trip, items: allItems, placeName, onOpenItem
             <li><b>Zoom</b>: pinch, or − and +. <b>Fit</b> shows the whole trip.</li>
             {onReschedule && <li><b>Move or resize</b>: with a mouse only, on a computer or tablet.</li>}
           </ul>
-          <button type="button" className="btn btn-primary" style={{ width: '100%' }} onClick={() => setShowHelp(false)}>Close</button>
+          <SheetActions><button type="button" className="btn btn-primary" onClick={() => setShowHelp(false)}>Close</button></SheetActions>
         </Sheet>
       )}
     </div>

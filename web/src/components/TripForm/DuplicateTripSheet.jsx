@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import client from '../../api/client'
-import Sheet from '../Sheet/Sheet.jsx'
+import Sheet, { SheetActions } from '../Sheet/Sheet.jsx'
 
 // Copy a trip under a new name: same group, dates, places and items; the
 // expenses and files stay with the original.
@@ -36,10 +36,12 @@ function DuplicateTripSheet({ trip, onClose, onCopied }) {
 
         {error && <p className="error">{error}</p>}
 
-        <button type="submit" className="btn btn-primary" style={{ width: '100%' }} disabled={saving}>
-          {saving ? 'Copying…' : 'Copy trip'}
-        </button>
-        <button type="button" className="btn btn-ghost" style={{ width: '100%', marginTop: 8 }} onClick={onClose}>Cancel</button>
+        <SheetActions>
+          <button type="submit" className="btn btn-primary" disabled={saving}>
+            {saving ? 'Copying…' : 'Copy trip'}
+          </button>
+          <button type="button" className="btn btn-ghost" onClick={onClose}>Cancel</button>
+        </SheetActions>
       </form>
     </Sheet>
   )

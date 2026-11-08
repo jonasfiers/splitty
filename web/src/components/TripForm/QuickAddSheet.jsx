@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import client from '../../api/client'
 import PlacePicker from '../PlacePicker/PlacePicker.jsx'
 import { KINDS, TRANSPORT_MODES, dayOf, timeOf } from '../../utils/trip.js'
-import Sheet from '../Sheet/Sheet.jsx'
+import Sheet, { SheetActions } from '../Sheet/Sheet.jsx'
 
 const LABELS = {
   transport: { start: 'Departure', end: 'Arrival', title: 'Title', titleHint: 'Leave empty to use the route' },
@@ -135,13 +135,15 @@ function QuickAddSheet({ tripId, kind, start, end, places, onClose, onSaved, onM
 
         {error && <p className="error">{error}</p>}
 
-        <button type="submit" className="btn btn-primary" style={{ width: '100%' }} disabled={saving}>
-          {saving ? 'Adding…' : 'Add to trip'}
-        </button>
-        <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-          <button type="button" className="btn btn-ghost" style={{ flex: 1 }} onClick={more}>More details…</button>
-          <button type="button" className="btn btn-ghost" style={{ flex: 1 }} onClick={onClose}>Cancel</button>
-        </div>
+        <SheetActions>
+          <button type="submit" className="btn btn-primary" disabled={saving}>
+            {saving ? 'Adding…' : 'Add to trip'}
+          </button>
+          <div className="sheet-actions-row">
+            <button type="button" className="btn btn-ghost" onClick={more}>More details…</button>
+            <button type="button" className="btn btn-ghost" onClick={onClose}>Cancel</button>
+          </div>
+        </SheetActions>
       </form>
     </Sheet>
   )

@@ -39,3 +39,10 @@ export default function Sheet({ title, onClose, className = '', zIndex, children
     </div>
   )
 }
+
+// The buttons at the bottom of a sheet, the same in every sheet: the main
+// action first and full width, then the ghost ones (Cancel, Close) under it.
+// `row` children (a <div className="sheet-actions-row">) sit side by side.
+export function SheetActions({ children }) {
+  return <div className="sheet-actions">{children}</div>
+}

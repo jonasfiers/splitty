@@ -2,7 +2,7 @@ import { useState } from 'react'
 import client from '../../api/client'
 import EmojiPicker from '../EmojiPicker/EmojiPicker.jsx'
 import { today } from '../../utils/trip.js'
-import Sheet from '../Sheet/Sheet.jsx'
+import Sheet, { SheetActions } from '../Sheet/Sheet.jsx'
 
 // Create or edit a trip. `groups` is only needed when the group is not fixed.
 function TripFormSheet({ trip, groupId, groups = [], onClose, onSaved }) {
@@ -93,10 +93,12 @@ function TripFormSheet({ trip, groupId, groups = [], onClose, onSaved }) {
 
         {error && <p className="error">{error}</p>}
 
-        <button type="submit" className="btn btn-primary" style={{ width: '100%' }} disabled={saving}>
-          {saving ? 'Saving…' : (isEdit ? 'Save changes' : 'Create trip')}
-        </button>
-        <button type="button" className="btn btn-ghost" style={{ width: '100%', marginTop: 8 }} onClick={onClose}>Cancel</button>
+        <SheetActions>
+          <button type="submit" className="btn btn-primary" disabled={saving}>
+            {saving ? 'Saving…' : (isEdit ? 'Save changes' : 'Create trip')}
+          </button>
+          <button type="button" className="btn btn-ghost" onClick={onClose}>Cancel</button>
+        </SheetActions>
       </form>
     </Sheet>
   )

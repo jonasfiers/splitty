@@ -1,6 +1,6 @@
-/* See TripDocuments.jsx. Rows as the item page's files (.expense-list). */
+/* See TripDocuments.jsx. Rows as the item page's files (.list). */
 .trip-docs { margin: 4px 0 20px; }
-.trip-docs .expense-list { margin-bottom: 10px; }
+.trip-docs .list { margin-bottom: 10px; }
 .trip-docs-actions {
   display: flex;
   align-items: center;

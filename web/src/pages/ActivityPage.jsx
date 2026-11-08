@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import LoadFailed from '../components/LoadFailed.jsx'
-import { useNavigate } from 'react-router'
+import { Link } from 'react-router'
 import client from '../api/client'
 import { formatCurrency } from '../utils/currency'
 import Loading from '../components/Loading.jsx'
@@ -50,7 +50,6 @@ export default function ActivityPage() {
   const [action, setAction] = useState('all')
   const [groupId, setGroupId] = useState('')
   const [shown, setShown] = useState(PAGE)
-  const navigate = useNavigate()
   // Same breakpoint as the other two-column pages (see index.css).
   const wide = useMediaQuery('(min-width: 1180px)')
 
@@ -178,11 +177,13 @@ export default function ActivityPage() {
             {items.map((a, i) => {
               const g = groups.get(a.groupId)
               const trip = isTripActivity(a)
+              const to = activityLink(a)
+              const Row = to ? Link : 'div'
               return (
-                <div
+                <Row
                   key={`${a.kind}-${a.expenseId || a.itemId || a.tripId}-${a.timestamp}-${i}`}
                   className={`act-row${isDeletedActivity(a) ? ' act-row-deleted' : ''}`}
-                  onClick={() => { const to = activityLink(a); if (to) navigate(to) }}
+                  {...(to && { to })}
                 >
                   <div className="act-icon">
                     <span aria-hidden="true">{activityIcon(a)}</span>
@@ -200,7 +201,7 @@ export default function ActivityPage() {
                     {!trip && <div className="act-amt">{formatCurrency(a.amount, a.currencyIso)}</div>}
                     <div className="act-meta">{timeLabel(a.timestamp)}</div>
                   </div>
-                </div>
+                </Row>
               )
             })}
           </div>

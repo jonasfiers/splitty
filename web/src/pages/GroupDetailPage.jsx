@@ -16,9 +16,10 @@ import CategoryPicker from '../components/CategoryPicker/CategoryPicker.jsx'
 import TripList from '../components/TripForm/TripList.jsx'
 import TripFormSheet from '../components/TripForm/TripFormSheet.jsx'
 import { useMediaQuery } from '../utils/useMediaQuery.js'
-import Sheet from '../components/Sheet/Sheet.jsx'
+import Sheet, { SheetActions } from '../components/Sheet/Sheet.jsx'
 import { useConfirm } from '../components/Confirm/ConfirmProvider.jsx'
 import Segmented from '../components/Segmented/Segmented.jsx'
+import { List, ListRow } from '../components/List/List.jsx'
 
 // Keep in sync with the .group-layout breakpoint in index.css.
 const WIDE_QUERY = '(min-width: 1180px)'
@@ -532,46 +533,30 @@ export default function GroupDetailPage() {
             ) : months.map(month => (
               <section key={month.key} className="expense-month">
               <div className="section-label">{month.label}</div>
-              <div className="expense-list">
-                {month.items.map(e => (
-                  <div
-                    key={e.id}
-                    className="expense-item"
-                    onClick={() => navigate(`/groups/${id}/expenses/${e.id}`)}
-                  >
-                    <div className="expense-icon" style={
-                      e.isTransfer ? { background: 'var(--accent-light)', color: 'var(--accent-text)' }
-                      : e.isSettlement ? { background: 'var(--green-light)', color: 'var(--green-dark)' }
-                      : {}
-                    }>
-                      {expenseIcon(e)}
-                    </div>
-                    <div className="expense-info">
-                      <div className="expense-name">{e.description}</div>
-                      <div className="expense-meta">
-                        {e.paidByName ? `Paid by ${e.paidByName}` : 'Paid by —'}
-                        {e.date ? ` · ${formatDate(e.date)}` : ''}
-                      </div>
-                    </div>
-                    <div className="expense-amounts">
-                      <div className="expense-share">{formatCurrency(e.amount, e.currencyIso)}</div>
-                      {e.isSettlement ? (
-                        e.paidByUserId === currentUser.id
-                          ? <div className="expense-total">you settled up</div>
-                          : e.shareAmount != null && <div className="expense-total">you received {formatCurrency(e.shareAmount, e.currencyIso)}</div>
-                      ) : e.isTransfer ? (
-                        e.paidByUserId === currentUser.id
-                          ? <div className="expense-total">you transferred</div>
-                          : e.shareAmount != null && <div className="expense-total">transferred to you</div>
-                      ) : (
-                        e.paidByUserId === currentUser.id
-                          ? <div className="expense-total">you paid</div>
-                          : e.shareAmount != null && <div className="expense-total">you owe {formatCurrency(e.shareAmount, e.currencyIso)}</div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <List>
+                {month.items.map(e => {
+                  const mine = e.paidByUserId === currentUser.id
+                  const sub = e.isSettlement ? (mine ? 'you settled up' : e.shareAmount != null && `you received ${formatCurrency(e.shareAmount, e.currencyIso)}`)
+                    : e.isTransfer ? (mine ? 'you transferred' : e.shareAmount != null && 'transferred to you')
+                    : (mine ? 'you paid' : e.shareAmount != null && `you owe ${formatCurrency(e.shareAmount, e.currencyIso)}`)
+                  return (
+                    <ListRow
+                      key={e.id}
+                      to={`/groups/${id}/expenses/${e.id}`}
+                      icon={expenseIcon(e)}
+                      iconStyle={e.isTransfer ? { background: 'var(--accent-light)', color: 'var(--accent-text)' }
+                        : e.isSettlement ? { background: 'var(--green-light)', color: 'var(--green-dark)' }
+                        : undefined}
+                      title={e.description}
+                      meta={<>{e.paidByName ? `Paid by ${e.paidByName}` : 'Paid by —'}{e.date ? ` · ${formatDate(e.date)}` : ''}</>}
+                      aside={<>
+                        <span className="list-row-amt">{formatCurrency(e.amount, e.currencyIso)}</span>
+                        {sub && <span className="list-row-sub">{sub}</span>}
+                      </>}
+                    />
+                  )
+                })}
+              </List>
               </section>
             ))}
 
@@ -663,10 +648,12 @@ export default function GroupDetailPage() {
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', background: 'var(--surface-2)', borderRadius: 8, padding: '10px 12px', marginBottom: 16, wordBreak: 'break-all', fontSize: 13 }}>
             <span style={{ flex: 1 }}>{inviteLink}</span>
           </div>
-          <button className="btn btn-primary" style={{ width: '100%' }} onClick={() => { navigator.clipboard.writeText(inviteLink); setCopied(true); setTimeout(() => setCopied(false), 2000) }}>
-            {copied ? 'Link copied!' : 'Copy link'}
-          </button>
-          <button className="btn btn-ghost" style={{ width: '100%', marginTop: 8 }} onClick={() => { setInviteLink(null); setCopied(false) }}>Close</button>
+          <SheetActions>
+            <button className="btn btn-primary" onClick={() => { navigator.clipboard.writeText(inviteLink); setCopied(true); setTimeout(() => setCopied(false), 2000) }}>
+              {copied ? 'Link copied!' : 'Copy link'}
+            </button>
+            <button className="btn btn-ghost" onClick={() => { setInviteLink(null); setCopied(false) }}>Close</button>
+          </SheetActions>
         </Sheet>
       )}
 
@@ -678,14 +665,14 @@ export default function GroupDetailPage() {
               <p style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 16 }}>
                 You and {transferTarget?.name} don't share any other groups to transfer the balance to.
               </p>
-              <button className="btn btn-ghost" style={{ width: '100%' }} onClick={() => setShowTransfer(false)}>Close</button>
+              <SheetActions><button className="btn btn-ghost" onClick={() => setShowTransfer(false)}>Close</button></SheetActions>
             </>
           ) : transferBilateral === 0 ? (
             <>
               <p style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 16 }}>
                 You have no direct balance with {transferTarget?.name} in this group to transfer.
               </p>
-              <button className="btn btn-ghost" style={{ width: '100%' }} onClick={() => setShowTransfer(false)}>Close</button>
+              <SheetActions><button className="btn btn-ghost" onClick={() => setShowTransfer(false)}>Close</button></SheetActions>
             </>
           ) : (
             <form onSubmit={handleTransfer}>
@@ -704,8 +691,10 @@ export default function GroupDetailPage() {
                   ))}
                 </select>
               </div>
-              <button type="submit" className="btn btn-primary" style={{ width: '100%' }}>Transfer balance</button>
-              <button type="button" className="btn btn-ghost" style={{ width: '100%', marginTop: 8 }} onClick={() => setShowTransfer(false)}>Cancel</button>
+              <SheetActions>
+                <button type="submit" className="btn btn-primary">Transfer balance</button>
+                <button type="button" className="btn btn-ghost" onClick={() => setShowTransfer(false)}>Cancel</button>
+              </SheetActions>
             </form>
           )}
         </Sheet>
@@ -755,10 +744,10 @@ export default function GroupDetailPage() {
                 required
               />
             </div>
-            <button type="submit" className="btn btn-primary" style={{ width: '100%' }}>Record settlement</button>
-            <button type="button" className="btn btn-ghost" style={{ width: '100%', marginTop: 8 }} onClick={() => setShowSettlement(false)}>
-              Cancel
-            </button>
+            <SheetActions>
+              <button type="submit" className="btn btn-primary">Record settlement</button>
+              <button type="button" className="btn btn-ghost" onClick={() => setShowSettlement(false)}>Cancel</button>
+            </SheetActions>
           </form>
         </Sheet>
       )}

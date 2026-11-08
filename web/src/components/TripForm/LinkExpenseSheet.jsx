@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import client from '../../api/client'
 import { formatCurrency, formatDate } from '../../utils/currency.js'
-import Sheet from '../Sheet/Sheet.jsx'
+import Sheet, { SheetActions } from '../Sheet/Sheet.jsx'
 
 const LIMIT = 50
 
@@ -73,7 +73,7 @@ function LinkExpenseSheet({ itemId, groupId, linkedIds, onClose, onLinked }) {
           )
         })}
       </div>
-      <button type="button" className="btn btn-ghost" style={{ width: '100%', marginTop: 8 }} onClick={onClose}>Cancel</button>
+      <SheetActions><button type="button" className="btn btn-ghost" onClick={onClose}>Cancel</button></SheetActions>
     </Sheet>
   )
 }

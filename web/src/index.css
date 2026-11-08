@@ -810,39 +810,6 @@ body {
 }
 .home-balance-split b { font-family: var(--font-mono); font-weight: 600; color: var(--text); margin-left: 4px; }
 
-/* Group list on Home: one card of rows */
-.group-rows {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--r-lg);
-  overflow: hidden;
-}
-.group-row {
-  display: flex; align-items: center; gap: 12px;
-  min-height: 64px;
-  padding: 12px 12px 12px 16px;
-  border-bottom: 1px solid var(--border);
-  color: inherit;
-}
-.group-row:last-child { border-bottom: none; }
-.group-row:hover { background: var(--surface-2); }
-.group-row-icon {
-  width: 40px; height: 40px; flex-shrink: 0;
-  display: flex; align-items: center; justify-content: center;
-  border-radius: var(--r-md);
-  background: var(--accent-light);
-  font-size: 20px;
-}
-.group-row-text { flex: 1; min-width: 0; }
-.group-row-name { font-size: 15px; font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.group-row-meta { font-size: 12px; color: var(--text-3); margin-top: 2px; }
-.group-row-bal { text-align: right; flex-shrink: 0; }
-.group-row-amt { font-family: var(--font-mono); font-size: 14px; font-weight: 600; }
-.group-row-amt.positive { color: var(--green-dark); }
-.group-row-amt.negative { color: var(--red-dark); }
-.group-row-amt.settled { font-family: var(--font-body); font-size: 13px; font-weight: 500; color: var(--text-3); }
-.group-row-sub { font-size: 11px; color: var(--text-3); margin-top: 2px; }
-.group-row-chev { width: 16px; height: 16px; flex-shrink: 0; stroke: var(--text-3); }
 .home-section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
 .home-section-head .section-label { margin: 0; padding: 0; }
 .home-section-link { font-size: 13px; font-weight: 600; color: var(--accent-text); background: none; border: none; cursor: pointer; padding: 10px 0; }
@@ -885,7 +852,7 @@ body {
 .today-trip-title { display: flex; gap: 8px; align-items: center; font-size: 16px; font-weight: 700; color: var(--text); min-width: 0; }
 .today-trip-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .today-trip-day { font-size: 12px; font-weight: 600; color: var(--accent-text); white-space: nowrap; }
-.today-trip .expense-list { border: none; border-top: 1px solid var(--border); border-radius: 0; background: none; }
+.today-trip .list { border: none; border-top: 1px solid var(--border); border-radius: 0; background: none; }
 .today-trip .trip-day-empty { border: none; border-top: 1px solid var(--border); border-radius: 0; padding: 12px 16px; }
 /* Footer lines: full-width 44px taps, hairline above, one line each. */
 .today-trip-night, .today-trip-tomorrow {
@@ -902,12 +869,12 @@ body {
 /* Rows: inset hairlines (iOS-style, aligned with the text column). */
 .today-entry, .today-earlier { position: relative; }
 /* Only the inset hairline between rows, not the rows' own full-width border too. */
-.today-list > .expense-item { border-bottom: none; }
-.today-list > * + *::before { content: ''; position: absolute; top: 0; left: 88px; right: 0; border-top: 1px solid var(--border); }
+.today-list > .list-row { border-bottom: none; }
+.today-list > * + *::before { content: ''; position: absolute; top: 0; left: 0; right: 0; border-top: 1px solid var(--border); }
 .today-entry { align-items: flex-start; padding: 12px 16px; border-bottom: none; }
 .today-entry.past { opacity: .55; }
 .today-entry.on { box-shadow: inset 3px 0 0 var(--accent); }
-.today-entry .expense-name { font-size: 15px; line-height: 21px; }
+.today-entry .list-row-title { font-size: 15px; line-height: 21px; }
 .today-meta { color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* Left column: time, then what is on or next, then the icon. */
 .today-when { width: 60px; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 6px; }
@@ -963,17 +930,10 @@ body {
 .home-trip:hover { border-color: var(--border-strong); }
 .home-trip-when { font-size: 12px; font-weight: 600; color: var(--accent-text); }
 .home-trip-title { display: flex; gap: 8px; align-items: center; font-size: 16px; font-weight: 700; color: var(--text); }
-.home-activity-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 0;
-  border-top: 1px solid var(--border);
-  color: inherit;
-}
-.home-activity-row:first-of-type { border-top: none; padding-top: 0; }
-.home-activity-desc { font-size: 13px; font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.home-activity-amt { font-family: var(--font-mono); font-size: 13px; color: var(--text); flex-shrink: 0; }
+/* A panel whose list runs to the card's edges (Recent activity) */
+.card.home-panel-flush { padding: 0; overflow: hidden; }
+.home-panel-flush > .home-panel-head { padding: 16px 16px 4px; margin-bottom: 0; }
+.list.list-flush { border: none; border-top: 1px solid var(--border); border-radius: 0; background: none; margin: 0; }
 
 @media (min-width: 1180px) {
   .page-wrap:has(.home-layout) { --wrap-w: 1240px; }
@@ -1101,27 +1061,45 @@ body {
 .expense-month { padding-top: 4px; }
 .group-total-link { color: inherit; text-decoration: underline; text-decoration-color: var(--border-strong); text-underline-offset: 3px; }
 
-/* Expense list */
-.expense-list {
+/* Lists: one card of rows (components/List/List.jsx) */
+.list {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--r-lg);
   overflow: hidden;
   margin-bottom: 16px;
 }
-.expense-item {
+.list-section .list { margin-bottom: 0; }
+.list-section { margin-bottom: 16px; }
+.list-hint { margin: 6px 4px 0; font-size: 12px; color: var(--text-3); }
+.list-section > h2.section-label { margin: 0; }
+.list-settings > .section-label { padding: 0 0 8px 4px; }
+.list-row {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 13px 16px;
+  width: 100%;
+  min-height: 52px;
+  padding: 12px 16px;
+  border: none;
   border-bottom: 1px solid var(--border);
-  cursor: pointer;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+  text-decoration: none;
   transition: background .12s;
 }
-.expense-item:last-child { border-bottom: none; }
-.expense-item:hover { background: var(--surface-2); }
+.list-row:last-child { border-bottom: none; }
+.list-row-wrap { display: flex; align-items: center; padding-right: 8px; border-bottom: 1px solid var(--border); }
+.list-row-wrap:last-child { border-bottom: none; }
+.list-row-wrap > .list-row { flex: 1; min-width: 0; border-bottom: none; }
+.list-row-link { cursor: pointer; }
+.list-row-link:hover { background: var(--surface-2); }
+.list-row-link:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 
-.expense-icon {
+.list-row-icon {
   width: 40px; height: 40px;
   border-radius: var(--r-md);
   background: var(--accent-light);
@@ -1133,8 +1111,8 @@ body {
   color: var(--accent-text);
   font-weight: 700;
 }
-.expense-info { flex: 1; min-width: 0; }
-.expense-name {
+.list-row-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.list-row-title {
   font-size: 14px;
   font-weight: 600;
   color: var(--text);
@@ -1142,24 +1120,47 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.expense-meta {
+.list-row-meta {
   font-size: 12px;
   color: var(--text-3);
   margin-top: 2px;
 }
-.expense-amounts { text-align: right; flex-shrink: 0; }
-.expense-share {
+.list-row-value {
+  max-width: 55%;
+  color: var(--text-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.list-row-aside { text-align: right; flex-shrink: 0; display: flex; flex-direction: column; align-items: flex-end; }
+.list-row-amt {
   font-family: var(--font-mono);
   font-size: 14px;
   font-weight: 500;
   color: var(--text);
 }
-.expense-share.positive { color: var(--green-dark); }
-.expense-share.negative { color: var(--red-dark); }
-.expense-total {
+.list-row-amt.positive { color: var(--green-dark); }
+.list-row-amt.negative { color: var(--red-dark); }
+.list-row-amt.settled { font-family: var(--font-body); font-size: 13px; color: var(--text-3); }
+.list-row-sub {
   font-size: 11px;
   color: var(--text-3);
 }
+.list-row-chev {
+  width: 16px; height: 16px; flex-shrink: 0;
+  fill: none; stroke: var(--text-3); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+}
+.list-row-action, .list-row-action .list-row-title { color: var(--accent-text); font-weight: 600; }
+/* Settings lists: lighter titles, no icons */
+.list-settings .list-row-title { font-weight: 500; }
+/* A row holding its own buttons (Today's chips): the title is the link and
+   stretches over the whole row; the buttons sit above it. */
+.list-row:has(.list-row-stretch) { position: relative; }
+.list-row-stretch { color: inherit; text-decoration: none; }
+.list-row-stretch::after { content: ''; position: absolute; inset: 0; }
+.list-row-stretch:focus-visible { outline: none; }
+.list-row-stretch:focus-visible::after { outline: 2px solid var(--accent); outline-offset: -2px; }
+.today-actions { position: relative; z-index: 1; }
 
 /* Members section */
 .members-section {
@@ -1494,7 +1495,7 @@ body {
   .profile-layout { flex-direction: row; gap: 32px; align-items: flex-start; }
   .profile-col { flex: 1; min-width: 0; }
   /* Both columns start with a section label, level with each other. */
-  .profile-col > .set-group:first-child { margin-top: 12px; }
+  .profile-col > .list-settings:first-child { margin-top: 12px; }
   .profile-signout { width: auto; min-width: 200px; margin-top: 28px; }
 }
 .profile-id {
@@ -1519,16 +1520,6 @@ body {
 .profile-signout { width: 100%; margin: 28px 0 24px; }
 
 /* Grouped settings cards (Profile) */
-.set-group { margin-top: 20px; }
-.set-group-label {
-  margin: 0 0 8px 4px;
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--text-3);
-  letter-spacing: .08em;
-  text-transform: uppercase;
-}
-.set-group-hint { margin: 6px 4px 0; font-size: 12px; color: var(--text-3); }
 .set-card {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -1536,53 +1527,22 @@ body {
   box-shadow: var(--shadow-sm);
   overflow: hidden;
 }
-.set-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-  min-height: 50px;
-  padding: 10px 16px;
-  text-align: left;
-  color: var(--text);
-  font-size: 14px;
-}
-.set-row + .set-row { border-top: 1px solid var(--border); }
-.set-row-link:hover { background: var(--surface-2); }
-.set-row-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.set-row-label { font-weight: 500; }
-.set-row-sub { font-size: 12px; color: var(--text-3); }
-.set-row-value {
-  max-width: 55%;
-  color: var(--text-3);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.set-row-chev {
-  width: 16px; height: 16px; flex-shrink: 0;
-  fill: none; stroke: var(--text-3); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
-}
-.set-row-action { color: var(--accent-text); font-weight: 600; }
-.set-row-action .set-row-label { font-weight: 600; }
-.set-row-icon {
-  display: flex; align-items: center; justify-content: center;
-  width: 32px; height: 32px; flex-shrink: 0;
-  border-radius: var(--r-sm);
-  background: var(--accent-light);
-}
-.set-row-icon svg {
+/* Settings lists (Profile): see List.jsx; spacing and the passkey icon */
+.list-settings { margin: 20px 0 0; }
+.list-settings .list-row { min-height: 50px; padding: 10px 16px; }
+.list-settings .list-row-icon { width: 32px; height: 32px; border-radius: var(--r-sm); }
+.list-settings .list-row-icon svg {
   width: 18px; height: 18px;
   fill: none; stroke: var(--accent); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
 }
-.set-row-remove {
+.list-row-remove {
   font-size: 13px;
   font-weight: 600;
   color: var(--text-3);
   padding: 6px 8px;
   border-radius: var(--r-sm);
 }
-.set-row-remove:hover { background: var(--red-light); color: var(--red-dark); }
+.list-row-remove:hover { background: var(--red-light); color: var(--red-dark); }
 .set-note {
   font-size: 13px; color: var(--text-2);
   margin: 0 0 8px; padding: 10px 14px;
@@ -1776,16 +1736,17 @@ body {
 .act-filters .filter-chips { padding-top: 0; flex-wrap: wrap; }
 .act-day { margin-bottom: 16px; }
 .act-day-label { margin: 0 0 6px; padding: 0; }
-.card.act-day-card { padding: 4px 16px; margin-bottom: 0; }
+.card.act-day-card { padding: 0; overflow: hidden; margin-bottom: 0; }
 .act-row {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px 0;
+  padding: 10px 16px;
   border-top: 1px solid var(--border);
   cursor: pointer;
 }
 .act-row:first-child { border-top: none; }
+a.act-row { color: inherit; text-decoration: none; }
 .act-row:hover .act-desc { color: var(--accent-text); }
 .act-icon {
   position: relative;
@@ -2278,9 +2239,12 @@ body {
 .row-action svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
 .row-action:hover { color: var(--red); background: var(--red-light); }
 /* The confirm sheet (components/Confirm). */
-.confirm-message { font-size: 14px; line-height: 1.5; color: var(--text-2); margin: -8px 0 20px; }
-.confirm-actions { display: flex; flex-direction: column; gap: 8px; }
-.confirm-actions .btn { width: 100%; }
+.confirm-message { font-size: 14px; line-height: 1.5; color: var(--text-2); margin: -8px 0 0; }
+/* Sheet footer (Sheet.jsx SheetActions): main action first, full width */
+.sheet-actions { display: flex; flex-direction: column; gap: 8px; margin-top: 20px; }
+.sheet-actions .btn { width: 100%; }
+.sheet-actions-row { display: flex; gap: 8px; }
+.sheet-actions-row .btn { flex: 1; }
 .trip-ref {
   display: inline-flex;
   align-items: stretch;
@@ -2323,7 +2287,6 @@ body {
   stroke-linejoin: round;
 }
 .trip-ref-icon:hover svg { stroke: var(--text); }
-a.expense-item { color: inherit; text-decoration: none; }
 
 /* Place picker */
 .place-picker {
@@ -2630,7 +2593,6 @@ a.expense-item { color: inherit; text-decoration: none; }
 .route-card-actions { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
 /* The route map: the trip map's look (pins, arcs, arrows), sized for a list beside or above it. */
 .route-map { height: min(55vh, 380px); }
-.route-view-chips { padding-top: 0; }
 .route-map-pick { margin-top: 12px; }
 .route-stop { width: 30px; height: 30px; font-size: 14px; }
 .trip-pin.route-stop-off { display: none; }
@@ -2738,7 +2700,6 @@ a.expense-item { color: inherit; text-decoration: none; }
 .delete-open-row .positive { color: var(--green-dark); }
 .delete-open-row .negative { color: var(--red-dark); }
 .delete-open p { margin: 8px 0 0; color: var(--text-3); font-size: 12px; }
-.delete-confirm { width: auto; }
 
 /* Privacy page (public) */
 .auth-privacy { margin-top: 8px; font-size: 12px; }

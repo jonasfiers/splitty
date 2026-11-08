@@ -6,7 +6,7 @@
 export function DetailHero({ icon, iconStyle, title, subtitle, aside }) {
   return (
     <div className="detail-hero">
-      <div className="expense-icon detail-hero-icon" style={iconStyle}>{icon}</div>
+      <div className="list-row-icon detail-hero-icon" style={iconStyle}>{icon}</div>
       <div className="detail-hero-text">
         <div className="detail-hero-title">{title}</div>
         {subtitle && <div className="detail-hero-sub">{subtitle}</div>}

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate } from 'react-router'
+import { Link } from 'react-router'
+import { ListRow } from '../components/List/List.jsx'
 import { useAuth } from '../context/AuthContext'
 import Loading from '../components/Loading.jsx'
 import { removeOffline, pruneOffline } from '../utils/offlineDocs.js'
@@ -16,7 +17,6 @@ import { useConfirm } from '../components/Confirm/ConfirmProvider.jsx'
 export default function OfflineDocumentsPage() {
   const confirm = useConfirm()
   const { token } = useAuth()
-  const navigate = useNavigate()
   const docs = useOfflineDocs()
   const [busy, setBusy] = useState(null)
 
@@ -75,33 +75,28 @@ export default function OfflineDocumentsPage() {
         {trips.map(trip => (
           <section key={trip.id} className="offline-docs-trip">
             <div className="section-label">{trip.title || 'Trip'}</div>
-            <div className="expense-list">
+            <div className="list">
               {trip.docs.map(doc => (
-                <a
+                <ListRow
                   key={doc.id}
-                  className="expense-item"
-                  href={`/offline-documents/${doc.id}`}
-                  onClick={event => { event.preventDefault(); navigate(`/offline-documents/${doc.id}`) }}
-                >
-                  <div className="expense-icon">{doc.mimeType === 'application/pdf' ? '📄' : '🖼️'}</div>
-                  <div className="expense-info">
-                    <div className="expense-name">{doc.filename}</div>
-                    <div className="expense-meta">{formatBytes(doc.size)}</div>
-                  </div>
-                  <button
+                  to={`/offline-documents/${doc.id}`}
+                  icon={doc.mimeType === 'application/pdf' ? '📄' : '🖼️'}
+                  title={doc.filename}
+                  meta={formatBytes(doc.size)}
+                  end={<button
                     type="button"
                     className="trip-docs-icon danger"
                     disabled={busy === doc.id}
                     aria-label={`Remove “${doc.filename}” from this device`}
                     title="Remove from this device"
-                    onClick={event => { event.preventDefault(); event.stopPropagation(); remove(doc) }}
+                    onClick={() => remove(doc)}
                   >
                     <svg viewBox="0 0 24 24" aria-hidden="true">
                       <line x1="6" y1="6" x2="18" y2="18" />
                       <line x1="18" y1="6" x2="6" y2="18" />
                     </svg>
-                  </button>
-                </a>
+                  </button>}
+                />
               ))}
             </div>
           </section>

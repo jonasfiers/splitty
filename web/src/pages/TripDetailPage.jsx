@@ -14,8 +14,9 @@ import { KINDS, TRANSPORT_MODES, itemIcon, buildTimeline, describe, formatDay, f
 import TripGantt from '../components/TripGantt/TripGantt.jsx'
 import Expandable from '../components/Expandable/Expandable.jsx'
 import { useMediaQuery } from '../utils/useMediaQuery.js'
-import Sheet from '../components/Sheet/Sheet.jsx'
+import Sheet, { SheetActions } from '../components/Sheet/Sheet.jsx'
 import TodayEntries from '../components/TodayEntries.jsx'
+import Segmented from '../components/Segmented/Segmented.jsx'
 import { useConfirm } from '../components/Confirm/ConfirmProvider.jsx'
 
 // Leaflet is only worth downloading once someone opens the map.
@@ -230,24 +231,24 @@ function TripDetailPage() {
             // Today is live, the same rows as Home's Today card.
             <TodayEntries tripId={id} day={day} entries={entries} places={places} />
           ) : (
-            <div className="expense-list" style={{ marginBottom: 0 }}>
+            <div className="list" style={{ marginBottom: 0 }}>
               {entries.map(({ item, time, phase, assumed }) => (
-                <div key={`${item.id}-${phase}`} className="expense-item" onClick={() => openItem(item)}>
-                  <div className={`trip-entry-time${assumed ? ' assumed' : ''}`} title={assumed ? 'Usual hotel time; no time set on this stay' : undefined}>{time || 'All day'}</div>
-                  <div className="expense-icon">{itemIcon(item)}</div>
-                  <div className="expense-info">
-                    <div className="expense-name">{item.title}</div>
-                    <div className="expense-meta">
+                <button key={`${item.id}-${phase}`} type="button" className="list-row list-row-link" onClick={() => openItem(item)}>
+                  <span className={`trip-entry-time${assumed ? ' assumed' : ''}`} title={assumed ? 'Usual hotel time; no time set on this stay' : undefined}>{time || 'All day'}</span>
+                  <span className="list-row-icon" aria-hidden="true">{itemIcon(item)}</span>
+                  <span className="list-row-text">
+                    <span className="list-row-title">{item.title}</span>
+                    <span className="list-row-meta">
                       {[phase, describe(item, placeName)].filter(Boolean).join(' · ') || KINDS[item.kind].label}
-                    </div>
-                  </div>
-                  <div className="expense-amounts">
-                    <div className="expense-total">
+                    </span>
+                  </span>
+                  <span className="list-row-aside">
+                    <span className="list-row-sub">
                       {item.expenseCount > 0 ? '✓ paid' : ''}
                       {item.attachmentCount > 0 && ` 📎${item.attachmentCount}`}
-                    </div>
-                  </div>
-                </div>
+                    </span>
+                  </span>
+                </button>
               ))}
             </div>
           )}
@@ -337,12 +338,15 @@ function TripDetailPage() {
         </div>
       ) : (
         <>
-          <div className="filter-chips">
-            <button className={`chip${tab === 'timeline' ? ' active' : ''}`} onClick={() => setTab('timeline')}>Day by day</button>
-            <button className={`chip${tab === 'map' ? ' active' : ''}`} onClick={() => setTab('map')}>
-              Map {places.length > 0 && `· ${places.length}`}
-            </button>
-          </div>
+          <Segmented
+            label="Show"
+            value={tab}
+            onChange={setTab}
+            options={[
+              { value: 'timeline', label: 'Day by day' },
+              { value: 'map', label: places.length > 0 ? `Map · ${places.length}` : 'Map' },
+            ]}
+          />
           {tab === 'timeline' && items.length > 0 && dayList}
           {tab === 'map' && mapView}
         </>
@@ -401,7 +405,7 @@ function TripDetailPage() {
               <span>{KINDS.activity.icon}</span>Activity
             </button>
           </div>
-          <button className="btn btn-ghost" style={{ width: '100%', marginTop: 8 }} onClick={() => setShowKinds(false)}>Cancel</button>
+          <SheetActions><button className="btn btn-ghost" onClick={() => setShowKinds(false)}>Cancel</button></SheetActions>
         </Sheet>
       )}
 

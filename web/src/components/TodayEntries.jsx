@@ -1,5 +1,5 @@
 import { Fragment, useCallback, useEffect, useState } from 'react'
-import { useNavigate } from 'react-router'
+import { Link } from 'react-router'
 import { KINDS, itemIcon, describe, mapsLink, linkTarget } from '../utils/trip.js'
 import BigReference from './BigReference/BigReference.jsx'
 
@@ -42,7 +42,6 @@ export function useClock() {
 }
 
 export default function TodayEntries({ tripId, day, entries, places }) {
-  const navigate = useNavigate()
   const time = useClock()
   const [bigRef, setBigRef] = useState(null)
   const [showPast, setShowPast] = useState(false)
@@ -67,7 +66,7 @@ export default function TodayEntries({ tripId, day, entries, places }) {
 
   return (
     <>
-      <div className="expense-list today-list" style={{ marginBottom: 0 }}>
+      <div className="list today-list" style={{ marginBottom: 0 }}>
           {entries.map(entry => {
             const { item, time: at, phase } = entry
             const on = isOn(item)
@@ -81,23 +80,20 @@ export default function TodayEntries({ tripId, day, entries, places }) {
                 </button>
               )}
               {(!past || showPast) && (
-              <div
-                className={`expense-item today-entry${past ? ' past' : ''}${on ? ' on' : ''}`}
-                onClick={() => navigate(`/trips/${tripId}/items/${item.id}`)}
-              >
+              <div className={`list-row list-row-link today-entry${past ? ' past' : ''}${on ? ' on' : ''}`}>
                 <div className="today-when">
                   <div className={`trip-entry-time${at ? '' : ' allday'}${entry.assumed ? ' assumed' : ''}`} title={entry.assumed ? 'Usual hotel time; no time set on this stay' : undefined}>{at || 'All day'}</div>
                   {on && <span className="today-badge">Now</span>}
                   {entry === next && <span className="today-badge next">{countdown(minutes(at) - minutes(time))}</span>}
                   <div className="today-icon">{itemIcon(item)}</div>
                 </div>
-                <div className="expense-info">
-                  <div className="expense-name">{item.title}</div>
-                  <div className="expense-meta today-meta">
+                <div className="list-row-text">
+                  <Link to={`/trips/${tripId}/items/${item.id}`} className="list-row-title list-row-stretch">{item.title}</Link>
+                  <div className="list-row-meta today-meta">
                     {[phase, describe(item, placeName)].filter(Boolean).join(' · ') || KINDS[item.kind].label}
                   </div>
                   {(item.confirmationRef || link) && (
-                    <div className="today-actions" onClick={e => e.stopPropagation()}>
+                    <div className="today-actions">
                       {item.confirmationRef && (
                         <button type="button" className="today-ref" onClick={() => setBigRef(item)} title="Show big" aria-label={`Show booking reference ${item.confirmationRef} full screen`}>
                           <span>{item.confirmationRef}</span>

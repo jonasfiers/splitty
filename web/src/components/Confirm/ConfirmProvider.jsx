@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useState } from 'react'
-import Sheet from '../Sheet/Sheet.jsx'
+import Sheet, { SheetActions } from '../Sheet/Sheet.jsx'
 
 // The app's "are you sure?": a sheet instead of the browser's own confirm()
 // box, which looks foreign, cannot be styled and shows the site's address.
@@ -26,12 +26,12 @@ export function ConfirmProvider({ children }) {
         // Above everything else, full-screen views and other sheets included.
         <Sheet title={ask.title} onClose={() => answer(false)} zIndex={1200}>
           {ask.message && <p className="confirm-message">{ask.message}</p>}
-          <div className="confirm-actions">
+          <SheetActions>
             <button type="button" className={`btn ${ask.danger ? 'btn-danger' : 'btn-primary'}`} onClick={() => answer(true)}>
               {ask.confirmLabel || 'OK'}
             </button>
             <button type="button" className="btn btn-ghost" onClick={() => answer(false)}>Cancel</button>
-          </div>
+          </SheetActions>
         </Sheet>
       )}
     </ConfirmContext.Provider>

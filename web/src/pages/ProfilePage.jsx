@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate, Link } from 'react-router'
+import { useNavigate } from 'react-router'
 import { startRegistration } from '@simplewebauthn/browser'
 import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
@@ -11,7 +11,8 @@ import { Avatar, PALETTE } from '../components/Avatar.jsx'
 import EmojiPicker from '../components/EmojiPicker/EmojiPicker.jsx'
 import { subscribeToPush, unsubscribeFromPush, isPushSubscribed, disablePushForLogout, forgetPushLocally } from '../utils/push.js'
 import TabHeader from '../components/PageHeader/TabHeader.jsx'
-import Sheet from '../components/Sheet/Sheet.jsx'
+import Sheet, { SheetActions } from '../components/Sheet/Sheet.jsx'
+import { List, ListRow } from '../components/List/List.jsx'
 import { useConfirm } from '../components/Confirm/ConfirmProvider.jsx'
 
 export default function ProfilePage() {
@@ -228,25 +229,22 @@ export default function ProfilePage() {
           {/* Passkeys */}
           <SetGroup label="Passkeys" hint="Sign in with Face ID, Touch ID or your phone's screen lock instead of a password.">
             {passkeys.map(p => (
-              <div key={p.credentialId} className="set-row">
-                <span className="set-row-icon" aria-hidden="true">
-                  <svg viewBox="0 0 24 24"><circle cx="8" cy="15" r="4" /><path d="M10.8 12.2L20 3M17 6l3 3M15 8l2 2" /></svg>
-                </span>
-                <span className="set-row-main">
-                  <span className="set-row-label">{p.name || 'Passkey'}</span>
-                  <span className="set-row-sub">
-                    {p.createdAt ? `Added ${new Date(p.createdAt).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}` : 'Added before Nov 2026'}
-                    {p.lastUsedAt && ` · used ${timeAgo(p.lastUsedAt)}`}
-                  </span>
-                </span>
-                <button type="button" className="set-row-remove" onClick={() => handleDeletePasskey(p.credentialId)} aria-label={`Remove ${p.name || 'passkey'}`}>
-                  Remove
-                </button>
-              </div>
+              <ListRow
+                key={p.credentialId}
+                icon={<svg viewBox="0 0 24 24"><circle cx="8" cy="15" r="4" /><path d="M10.8 12.2L20 3M17 6l3 3M15 8l2 2" /></svg>}
+                title={p.name || 'Passkey'}
+                meta={<>
+                  {p.createdAt ? `Added ${new Date(p.createdAt).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}` : 'Added before Nov 2026'}
+                  {p.lastUsedAt && ` · used ${timeAgo(p.lastUsedAt)}`}
+                </>}
+                aside={
+                  <button type="button" className="list-row-remove" onClick={() => handleDeletePasskey(p.credentialId)} aria-label={`Remove ${p.name || 'passkey'}`}>
+                    Remove
+                  </button>
+                }
+              />
             ))}
-            <button type="button" className="set-row set-row-action" onClick={handleAddPasskey}>
-              + Add a passkey
-            </button>
+            <SetRow label="+ Add a passkey" onClick={handleAddPasskey} action />
           </SetGroup>
           {message && <p className="set-ok">{message}</p>}
           {error && <p className="error">{error}</p>}
@@ -260,17 +258,20 @@ export default function ProfilePage() {
 
           {/* Preferences */}
           <SetGroup label="Preferences">
-            <div className="set-row">
-              <span className="set-row-main"><span className="set-row-label">Notifications</span></span>
-              <button
-                className={`toggle${notifications ? ' on' : ''}`}
-                onClick={handleNotificationsToggle}
-                aria-label="Notifications"
-                aria-pressed={notifications}
-              />
-            </div>
-            <div className="set-row">
-              <span className="set-row-main"><span className="set-row-label">Appearance</span></span>
+            <SetRow
+              label="Notifications"
+              aside={
+                <button
+                  className={`toggle${notifications ? ' on' : ''}`}
+                  onClick={handleNotificationsToggle}
+                  aria-label="Notifications"
+                  aria-pressed={notifications}
+                />
+              }
+            />
+            <SetRow
+              label="Appearance"
+              aside={
               <div className="theme-segment">
                 {['system', 'light', 'dark'].map(opt => (
                   <button
@@ -282,7 +283,8 @@ export default function ProfilePage() {
                   </button>
                 ))}
               </div>
-            </div>
+              }
+            />
           </SetGroup>
           {notifError && <p className="error">{notifError}</p>}
 
@@ -345,10 +347,10 @@ export default function ProfilePage() {
               <p className="form-hint">A new address only takes effect once you confirm it from that inbox.</p>
             </div>
             {editError && <p className="error">{editError}</p>}
-            <div className="panel-actions">
+            <SheetActions>
+              <button type="submit" className="btn btn-primary" disabled={editSaving}>{editSaving ? 'Saving…' : 'Save'}</button>
               <button type="button" className="btn btn-ghost" onClick={() => setShowEdit(false)}>Cancel</button>
-              <button type="submit" className="btn btn-secondary" disabled={editSaving}>{editSaving ? 'Saving…' : 'Save'}</button>
-            </div>
+            </SheetActions>
           </form>
         </Sheet>
       )}
@@ -382,10 +384,10 @@ export default function ProfilePage() {
               <input type="password" autoComplete="new-password" value={passwordForm.confirmPassword} onChange={e => setPasswordForm(f => ({ ...f, confirmPassword: e.target.value }))} required />
             </div>
             {passwordError && <p className="error">{passwordError}</p>}
-            <div className="panel-actions">
+            <SheetActions>
+              <button type="submit" className="btn btn-primary" disabled={passwordSaving}>{passwordSaving ? 'Saving…' : 'Change password'}</button>
               <button type="button" className="btn btn-ghost" onClick={() => { setShowPasswordForm(false); setPasswordError('') }}>Cancel</button>
-              <button type="submit" className="btn btn-secondary" disabled={passwordSaving}>{passwordSaving ? 'Saving…' : 'Change password'}</button>
-            </div>
+            </SheetActions>
           </form>
         </Sheet>
       )}
@@ -460,44 +462,25 @@ function DeleteAccountSheet({ email, userId, onClose, onDeleted }) {
           />
         </div>
         {error && <p className="error">{error}</p>}
-        <div className="panel-actions">
-          <button type="button" className="btn btn-ghost" onClick={onClose}>Cancel</button>
-          <button type="submit" className="btn btn-danger delete-confirm" disabled={!matches || busy}>
+        <SheetActions>
+          <button type="submit" className="btn btn-danger" disabled={!matches || busy}>
             {busy ? 'Deleting…' : 'Delete my account'}
           </button>
-        </div>
+          <button type="button" className="btn btn-ghost" onClick={onClose}>Cancel</button>
+        </SheetActions>
       </form>
     </Sheet>
   )
 }
 
+// A group of settings: the shared list, with lighter titles.
 function SetGroup({ label, hint, children }) {
-  return (
-    <section className="set-group">
-      <h2 className="set-group-label">{label}</h2>
-      <div className="set-card">{children}</div>
-      {hint && <p className="set-group-hint">{hint}</p>}
-    </section>
-  )
+  return <List label={label} hint={hint} className="list-settings">{children}</List>
 }
 
 // A settings row: a link (`to`), a button (`onClick`), or plain text.
 // `action` styles it as a command rather than a place to go.
-function SetRow({ label, value, sub, to, onClick, action = false }) {
-  const body = (
-    <>
-      <span className="set-row-main">
-        <span className="set-row-label">{label}</span>
-        {sub && <span className="set-row-sub">{sub}</span>}
-      </span>
-      {value && <span className="set-row-value">{value}</span>}
-      {!action && (to || onClick) && (
-        <svg className="set-row-chev" viewBox="0 0 24 24" aria-hidden="true"><polyline points="9 6 15 12 9 18" /></svg>
-      )}
-    </>
-  )
-  if (to) return <Link to={to} className="set-row set-row-link">{body}</Link>
-  if (onClick) return <button type="button" className={`set-row set-row-link${action ? ' set-row-action' : ''}`} onClick={onClick}>{body}</button>
-  return <div className="set-row">{body}</div>
+function SetRow({ label, value, sub, to, onClick, action = false, ...rest }) {
+  return <ListRow title={label} meta={sub} value={value} to={to} onClick={onClick} action={action} chevron={!!(to || onClick)} {...rest} />
 }
 

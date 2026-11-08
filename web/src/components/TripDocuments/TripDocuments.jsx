@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router'
+import { ListRow } from '../List/List.jsx'
 import client from '../../api/client'
 import { isStandalone } from '../../utils/standalone.js'
 import { formatBytes } from '../../utils/trip.js'
@@ -134,62 +135,60 @@ export default function TripDocuments({ tripId, tripTitle, heading = true }) {
       {heading && <div className="section-label">Documents{documents?.length ? ` · ${documents.length}` : ''}</div>}
       {error && <p className="error">{error}</p>}
       {documents?.length > 0 && (
-        <div className="expense-list">
+        <div className="list">
           {documents.map(doc => {
             const viewer = `/trips/${tripId}/documents/${doc.id}`
             return (
-              <a
+              <ListRow
                 key={doc.id}
-                className="expense-item"
                 href={standalone ? viewer : `/api${doc.url}`}
                 {...(standalone
                   ? { onClick: event => { event.preventDefault(); navigate(viewer) } }
                   : { target: '_blank', rel: 'noopener noreferrer' })}
-              >
-                <div className="expense-icon">{doc.mimeType === 'application/pdf' ? '📄' : '🖼️'}</div>
-                <div className="expense-info">
-                  <div className="expense-name">{doc.filename}</div>
-                  <div className="expense-meta">{who(doc)} · {formatBytes(doc.size)}</div>
-                </div>
-                <div className="trip-docs-actions">
-                  {canKeep && (
-                    <button
-                      type="button"
-                      className={`trip-docs-icon${kept.has(doc.id) ? ' on' : ''}`}
-                      disabled={busy === doc.id}
-                      aria-pressed={kept.has(doc.id)}
-                      aria-label={kept.has(doc.id) ? `Remove “${doc.filename}” from this device` : `Keep “${doc.filename}” on this device`}
-                      title={kept.has(doc.id) ? 'On this device, opens offline · tap to remove' : 'Keep on this device, to open offline'}
-                      onClick={event => { event.preventDefault(); event.stopPropagation(); toggleOffline(doc) }}
-                    >
-                      {kept.has(doc.id) ? <OnDeviceIcon /> : <KeepIcon />}
-                    </button>
-                  )}
-                  {doc.mine && (<>
-                    <button
-                      type="button"
-                      className={`trip-docs-icon${doc.shared ? ' on' : ''}`}
-                      disabled={busy === doc.id}
-                      aria-pressed={doc.shared}
-                      aria-label={doc.shared ? `Make “${doc.filename}” private` : `Share “${doc.filename}” with the trip`}
-                      title={doc.shared ? 'Shared with the trip · tap to make private' : 'Only you · tap to share with the trip'}
-                      onClick={event => { event.preventDefault(); event.stopPropagation(); setShared(doc, !doc.shared) }}
-                    >
-                      <PeopleIcon />
-                    </button>
-                    <button
-                      type="button"
-                      className="trip-docs-icon danger"
-                      disabled={busy === doc.id}
-                      aria-label={`Delete “${doc.filename}”`}
-                      title="Delete"
-                      onClick={event => { event.preventDefault(); event.stopPropagation(); remove(doc) }}
-                    >
-                      <TrashIcon />
-                    </button>
-                  </>)}
-                </div>
-              </a>
+                icon={doc.mimeType === 'application/pdf' ? '📄' : '🖼️'}
+                title={doc.filename}
+                meta={<>{who(doc)} · {formatBytes(doc.size)}</>}
+                end={
+                  <div className="trip-docs-actions">
+                    {canKeep && (
+                      <button
+                        type="button"
+                        className={`trip-docs-icon${kept.has(doc.id) ? ' on' : ''}`}
+                        disabled={busy === doc.id}
+                        aria-pressed={kept.has(doc.id)}
+                        aria-label={kept.has(doc.id) ? `Remove “${doc.filename}” from this device` : `Keep “${doc.filename}” on this device`}
+                        title={kept.has(doc.id) ? 'On this device, opens offline · tap to remove' : 'Keep on this device, to open offline'}
+                        onClick={() => { toggleOffline(doc) }}
+                      >
+                        {kept.has(doc.id) ? <OnDeviceIcon /> : <KeepIcon />}
+                      </button>
+                    )}
+                    {doc.mine && (<>
+                      <button
+                        type="button"
+                        className={`trip-docs-icon${doc.shared ? ' on' : ''}`}
+                        disabled={busy === doc.id}
+                        aria-pressed={doc.shared}
+                        aria-label={doc.shared ? `Make “${doc.filename}” private` : `Share “${doc.filename}” with the trip`}
+                        title={doc.shared ? 'Shared with the trip · tap to make private' : 'Only you · tap to share with the trip'}
+                        onClick={() => { setShared(doc, !doc.shared) }}
+                      >
+                        <PeopleIcon />
+                      </button>
+                      <button
+                        type="button"
+                        className="trip-docs-icon danger"
+                        disabled={busy === doc.id}
+                        aria-label={`Delete “${doc.filename}”`}
+                        title="Delete"
+                        onClick={() => { remove(doc) }}
+                      >
+                        <TrashIcon />
+                      </button>
+                    </>)}
+                  </div>
+                }
+              />
             )
           })}
         </div>

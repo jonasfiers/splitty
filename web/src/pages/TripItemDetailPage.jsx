@@ -15,6 +15,7 @@ import { isStandalone } from '../utils/standalone.js'
 const TripMap = lazy(() => import('../components/TripMap/TripMap.jsx'))
 const noop = () => {}
 import { formatCurrency, formatDate } from '../utils/currency.js'
+import { ListRow } from '../components/List/List.jsx'
 import { KINDS, TRANSPORT_MODES, itemIcon, dayOf, timeOf, formatDay, formatDuration, daysBetween, mapsLink, linkTarget, formatBytes, DEFAULT_CHECK_IN, DEFAULT_CHECK_OUT } from '../utils/trip.js'
 
 const START_LABEL = { transport: 'Departure', stay: 'Check-in', activity: 'Starts' }
@@ -333,26 +334,22 @@ export default function TripItemDetailPage() {
           )}
           <div className="section-label">Tickets and documents</div>
           {item.attachments.length > 0 && (
-            <div className="expense-list">
+            <div className="list">
               {item.attachments.map(a => (
                 // In a browser tab: a plain link, so the browser's own PDF and
                 // image viewers open it in a new tab. In the installed app that
                 // would fill the window with no way back: Splitty's viewer.
-                <a
+                <ListRow
                   key={a.id}
-                  className="expense-item"
                   href={standalone ? `/trips/${tripId}/items/${itemId}/files/${a.id}` : `/api${a.url}`}
                   {...(standalone
                     ? { onClick: event => { event.preventDefault(); navigate(`/trips/${tripId}/items/${itemId}/files/${a.id}`) } }
                     : { target: '_blank', rel: 'noopener noreferrer' })}
-                >
-                  <div className="expense-icon">{a.mimeType === 'application/pdf' ? '📄' : '🖼️'}</div>
-                  <div className="expense-info">
-                    <div className="expense-name">{a.filename}</div>
-                    <div className="expense-meta">{formatBytes(a.size)}</div>
-                  </div>
-                  <RowAction label={`Delete ${a.filename}`} onClick={() => handleDeleteAttachment(a)} />
-                </a>
+                  icon={a.mimeType === 'application/pdf' ? '📄' : '🖼️'}
+                  title={a.filename}
+                  meta={formatBytes(a.size)}
+                  end={<RowAction label={`Delete ${a.filename}`} onClick={() => handleDeleteAttachment(a)} />}
+                />
               ))}
             </div>
           )}
@@ -363,19 +360,18 @@ export default function TripItemDetailPage() {
           <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 8 }}>PDF or image, 10 MB at most.</p>
           <div className="section-label">Paid for with</div>
           {item.expenses.length > 0 && (
-            <div className="expense-list">
+            <div className="list">
               {item.expenses.map(e => (
-                <div key={e.id} className="expense-item" onClick={() => navigate(`/groups/${item.groupId}/expenses/${e.id}`)}>
-                  <div className="expense-icon" style={{ background: 'var(--green-light)', color: 'var(--green-dark)' }}>✓</div>
-                  <div className="expense-info">
-                    <div className="expense-name">{e.description}</div>
-                    <div className="expense-meta">Paid by {e.paidByName ?? '—'}{e.date ? ` · ${formatDate(e.date)}` : ''}</div>
-                  </div>
-                  <div className="expense-amounts">
-                    <div className="expense-share">{formatCurrency(e.amount, e.currencyIso)}</div>
-                  </div>
-                  <RowAction label={`Unlink ${e.description}`} onClick={() => handleUnlink(e)} />
-                </div>
+                <ListRow
+                  key={e.id}
+                  to={`/groups/${item.groupId}/expenses/${e.id}`}
+                  icon="✓"
+                  iconStyle={{ background: 'var(--green-light)', color: 'var(--green-dark)' }}
+                  title={e.description}
+                  meta={<>Paid by {e.paidByName ?? '—'}{e.date ? ` · ${formatDate(e.date)}` : ''}</>}
+                  aside={<span className="list-row-amt">{formatCurrency(e.amount, e.currencyIso)}</span>}
+                  end={<RowAction label={`Unlink ${e.description}`} onClick={() => handleUnlink(e)} />}
+                />
               ))}
             </div>
           )}

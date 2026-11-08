@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import LoadFailed from '../components/LoadFailed.jsx'
-import { Link, useNavigate } from 'react-router'
+import { useNavigate } from 'react-router'
 import client from '../api/client'
 import FabButton from '../components/FabButton/FabButton.jsx'
 import EmojiPicker from '../components/EmojiPicker/EmojiPicker.jsx'
@@ -11,7 +11,8 @@ import Loading from '../components/Loading.jsx'
 import HomePanels from '../components/HomePanels.jsx'
 import TodayTrip from '../components/TodayTrip.jsx'
 import TabHeader from '../components/PageHeader/TabHeader.jsx'
-import Sheet from '../components/Sheet/Sheet.jsx'
+import Sheet, { SheetActions } from '../components/Sheet/Sheet.jsx'
+import { List, ListRow } from '../components/List/List.jsx'
 
 export default function GroupsPage() {
   const navigate = useNavigate()
@@ -125,35 +126,31 @@ export default function GroupsPage() {
               <button className="btn-pill" onClick={() => setShowNewGroup(true)}>+ New group</button>
             </div>
           ) : (
-            <div className="group-rows">
+            <List>
               {groups.map(g => {
                 const myBalance = g.members?.find(m => m.id === currentUser?.id)?.balance ?? 0
                 const people = g.members?.length || 0
                 const when = timeAgo(g.lastActivity)
                 return (
-                  <Link key={g.id} to={`/groups/${g.id}`} className="group-row">
-                    <span className="group-row-icon" aria-hidden="true">{g.icon || '👥'}</span>
-                    <div className="group-row-text">
-                      <div className="group-row-name">{g.title}</div>
-                      <div className="group-row-meta">
-                        {people} {people === 1 ? 'person' : 'people'}{when ? ` · ${when}` : ''}
-                      </div>
-                    </div>
-                    <div className="group-row-bal">
-                      {myBalance === 0 ? (
-                        <span className="group-row-amt settled">Settled</span>
-                      ) : <>
-                        <div className={`group-row-amt ${myBalance > 0 ? 'positive' : 'negative'}`}>
-                          {myBalance > 0 ? '+' : '−'}{formatCurrency(Math.abs(myBalance), g.iso)}
-                        </div>
-                        <div className="group-row-sub">{myBalance > 0 ? 'owed to you' : 'you owe'}</div>
-                      </>}
-                    </div>
-                    <svg className="group-row-chev" viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><polyline points="9 6 15 12 9 18" /></svg>
-                  </Link>
+                  <ListRow
+                    key={g.id}
+                    to={`/groups/${g.id}`}
+                    icon={g.icon || '👥'}
+                    title={g.title}
+                    meta={`${people} ${people === 1 ? 'person' : 'people'}${when ? ` · ${when}` : ''}`}
+                    chevron
+                    aside={myBalance === 0 ? (
+                      <span className="list-row-amt settled">Settled</span>
+                    ) : <>
+                      <span className={`list-row-amt ${myBalance > 0 ? 'positive' : 'negative'}`}>
+                        {myBalance > 0 ? '+' : '−'}{formatCurrency(Math.abs(myBalance), g.iso)}
+                      </span>
+                      <span className="list-row-sub">{myBalance > 0 ? 'owed to you' : 'you owe'}</span>
+                    </>}
+                  />
                 )
               })}
-            </div>
+            </List>
           )}
         </div>
         <aside className="home-aside">
@@ -195,9 +192,7 @@ export default function GroupsPage() {
               </button>
             ))}
           </div>
-          <button className="btn btn-ghost" style={{ width: '100%', marginTop: 12 }} onClick={() => setShowExpensePicker(false)}>
-            Cancel
-          </button>
+          <SheetActions><button className="btn btn-ghost" onClick={() => setShowExpensePicker(false)}>Cancel</button></SheetActions>
         </Sheet>
       )}
 
@@ -235,10 +230,10 @@ export default function GroupsPage() {
               </select>
             </div>
             {error && <p className="error">{error}</p>}
-            <button type="submit" className="btn btn-primary">Create group</button>
-            <button type="button" className="btn btn-ghost" style={{ width: '100%', marginTop: 8 }} onClick={() => setShowNewGroup(false)}>
-              Cancel
-            </button>
+            <SheetActions>
+              <button type="submit" className="btn btn-primary">Create group</button>
+              <button type="button" className="btn btn-ghost" onClick={() => setShowNewGroup(false)}>Cancel</button>
+            </SheetActions>
           </form>
         </Sheet>
       )}

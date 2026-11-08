@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
+import { List, ListRow } from './List/List.jsx'
 import client from '../api/client'
 import { formatCurrency } from '../utils/currency.js'
 import { timeAgo } from '../utils/time.js'
@@ -107,26 +108,22 @@ function RecentActivity({ activity }) {
   if (!activity?.length) return null
 
   return (
-    <div className="card home-panel">
+    <div className="card home-panel home-panel-flush">
       <div className="home-panel-head">
         <span className="section-label" style={{ padding: 0, margin: 0 }}>Recent activity</span>
         <Link to="/activity" className="home-panel-link">All</Link>
       </div>
-      {activity.slice(0, RECENT).map((a, i) => (
-        <Link
-          key={i}
-          to={activityLink(a) || '/activity'}
-          className="home-activity-row"
-        >
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div className="home-activity-desc">{a.description}</div>
-            <div className="home-panel-sub">
-              {a.userName} {activityVerb(a)} · {timeAgo(a.timestamp)}
-            </div>
-          </div>
-          {!isTripActivity(a) && <span className="home-activity-amt">{formatCurrency(a.amount, a.currencyIso)}</span>}
-        </Link>
-      ))}
+      <List className="list-flush">
+        {activity.slice(0, RECENT).map((a, i) => (
+          <ListRow
+            key={i}
+            to={activityLink(a) || '/activity'}
+            title={a.description}
+            meta={`${a.userName} ${activityVerb(a)} · ${timeAgo(a.timestamp)}`}
+            aside={!isTripActivity(a) && <span className="list-row-amt">{formatCurrency(a.amount, a.currencyIso)}</span>}
+          />
+        ))}
+      </List>
     </div>
   )
 }
