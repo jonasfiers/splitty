@@ -38,9 +38,10 @@ export default function BigReference({ value, label, onClose }) {
     }
   }, [onClose])
 
-  // Size the text to the reference: short ones fill the width, longer ones
-  // (past 14 characters) stop shrinking and wrap instead.
-  const chars = Math.min(Math.max(value.length, 4), 14)
+  // Size the text to the reference: up to 24 characters it shrinks to stay on
+  // one line (an 18-digit booking number wrapped at the old limit of 14);
+  // longer ones stop shrinking and wrap instead.
+  const chars = Math.min(Math.max(value.length, 4), 24)
 
   return createPortal(
     <div className="bigref" role="dialog" aria-modal="true" aria-label={label} onClick={onClose}>
