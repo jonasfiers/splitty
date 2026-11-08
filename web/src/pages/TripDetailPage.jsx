@@ -15,6 +15,7 @@ import TripGantt from '../components/TripGantt/TripGantt.jsx'
 import Expandable from '../components/Expandable/Expandable.jsx'
 import { useMediaQuery } from '../utils/useMediaQuery.js'
 import Sheet from '../components/Sheet/Sheet.jsx'
+import TodayEntries from '../components/TodayEntries.jsx'
 
 // Leaflet is only worth downloading once someone opens the map.
 const TripMap = lazy(() => import('../components/TripMap/TripMap.jsx'))
@@ -223,11 +224,14 @@ function TripDetailPage() {
           </div>
           {entries.length === 0 ? (
             <div className="trip-day-empty">Nothing planned</div>
+          ) : day === now ? (
+            // Today is live, the same rows as Home's Today card.
+            <TodayEntries tripId={id} day={day} entries={entries} places={places} />
           ) : (
             <div className="expense-list" style={{ marginBottom: 0 }}>
-              {entries.map(({ item, time, phase }) => (
+              {entries.map(({ item, time, phase, assumed }) => (
                 <div key={`${item.id}-${phase}`} className="expense-item" onClick={() => openItem(item)}>
-                  <div className="trip-entry-time">{time || 'All day'}</div>
+                  <div className={`trip-entry-time${assumed ? ' assumed' : ''}`} title={assumed ? 'Usual hotel time; no time set on this stay' : undefined}>{time || 'All day'}</div>
                   <div className="expense-icon">{itemIcon(item)}</div>
                   <div className="expense-info">
                     <div className="expense-name">{item.title}</div>

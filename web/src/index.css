@@ -948,12 +948,88 @@ body {
 .home-cat-amt { font-family: var(--font-mono); color: var(--text); flex-shrink: 0; }
 .home-cat-track { height: 6px; border-radius: var(--r-pill); background: var(--surface-2); margin-top: 4px; }
 .home-cat-bar { height: 100%; border-radius: var(--r-pill); background: var(--accent); opacity: .75; }
-/* Today's plan while a trip is on (TodayTrip.jsx), above the balance. */
-.today-trip { margin-bottom: 16px; }
-.today-trip-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 10px; color: inherit; }
+/* Today's plan while a trip is on (TodayTrip.jsx), above the balance.
+   One surface: rows sit straight on the card, no list-in-card. */
+.card.today-trip { padding: 0; overflow: hidden; margin-bottom: 16px; }
+.today-trip-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; min-height: 48px; padding: 12px 16px; color: inherit; }
 .today-trip-title { display: flex; gap: 8px; align-items: center; font-size: 16px; font-weight: 700; color: var(--text); min-width: 0; }
+.today-trip-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .today-trip-day { font-size: 12px; font-weight: 600; color: var(--accent); white-space: nowrap; }
-.today-trip-night { font-size: 13px; color: var(--text-2); margin-top: 10px; }
+.today-trip .expense-list { border: none; border-top: 1px solid var(--border); border-radius: 0; background: none; }
+.today-trip .trip-day-empty { border: none; border-top: 1px solid var(--border); border-radius: 0; padding: 12px 16px; }
+/* Footer lines: full-width 44px taps, hairline above, one line each. */
+.today-trip-night, .today-trip-tomorrow {
+  display: block;
+  padding: 0 16px;
+  line-height: 44px;
+  border-top: 1px solid var(--border);
+  font-size: 13px;
+  color: var(--text-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Rows: inset hairlines (iOS-style, aligned with the text column). */
+.today-entry, .today-earlier { position: relative; }
+/* Only the inset hairline between rows, not the rows' own full-width border too. */
+.today-list > .expense-item { border-bottom: none; }
+.today-list > * + *::before { content: ''; position: absolute; top: 0; left: 88px; right: 0; border-top: 1px solid var(--border); }
+.today-entry { align-items: flex-start; padding: 12px 16px; border-bottom: none; }
+.today-entry.past { opacity: .55; }
+.today-entry.on { box-shadow: inset 3px 0 0 var(--accent); }
+@media (hover: none) { .today-entry:hover { background: none; } }
+.today-entry .expense-name { font-size: 15px; line-height: 21px; }
+.today-meta { color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Left column: time, then what is on or next, then the icon. */
+.today-when { width: 60px; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 6px; }
+.today-entry .trip-entry-time { width: auto; font-size: 13px; font-weight: 600; line-height: 21px; color: var(--text); white-space: nowrap; }
+.today-entry .trip-entry-time.assumed { color: var(--text-3); font-weight: 500; font-style: italic; }
+.today-entry .trip-entry-time.allday { font-family: var(--font-body); font-size: 10px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--text-3); }
+.today-icon { font-size: 20px; line-height: 1; }
+.today-when .today-badge { white-space: nowrap; }
+.today-badge {
+  padding: 0 7px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 20px;
+  color: var(--surface);
+  background: var(--accent);
+}
+.today-badge.next { color: var(--accent); background: var(--accent-light); }
+/* Earlier entries fold into one line, like the trip page's earlier days. */
+.today-earlier {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  padding: 0 16px 0 88px;
+  text-align: left;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+}
+/* Third line: booking reference and directions. Neutral, so the only
+   colour in a row is its Now/next badge; 30px chips, 44px tap height. */
+.today-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 8px; }
+.today-ref, .today-nav {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 30px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  background: var(--surface-2);
+  cursor: pointer;
+}
+.today-ref::after, .today-nav::after { content: ''; position: absolute; inset: -7px 0; }
+.today-ref { font-family: var(--font-mono); letter-spacing: .02em; max-width: 160px; }
+.today-ref span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.today-nav svg { width: 14px; height: 14px; fill: none; stroke: var(--accent); stroke-width: 2.2; stroke-linejoin: round; }
 .home-trip { display: block; color: inherit; }
 .home-trip:hover { border-color: var(--border-strong); }
 .home-trip-when { font-size: 12px; font-weight: 600; color: var(--accent); }
@@ -2246,6 +2322,8 @@ body {
   border-radius: var(--r-lg);
   padding: 10px 16px;
 }
+/* A usual hotel time standing in for one not entered on the stay. */
+.trip-entry-time.assumed { color: var(--text-3); font-style: italic; }
 .trip-entry-time {
   width: 44px;
   flex-shrink: 0;

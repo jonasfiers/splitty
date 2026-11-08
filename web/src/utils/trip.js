@@ -57,10 +57,16 @@ export const formatMoment = moment => {
   return `${formatDay(dayOf(moment))}${time ? ` · ${time}` : ''}`
 }
 
+// Usual hotel times, for stays entered without one: shown softer (an entry's
+// `assumed`), so they are not mistaken for the booking's own times.
+export const DEFAULT_CHECK_IN = '15:00'
+export const DEFAULT_CHECK_OUT = '11:00'
+
 // The itinerary is derived, never stored: one entry per day from the first to
 // the last day that matters, each holding what happens on it. A stay shows on
-// the day you check in and the day you check out, and is named in the header
-// of every night in between.
+// the day you check in and the day you check out (in time order, at the usual
+// hotel times when none were entered), and is named in the header of every
+// night in between.
 export function buildTimeline(trip, items) {
   const days = [trip.startDate, trip.endDate, ...items.flatMap(i => [dayOf(i.start), dayOf(i.end)])].filter(Boolean).sort()
   if (days.length === 0) return []
@@ -71,10 +77,14 @@ export function buildTimeline(trip, items) {
     const entries = []
     for (const item of items) {
       const start = dayOf(item.start), end = dayOf(item.end)
-      if (start === day) {
-        entries.push({ item, time: timeOf(item.start), phase: item.kind === 'stay' ? 'Check-in' : null })
+      if (start === day && item.kind === 'stay') {
+        const time = timeOf(item.start)
+        entries.push({ item, time: time || DEFAULT_CHECK_IN, assumed: !time, phase: 'Check-in' })
+      } else if (start === day) {
+        entries.push({ item, time: timeOf(item.start), phase: null })
       } else if (item.kind === 'stay' && end === day) {
-        entries.push({ item, time: timeOf(item.end), phase: 'Check-out' })
+        const time = timeOf(item.end)
+        entries.push({ item, time: time || DEFAULT_CHECK_OUT, assumed: !time, phase: 'Check-out' })
       } else if (item.kind !== 'stay' && end === day) {
         entries.push({ item, time: timeOf(item.end), phase: item.kind === 'transport' ? 'Arrival' : 'Ends' })
       }
