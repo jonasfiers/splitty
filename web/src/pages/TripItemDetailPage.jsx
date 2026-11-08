@@ -16,6 +16,7 @@ const TripMap = lazy(() => import('../components/TripMap/TripMap.jsx'))
 const noop = () => {}
 import { formatCurrency, formatDate } from '../utils/currency.js'
 import { ListRow } from '../components/List/List.jsx'
+import { leaveTo } from '../utils/history.js'
 import { KINDS, TRANSPORT_MODES, itemIcon, dayOf, timeOf, formatDay, formatDuration, daysBetween, mapsLink, linkTarget, formatBytes, DEFAULT_CHECK_IN, DEFAULT_CHECK_OUT } from '../utils/trip.js'
 
 const START_LABEL = { transport: 'Departure', stay: 'Check-in', activity: 'Starts' }
@@ -164,7 +165,7 @@ export default function TripItemDetailPage() {
     if (!ok) return
     try {
       await client.delete(`/trips/items/${itemId}`)
-      navigate(`/trips/${tripId}`, { state: { notice: `"${item.title}" was deleted.` } })
+      leaveTo(navigate, `/trips/${tripId}`, { notice: `"${item.title}" was deleted.` })
     } catch { setError('Failed to delete.') }
   }
 
@@ -238,9 +239,10 @@ export default function TripItemDetailPage() {
     return { places, items: [{ ...item, placeId: item.place?.id, fromPlaceId: item.from?.id, toPlaceId: item.to?.id }] }
   }, [item])
 
-  if (loading) return <Loading />
-  if (loadError) return <LoadFailed error={loadError} what="this item" onRetry={retry} />
-  if (!item) return null
+  // While loading or when it fails: the bar with its way back stays.
+  const bare = <PageHeader compact crumbs={[{ to: '/trips', label: 'Trips' }, { to: `/trips/${tripId}`, label: 'Trip' }]} name="Item" />
+  if (loading || (!item && !loadError)) return <>{bare}<Loading /></>
+  if (loadError) return <>{bare}<LoadFailed error={loadError} what="this item" onRetry={retry} /></>
 
   const mode = TRANSPORT_MODES.find(m => m.value === item.mode)
   const paid = item.expenses.reduce((sum, e) => sum + Number(e.amountBase || 0), 0)

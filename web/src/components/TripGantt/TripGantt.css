@@ -213,7 +213,7 @@
 .trip-toast {
     position: fixed;
     left: 50%;
-    bottom: calc(var(--nav-h) + 20px);
+    bottom: calc(var(--nav-h) + 20px + env(safe-area-inset-bottom));
     transform: translateX(-50%);
     z-index: 1200;
     display: flex;

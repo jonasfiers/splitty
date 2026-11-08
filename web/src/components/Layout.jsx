@@ -1,5 +1,6 @@
 import { Outlet, NavLink, Link, useNavigate } from 'react-router'
 import { useOffline } from '../utils/connection.js'
+import { useHistoryTracker } from '../utils/history.js'
 import { useOfflineDocs } from '../utils/useOfflineDocs.js'
 import { useAuth } from '../context/AuthContext'
 import { Avatar } from './Avatar.jsx'
@@ -58,6 +59,7 @@ function AdminIcon({ size = 20 }) {
 }
 
 export default function Layout() {
+  useHistoryTracker()
   const offline = useOffline()
   const kept = useOfflineDocs()
   const { currentUser, isAdmin, logout } = useAuth()

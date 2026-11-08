@@ -9,6 +9,7 @@ import ConfirmConnection from '../components/TripRoute/ConfirmConnection.jsx'
 import Expandable from '../components/Expandable/Expandable.jsx'
 import { dayOf, timeOf, today, daysBetween, formatDay } from '../utils/trip.js'
 import Segmented from '../components/Segmented/Segmented.jsx'
+import { leaveTo } from '../utils/history.js'
 import { useMediaQuery } from '../utils/useMediaQuery.js'
 
 const RouteMap = lazy(() => import('../components/TripRoute/RouteMap.jsx'))
@@ -163,16 +164,12 @@ export default function TripRoutePage() {
   const backToTrip = n => {
     const target = `/trips/${tripId}`
     const notice = { notice: `Added ${n} item${n !== 1 ? 's' : ''} from the connection.` }
-    if (state?.fromTrip && window.history.state?.idx > 0) {
-      window.addEventListener('popstate', () => navigate(target, { replace: true, state: notice }), { once: true })
-      navigate(-1)
-    } else {
-      navigate(target, { replace: true, state: notice })
-    }
+    leaveTo(navigate, target, notice)
   }
 
-  if (loading) return <Loading />
-  if (missing) return <div className="empty-state"><p className="empty-state-title">Trip not found.</p></div>
+  const bare = <PageHeader compact crumbs={[{ to: '/trips', label: 'Trips' }]} name="Find a route" />
+  if (loading) return <>{bare}<Loading /></>
+  if (missing) return <>{bare}<div className="empty-state"><p className="empty-state-title">Trip not found.</p></div></>
 
   const header = (
     <PageHeader crumbs={[{ to: '/trips', label: 'Trips' }, { to: `/trips/${tripId}`, label: tripTitle || 'Trip' }]} title="Find a route" name="Find a route" />

@@ -9,6 +9,7 @@ import { useMediaQuery } from '../utils/useMediaQuery.js'
 import ExpenseHistory from '../components/ExpenseHistory.jsx'
 import { DetailHero, DetailRows, DetailRow } from '../components/Detail/Detail.jsx'
 import { useConfirm } from '../components/Confirm/ConfirmProvider.jsx'
+import { leaveTo } from '../utils/history.js'
 import { useAuth } from '../context/AuthContext.jsx'
 
 export default function ExpenseDetailPage() {
@@ -35,7 +36,7 @@ export default function ExpenseDetailPage() {
     if (!ok) return
     try {
       await client.delete(`/expenses/${id}`)
-      navigate(`/groups/${groupId}`, { state: { notice: `"${expense.description}" was deleted.` } })
+      leaveTo(navigate, `/groups/${groupId}`, { notice: `"${expense.description}" was deleted.` })
     } catch {
       setError('Failed to delete expense.')
     }
@@ -60,8 +61,12 @@ export default function ExpenseDetailPage() {
     }).finally(() => setLoading(false))
   }, [id, groupId])
 
-  if (loading) return <Loading />
-  if (!expense) return null
+  if (loading || !expense) return (
+    <>
+      <PageHeader compact crumbs={[{ to: '/groups', label: 'Home' }, { to: `/groups/${groupId}`, label: 'Group' }]} name="Expense" />
+      <Loading />
+    </>
+  )
 
   const icon = expense.isTransfer ? '⇄' : expense.isSettlement ? '✓' : (expense.categoryIcon || expense.description?.[0]?.toUpperCase() || '?')
   const memberMap = new Map(members.map(m => [m.id, m]))

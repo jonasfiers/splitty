@@ -6,6 +6,8 @@ import { formatCurrency } from '../utils/currency.js'
 import Loading from '../components/Loading.jsx'
 import PageHeader from '../components/PageHeader/PageHeader.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
+import { leaveTo } from '../utils/history.js'
+import BackLink from '../components/BackLink.jsx'
 import CategoryPicker from '../components/CategoryPicker/CategoryPicker.jsx'
 
 function recalculate(shares, total, payerId) {
@@ -191,11 +193,13 @@ export default function ExpenseFormPage() {
 
       if (tripItem && !isEdit) {
         await client.post(`/trips/items/${tripItem.id}/expenses`, { expenseId })
-        navigate(`/trips/${tripItem.tripId}/items/${tripItem.id}`, { replace: true })
+        leaveTo(navigate, `/trips/${tripItem.tripId}/items/${tripItem.id}`)
         return
       }
 
-      navigate(form.groupId ? `/groups/${form.groupId}` : '/groups')
+      // Saved: out of the form, back where it was opened from (the expense
+      // for an edit, the group for a new one), so Back does not reopen it.
+      leaveTo(navigate, isEdit ? `/groups/${form.groupId || groupId}/expenses/${id}` : form.groupId ? `/groups/${form.groupId}` : '/groups')
     } catch (err) {
       console.error('Save expense failed:', err)
       setError(err?.response?.data?.error || 'Failed to save expense.')
@@ -206,9 +210,10 @@ export default function ExpenseFormPage() {
 
   const backPath = tripItem && !isEdit
     ? `/trips/${tripItem.tripId}/items/${tripItem.id}`
+    : isEdit && groupId ? `/groups/${groupId}/expenses/${id}`
     : groupId ? `/groups/${groupId}` : '/groups'
 
-  if (loading) return <Loading />
+  if (loading) return <><PageHeader compact back={{ to: backPath }} name={isEdit ? 'Edit expense' : 'New expense'} /><Loading /></>
 
   return (
     <>
@@ -367,7 +372,7 @@ export default function ExpenseFormPage() {
           {error && <p className="error">{error}</p>}
 
           <div className="panel-actions" style={{ marginTop: '0.5rem' }}>
-            <Link to={backPath} className="btn btn-ghost">Cancel</Link>
+            <BackLink to={backPath} replace className="btn btn-ghost">Cancel</BackLink>
             <button type="submit" className="btn btn-secondary" disabled={saving}>
               {saving ? 'Saving…' : (isEdit ? 'Save changes' : 'Add expense')}
             </button>

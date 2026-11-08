@@ -4,6 +4,8 @@ import client from '../api/client'
 import PlacePicker from '../components/PlacePicker/PlacePicker.jsx'
 import Loading from '../components/Loading.jsx'
 import PageHeader from '../components/PageHeader/PageHeader.jsx'
+import { leaveTo } from '../utils/history.js'
+import BackLink from '../components/BackLink.jsx'
 import { KINDS, TRANSPORT_MODES, dayOf, timeOf } from '../utils/trip.js'
 
 const LABELS = {
@@ -122,7 +124,7 @@ export default function TripItemFormPage() {
     try {
       if (isEdit) {
         await client.put(`/trips/items/${itemId}`, payload)
-        navigate(`/trips/${tripId}/items/${itemId}`)
+        leaveTo(navigate, `/trips/${tripId}/items/${itemId}`)
       } else {
         const { data } = await client.post(`/trips/${tripId}/items`, payload)
         navigate(`/trips/${tripId}/items/${data.id}`, { replace: true })
@@ -134,8 +136,8 @@ export default function TripItemFormPage() {
     }
   }
 
-  if (loading) return <Loading />
-  if (missing) return <div className="empty-state"><p className="empty-state-title">Trip not found.</p></div>
+  if (loading) return <><PageHeader compact back={{ to: backPath }} name={isEdit ? 'Edit item' : 'New item'} /><Loading /></>
+  if (missing) return <><PageHeader compact crumbs={[{ to: '/trips', label: 'Trips' }]} name="Trip" /><div className="empty-state"><p className="empty-state-title">Trip not found.</p></div></>
 
   const labels = LABELS[kind]
   const formTitle = `${isEdit ? 'Edit' : 'New'} ${(kind === 'transport' && form.mode !== 'other'
@@ -245,7 +247,7 @@ export default function TripItemFormPage() {
           {error && <p className="error">{error}</p>}
 
           <div className="panel-actions" style={{ marginTop: '0.5rem' }}>
-            <Link to={backPath} className="btn btn-ghost">Cancel</Link>
+            <BackLink to={backPath} replace className="btn btn-ghost">Cancel</BackLink>
             <button type="submit" className="btn btn-secondary" disabled={saving}>
               {saving ? 'Saving…' : (isEdit ? 'Save changes' : 'Add to trip')}
             </button>

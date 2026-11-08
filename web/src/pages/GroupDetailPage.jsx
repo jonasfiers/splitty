@@ -19,6 +19,7 @@ import { useMediaQuery } from '../utils/useMediaQuery.js'
 import Sheet, { SheetActions } from '../components/Sheet/Sheet.jsx'
 import { useConfirm } from '../components/Confirm/ConfirmProvider.jsx'
 import Segmented from '../components/Segmented/Segmented.jsx'
+import { leaveTo } from '../utils/history.js'
 import { List, ListRow } from '../components/List/List.jsx'
 
 // Keep in sync with the .group-layout breakpoint in index.css.
@@ -168,7 +169,7 @@ export default function GroupDetailPage() {
     if (!ok) return
     try {
       await client.delete(`/groups/${id}/${userId}`)
-      if (isSelf) { navigate('/groups'); return }
+      if (isSelf) { leaveTo(navigate, '/groups'); return }
       await load()
     } catch { setError('Failed to remove member.') }
   }
@@ -178,7 +179,7 @@ export default function GroupDetailPage() {
     if (!(await confirm({ title: `Delete "${group?.title}"${withTrips}?`, message: 'This cannot be undone.', confirmLabel: 'Delete group', danger: true }))) return
     try {
       await client.delete(`/groups/${id}`)
-      navigate('/groups')
+      leaveTo(navigate, '/groups')
     } catch { setError('Failed to delete group.') }
   }
 
@@ -280,9 +281,11 @@ export default function GroupDetailPage() {
     }
   }
 
-  if (loading) return <Loading />
-  if (loadError) return <LoadFailed error={loadError} what="this group" onRetry={retry} />
-  if (!group) return <div className="empty-state"><p className="empty-state-title">Group not found.</p></div>
+  // While loading or when it fails: the bar with its way back stays.
+  const bare = <PageHeader compact crumbs={[{ to: '/groups', label: 'Home' }]} name="Group" />
+  if (loading) return <>{bare}<Loading /></>
+  if (loadError) return <>{bare}<LoadFailed error={loadError} what="this group" onRetry={retry} /></>
+  if (!group) return <>{bare}<div className="empty-state"><p className="empty-state-title">Group not found.</p></div></>
 
   // Expense icon: use emoji field if present, otherwise first letter of description
   const expenseIcon = e => e.isTransfer ? '⇄' : e.isSettlement ? '✓' : (e.categoryIcon || (e.description?.[0]?.toUpperCase() ?? '?'))

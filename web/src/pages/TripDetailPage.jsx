@@ -17,6 +17,7 @@ import { useMediaQuery } from '../utils/useMediaQuery.js'
 import Sheet, { SheetActions } from '../components/Sheet/Sheet.jsx'
 import TodayEntries from '../components/TodayEntries.jsx'
 import Segmented from '../components/Segmented/Segmented.jsx'
+import { leaveTo } from '../utils/history.js'
 import { useConfirm } from '../components/Confirm/ConfirmProvider.jsx'
 
 // Leaflet is only worth downloading once someone opens the map.
@@ -185,13 +186,15 @@ function TripDetailPage() {
     if (!(await confirm({ title: `Delete "${trip.title}"?`, message: 'Everything planned in it goes too. Its expenses stay in the group. This cannot be undone.', confirmLabel: 'Delete trip', danger: true }))) return
     try {
       await client.delete(`/trips/${id}`)
-      navigate('/trips')
+      leaveTo(navigate, '/trips')
     } catch { setError('Failed to delete the trip.') }
   }
 
-  if (loading) return <Loading />
-  if (loadError) return <LoadFailed error={loadError} what="this trip" onRetry={retry} />
-  if (!trip) return <div className="empty-state"><p className="empty-state-title">Trip not found.</p></div>
+  // While loading or when it fails: the bar with its way back stays.
+  const bare = <PageHeader compact crumbs={[{ to: '/trips', label: 'Trips' }]} name="Trip" />
+  if (loading) return <>{bare}<Loading /></>
+  if (loadError) return <>{bare}<LoadFailed error={loadError} what="this trip" onRetry={retry} /></>
+  if (!trip) return <>{bare}<div className="empty-state"><p className="empty-state-title">Trip not found.</p></div></>
 
   const placeById = new Map(places.map(p => [p.id, p]))
   const placeName = placeId => placeById.get(placeId)?.name

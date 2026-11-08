@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router'
 import { useMediaQuery } from '../../utils/useMediaQuery.js'
+import BackLink from '../BackLink.jsx'
 import './PageHeader.css'
 
 // The header of a detail page (a trip, a group, an expense...).
@@ -48,10 +49,10 @@ export default function PageHeader({ crumbs, back: plainBack, title, name, actio
   const backLabel = crumbs?.length ? back.label : 'Back'
 
   const backLink = (
-    <Link to={back.to} className="ph-back">
+    <BackLink to={back.to} replace={!!plainBack && !crumbs?.length} className="ph-back">
       <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="15 18 9 12 15 6" /></svg>
       {backLabel}
-    </Link>
+    </BackLink>
   )
 
   if (wide) {

@@ -24,8 +24,9 @@ export default function FriendsPage() {
       .finally(() => setLoading(false))
   }, [currentUser, attempt])
 
-  if (loading) return <Loading />
-  if (loadError) return <LoadFailed error={loadError} what="your friends" onRetry={retry} />
+  const bare = <PageHeader compact crumbs={[{ to: '/profile', label: 'Profile' }]} name="Friends" />
+  if (loading) return <>{bare}<Loading /></>
+  if (loadError) return <>{bare}<LoadFailed error={loadError} what="your friends" onRetry={retry} /></>
 
   return (
     <>

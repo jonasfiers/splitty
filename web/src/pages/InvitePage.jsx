@@ -25,7 +25,7 @@ export default function InvitePage() {
     setJoining(true)
     try {
       const { data } = await client.post(`/invites/${token}/redeem`)
-      navigate(`/groups/${data.groupId}`)
+      navigate(`/groups/${data.groupId}`, { replace: true })
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to join group.')
       setJoining(false)
