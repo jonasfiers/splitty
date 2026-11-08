@@ -303,14 +303,7 @@ function TripDetailPage() {
           <p style={{ color: 'var(--text-3)', fontSize: 14 }}>Nothing planned yet. Add a flight, a stay or something to do.</p>
         </div>
       ) : (
-        <Expandable
-          label={`${trip.title} · Timeline`}
-          extra={places.some(p => p.lat != null) && (
-            <Suspense fallback={<Loading />}>
-              <TripMap places={places} items={items} onOpenItem={openItem} highlight={highlight} onHover={setHighlight} />
-            </Suspense>
-          )}
-        >
+        <Expandable label={`${trip.title} · Timeline`}>
           <TripGantt trip={trip} items={items} placeName={placeName} onOpenItem={openItem} onCreate={createFromTimeline} onReschedule={reschedule} onDelete={removeItem} highlight={highlight} onHover={setHighlight} />
         </Expandable>
       )}
