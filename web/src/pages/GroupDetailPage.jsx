@@ -18,8 +18,8 @@ import TripFormSheet from '../components/TripForm/TripFormSheet.jsx'
 import { useMediaQuery } from '../utils/useMediaQuery.js'
 import Sheet from '../components/Sheet/Sheet.jsx'
 import { useConfirm } from '../components/Confirm/ConfirmProvider.jsx'
+import Segmented from '../components/Segmented/Segmented.jsx'
 
-const FILTERS = ['All', 'You paid', 'You owe']
 // Keep in sync with the .group-layout breakpoint in index.css.
 const WIDE_QUERY = '(min-width: 1180px)'
 
@@ -36,7 +36,6 @@ export default function GroupDetailPage() {
   const [members, setMembers] = useState([])
   const [balance, setBalance] = useState(null)
   const [tab, setTab] = useState('expenses')
-  const [filter, setFilter] = useState('All')
   const [showSettlement, setShowSettlement] = useState(false)
   const [settlementForm, setSettlementForm] = useState({
     paidByUserId: '',
@@ -195,7 +194,17 @@ export default function GroupDetailPage() {
   const handleInvite = async () => {
     try {
       const { data } = await client.post(`/invites/groups/${id}`)
-      setInviteLink(`${window.location.origin}/invite/${data.token}`)
+      const link = `${window.location.origin}/invite/${data.token}`
+      // The phone's share sheet when there is one; otherwise ours, with the link to copy.
+      if (navigator.share) {
+        try {
+          await navigator.share({ title: `Join ${group.title} on Splitty`, url: link })
+          return
+        } catch (err) {
+          if (err.name === 'AbortError') return
+        }
+      }
+      setInviteLink(link)
     } catch { setError('Failed to generate invite link.') }
   }
 
@@ -290,38 +299,57 @@ export default function GroupDetailPage() {
 
   const activeFilterCount = [debouncedKeyword, filters.categoryId, filters.paidByUserId, filters.startDate, filters.endDate].filter(Boolean).length
 
-  const filteredExpenses = expenses.filter(e => {
-    if (filter === 'You paid') return e.paidByUserId === currentUser?.id
-    if (filter === 'You owe') return e.paidByUserId !== currentUser?.id && e.shareAmount != null
-    return true
-  })
+  // The filters in the panel (the keyword has its own field).
+  const panelFilterCount = [filters.categoryId, filters.paidByUserId, filters.startDate, filters.endDate].filter(Boolean).length
+  const clearFilters = () => {
+    setFilters({ keyword: '', categoryId: null, paidByUserId: '', startDate: '', endDate: '' })
+    setDebouncedKeyword('')
+  }
 
-  const balanceBanner = balance !== null && (
-    <div className="debt-banners">
-      {!balance.amount ? (
-        <div className="debt-banner settled">
-          <span style={{ fontSize: 16, marginRight: 6 }}>✓</span>
-          <span className="debt-banner-text">All settled up</span>
-        </div>
-      ) : balance.amount > 0 ? (
-        <div className="debt-banner owed">
-          <span className="debt-banner-text">You are owed {formatCurrency(balance.amount, balance.iso)}</span>
-          <button className="btn-pill-white" style={{ marginLeft: 'auto', color: 'inherit' }} onClick={() => {
-            const owers = members.filter(m => m.id !== currentUser.id && m.balance < 0)
-            if (owers.length === 1) openSettlement(owers[0])
-            else setShowSettlement(true)
-          }}>Settle up</button>
-        </div>
-      ) : (
-        <div className="debt-banner owes">
-          <span className="debt-banner-text">You owe {formatCurrency(Math.abs(balance.amount), balance.iso)}</span>
-          <button className="btn-pill-white" style={{ marginLeft: 'auto', color: 'inherit' }} onClick={() => {
-            const lenders = members.filter(m => m.id !== currentUser.id && m.balance > 0)
-            if (lenders.length === 1) openSettlement(lenders[0])
-            else setShowSettlement(true)
-          }}>Settle up</button>
-        </div>
-      )}
+  // The list by month: "November", or "October 2025" for another year.
+  const thisYear = new Date().getFullYear()
+  const months = []
+  for (const e of expenses) {
+    const d = e.date ? new Date(`${e.date.slice(0, 10)}T12:00:00`) : null
+    const key = d ? `${d.getFullYear()}-${d.getMonth()}` : 'none'
+    if (months.at(-1)?.key !== key) {
+      const label = !d ? 'No date'
+        : d.toLocaleDateString(undefined, d.getFullYear() === thisYear ? { month: 'long' } : { month: 'long', year: 'numeric' })
+      months.push({ key, label, items: [] })
+    }
+    months.at(-1).items.push(e)
+  }
+
+  // Who the balance is with: the members on the other side of it.
+  const counterparts = !balance?.amount ? [] : members.filter(m =>
+    m.id !== currentUser?.id && (balance.amount > 0 ? m.balance < 0 : m.balance > 0))
+  const openSettleUp = () => {
+    if (counterparts.length === 1) openSettlement(counterparts[0])
+    else setShowSettlement(true)
+  }
+  const withWhom = counterparts.length === 1 ? counterparts[0].name
+    : counterparts.length === 2 ? `${counterparts[0].name} and ${counterparts[1].name}`
+    : counterparts.length > 2 ? `${counterparts[0].name} and ${counterparts.length - 1} others`
+    : null
+
+  const balanceCard = balance !== null && (
+    <div className="balance-card">
+      <div className="balance-card-text">
+        {!balance.amount ? (
+          <div className="balance-card-main">All settled up</div>
+        ) : balance.amount > 0 ? (
+          <>
+            <div className="balance-card-main">You're owed <span className="owed">{formatCurrency(balance.amount, balance.iso)}</span></div>
+            {withWhom && <div className="balance-card-sub">from {withWhom}</div>}
+          </>
+        ) : (
+          <>
+            <div className="balance-card-main">You owe <span className="owe">{formatCurrency(Math.abs(balance.amount), balance.iso)}</span></div>
+            {withWhom && <div className="balance-card-sub">to {withWhom}</div>}
+          </>
+        )}
+      </div>
+      {!!balance.amount && <button type="button" className="btn btn-primary btn-sm" onClick={openSettleUp}>Settle up</button>}
     </div>
   )
 
@@ -393,13 +421,16 @@ export default function GroupDetailPage() {
         crumbs={[{ to: '/groups', label: 'Home' }]}
         title={group.title}
         name={group.title}
-        actions={[{ label: 'Delete group', onClick: handleDeleteGroup, danger: true }]}
+        actions={[
+          { label: 'Invite', onClick: handleInvite, primary: true },
+          { label: 'Delete group', onClick: handleDeleteGroup, danger: true },
+        ]}
       >
         <div className="group-info-meta">
           <AvatarStack members={members} />
           <span className="group-info-count">
             {members.length} member{members.length !== 1 ? 's' : ''}
-            {totalAmount > 0 && ` · ${formatCurrency(totalAmount, group.iso)} total`}
+            {totalAmount > 0 && <> · <Link to={`/insights?group=${id}`} className="group-total-link">{formatCurrency(totalAmount, group.iso)} total</Link></>}
           </span>
         </div>
       </PageHeader>
@@ -407,67 +438,47 @@ export default function GroupDetailPage() {
       {state?.notice && <p className="error" style={{ background: 'var(--accent-light)', color: 'var(--accent-text)', borderColor: 'var(--accent-subtle)' }}>{state.notice}</p>}
       {error && <p className="error">{error}</p>}
 
-      {!wide && balanceBanner}
+      {!wide && balanceCard}
 
       <div className="group-layout">
         <div className="group-main">
-          {/* Tabs */}
-          <div className="filter-chips">
-            <button className={`chip${tab === 'expenses' ? ' active' : ''}`} onClick={() => setTab('expenses')}>Expenses</button>
-            <button className={`chip${tab === 'members' ? ' active' : ''}`} onClick={() => setTab('members')}>
-              Members {members.length > 0 && `· ${members.length}`}
-            </button>
-            <button className={`chip${tab === 'trips' ? ' active' : ''}`} onClick={() => setTab('trips')}>
-              Trips {trips.length > 0 && `· ${trips.length}`}
-            </button>
-          </div>
+          <Segmented
+            label="Show"
+            value={tab}
+            onChange={setTab}
+            options={[
+              { value: 'expenses', label: 'Expenses' },
+              { value: 'members', label: `Members · ${members.length}` },
+              { value: 'trips', label: trips.length ? `Trips · ${trips.length}` : 'Trips' },
+            ]}
+          />
 
           {tab === 'expenses' && <>
-            {!wide && categoryCard}
-
-            {/* Filter chips */}
-            <div className="filter-chips">
-              {FILTERS.map(f => (
-                <button key={f} className={`chip${filter === f ? ' active' : ''}`} onClick={() => setFilter(f)}>{f}</button>
-              ))}
-            </div>
-
-            {/* Search & filters */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0 8px' }}>
+            <div className="search-row">
+              <label className="search-field">
+                <svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" /></svg>
+                <input
+                  type="search"
+                  placeholder="Search expenses"
+                  aria-label="Search expenses"
+                  value={filters.keyword}
+                  onChange={e => setFilters(f => ({ ...f, keyword: e.target.value }))}
+                />
+              </label>
               <button
-                className={`btn btn-ghost btn-sm${showFilters ? ' active' : ''}`}
-                style={{ position: 'relative' }}
+                type="button"
+                className={`icon-btn${showFilters || panelFilterCount ? ' active' : ''}`}
+                aria-label={panelFilterCount ? `Filters, ${panelFilterCount} on` : 'Filters'}
+                aria-expanded={showFilters}
                 onClick={() => setShowFilters(v => !v)}
               >
-                Filters
-                {activeFilterCount > 0 && (
-                  <span style={{
-                    position: 'absolute', top: -6, right: -6,
-                    background: 'var(--accent)', color: '#fff',
-                    borderRadius: 'var(--r-pill)', fontSize: 10, fontWeight: 700,
-                    padding: '1px 5px', lineHeight: '14px',
-                  }}>{activeFilterCount}</span>
-                )}
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4" /></svg>
+                {panelFilterCount > 0 && <span className="icon-btn-badge">{panelFilterCount}</span>}
               </button>
-              {activeFilterCount > 0 && (
-                <button className="btn btn-ghost btn-sm" onClick={() => {
-                  setFilters({ keyword: '', categoryId: null, paidByUserId: '', startDate: '', endDate: '' })
-                  setDebouncedKeyword('')
-                }}>Clear all</button>
-              )}
             </div>
 
             {showFilters && (
               <div className="card" style={{ marginBottom: 12, padding: 16 }}>
-                <div className="form-group" style={{ marginBottom: 12 }}>
-                  <label>Search</label>
-                  <input
-                    type="text"
-                    placeholder="Filter by description…"
-                    value={filters.keyword}
-                    onChange={e => setFilters(f => ({ ...f, keyword: e.target.value }))}
-                  />
-                </div>
                 <div className="form-row" style={{ marginBottom: 12 }}>
                   <div className="form-group" style={{ marginBottom: 0 }}>
                     <label>From</label>
@@ -501,20 +512,28 @@ export default function GroupDetailPage() {
                     onChange={e => setFilters(f => ({ ...f, paidByUserId: e.target.value }))}
                   >
                     <option value="">Anyone</option>
-                    {members.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                    {members.map(m => <option key={m.id} value={m.id}>{m.id === currentUser?.id ? 'You' : m.name}</option>)}
                   </select>
                 </div>
+                {panelFilterCount > 0 && (
+                  <button type="button" className="btn btn-ghost btn-sm" style={{ marginTop: 12 }} onClick={clearFilters}>Clear filters</button>
+                )}
               </div>
             )}
 
-            {filteredExpenses.length === 0 ? (
+            {expenses.length === 0 ? (
               <div className="empty-state" style={{ padding: '32px 24px' }}>
                 <img src="/cat-empty.svg" alt="" style={{ width: 80, height: 80 }} />
-                <p style={{ color: 'var(--text-3)', fontSize: 14 }}>No expenses yet.</p>
+                {activeFilterCount > 0 ? <>
+                  <p style={{ color: 'var(--text-3)', fontSize: 14 }}>Nothing matches.</p>
+                  <button type="button" className="btn btn-ghost btn-sm" onClick={clearFilters}>Clear search and filters</button>
+                </> : <p style={{ color: 'var(--text-3)', fontSize: 14 }}>No expenses yet.</p>}
               </div>
-            ) : (
+            ) : months.map(month => (
+              <section key={month.key} className="expense-month">
+              <div className="section-label">{month.label}</div>
               <div className="expense-list">
-                {filteredExpenses.map(e => (
+                {month.items.map(e => (
                   <div
                     key={e.id}
                     className="expense-item"
@@ -553,7 +572,8 @@ export default function GroupDetailPage() {
                   </div>
                 ))}
               </div>
-            )}
+              </section>
+            ))}
 
             {hasMore && (
               <button className="btn-outline-amber" style={{ width: '100%', marginTop: 8 }} onClick={loadMore} disabled={loadingMore}>
@@ -617,7 +637,7 @@ export default function GroupDetailPage() {
         </div>
         {wide && (
           <aside className="group-aside">
-            {balanceBanner}
+            {balanceCard}
             {categoryCard}
             {membersCard}
           </aside>

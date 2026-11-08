@@ -5,7 +5,6 @@ import client from '../api/client'
 import FabButton from '../components/FabButton/FabButton.jsx'
 import EmojiPicker from '../components/EmojiPicker/EmojiPicker.jsx'
 import { formatCurrency } from '../utils/currency.js'
-import { getInitials, AvatarStack } from '../components/Avatar.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { timeAgo } from '../utils/time.js'
 import Loading from '../components/Loading.jsx'
@@ -17,7 +16,7 @@ import Sheet from '../components/Sheet/Sheet.jsx'
 export default function GroupsPage() {
   const navigate = useNavigate()
   const { currentUser } = useAuth()
-  const [balance, setBalance] = useState({ balanceOwed: 0, balanceLent: 0, grossOwed: 0, grossLent: 0 })
+  const [balance, setBalance] = useState({ balanceOwed: 0, balanceLent: 0 })
   const [groups, setGroups] = useState([])
   const [currencies, setCurrencies] = useState([])
   const [showNewGroup, setShowNewGroup] = useState(false)
@@ -38,11 +37,9 @@ export default function GroupsPage() {
         const curs = cr.data.currencies || []
         setCurrencies(curs)
         if (curs.length > 0) setForm(f => ({ ...f, currencyIso: curs[0].iso }))
-        setBalance({ 
-          balanceOwed: Number(bal.data.balanceOwed ?? 0), 
+        setBalance({
+          balanceOwed: Number(bal.data.balanceOwed ?? 0),
           balanceLent: Number(bal.data.balanceLent ?? 0),
-          grossOwed: Number(bal.data.grossOwed ?? 0),
-          grossLent: Number(bal.data.grossLent ?? 0)
         })
       })
       .catch(err => setLoadError(err))
@@ -91,80 +88,34 @@ export default function GroupsPage() {
         <div className="home-main">
           {/* on a trip: today's plan comes first */}
           <TodayTrip />
-          {/* balance */}
-          <div className="balance-banner">
-            {(() => {
-              const netTotal = balance.balanceLent + balance.balanceOwed
-              const grossTotal = balance.grossLent + balance.grossOwed
-              const net = balance.balanceLent - balance.balanceOwed
-              const isSettled = netTotal < 0.01
-              const pct = grossTotal > 0.01 ? (balance.grossLent / grossTotal) * 100 : 50
-
-              return (
-                <>
-                  <div className="balance-content" style={{ paddingBottom: isSettled ? 48 : 32 }}>
-                    {isSettled ? (
-                      <div className="balance-settled-info">
-                        <span className="balance-settled-icon">🎉</span>
-                        <div className="balance-settled-text">You're all settled up!</div>
-                      </div>
-                    ) : (
-                      <>
-                        <div className="balance-col">
-                          <span className="balance-lbl">You paid</span>
-                          <span className="balance-amt positive">{formatCurrency(balance.grossLent)}</span>
-                        </div>
-                        <div className="balance-divider" />
-                        <div className="balance-col" style={{ alignItems: 'flex-end', textAlign: 'right' }}>
-                          <span className="balance-lbl">You borrowed</span>
-                          <span className="balance-amt negative">{formatCurrency(balance.grossOwed)}</span>
-                        </div>
-                      </>
-                    )}
+          {/* What is open now, across all groups (per person, netted over groups) */}
+          {(() => {
+            const owed = balance.balanceLent
+            const owe = balance.balanceOwed
+            const net = owed - owe
+            const settled = owed < 1 && owe < 1
+            return (
+              <div className="card home-balance">
+                <div className="home-balance-lbl">Across all groups</div>
+                <div className="home-balance-main">
+                  {settled ? "You're all settled up"
+                    : net >= 0 ? <>You're owed <span className="owed">{formatCurrency(net)}</span></>
+                    : <>You owe <span className="owe">{formatCurrency(-net)}</span></>}
+                </div>
+                {owed >= 1 && owe >= 1 && (
+                  <div className="home-balance-split">
+                    <span>Owed to you<b>{formatCurrency(owed)}</b></span>
+                    <span>You owe<b>{formatCurrency(owe)}</b></span>
                   </div>
+                )}
+              </div>
+            )
+          })()}
 
-                  <div className={`balance-bar-track ${isSettled ? 'settled' : ''}`}>
-                    <div 
-                      className={`balance-net-marker ${isSettled ? 'settled' : net > 0 ? 'positive' : net < 0 ? 'negative' : ''}`}
-                      style={{ left: `clamp(35px, ${pct}%, calc(100% - 35px))` }}
-                    >
-                      {isSettled ? (
-                        <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                            <polyline points="20 6 9 17 4 12"></polyline>
-                          </svg>
-                          Settled
-                        </span>
-                      ) : (
-                        <>{net > 0 ? '+' : ''}{formatCurrency(net)}</>
-                      )}
-                    </div>
-                    {!isSettled && (
-                      <>
-                        <div 
-                          className="balance-bar positive" 
-                          style={{ flex: balance.grossLent, minWidth: balance.grossLent > 0 ? 4 : 0 }} 
-                        />
-                        <div 
-                          className="balance-bar negative" 
-                          style={{ flex: balance.grossOwed, minWidth: balance.grossOwed > 0 ? 4 : 0 }} 
-                        />
-                      </>
-                    )}
-                  </div>
-                </>
-              )
-            })()}
+          <div className="home-section-head">
+            <div className="section-label">Groups</div>
+            <button type="button" className="home-section-link" onClick={() => setShowNewGroup(true)}>+ New group</button>
           </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div className="section-label" style={{ marginBottom: 0 }}>Your groups</div>
-            <button className="btn-pill-outline" style={{ fontSize: 12, padding: '5px 12px' }} onClick={() => setShowNewGroup(true)}>
-              + New group
-            </button>
-          </div>
-
-          <div style={{ height: 10 }} />
 
           {groups.length === 0 ? (
             <div className="empty-state">
@@ -174,72 +125,31 @@ export default function GroupsPage() {
               <button className="btn-pill" onClick={() => setShowNewGroup(true)}>+ New group</button>
             </div>
           ) : (
-            <div className="group-cards">
+            <div className="group-rows">
               {groups.map(g => {
-                const me = g.members?.find(m => m.id === currentUser?.id)
-                const myBalance = me?.balance ?? 0
-                const others = g.members?.filter(m => m.id !== currentUser?.id) || []
-
+                const myBalance = g.members?.find(m => m.id === currentUser?.id)?.balance ?? 0
+                const people = g.members?.length || 0
+                const when = timeAgo(g.lastActivity)
                 return (
-                  <Link key={g.id} to={`/groups/${g.id}`} className="group-card">
-                    <div className="gc-top">
-                      <div className="gc-top-row">
-                        <div className="gc-title-area">
-                          <span className="gc-icon">{g.icon || '👥'}</span>
-                          <div className="gc-name">{g.title}</div>
-                        </div>
-                        {myBalance === 0 ? (
-                          <span className="gc-bal settled">✓ settled</span>
-                        ) : (
-                          <span className={`gc-bal ${myBalance > 0 ? 'positive' : 'negative'}`}>
-                            {myBalance > 0 ? '+' : ''}{formatCurrency(myBalance, g.iso)}
-                          </span>
-                        )}
-                      </div>
-                      <div className="gc-meta-row">
-                        {timeAgo(g.lastActivity) ? (
-                          <span className="gc-meta">{timeAgo(g.lastActivity)}</span>
-                        ) : <div />}
-                        <AvatarStack members={g.members || []} />
+                  <Link key={g.id} to={`/groups/${g.id}`} className="group-row">
+                    <span className="group-row-icon" aria-hidden="true">{g.icon || '👥'}</span>
+                    <div className="group-row-text">
+                      <div className="group-row-name">{g.title}</div>
+                      <div className="group-row-meta">
+                        {people} {people === 1 ? 'person' : 'people'}{when ? ` · ${when}` : ''}
                       </div>
                     </div>
-
-                    {(() => {
-                      const debtors = others.filter(m => m.balance !== 0)
-                      if (!debtors.length || (g.members?.length || 0) <= 2) return null
-                      const maxAbs = Math.max(...debtors.map(m => Math.abs(m.balance)))
-                  
-                      return (
-                        <div className="gc-members-list">
-                          {debtors.map(m => {
-                            const pct = maxAbs > 0 ? (Math.abs(m.balance) / maxAbs) * 50 : 0
-                            const isPos = m.balance > 0
-                            return (
-                              <div key={m.id} className="gc-member-row">
-                                <div className="gc-member-info">
-                                  <span className="gc-member-name">{m.name}</span>
-                                  <span className={`gc-member-amount ${isPos ? 'positive' : 'negative'}`}>
-                                    {isPos ? '+' : ''}{formatCurrency(m.balance, g.iso)}
-                                  </span>
-                                </div>
-                                {debtors.length > 1 && (
-                                  <div className="gc-member-bar-track">
-                                    <div className="gc-member-bar-center" />
-                                    <div 
-                                      className={`gc-member-bar ${isPos ? 'positive' : 'negative'}`}
-                                      style={{ 
-                                        width: `${pct}%`, 
-                                        ...(isPos ? { left: '50%' } : { right: '50%' }) 
-                                      }}
-                                    />
-                                  </div>
-                                )}
-                              </div>
-                            )
-                          })}
+                    <div className="group-row-bal">
+                      {myBalance === 0 ? (
+                        <span className="group-row-amt settled">Settled</span>
+                      ) : <>
+                        <div className={`group-row-amt ${myBalance > 0 ? 'positive' : 'negative'}`}>
+                          {myBalance > 0 ? '+' : '−'}{formatCurrency(Math.abs(myBalance), g.iso)}
                         </div>
-                      )
-                    })()}
+                        <div className="group-row-sub">{myBalance > 0 ? 'owed to you' : 'you owe'}</div>
+                      </>}
+                    </div>
+                    <svg className="group-row-chev" viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><polyline points="9 6 15 12 9 18" /></svg>
                   </Link>
                 )
               })}

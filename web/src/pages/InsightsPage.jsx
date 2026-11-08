@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, Fragment, useCallback } from 'react'
 import LoadFailed from '../components/LoadFailed.jsx'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, Label } from 'recharts'
 import client from '../api/client'
-import { Link } from 'react-router'
+import { Link, useSearchParams } from 'react-router'
 import { formatCurrency, formatCompactCurrency } from '../utils/currency.js'
 import Loading from '../components/Loading.jsx'
 import { COLOURS, STROKES } from '../utils/chartColors.js'
@@ -43,7 +43,9 @@ export default function InsightsPage() {
   const [activeCategory, setActiveCategory] = useState(null)
   const [hoveredCell, setHoveredCell] = useState(null)
   const [period, setPeriod] = useState('all')
-  const [groupId, setGroupId] = useState('')
+  // ?group=<id>: opened from a group's total.
+  const [searchParams] = useSearchParams()
+  const [groupId, setGroupId] = useState(() => searchParams.get('group') || '')
   const [scope, setScope] = useState('group')
   const [groups, setGroups] = useState([])
   const [refreshing, setRefreshing] = useState(false)
