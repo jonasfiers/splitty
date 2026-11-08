@@ -10,7 +10,7 @@ import TripFormSheet from '../components/TripForm/TripFormSheet.jsx'
 import DuplicateTripSheet from '../components/TripForm/DuplicateTripSheet.jsx'
 import QuickAddSheet from '../components/TripForm/QuickAddSheet.jsx'
 import { formatCurrency } from '../utils/currency.js'
-import { KINDS, TRANSPORT_MODES, itemIcon, buildTimeline, formatDay, formatDateRange, formatMoment, daysBetween, today } from '../utils/trip.js'
+import { KINDS, TRANSPORT_MODES, itemIcon, buildTimeline, describe, formatDay, formatDateRange, formatMoment, daysBetween, today } from '../utils/trip.js'
 import TripGantt from '../components/TripGantt/TripGantt.jsx'
 import Expandable from '../components/Expandable/Expandable.jsx'
 import { useMediaQuery } from '../utils/useMediaQuery.js'
@@ -19,17 +19,6 @@ import Sheet from '../components/Sheet/Sheet.jsx'
 // Leaflet is only worth downloading once someone opens the map.
 const TripMap = lazy(() => import('../components/TripMap/TripMap.jsx'))
 
-// The second line of a timeline entry. Whatever the title already says (a
-// hotel named after its place, a flight titled by its route) is left out.
-const describe = (item, placeName) => {
-  const parts = item.kind === 'transport'
-    ? [
-        [item.carrier, item.number].filter(Boolean).join(' '),
-        [placeName(item.fromPlaceId), placeName(item.toPlaceId)].filter(Boolean).join(' → '),
-      ]
-    : [placeName(item.placeId)]
-  return parts.filter(part => part && part !== item.title).join(' · ')
-}
 
 // A new trip id (e.g. after copying) remounts the page, so nothing of the
 // previous trip's state carries over.
@@ -52,6 +41,7 @@ function TripDetailPage() {
   // Item ids under the pointer in the timeline or on the map; the other one lights them up.
   const [highlight, setHighlight] = useState(null)
   const [showKinds, setShowKinds] = useState(false)
+  const [showPast, setShowPast] = useState(false) // during the trip: the days before today
   // A range dragged out (or a day tapped) on the timeline: { kind, start, end }.
   const [quickAdd, setQuickAdd] = useState(null)
   const [added, setAdded] = useState(null) // title of the item just added that way
@@ -209,9 +199,20 @@ function TripDetailPage() {
   const paid = Number(trip.paidBase || 0)
   const nights = daysBetween(trip.startDate, trip.endDate)
 
+  // While the trip is on, the day list opens on today: earlier days fold away
+  // behind a link (whole days, so today itself is always complete).
+  const onTrip = trip.startDate <= now && now <= trip.endDate
+  const pastDays = onTrip ? timeline.filter(d => d.day < now).length : 0
+  const shownDays = pastDays && !showPast ? timeline.filter(d => d.day >= now) : timeline
+
   const dayList = (
     <div className="trip-timeline">
-      {timeline.map(({ day, entries, sleepingAt, outsideTrip }) => (
+      {pastDays > 0 && (
+        <button type="button" className="trip-past-toggle" onClick={() => setShowPast(v => !v)} aria-expanded={showPast}>
+          {showPast ? 'Hide earlier days' : `Show ${pastDays} earlier day${pastDays !== 1 ? 's' : ''}`}
+        </button>
+      )}
+      {shownDays.map(({ day, entries, sleepingAt, outsideTrip }) => (
         <div key={day} className={`trip-day${day === now ? ' today' : ''}`}>
           <div className="trip-day-head">
             <span className="trip-day-name">{formatDay(day)}</span>

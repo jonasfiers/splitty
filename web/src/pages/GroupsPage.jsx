@@ -10,6 +10,7 @@ import { useAuth } from '../context/AuthContext.jsx'
 import { timeAgo } from '../utils/time.js'
 import Loading from '../components/Loading.jsx'
 import HomePanels from '../components/HomePanels.jsx'
+import TodayTrip from '../components/TodayTrip.jsx'
 import TabHeader from '../components/PageHeader/TabHeader.jsx'
 import Sheet from '../components/Sheet/Sheet.jsx'
 
@@ -88,6 +89,8 @@ export default function GroupsPage() {
       <TabHeader logo />
       <div className="home-layout">
         <div className="home-main">
+          {/* on a trip: today's plan comes first */}
+          <TodayTrip />
           {/* balance */}
           <div className="balance-banner">
             {(() => {

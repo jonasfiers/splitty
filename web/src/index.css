@@ -948,6 +948,12 @@ body {
 .home-cat-amt { font-family: var(--font-mono); color: var(--text); flex-shrink: 0; }
 .home-cat-track { height: 6px; border-radius: var(--r-pill); background: var(--surface-2); margin-top: 4px; }
 .home-cat-bar { height: 100%; border-radius: var(--r-pill); background: var(--accent); opacity: .75; }
+/* Today's plan while a trip is on (TodayTrip.jsx), above the balance. */
+.today-trip { margin-bottom: 16px; }
+.today-trip-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 10px; color: inherit; }
+.today-trip-title { display: flex; gap: 8px; align-items: center; font-size: 16px; font-weight: 700; color: var(--text); min-width: 0; }
+.today-trip-day { font-size: 12px; font-weight: 600; color: var(--accent); white-space: nowrap; }
+.today-trip-night { font-size: 13px; color: var(--text-2); margin-top: 10px; }
 .home-trip { display: block; color: inherit; }
 .home-trip:hover { border-color: var(--border-strong); }
 .home-trip-when { font-size: 12px; font-weight: 600; color: var(--accent); }
@@ -2199,6 +2205,17 @@ body {
 }
 
 /* Timeline */
+.trip-past-toggle {
+  align-self: flex-start;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
 .trip-timeline {
   display: flex;
   flex-direction: column;

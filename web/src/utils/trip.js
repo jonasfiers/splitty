@@ -87,6 +87,18 @@ export function buildTimeline(trip, items) {
   return timeline
 }
 
+// The second line of a timeline entry. Whatever the title already says (a
+// hotel named after its place, a flight titled by its route) is left out.
+export const describe = (item, placeName) => {
+  const parts = item.kind === 'transport'
+    ? [
+        [item.carrier, item.number].filter(Boolean).join(' '),
+        [placeName(item.fromPlaceId), placeName(item.toPlaceId)].filter(Boolean).join(' → '),
+      ]
+    : [placeName(item.placeId)]
+  return parts.filter(part => part && part !== item.title).join(' · ')
+}
+
 // iPadOS reports itself as a Mac; a touch screen gives it away.
 const device = () => {
   const ua = navigator.userAgent
