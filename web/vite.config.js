@@ -49,17 +49,20 @@ export default defineConfig(({ mode }) => {
           short_name: 'Splitty',
           description: 'Split expenses with friends',
           // The app's dark background, in both themes: Android colours its
-          // bottom navigation bar (and the launch splash) from these, and a
-          // manifest cannot hold a light and a dark variant. A dark bar under
-          // light mode looks fine; a white one under dark mode does not.
+          // bottom navigation bar (and the launch splash) from these. A dark bar
+          // under light mode looks fine; a white one under dark mode does not.
           // The status bar follows the page's live theme-color meta instead.
+          // Tried 2026-11-08 on QA: light colours + a dark variant, both as
+          // `color_scheme_dark` and as `user_preferences.color_scheme.dark`.
+          // Chrome on Android read neither (chrome://webapks "Dark theme color"
+          // stayed empty) and the bar went light under dark mode.
           theme_color: '#1C1714',
           background_color: '#1C1714',
           display: 'standalone',
           viewport: 'width=device-width, initial-scale=1.0, viewport-fit=cover',
           start_url: '/',
           scope: '/',
-          orientation: 'portrait',
+          orientation: 'any',
           icons: [
             {
               src: '/cat-icon-192.png',

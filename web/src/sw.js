@@ -93,7 +93,7 @@ self.addEventListener('fetch', event => {
         return
     }
     if (APP_URLS.includes(url.pathname)) {
-        event.respondWith((async () => (await caches.match(url.pathname)) ?? fetch(request))())
+        event.respondWith((async () => (await fromApp(url.pathname)) ?? fetch(request))())
     }
 })
 
@@ -104,12 +104,21 @@ async function navigation(request) {
         const res = await Promise.race([network, timeout])
         if (res) return res
     } catch { /* offline: the saved app below */ }
-    const saved = await caches.match(INDEX)
+    const saved = await fromApp(INDEX)
     if (saved) {
         network.catch(() => {})   // a late answer is not needed any more
         return saved
     }
     return network                // nothing saved yet: wait for the network
+}
+
+// A saved app file: this build's copy first. A bare caches.match() searches the
+// caches oldest first, so the kept previous build would win for every file whose
+// name does not change between builds (manifest.webmanifest, icons, index.html):
+// the installed app kept getting the old manifest. The previous build's cache is
+// only a fallback, for a page still running it that loads one of its lazy parts.
+async function fromApp(path) {
+    return (await (await caches.open(APP_CACHE)).match(path)) ?? caches.match(path)
 }
 
 async function cacheFirst(name, request) {
