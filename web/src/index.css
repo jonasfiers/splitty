@@ -1356,11 +1356,17 @@ body {
 
 /* Expense detail: chart and people stacked on phones, side by side on wide
    screens, with the details and actions in a column on the right. */
-.expense-split-members {
-  border-top: 1px solid var(--border);
-  padding-top: 12px;
-  margin-top: 4px;
-}
+/* Expense page: the amount on its own line under the head; the split as
+   one line of outcome, a thin bar of the shares, then the list. */
+.detail-amount { margin-top: 16px; font-family: var(--font-mono); font-size: 28px; font-weight: 600; color: var(--text); line-height: 1.2; }
+.detail-amount-base { display: block; margin-top: 2px; font-size: 13px; font-weight: 400; color: var(--text-3); }
+.split-outcome { font-size: 15px; font-weight: 700; margin-bottom: 12px; }
+.split-outcome.positive { color: var(--green-dark); }
+.split-outcome.negative { color: var(--red-dark); }
+.split-outcome.neutral { color: var(--text-2); }
+.split-bar { display: flex; gap: 3px; height: 10px; margin-bottom: 8px; }
+.split-bar span { flex-basis: 0; min-width: 6px; border-radius: 999px; border: 1px solid; }
+.member-sub { font-size: 11px; color: var(--text-3); }
 @media (min-width: 1180px) {
   .page-wrap:has(.expense-detail-layout) { --wrap-w: 1140px; }
   .expense-detail-layout {
@@ -1382,18 +1388,6 @@ body {
     gap: 8px;
   }
   .expense-detail-actions .btn { width: 100%; }
-  .expense-split-body {
-    display: grid;
-    grid-template-columns: 260px minmax(0, 1fr);
-    gap: 24px;
-    align-items: center;
-  }
-  .expense-split-members {
-    border-top: none;
-    border-left: 1px solid var(--border);
-    margin: 0;
-    padding: 0 0 0 20px;
-  }
 }
 
 /* Expense form: on desktop the narrow form is centred instead of hugging the

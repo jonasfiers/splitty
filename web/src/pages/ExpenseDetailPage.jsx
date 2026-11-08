@@ -1,19 +1,19 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link, useNavigate } from 'react-router'
 import client from '../api/client'
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
 import { formatCurrency, formatDate } from '../utils/currency.js'
 import { Avatar, colorFor } from '../components/Avatar.jsx'
 import Loading from '../components/Loading.jsx'
-import ChartTooltip from '../components/ChartTooltip.jsx'
 import PageHeader from '../components/PageHeader/PageHeader.jsx'
 import { useMediaQuery } from '../utils/useMediaQuery.js'
 import ExpenseHistory from '../components/ExpenseHistory.jsx'
 import { DetailHero, DetailRows, DetailRow } from '../components/Detail/Detail.jsx'
 import { useConfirm } from '../components/Confirm/ConfirmProvider.jsx'
+import { useAuth } from '../context/AuthContext.jsx'
 
 export default function ExpenseDetailPage() {
   const confirm = useConfirm()
+  const { currentUser } = useAuth()
   const { groupId, id } = useParams()
   const navigate = useNavigate()
   // Same breakpoint as the group page and the .expense-detail-layout rule in index.css.
@@ -66,12 +66,24 @@ export default function ExpenseDetailPage() {
   const icon = expense.isTransfer ? '⇄' : expense.isSettlement ? '✓' : (expense.categoryIcon || expense.description?.[0]?.toUpperCase() || '?')
   const memberMap = new Map(members.map(m => [m.id, m]))
 
+  // What this expense means for the person looking at it, in one line.
+  const outcome = (() => {
+    if (expense.isSettlement || expense.isTransfer || shares.length === 0 || !currentUser) return null
+    const fmt = v => formatCurrency(v, expense.currencyIso)
+    const others = shares.filter(sh => sh.userId !== expense.paidByUserId && sh.amount > 0)
+    const mine = shares.find(sh => sh.userId === currentUser.id)?.amount ?? 0
+    if (currentUser.id === expense.paidByUserId) {
+      const back = others.reduce((sum, sh) => sum + Number(sh.amount), 0)
+      if (back <= 0) return { tone: 'neutral', text: 'Only your own share' }
+      if (others.length === 1) return { tone: 'positive', text: `${memberMap.get(others[0].userId)?.name ?? 'They'} owes you ${fmt(back)}` }
+      return { tone: 'positive', text: `You get ${fmt(back)} back from ${others.length} people` }
+    }
+    if (mine > 0) return { tone: 'negative', text: `You owe ${expense.paidByName ?? 'the payer'} ${fmt(mine)}` }
+    return { tone: 'neutral', text: "You're not part of this split" }
+  })()
+
   const details = (
     <DetailRows>
-      {wide && !expense.isSettlement && !expense.isTransfer && (
-        <DetailRow label="Paid by">{expense.paidByName ?? '—'}</DetailRow>
-      )}
-      {wide && expense.date && <DetailRow label="Date">{formatDate(expense.date)}</DetailRow>}
       {(expense.isSettlement || expense.isTransfer) ? (
         <>
           <DetailRow label="From">{expense.paidByName}</DetailRow>
@@ -116,21 +128,17 @@ export default function ExpenseDetailPage() {
                 : expense.isSettlement ? { background: 'var(--green-light)', color: 'var(--green-dark)' }
                 : undefined}
               title={expense.description}
-              subtitle={expense.paidByName ?? '—'}
-              aside={
-                <>
-                  <div style={{ fontSize: 22, fontFamily: 'var(--font-mono)', fontWeight: 600, color: 'var(--accent-text)' }}>
-                    {formatCurrency(expense.amount, expense.currencyIso)}
-                  </div>
-                  {expense.amountBase != null && expense.currencyIso !== expense.groupCurrencyIso && (
-                    <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2, fontFamily: 'var(--font-mono)' }}>
-                      ≈ {formatCurrency(Number(expense.amountBase), expense.groupCurrencyIso)}
-                    </div>
-                  )}
-                  {expense.date && <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 3 }}>{formatDate(expense.date)}</div>}
-                </>
-              }
+              subtitle={[
+                !expense.isSettlement && !expense.isTransfer && `Paid by ${expense.paidByName ?? '—'}`,
+                expense.date && formatDate(expense.date),
+              ].filter(Boolean).join(' · ')}
             />
+            <div className="detail-amount">
+              {formatCurrency(expense.amount, expense.currencyIso)}
+              {expense.amountBase != null && expense.currencyIso !== expense.groupCurrencyIso && (
+                <span className="detail-amount-base">≈ {formatCurrency(Number(expense.amountBase), expense.groupCurrencyIso)}</span>
+              )}
+            </div>
 
             {!wide && <hr className="divider" style={{ margin: '20px 0 16px' }} />}
 
@@ -140,52 +148,30 @@ export default function ExpenseDetailPage() {
           {!expense.isSettlement && !expense.isTransfer && shares.length > 0 && (
             <>
               <div className="section-label">Split</div>
-              <div className="card" style={{ paddingBottom: 8 }}>
-                <div className="expense-split-body">
-                  <ResponsiveContainer width="100%" height={220}>
-                    <PieChart>
-                      <Pie
-                        data={shares.map(s => ({ name: memberMap.get(s.userId)?.name ?? s.userId, value: s.amount }))}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={60}
-                        outerRadius={90}
-                        paddingAngle={3}
-                        dataKey="value"
-                      >
-                        {shares.map(s => {
-                          const member = memberMap.get(s.userId)
-                          const color = colorFor(member?.avatarColor !== undefined && member?.avatarColor !== null ? member.avatarColor : (member?.name ?? s.userId))
-                          return <Cell key={s.userId} fill={color.bg} stroke={color.fg} strokeWidth={1.5} />
-                        })}
-                      </Pie>
-                      <Tooltip
-                        content={({ active, payload }) => {
-                          if (!active || !payload?.length) return null
-                          const { name, value } = payload[0].payload
-                          return <ChartTooltip title={name} value={formatCurrency(value, expense.currencyIso)} />
-                        }}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                  <div className="members-section expense-split-members">
-                    {shares.map(s => {
-                      const member = memberMap.get(s.userId)
-                      const isPayer = s.userId === expense.paidByUserId
-                      return (
-                        <div key={s.userId} className="member-row">
-                          <Avatar name={member?.name} size={34} colorIndex={member?.avatarColor} emoji={member?.avatarEmoji} />
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div className="member-name">{member?.name ?? s.userId}</div>
-                            {isPayer && <div style={{ fontSize: 11, color: 'var(--text-3)' }}>paid</div>}
-                          </div>
-                          <span className="member-bal" style={{ color: isPayer ? 'var(--green-dark)' : 'var(--text-2)' }}>
-                            {formatCurrency(s.amount, expense.currencyIso)}
-                          </span>
+              <div className="card">
+                {outcome && <div className={`split-outcome ${outcome.tone}`}>{outcome.text}</div>}
+                <div className="split-bar" aria-hidden="true">
+                  {shares.filter(sh => sh.amount > 0).map(sh => {
+                    const member = memberMap.get(sh.userId)
+                    const color = colorFor(member?.avatarColor ?? member?.name ?? sh.userId)
+                    return <span key={sh.userId} style={{ flexGrow: sh.amount, background: color.bg, borderColor: color.fg }} />
+                  })}
+                </div>
+                <div className="members-section">
+                  {shares.map(sh => {
+                    const member = memberMap.get(sh.userId)
+                    const isPayer = sh.userId === expense.paidByUserId
+                    return (
+                      <div key={sh.userId} className="member-row">
+                        <Avatar name={member?.name} size={34} colorIndex={member?.avatarColor} emoji={member?.avatarEmoji} />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div className="member-name">{member?.name ?? sh.userId}{sh.userId === currentUser?.id && ' (you)'}</div>
+                          {isPayer && <div className="member-sub">paid {formatCurrency(expense.amount, expense.currencyIso)}</div>}
                         </div>
-                      )
-                    })}
-                  </div>
+                        <span className="member-bal">{formatCurrency(sh.amount, expense.currencyIso)}</span>
+                      </div>
+                    )
+                  })}
                 </div>
               </div>
             </>
