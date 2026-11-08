@@ -12,8 +12,10 @@ import EmojiPicker from '../components/EmojiPicker/EmojiPicker.jsx'
 import { subscribeToPush, unsubscribeFromPush, isPushSubscribed, disablePushForLogout, forgetPushLocally } from '../utils/push.js'
 import TabHeader from '../components/PageHeader/TabHeader.jsx'
 import Sheet from '../components/Sheet/Sheet.jsx'
+import { useConfirm } from '../components/Confirm/ConfirmProvider.jsx'
 
 export default function ProfilePage() {
+  const confirm = useConfirm()
   const { currentUser, isAdmin, logout, updateToken } = useAuth()
   const { theme, setTheme } = useTheme()
   const navigate = useNavigate()
@@ -152,7 +154,7 @@ export default function ProfilePage() {
   }
 
   const handleDeletePasskey = async credentialId => {
-    if (!window.confirm('Remove this passkey?')) return
+    if (!(await confirm({ title: 'Remove this passkey?', message: 'You can no longer sign in with it on that device.', confirmLabel: 'Remove', danger: true }))) return
     setError('')
     try {
       await client.delete(`/auth/passkey/${encodeURIComponent(credentialId)}`)

@@ -3,6 +3,7 @@ import client from '../api/client'
 import IconCard from '../components/IconCard/IconCard.jsx'
 import Loading from '../components/Loading.jsx'
 import PageHeader from '../components/PageHeader/PageHeader.jsx'
+import { useConfirm } from '../components/Confirm/ConfirmProvider.jsx'
 
 function getCurrencyInfo(iso) {
   try {
@@ -17,6 +18,7 @@ function getCurrencyInfo(iso) {
 }
 
 export default function CurrenciesPage() {
+  const confirm = useConfirm()
   const [currencies, setCurrencies] = useState([])
   const [iso, setIso] = useState('')
   const [showForm, setShowForm] = useState(false)
@@ -44,7 +46,7 @@ export default function CurrenciesPage() {
   }
 
   const handleDelete = async iso => {
-    if (!window.confirm(`Delete ${iso}?`)) return
+    if (!(await confirm({ title: `Delete ${iso}?`, confirmLabel: 'Delete', danger: true }))) return
     setError('')
     try {
       await client.delete(`/currencies/${iso}`)

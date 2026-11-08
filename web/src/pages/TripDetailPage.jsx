@@ -16,6 +16,7 @@ import Expandable from '../components/Expandable/Expandable.jsx'
 import { useMediaQuery } from '../utils/useMediaQuery.js'
 import Sheet from '../components/Sheet/Sheet.jsx'
 import TodayEntries from '../components/TodayEntries.jsx'
+import { useConfirm } from '../components/Confirm/ConfirmProvider.jsx'
 
 // Leaflet is only worth downloading once someone opens the map.
 const TripMap = lazy(() => import('../components/TripMap/TripMap.jsx'))
@@ -29,6 +30,7 @@ export default function TripDetailPageForId() {
 }
 
 function TripDetailPage() {
+  const confirm = useConfirm()
   const { id } = useParams()
   const navigate = useNavigate()
   const { state } = useLocation()
@@ -179,7 +181,7 @@ function TripDetailPage() {
   }, [added])
 
   const handleDelete = async () => {
-    if (!window.confirm(`Delete "${trip.title}" with everything planned in it? Its expenses stay in the group. This cannot be undone.`)) return
+    if (!(await confirm({ title: `Delete "${trip.title}"?`, message: 'Everything planned in it goes too. Its expenses stay in the group. This cannot be undone.', confirmLabel: 'Delete trip', danger: true }))) return
     try {
       await client.delete(`/trips/${id}`)
       navigate('/trips')

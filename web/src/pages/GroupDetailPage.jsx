@@ -17,12 +17,14 @@ import TripList from '../components/TripForm/TripList.jsx'
 import TripFormSheet from '../components/TripForm/TripFormSheet.jsx'
 import { useMediaQuery } from '../utils/useMediaQuery.js'
 import Sheet from '../components/Sheet/Sheet.jsx'
+import { useConfirm } from '../components/Confirm/ConfirmProvider.jsx'
 
 const FILTERS = ['All', 'You paid', 'You owe']
 // Keep in sync with the .group-layout breakpoint in index.css.
 const WIDE_QUERY = '(min-width: 1180px)'
 
 export default function GroupDetailPage() {
+  const confirm = useConfirm()
   const { id } = useParams()
   const navigate = useNavigate()
   const { state } = useLocation()
@@ -160,10 +162,10 @@ export default function GroupDetailPage() {
   const handleRemoveMember = async userId => {
     const isSelf = userId === currentUser?.id
     const member = members.find(m => m.id === userId)
-    const message = isSelf
-      ? 'Leave this group? You will no longer have access to it.'
-      : `Remove ${member?.name ?? 'this member'} from the group?`
-    if (!window.confirm(message)) return
+    const ok = await confirm(isSelf
+      ? { title: 'Leave this group?', message: 'You will no longer have access to it.', confirmLabel: 'Leave group', danger: true }
+      : { title: `Remove ${member?.name ?? 'this member'} from the group?`, confirmLabel: 'Remove', danger: true })
+    if (!ok) return
     try {
       await client.delete(`/groups/${id}/${userId}`)
       if (isSelf) { navigate('/groups'); return }
@@ -173,7 +175,7 @@ export default function GroupDetailPage() {
 
   const handleDeleteGroup = async () => {
     const withTrips = trips.length > 0 ? ` and its ${trips.length} trip${trips.length !== 1 ? 's' : ''}` : ''
-    if (!window.confirm(`Delete "${group?.title}"${withTrips}? This cannot be undone.`)) return
+    if (!(await confirm({ title: `Delete "${group?.title}"${withTrips}?`, message: 'This cannot be undone.', confirmLabel: 'Delete group', danger: true }))) return
     try {
       await client.delete(`/groups/${id}`)
       navigate('/groups')
@@ -181,7 +183,7 @@ export default function GroupDetailPage() {
   }
 
   const handleDeleteExpense = async expenseId => {
-    if (!window.confirm('Delete this expense?')) return
+    if (!(await confirm({ title: 'Delete this expense?', confirmLabel: 'Delete', danger: true }))) return
     try {
       await client.delete(`/expenses/${expenseId}`)
       setExpenses(es => es.filter(e => e.id !== expenseId))

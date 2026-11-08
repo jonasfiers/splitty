@@ -4,8 +4,10 @@ import EmojiPicker from '../components/EmojiPicker/EmojiPicker.jsx'
 import IconCard from '../components/IconCard/IconCard.jsx'
 import Loading from '../components/Loading.jsx'
 import PageHeader from '../components/PageHeader/PageHeader.jsx'
+import { useConfirm } from '../components/Confirm/ConfirmProvider.jsx'
 
 export default function CategoriesPage() {
+  const confirm = useConfirm()
   const [categories, setCategories] = useState([])
   const [form, setForm] = useState({ name: '', parentId: '', icon: '' })
   const [editId, setEditId] = useState(null)
@@ -52,7 +54,7 @@ export default function CategoriesPage() {
   }
 
   const handleDelete = async id => {
-    if (!window.confirm('Delete this category?')) return
+    if (!(await confirm({ title: 'Delete this category?', confirmLabel: 'Delete', danger: true }))) return
     setError('')
     try {
       await client.delete(`/categories/${id}`)

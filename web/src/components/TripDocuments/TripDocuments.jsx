@@ -6,6 +6,7 @@ import { formatBytes } from '../../utils/trip.js'
 import { keepOffline, removeOffline, syncTrip, offlineSupported } from '../../utils/offlineDocs.js'
 import { useOfflineDocs } from '../../utils/useOfflineDocs.js'
 import './TripDocuments.css'
+import { useConfirm } from '../Confirm/ConfirmProvider.jsx'
 
 // A trip's travel documents: arrival cards, visas, insurance, passport copies
 // (on their own page, pages/TripDocumentsPage, from the trip's Documents chip).
@@ -21,6 +22,7 @@ import './TripDocuments.css'
 // Links are signed for 5 minutes: refreshed while the page is open and on
 // coming back to it, as on the item page.
 export default function TripDocuments({ tripId, tripTitle, heading = true }) {
+  const confirm = useConfirm()
   const navigate = useNavigate()
   const standalone = useMemo(isStandalone, [])
   const [documents, setDocuments] = useState(null)
@@ -84,7 +86,7 @@ export default function TripDocuments({ tripId, tripTitle, heading = true }) {
   }
 
   const setShared = async (doc, shared) => {
-    if (shared && !window.confirm(`Share “${doc.filename}” with everyone on this trip?`)) return
+    if (shared && !(await confirm({ title: `Share “${doc.filename}”?`, message: 'Everyone on this trip can then see and download it.', confirmLabel: 'Share' }))) return
     setBusy(doc.id)
     try {
       await client.patch(`/trips/documents/${doc.id}`, { shared })
@@ -110,7 +112,7 @@ export default function TripDocuments({ tripId, tripTitle, heading = true }) {
   }
 
   const remove = async doc => {
-    if (!window.confirm(`Delete “${doc.filename}”?`)) return
+    if (!(await confirm({ title: `Delete “${doc.filename}”?`, confirmLabel: 'Delete', danger: true }))) return
     setBusy(doc.id)
     try {
       await client.delete(`/trips/documents/${doc.id}`)

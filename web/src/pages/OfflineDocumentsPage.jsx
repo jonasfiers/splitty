@@ -6,6 +6,7 @@ import { removeOffline, pruneOffline } from '../utils/offlineDocs.js'
 import { useOfflineDocs } from '../utils/useOfflineDocs.js'
 import { formatBytes } from '../utils/trip.js'
 import '../components/TripDocuments/TripDocuments.css'
+import { useConfirm } from '../components/Confirm/ConfirmProvider.jsx'
 
 // The trip documents kept on this device (utils/offlineDocs.js), grouped by
 // trip. Works without a connection and without being signed in (an expired
@@ -13,6 +14,7 @@ import '../components/TripDocuments/TripDocuments.css'
 // sits outside the sign-in guard; signing out removes the documents anyway.
 // Each opens in the full-screen viewer from the device's copy.
 export default function OfflineDocumentsPage() {
+  const confirm = useConfirm()
   const { token } = useAuth()
   const navigate = useNavigate()
   const docs = useOfflineDocs()
@@ -47,7 +49,7 @@ export default function OfflineDocumentsPage() {
   }, [hasPdf])
 
   const remove = async doc => {
-    if (!window.confirm(`Remove “${doc.filename}” from this device? It stays in the trip.`)) return
+    if (!(await confirm({ title: `Remove “${doc.filename}” from this device?`, message: 'It stays in the trip.', confirmLabel: 'Remove', danger: true }))) return
     setBusy(doc.id)
     try { await removeOffline([doc.id]) } finally { setBusy(null) }
   }
