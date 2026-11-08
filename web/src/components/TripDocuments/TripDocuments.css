@@ -24,8 +24,8 @@
   fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round;
 }
 .trip-docs-icon:hover { background: var(--surface-2); color: var(--text); }
-.trip-docs-icon.on { color: var(--accent); }
-.trip-docs-icon.on:hover { color: var(--accent); }
+.trip-docs-icon.on { color: var(--accent-text); }
+.trip-docs-icon.on:hover { color: var(--accent-text); }
 .trip-docs-icon.danger:hover { color: var(--red); }
 .trip-docs-icon:disabled { opacity: .5; cursor: default; }
 .trip-docs-add { width: 100%; padding: 10px; }

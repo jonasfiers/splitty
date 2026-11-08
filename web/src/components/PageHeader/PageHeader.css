@@ -21,7 +21,7 @@
   margin-bottom: 6px;
   min-width: 0;
 }
-.ph-crumbs a { color: var(--accent); font-weight: 600; }
+.ph-crumbs a { color: var(--accent-text); font-weight: 600; }
 .ph-crumbs a:hover { opacity: .75; }
 .ph-crumb-sep { color: var(--text-3); }
 .ph-crumb-current {
@@ -62,7 +62,7 @@
   justify-self: start;
   font-size: 15px;
   font-weight: 600;
-  color: var(--accent);
+  color: var(--accent-text);
   padding: 6px 4px;
 }
 .ph-back svg {
@@ -92,7 +92,7 @@
 .ph-bar-btn {
   font-size: 15px;
   font-weight: 600;
-  color: var(--accent);
+  color: var(--accent-text);
   padding: 6px 8px;
 }
 .ph-narrow .ph-title { font-size: 28px; line-height: 1.15; }
@@ -109,7 +109,7 @@
 }
 .ph-wide .ph-more-btn { border: 1px solid var(--border-strong); border-radius: var(--r-md); width: 36px; height: 34px; }
 .ph-more-btn:hover, .ph-more-btn[aria-expanded="true"] { background: var(--surface-2); color: var(--text); }
-.ph-narrow .ph-more-btn { color: var(--accent); }
+.ph-narrow .ph-more-btn { color: var(--accent-text); }
 .ph-more-btn svg { width: 20px; height: 20px; fill: currentColor; }
 .ph-menu {
   position: absolute;

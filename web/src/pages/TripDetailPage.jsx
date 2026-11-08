@@ -282,7 +282,7 @@ function TripDetailPage() {
         {formatDateRange(trip.startDate, trip.endDate)}
         {nights > 0 && ` · ${nights} night${nights !== 1 ? 's' : ''}`}
         {' · '}
-        <Link to={`/groups/${trip.groupId}`} style={{ color: 'var(--accent)' }}>{trip.groupIcon} {trip.groupTitle}</Link>
+        <Link to={`/groups/${trip.groupId}`} style={{ color: 'var(--accent-text)' }}>{trip.groupIcon} {trip.groupTitle}</Link>
       </PageHeader>
 
       {/* Documents and money: a row of chips, so the page opens on the plan. */}
@@ -297,7 +297,7 @@ function TripDetailPage() {
         )}
       </div>
 
-      {state?.notice && <p className="error" style={{ background: 'var(--accent-light)', color: 'var(--accent)', borderColor: 'var(--accent-subtle)' }}>{state.notice}</p>}
+      {state?.notice && <p className="error" style={{ background: 'var(--accent-light)', color: 'var(--accent-text)', borderColor: 'var(--accent-subtle)' }}>{state.notice}</p>}
       {error && <p className="error">{error}</p>}
 
       {trip.notes && <p className="trip-notes">{trip.notes}</p>}

@@ -39,7 +39,7 @@
 }
 .gantt-day.weekend { color: var(--text-3); }
 .gantt-day.outside { color: var(--text-3); font-weight: 500; }
-.gantt-day.today { color: var(--accent); }
+.gantt-day.today { color: var(--accent-text); }
 .gantt-month { margin-left: 6px; font-weight: 500; color: var(--text-3); }
 .gantt-lane + .gantt-lane .gantt-track { border-top: 1px dashed var(--border); }
 .gantt-track { position: relative; flex-shrink: 0; }
@@ -65,7 +65,7 @@
 }
 .gantt-bar:hover { filter: brightness(.97); box-shadow: var(--shadow-md); }
 .gantt-bar.stay { background: var(--green-light); border-color: var(--green); color: var(--green-dark); }
-.gantt-bar.transport { background: var(--accent-subtle); border-color: var(--accent); color: var(--accent); }
+.gantt-bar.transport { background: var(--accent-subtle); border-color: var(--accent); color: var(--accent-text); }
 .gantt-bar.activity { background: var(--surface-2); border-color: var(--border-strong); color: var(--text); }
 .gantt-bar-icon { flex-shrink: 0; font-size: 13px; }
 .gantt-bar-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -118,7 +118,7 @@
     box-shadow: var(--shadow-md);
 }
 .gantt-ghost.stay { background: var(--green-light); border-color: var(--green); color: var(--green-dark); }
-.gantt-ghost.transport { background: var(--accent-subtle); border-color: var(--accent); color: var(--accent); }
+.gantt-ghost.transport { background: var(--accent-subtle); border-color: var(--accent); color: var(--accent-text); }
 .gantt-ghost.activity { background: var(--surface-2); border-color: var(--border-strong); color: var(--text); }
 .gantt-hint {
     position: sticky;
@@ -131,7 +131,7 @@
 .gantt-hint-dismiss {
     font: inherit;
     font-weight: 600;
-    color: var(--accent);
+    color: var(--accent-text);
     background: none;
     border: none;
     padding: 0;
@@ -228,7 +228,7 @@
     box-shadow: var(--shadow-lg);
 }
 .trip-toast span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.trip-toast button { color: var(--accent); font-weight: 700; flex-shrink: 0; }
+.trip-toast button { color: var(--accent-text); font-weight: 700; flex-shrink: 0; }
 @media (min-width: 768px) { .trip-toast { bottom: 28px; } }
 
 /* Zoom: − / Fit / + in the bottom corner, clear of the dates; hour marks once days are wide enough. */
@@ -255,9 +255,9 @@
 }
 .gantt-zoom button:first-child { border-left: none; font-size: 16px; }
 .gantt-zoom button:nth-child(3) { font-size: 16px; }
-.gantt-zoom button:hover:not(:disabled) { color: var(--accent); }
+.gantt-zoom button:hover:not(:disabled) { color: var(--accent-text); }
 .gantt-zoom button:disabled { opacity: .35; cursor: default; }
-.gantt-zoom button.active { color: var(--accent); }
+.gantt-zoom button.active { color: var(--accent-text); }
 .gantt-day { position: relative; }
 .gantt-days.ticked .gantt-day { padding-bottom: 18px; }
 .gantt-tick-label {

@@ -300,7 +300,7 @@ export default function InsightsPage() {
                         </div>
                         <div style={{ borderTop: '1px solid var(--border)', marginTop: 10, paddingTop: 10, display: 'flex', justifyContent: 'space-between', fontWeight: 600, fontSize: 14 }}>
                           <span>Total</span>
-                          <span style={{ color: 'var(--accent)' }}>{formatCurrency(d.total)}</span>
+                          <span style={{ color: 'var(--accent-text)' }}>{formatCurrency(d.total)}</span>
                         </div>
                       </div>
                     )
@@ -362,7 +362,7 @@ export default function InsightsPage() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, paddingBottom: 8 }}>
                 <span
                   onClick={() => { setActiveCategory(null); setHiddenPie([]) }}
-                  style={{ color: 'var(--accent)', cursor: 'pointer', fontWeight: 500 }}
+                  style={{ color: 'var(--accent-text)', cursor: 'pointer', fontWeight: 500 }}
                 >
                   All
                 </span>
@@ -377,7 +377,7 @@ export default function InsightsPage() {
                       ) : (
                         <span
                           onClick={() => { setActiveCategory(path); setHiddenPie([]) }}
-                          style={{ color: 'var(--accent)', cursor: 'pointer', fontWeight: 500 }}
+                          style={{ color: 'var(--accent-text)', cursor: 'pointer', fontWeight: 500 }}
                         >
                           {part}
                         </span>
@@ -446,7 +446,7 @@ export default function InsightsPage() {
                     <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '10px 14px', fontSize: 13, boxShadow: 'var(--shadow-lg)' }}>
                       <div style={{ fontWeight: 600, color: 'var(--text)', marginBottom: 4 }}>{icon} {name}</div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'baseline' }}>
-                        <span style={{ color: 'var(--accent)', fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 600 }}>{formatCurrency(total)}</span>
+                        <span style={{ color: 'var(--accent-text)', fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 600 }}>{formatCurrency(total)}</span>
                         <span style={{ color: 'var(--text-3)', fontSize: 11 }}>{pct}%</span>
                       </div>
                     </div>
@@ -510,7 +510,7 @@ export default function InsightsPage() {
                     return (
                       <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '10px 14px', fontSize: 13, boxShadow: 'var(--shadow-lg)' }}>
                         <div style={{ fontWeight: 600, color: 'var(--text)', marginBottom: 4 }}>{name}</div>
-                        <span style={{ color: 'var(--accent)', fontFamily: 'var(--font-mono)', fontWeight: 600 }}>{formatCurrency(total)}</span>
+                        <span style={{ color: 'var(--accent-text)', fontFamily: 'var(--font-mono)', fontWeight: 600 }}>{formatCurrency(total)}</span>
                       </div>
                     )
                   }}

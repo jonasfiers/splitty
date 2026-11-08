@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router'
 import { AuthProvider } from './context/AuthContext'
 import { ThemeProvider } from './context/ThemeContext'
+import { ConfirmProvider } from './components/Confirm/ConfirmProvider.jsx'
 import ProtectedRoute from './components/ProtectedRoute'
 import AdminRoute from './components/AdminRoute'
 import Layout from './components/Layout'
@@ -37,6 +38,7 @@ const VerifyEmailChangePage = lazy(() => import('./pages/VerifyEmailChangePage')
 export default function App() {
   return (
     <ThemeProvider>
+    <ConfirmProvider>
     <AuthProvider>
       <BrowserRouter>
         <Suspense>
@@ -87,6 +89,7 @@ export default function App() {
         </Suspense>
       </BrowserRouter>
     </AuthProvider>
+    </ConfirmProvider>
     </ThemeProvider>
   )
 }

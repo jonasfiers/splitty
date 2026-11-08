@@ -275,7 +275,7 @@ export default function GroupsPage() {
               >
                 <span style={{
                   width: 32, height: 32, borderRadius: 8,
-                  background: 'var(--accent-subtle)', color: 'var(--accent)',
+                  background: 'var(--accent-subtle)', color: 'var(--accent-text)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: 13, fontWeight: 700, flexShrink: 0,
                 }}>

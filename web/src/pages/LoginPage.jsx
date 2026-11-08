@@ -111,7 +111,7 @@ export default function LoginPage() {
               required
             />
           </div>
-          {state?.notice && <p className="error" style={{ background: 'var(--accent-light)', color: 'var(--accent)', borderColor: 'var(--accent-subtle)' }}>{state.notice}</p>}
+          {state?.notice && <p className="error" style={{ background: 'var(--accent-light)', color: 'var(--accent-text)', borderColor: 'var(--accent-subtle)' }}>{state.notice}</p>}
           {error && <p className="error">{error}</p>}
           {unverified && (
             <div className="error" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>

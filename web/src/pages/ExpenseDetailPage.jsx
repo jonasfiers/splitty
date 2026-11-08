@@ -9,8 +9,11 @@ import ChartTooltip from '../components/ChartTooltip.jsx'
 import PageHeader from '../components/PageHeader/PageHeader.jsx'
 import { useMediaQuery } from '../utils/useMediaQuery.js'
 import ExpenseHistory from '../components/ExpenseHistory.jsx'
+import { DetailHero, DetailRows, DetailRow } from '../components/Detail/Detail.jsx'
+import { useConfirm } from '../components/Confirm/ConfirmProvider.jsx'
 
 export default function ExpenseDetailPage() {
+  const confirm = useConfirm()
   const { groupId, id } = useParams()
   const navigate = useNavigate()
   // Same breakpoint as the group page and the .expense-detail-layout rule in index.css.
@@ -23,7 +26,13 @@ export default function ExpenseDetailPage() {
   const [error, setError] = useState('')
 
   const handleDelete = async () => {
-    if (!window.confirm('Delete this expense?')) return
+    const what = expense.isTransfer ? 'transfer' : expense.isSettlement ? 'settlement' : 'expense'
+    const ok = await confirm({
+      title: expense.isTransfer || expense.isSettlement ? `Cancel this ${what}?` : `Delete "${expense.description}"?`,
+      confirmLabel: expense.isTransfer || expense.isSettlement ? `Cancel ${what}` : 'Delete',
+      danger: true,
+    })
+    if (!ok) return
     try {
       await client.delete(`/expenses/${id}`)
       navigate(`/groups/${groupId}`, { state: { notice: `"${expense.description}" was deleted.` } })
@@ -58,49 +67,29 @@ export default function ExpenseDetailPage() {
   const memberMap = new Map(members.map(m => [m.id, m]))
 
   const details = (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <DetailRows>
       {wide && !expense.isSettlement && !expense.isTransfer && (
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ fontSize: 13, color: 'var(--text-3)' }}>Paid by</span>
-          <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{expense.paidByName ?? '—'}</span>
-        </div>
+        <DetailRow label="Paid by">{expense.paidByName ?? '—'}</DetailRow>
       )}
-      {wide && expense.date && (
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ fontSize: 13, color: 'var(--text-3)' }}>Date</span>
-          <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{formatDate(expense.date)}</span>
-        </div>
-      )}
+      {wide && expense.date && <DetailRow label="Date">{formatDate(expense.date)}</DetailRow>}
       {(expense.isSettlement || expense.isTransfer) ? (
         <>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: 13, color: 'var(--text-3)' }}>From</span>
-            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{expense.paidByName}</span>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: 13, color: 'var(--text-3)' }}>To</span>
-            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>
-              {memberMap.get(shares.find(s => s.userId !== expense.paidByUserId)?.userId)?.name ?? '—'}
-            </span>
-          </div>
+          <DetailRow label="From">{expense.paidByName}</DetailRow>
+          <DetailRow label="To">
+            {memberMap.get(shares.find(s => s.userId !== expense.paidByUserId)?.userId)?.name ?? '—'}
+          </DetailRow>
         </>
       ) : (
-        expense.categoryName && (
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: 13, color: 'var(--text-3)' }}>Category</span>
-            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{expense.categoryName}</span>
-          </div>
-        )
+        expense.categoryName && <DetailRow label="Category">{expense.categoryName}</DetailRow>
       )}
       {expense.tripItem && (
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
-          <span style={{ fontSize: 13, color: 'var(--text-3)' }}>Trip</span>
-          <Link to={`/trips/${expense.tripItem.tripId}/items/${expense.tripItem.id}`} style={{ fontSize: 13, fontWeight: 600, color: 'var(--accent)', textAlign: 'right' }}>
+        <DetailRow label="Trip">
+          <Link to={`/trips/${expense.tripItem.tripId}/items/${expense.tripItem.id}`}>
             {expense.tripItem.title} · {expense.tripItem.tripTitle}
           </Link>
-        </div>
+        </DetailRow>
       )}
-    </div>
+    </DetailRows>
   )
 
   return (
@@ -121,33 +110,29 @@ export default function ExpenseDetailPage() {
       <div className="expense-detail-layout">
         <div className="expense-detail-main">
           <div className="card">
-            <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: wide ? 0 : 20 }}>
-              <div className="expense-icon" style={{
-                width: 56, height: 56, fontSize: 26, borderRadius: 'var(--r-lg)', flexShrink: 0,
-                ...(expense.isTransfer ? { background: 'var(--accent-light)', color: 'var(--accent)' }
-                  : expense.isSettlement ? { background: 'var(--green-light)', color: 'var(--green-dark)' }
-                  : {})
-              }}>
-                {icon}
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--text)', marginBottom: 4 }}>{expense.description}</div>
-                <div style={{ fontSize: 13, color: 'var(--text-3)' }}>{expense.paidByName ?? '—'}</div>
-              </div>
-              <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                <div style={{ fontSize: 22, fontFamily: 'var(--font-mono)', fontWeight: 600, color: 'var(--accent)' }}>
-                  {formatCurrency(expense.amount, expense.currencyIso)}
-                </div>
-                {expense.amountBase != null && expense.currencyIso !== expense.groupCurrencyIso && (
-                  <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2, fontFamily: 'var(--font-mono)' }}>
-                    ≈ {formatCurrency(Number(expense.amountBase), expense.groupCurrencyIso)}
+            <DetailHero
+              icon={icon}
+              iconStyle={expense.isTransfer ? { background: 'var(--accent-light)', color: 'var(--accent-text)' }
+                : expense.isSettlement ? { background: 'var(--green-light)', color: 'var(--green-dark)' }
+                : undefined}
+              title={expense.description}
+              subtitle={expense.paidByName ?? '—'}
+              aside={
+                <>
+                  <div style={{ fontSize: 22, fontFamily: 'var(--font-mono)', fontWeight: 600, color: 'var(--accent-text)' }}>
+                    {formatCurrency(expense.amount, expense.currencyIso)}
                   </div>
-                )}
-                {expense.date && <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 3 }}>{formatDate(expense.date)}</div>}
-              </div>
-            </div>
+                  {expense.amountBase != null && expense.currencyIso !== expense.groupCurrencyIso && (
+                    <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2, fontFamily: 'var(--font-mono)' }}>
+                      ≈ {formatCurrency(Number(expense.amountBase), expense.groupCurrencyIso)}
+                    </div>
+                  )}
+                  {expense.date && <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 3 }}>{formatDate(expense.date)}</div>}
+                </>
+              }
+            />
 
-            {!wide && <hr className="divider" style={{ margin: '0 0 16px' }} />}
+            {!wide && <hr className="divider" style={{ margin: '20px 0 16px' }} />}
 
             {!wide && details}
           </div>

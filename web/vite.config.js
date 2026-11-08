@@ -23,10 +23,45 @@ function copyPdfjsAssets() {
   }
 }
 
+// Every :hover rule applies only on devices with a real pointer that can hover.
+// A touch screen otherwise keeps the hover look on whatever was tapped last
+// (a row stays tinted until the next tap elsewhere). Done at build time, so
+// CSS is written with plain :hover; rules already inside a (hover: hover)
+// query are left alone. Selectors without :hover in the same rule stay as
+// they are. Our own plugin rather than postcss-hover-media-feature, which
+// has not been updated since 2022.
+function hoverOnlyWithMouse() {
+  const inHoverQuery = rule => {
+    for (let p = rule.parent; p; p = p.parent) {
+      if (p.type === 'atrule' && p.name === 'media' && /\(\s*hover\s*:\s*hover\s*\)/.test(p.params)) return true
+    }
+    return false
+  }
+  return {
+    postcssPlugin: 'hover-only-with-mouse',
+    Rule(rule, { AtRule }) {
+      if (!rule.selector.includes(':hover') || inHoverQuery(rule)) return
+      if (rule.parent?.type === 'atrule' && /keyframes$/.test(rule.parent.name)) return
+      const hover = rule.selectors.filter(s => s.includes(':hover'))
+      const rest = rule.selectors.filter(s => !s.includes(':hover'))
+      const media = new AtRule({ name: 'media', params: '(hover: hover)' })
+      media.append(rule.clone({ selectors: hover }))
+      if (rest.length) {
+        rule.selectors = rest
+        rule.after(media)
+      } else {
+        rule.replaceWith(media)
+      }
+    },
+  }
+}
+hoverOnlyWithMouse.postcss = true
+
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
 
   return {
+    css: { postcss: { plugins: [hoverOnlyWithMouse()] } },
     plugins: [
       react(),
       copyPdfjsAssets(),

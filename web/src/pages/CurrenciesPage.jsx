@@ -105,7 +105,7 @@ export default function CurrenciesPage() {
               <IconCard
                 key={c.iso}
                 icon={symbol}
-                iconStyle={{ fontWeight: 700, color: 'var(--accent)' }}
+                iconStyle={{ fontWeight: 700, color: 'var(--accent-text)' }}
                 title={name}
                 subtitle={`${c.iso} · ${decimals} decimal${decimals !== 1 ? 's' : ''}`}
                 actions={

@@ -6,6 +6,8 @@ import Loading from '../components/Loading.jsx'
 import PageHeader from '../components/PageHeader/PageHeader.jsx'
 import LinkExpenseSheet from '../components/TripForm/LinkExpenseSheet.jsx'
 import BigReference from '../components/BigReference/BigReference.jsx'
+import { DetailHero, DetailRows, DetailRow, DetailRowSub, RowAction } from '../components/Detail/Detail.jsx'
+import { useConfirm } from '../components/Confirm/ConfirmProvider.jsx'
 import { useMediaQuery } from '../utils/useMediaQuery.js'
 import { isStandalone } from '../utils/standalone.js'
 
@@ -13,31 +15,79 @@ import { isStandalone } from '../utils/standalone.js'
 const TripMap = lazy(() => import('../components/TripMap/TripMap.jsx'))
 const noop = () => {}
 import { formatCurrency, formatDate } from '../utils/currency.js'
-import { KINDS, TRANSPORT_MODES, itemIcon, dayOf, formatMoment, mapsLink, linkTarget, formatBytes } from '../utils/trip.js'
+import { KINDS, TRANSPORT_MODES, itemIcon, dayOf, timeOf, formatDay, formatDuration, daysBetween, mapsLink, linkTarget, formatBytes, DEFAULT_CHECK_IN, DEFAULT_CHECK_OUT } from '../utils/trip.js'
 
 const START_LABEL = { transport: 'Departure', stay: 'Check-in', activity: 'Starts' }
 const END_LABEL = { transport: 'Arrival', stay: 'Check-out', activity: 'Ends' }
-
-function Row({ label, children }) {
-  return (
-    <div className="trip-row">
-      <span className="trip-row-label">{label}</span>
-      <span className="trip-row-value">{children}</span>
-    </div>
-  )
-}
 
 function PlaceValue({ place }) {
   const link = mapsLink(place)
   return (
     <>
       {link ? <a href={link.url} target={linkTarget(link.url)} rel="noopener noreferrer" title={link.label}>{place.name}</a> : place.name}
-      {place.address && <span className="trip-row-sub">{place.address}</span>}
+      {place.address && <DetailRowSub>{place.address}</DetailRowSub>}
+    </>
+  )
+}
+
+// Minutes between two 'YYYY-MM-DDTHH:MM' wall-clock moments.
+const minutesBetween = (a, b) => {
+  const at = m => { const [d, t] = m.split('T'); const [y, mo, day] = d.split('-').map(Number); const [h, mi] = t.split(':').map(Number); return new Date(y, mo - 1, day, h, mi) }
+  return Math.round((at(b) - at(a)) / 60000)
+}
+
+// The item's time span as one block, like a boarding pass: start on the left,
+// end on the right, what lies between in the middle (a duration, or nights for
+// a stay). A journey shows its places under the times. Stays without times get
+// the usual hotel times, shown softer. No duration for flights: times are local
+// wall-clock without a zone, so across zones it would be wrong.
+function Span({ item }) {
+  const stay = item.kind === 'stay'
+  const startTime = timeOf(item.start) || (stay ? DEFAULT_CHECK_IN : '')
+  const endTime = item.end ? timeOf(item.end) || (stay ? DEFAULT_CHECK_OUT : '') : ''
+  const sameDay = item.end && dayOf(item.end) === dayOf(item.start)
+  // All on one day (or a single moment): the date once, above both times.
+  // Across days (a stay, a night train) each time gets its own date.
+  const oneDay = !stay && (!item.end || sameDay) && !!startTime
+  let middle = null
+  if (stay && item.end) {
+    const nights = daysBetween(dayOf(item.start), dayOf(item.end))
+    if (nights > 0) middle = `${nights} night${nights !== 1 ? 's' : ''}`
+  } else if (item.end && timeOf(item.start) && timeOf(item.end) && item.mode !== 'flight') {
+    const mins = minutesBetween(item.start, item.end)
+    if (mins > 0) middle = formatDuration(mins)
+  }
+  const side = (label, day, time, assumed, place, end) => (
+    <div className={`span-side${end ? ' end' : ''}`}>
+      <div className="span-label">{label}</div>
+      <div className={`span-time${assumed ? ' assumed' : ''}`} title={assumed ? 'Usual hotel time; no time set on this stay' : undefined}>
+        {time || formatDay(day)}
+      </div>
+      {time && !oneDay && <div className="span-day">{formatDay(day)}</div>}
+      {place && <div className="span-place"><PlaceValue place={place} /></div>}
+    </div>
+  )
+  return (
+    <>
+    {oneDay && <div className="span-date">{formatDay(dayOf(item.start))}</div>}
+    <div className="span">
+      {side(START_LABEL[item.kind], dayOf(item.start), startTime, stay && !timeOf(item.start), item.kind === 'transport' ? item.from : null, false)}
+      {item.end && (
+        <>
+          <div className="span-middle">
+            <span className="span-line" />
+            {middle && <span className="span-duration">{middle}</span>}
+          </div>
+          {side(END_LABEL[item.kind], dayOf(item.end), endTime, stay && !timeOf(item.end), item.kind === 'transport' ? item.to : null, true)}
+        </>
+      )}
+    </div>
     </>
   )
 }
 
 export default function TripItemDetailPage() {
+  const confirm = useConfirm()
   const { tripId, itemId } = useParams()
   const navigate = useNavigate()
   const fileInput = useRef(null)
@@ -104,8 +154,13 @@ export default function TripItemDetailPage() {
   }, [standalone, hasPdf])
 
   const handleDelete = async () => {
-    const kept = item.expenses.length > 0 ? ' Its expenses stay in the group.' : ''
-    if (!window.confirm(`Delete "${item.title}"?${kept}`)) return
+    const ok = await confirm({
+      title: `Delete "${item.title}"?`,
+      message: item.expenses.length > 0 ? 'Its expenses stay in the group.' : null,
+      confirmLabel: 'Delete',
+      danger: true,
+    })
+    if (!ok) return
     try {
       await client.delete(`/trips/items/${itemId}`)
       navigate(`/trips/${tripId}`, { state: { notice: `"${item.title}" was deleted.` } })
@@ -125,7 +180,13 @@ export default function TripItemDetailPage() {
   }
 
   const handleUnlink = async expense => {
-    if (!window.confirm(`Unlink "${expense.description}" from this item? The expense itself stays in the group.`)) return
+    const ok = await confirm({
+      title: `Unlink "${expense.description}"?`,
+      message: 'The expense itself stays in the group.',
+      confirmLabel: 'Unlink',
+      danger: true,
+    })
+    if (!ok) return
     try {
       await client.delete(`/trips/items/${itemId}/expenses/${expense.id}`)
       await load()
@@ -153,7 +214,8 @@ export default function TripItemDetailPage() {
   }
 
   const handleDeleteAttachment = async attachment => {
-    if (!window.confirm(`Delete "${attachment.filename}"?`)) return
+    const ok = await confirm({ title: `Delete "${attachment.filename}"?`, confirmLabel: 'Delete', danger: true })
+    if (!ok) return
     try {
       await client.delete(`/trips/attachments/${attachment.id}`)
       await load()
@@ -181,7 +243,8 @@ export default function TripItemDetailPage() {
 
   const mode = TRANSPORT_MODES.find(m => m.value === item.mode)
   const paid = item.expenses.reduce((sum, e) => sum + Number(e.amountBase || 0), 0)
-  const sameDayEnd = item.end && dayOf(item.end) === dayOf(item.start)
+  // Directions: to where a journey leaves from, otherwise to the item's place.
+  const goLink = mapsLink(item.kind === 'transport' ? item.from : item.place)
 
   return (
     <>
@@ -199,60 +262,58 @@ export default function TripItemDetailPage() {
       <div className="item-layout">
         <div className="item-main">
           <div className="card">
-            <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20 }}>
-              <div className="expense-icon" style={{ width: 56, height: 56, fontSize: 26, borderRadius: 'var(--r-lg)', flexShrink: 0 }}>
-                {itemIcon(item)}
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--text)', marginBottom: 4, overflowWrap: 'anywhere' }}>{item.title}</div>
-                <div style={{ fontSize: 13, color: 'var(--text-3)' }}>
-                  <Link to={`/trips/${tripId}`} style={{ color: 'inherit' }}>{item.tripTitle}</Link>
-                </div>
-              </div>
-            </div>
+            <DetailHero
+              icon={itemIcon(item)}
+              title={item.title}
+              subtitle={<Link to={`/trips/${tripId}`}>{item.tripTitle}</Link>}
+            />
 
-            <hr className="divider" style={{ margin: '0 0 16px' }} />
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <Row label={START_LABEL[item.kind]}>{formatMoment(item.start)}</Row>
-              {item.end && (
-                <Row label={END_LABEL[item.kind]}>
-                  {sameDayEnd && item.end.length > 10 ? item.end.slice(11, 16) : formatMoment(item.end)}
-                </Row>
-              )}
-              {item.from && <Row label="From"><PlaceValue place={item.from} /></Row>}
-              {item.to && <Row label="To"><PlaceValue place={item.to} /></Row>}
-              {item.place && <Row label="Where"><PlaceValue place={item.place} /></Row>}
-              {(item.carrier || item.number) && (
-                <Row label={item.mode === 'flight' ? 'Flight' : item.mode === 'car' ? 'Rental' : 'Operator'}>
-                  {[item.carrier, item.number].filter(Boolean).join(' ')}
-                </Row>
-              )}
-              {item.confirmationRef && (
-                <Row label="Booking reference">
-                  <span className="trip-ref">
-                    <button type="button" className="trip-ref-code" onClick={() => setShowBigRef(true)} aria-label={`Show booking reference ${item.confirmationRef} full screen`} title="Show big">
-                      {item.confirmationRef}
+            {(item.confirmationRef || goLink) && (
+              <div className="today-actions item-quick">
+                {item.confirmationRef && (
+                  <>
+                    <button type="button" className="today-ref" onClick={() => setShowBigRef(true)} title="Show big" aria-label={`Show booking reference ${item.confirmationRef} full screen`}>
+                      <span>{item.confirmationRef}</span>
                     </button>
-                    <button type="button" className="trip-ref-icon" onClick={copyReference} aria-label="Copy booking reference" title={copied ? 'Copied' : 'Copy'}>
+                    <button type="button" className="today-nav" onClick={copyReference} aria-label="Copy booking reference" title={copied ? 'Copied' : 'Copy'}>
                       {copied ? (
-                        <svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
                       ) : (
-                        <svg viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2" /><path d="M5 15V6a2 2 0 0 1 2-2h8" /></svg>
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2" /><path d="M5 15V6a2 2 0 0 1 2-2h8" /></svg>
                       )}
+                      {copied ? 'Copied' : 'Copy'}
                     </button>
-                  </span>
-                  {showBigRef && (
-                    <BigReference value={item.confirmationRef} label={`${item.title} · Booking reference`} onClose={closeBigRef} />
-                  )}
-                </Row>
+                  </>
+                )}
+                {goLink && (
+                  <a className="today-nav" href={goLink.url} target={linkTarget(goLink.url)} rel="noopener noreferrer" title={goLink.label}>
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l18-8-8 18-2-8-8-2z" /></svg>
+                    Go
+                  </a>
+                )}
+                {showBigRef && (
+                  <BigReference value={item.confirmationRef} label={`${item.title} · Booking reference`} onClose={closeBigRef} />
+                )}
+              </div>
+            )}
+
+            <hr className="divider" style={{ margin: '20px 0 16px' }} />
+
+            <Span item={item} />
+
+            <DetailRows>
+              {item.place && <DetailRow label="Where"><PlaceValue place={item.place} /></DetailRow>}
+              {(item.carrier || item.number) && (
+                <DetailRow label={item.mode === 'flight' ? 'Flight' : item.mode === 'car' ? 'Rental' : 'Operator'}>
+                  {[item.carrier, item.number].filter(Boolean).join(' ')}
+                </DetailRow>
               )}
               {item.url && (
-                <Row label="Link">
+                <DetailRow label="Link">
                   <a href={item.url} target="_blank" rel="noopener noreferrer">{item.url.replace(/^https?:\/\/(www\.)?/i, '').split('/')[0]}</a>
-                </Row>
+                </DetailRow>
               )}
-            </div>
+            </DetailRows>
 
             {item.notes && <p className="trip-notes" style={{ margin: '16px 0 0' }}>{item.notes}</p>}
           </div>
@@ -270,6 +331,36 @@ export default function TripItemDetailPage() {
               <button className="btn btn-ghost" onClick={handleDelete}>Delete</button>
             </div>
           )}
+          <div className="section-label">Tickets and documents</div>
+          {item.attachments.length > 0 && (
+            <div className="expense-list">
+              {item.attachments.map(a => (
+                // In a browser tab: a plain link, so the browser's own PDF and
+                // image viewers open it in a new tab. In the installed app that
+                // would fill the window with no way back: Splitty's viewer.
+                <a
+                  key={a.id}
+                  className="expense-item"
+                  href={standalone ? `/trips/${tripId}/items/${itemId}/files/${a.id}` : `/api${a.url}`}
+                  {...(standalone
+                    ? { onClick: event => { event.preventDefault(); navigate(`/trips/${tripId}/items/${itemId}/files/${a.id}`) } }
+                    : { target: '_blank', rel: 'noopener noreferrer' })}
+                >
+                  <div className="expense-icon">{a.mimeType === 'application/pdf' ? '📄' : '🖼️'}</div>
+                  <div className="expense-info">
+                    <div className="expense-name">{a.filename}</div>
+                    <div className="expense-meta">{formatBytes(a.size)}</div>
+                  </div>
+                  <RowAction label={`Delete ${a.filename}`} onClick={() => handleDeleteAttachment(a)} />
+                </a>
+              ))}
+            </div>
+          )}
+          <input ref={fileInput} type="file" accept="application/pdf,image/jpeg,image/png,image/webp" hidden onChange={handleUpload} />
+          <button className="btn-pill-outline" style={{ width: '100%', padding: '10px' }} onClick={() => fileInput.current?.click()} disabled={uploading}>
+            {uploading ? 'Uploading…' : 'Add a file'}
+          </button>
+          <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 8 }}>PDF or image, 10 MB at most.</p>
           <div className="section-label">Paid for with</div>
           {item.expenses.length > 0 && (
             <div className="expense-list">
@@ -282,14 +373,8 @@ export default function TripItemDetailPage() {
                   </div>
                   <div className="expense-amounts">
                     <div className="expense-share">{formatCurrency(e.amount, e.currencyIso)}</div>
-                    <button
-                      type="button"
-                      className="trip-unlink"
-                      onClick={event => { event.stopPropagation(); handleUnlink(e) }}
-                    >
-                      unlink
-                    </button>
                   </div>
+                  <RowAction label={`Unlink ${e.description}`} onClick={() => handleUnlink(e)} />
                 </div>
               ))}
             </div>
@@ -315,42 +400,6 @@ export default function TripItemDetailPage() {
             />
           )}
 
-          <div className="section-label">Tickets and documents</div>
-          {item.attachments.length > 0 && (
-            <div className="expense-list">
-              {item.attachments.map(a => (
-                // In a browser tab: a plain link, so the browser's own PDF and
-                // image viewers open it in a new tab. In the installed app that
-                // would fill the window with no way back: Splitty's viewer.
-                <a
-                  key={a.id}
-                  className="expense-item"
-                  href={standalone ? `/trips/${tripId}/items/${itemId}/files/${a.id}` : `/api${a.url}`}
-                  {...(standalone
-                    ? { onClick: event => { event.preventDefault(); navigate(`/trips/${tripId}/items/${itemId}/files/${a.id}`) } }
-                    : { target: '_blank', rel: 'noopener noreferrer' })}
-                >
-                  <div className="expense-icon">{a.mimeType === 'application/pdf' ? '📄' : '🖼️'}</div>
-                  <div className="expense-info">
-                    <div className="expense-name">{a.filename}</div>
-                    <div className="expense-meta">{formatBytes(a.size)}</div>
-                  </div>
-                  <button
-                    type="button"
-                    className="trip-unlink"
-                    onClick={event => { event.preventDefault(); event.stopPropagation(); handleDeleteAttachment(a) }}
-                  >
-                    delete
-                  </button>
-                </a>
-              ))}
-            </div>
-          )}
-          <input ref={fileInput} type="file" accept="application/pdf,image/jpeg,image/png,image/webp" hidden onChange={handleUpload} />
-          <button className="btn-pill-outline" style={{ width: '100%', padding: '10px' }} onClick={() => fileInput.current?.click()} disabled={uploading}>
-            {uploading ? 'Uploading…' : 'Add a file'}
-          </button>
-          <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 8 }}>PDF or image, 10 MB at most.</p>
         </aside>
       </div>
     </>

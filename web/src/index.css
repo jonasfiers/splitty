@@ -3,6 +3,10 @@
 ══════════════════════════════════════════ */
 :root {
   --accent:        #E8603A;
+  /* Orange for small text and links: the brand orange is too light on white
+     (3.3:1); this one passes WCAG AA (5.1:1, 4.7:1 on --accent-light, 4.6:1 on --bg).
+     Fills, buttons and the logo keep --accent. */
+  --accent-text:   #C2410C;
   --accent-light:  #FEF0EB;
   --accent-hover:  #D4512B;
   --accent-subtle: #FDE2D8;
@@ -31,7 +35,7 @@
 
   --text:         #1C1917;
   --text-2:       #78716C;
-  --text-3:       #A8998E;
+  --text-3:       #8A7B70; /* was #A8998E (2.7:1); now ~4:1, still a step below --text-2 */
 
   --font-display: 'DM Serif Display', serif;
   --font-body:    'Plus Jakarta Sans', sans-serif;
@@ -57,6 +61,7 @@
 ══════════════════════════════════════════ */
 [data-theme="dark"] {
   --accent:        #F07452;
+  --accent-text:   #F07452;
   --accent-light:  #2E1E17;
   --accent-hover:  #E8603A;
   --accent-subtle: #3A2218;
@@ -195,7 +200,7 @@ body {
   color: var(--text-3);
   transition: color .15s;
 }
-.nav-item.active { color: var(--accent); }
+.nav-item.active { color: var(--accent-text); }
 .nav-label {
   font-size: 10px;
   font-weight: 600;
@@ -414,7 +419,7 @@ body {
   margin-top: 20px;
 }
 .auth-footer a {
-  color: var(--accent);
+  color: var(--accent-text);
   font-weight: 600;
 }
 
@@ -557,7 +562,7 @@ body {
 
 .btn-pill-outline {
   background: transparent;
-  color: var(--accent);
+  color: var(--accent-text);
   border: 1px solid var(--accent);
   padding: 7px 16px;
   border-radius: var(--r-pill);
@@ -583,7 +588,7 @@ body {
 
 .btn-outline-amber {
   background: transparent;
-  color: var(--accent);
+  color: var(--accent-text);
   border: 1px solid var(--accent);
   padding: 8px 16px;
   border-radius: var(--r-md);
@@ -726,7 +731,7 @@ body {
 .chip.active {
   background: var(--accent-subtle);
   border-color: var(--accent);
-  color: var(--accent);
+  color: var(--accent-text);
   font-weight: 600;
 }
 
@@ -932,7 +937,7 @@ body {
   align-items: center;
   margin-bottom: 10px;
 }
-.home-panel-link { font-size: 12px; font-weight: 600; color: var(--accent); }
+.home-panel-link { font-size: 12px; font-weight: 600; color: var(--accent-text); }
 .home-panel-sub { font-size: 12px; color: var(--text-3); margin-top: 2px; }
 .home-up { color: var(--red-dark); font-weight: 600; }
 .home-down { color: var(--green-dark); font-weight: 600; }
@@ -954,7 +959,7 @@ body {
 .today-trip-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; min-height: 48px; padding: 12px 16px; color: inherit; }
 .today-trip-title { display: flex; gap: 8px; align-items: center; font-size: 16px; font-weight: 700; color: var(--text); min-width: 0; }
 .today-trip-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.today-trip-day { font-size: 12px; font-weight: 600; color: var(--accent); white-space: nowrap; }
+.today-trip-day { font-size: 12px; font-weight: 600; color: var(--accent-text); white-space: nowrap; }
 .today-trip .expense-list { border: none; border-top: 1px solid var(--border); border-radius: 0; background: none; }
 .today-trip .trip-day-empty { border: none; border-top: 1px solid var(--border); border-radius: 0; padding: 12px 16px; }
 /* Footer lines: full-width 44px taps, hairline above, one line each. */
@@ -977,7 +982,6 @@ body {
 .today-entry { align-items: flex-start; padding: 12px 16px; border-bottom: none; }
 .today-entry.past { opacity: .55; }
 .today-entry.on { box-shadow: inset 3px 0 0 var(--accent); }
-@media (hover: none) { .today-entry:hover { background: none; } }
 .today-entry .expense-name { font-size: 15px; line-height: 21px; }
 .today-meta { color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* Left column: time, then what is on or next, then the icon. */
@@ -996,7 +1000,7 @@ body {
   color: var(--surface);
   background: var(--accent);
 }
-.today-badge.next { color: var(--accent); background: var(--accent-light); }
+.today-badge.next { color: var(--accent-text); background: var(--accent-light); }
 /* Earlier entries fold into one line, like the trip page's earlier days. */
 .today-earlier {
   display: block;
@@ -1006,7 +1010,7 @@ body {
   text-align: left;
   font-size: 13px;
   font-weight: 600;
-  color: var(--accent);
+  color: var(--accent-text);
 }
 /* Third line: booking reference and directions. Neutral, so the only
    colour in a row is its Now/next badge; 30px chips, 44px tap height. */
@@ -1032,7 +1036,7 @@ body {
 .today-nav svg { width: 14px; height: 14px; fill: none; stroke: var(--accent); stroke-width: 2.2; stroke-linejoin: round; }
 .home-trip { display: block; color: inherit; }
 .home-trip:hover { border-color: var(--border-strong); }
-.home-trip-when { font-size: 12px; font-weight: 600; color: var(--accent); }
+.home-trip-when { font-size: 12px; font-weight: 600; color: var(--accent-text); }
 .home-trip-title { display: flex; gap: 8px; align-items: center; font-size: 16px; font-weight: 700; color: var(--text); }
 .home-activity-row {
   display: flex;
@@ -1275,7 +1279,7 @@ body {
   justify-content: center;
   font-size: 18px;
   flex-shrink: 0;
-  color: var(--accent);
+  color: var(--accent-text);
   font-weight: 700;
 }
 .expense-info { flex: 1; min-width: 0; }
@@ -1424,7 +1428,7 @@ body {
   font-weight: 700;
   flex-shrink: 0;
   background: var(--accent-light);
-  color: var(--accent);
+  color: var(--accent-text);
 }
 .member-name {
   font-size: 14px;
@@ -1537,7 +1541,7 @@ body {
   padding: 5px 12px;
   border-radius: var(--r-pill);
   background: var(--accent-light);
-  color: var(--accent);
+  color: var(--accent-text);
   font-size: 12px;
   font-weight: 600;
   flex-shrink: 0;
@@ -1623,7 +1627,7 @@ body {
   transition: background .1s;
 }
 .cat-picker-option:hover { background: var(--bg); }
-.cat-picker-option.selected { background: var(--accent-light); color: var(--accent); font-weight: 600; }
+.cat-picker-option.selected { background: var(--accent-light); color: var(--accent-text); font-weight: 600; }
 .cat-picker-option-icon {
   font-size: 15px;
   width: 20px;
@@ -1714,7 +1718,7 @@ body {
   width: 16px; height: 16px; flex-shrink: 0;
   fill: none; stroke: var(--text-3); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
 }
-.set-row-action { color: var(--accent); font-weight: 600; }
+.set-row-action { color: var(--accent-text); font-weight: 600; }
 .set-row-action .set-row-label { font-weight: 600; }
 .set-row-icon {
   display: flex; align-items: center; justify-content: center;
@@ -1820,7 +1824,7 @@ body {
   background: var(--surface-2);
   color: var(--text-2);
 }
-.trip-card-when.now { background: var(--accent-subtle); color: var(--accent); }
+.trip-card-when.now { background: var(--accent-subtle); color: var(--accent-text); }
 .trip-card-title { font-size: 16px; font-weight: 700; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .trip-card-dates { font-size: 13px; color: var(--text-2); }
 .trip-card-foot {
@@ -1937,7 +1941,7 @@ body {
   cursor: pointer;
 }
 .act-row:first-child { border-top: none; }
-.act-row:hover .act-desc { color: var(--accent); }
+.act-row:hover .act-desc { color: var(--accent-text); }
 .act-icon {
   position: relative;
   width: 34px; height: 34px;
@@ -2021,7 +2025,7 @@ body {
   font-weight: 700;
   flex-shrink: 0;
   background: var(--accent-light);
-  color: var(--accent);
+  color: var(--accent-text);
 }
 .friend-info { flex: 1; min-width: 0; }
 .friend-name {
@@ -2076,7 +2080,7 @@ body {
 .group-chip {
   display: inline-block;
   background: var(--accent-light);
-  color: var(--accent);
+  color: var(--accent-text);
   padding: 2px 8px;
   border-radius: var(--r-pill);
   font-size: 11px;
@@ -2118,7 +2122,7 @@ body {
   width: 30px; height: 30px;
   border-radius: 50%;
   background: var(--accent-light);
-  color: var(--accent);
+  color: var(--accent-text);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2165,7 +2169,7 @@ body {
   gap: 4px;
   font-size: 14px;
   font-weight: 600;
-  color: var(--accent);
+  color: var(--accent-text);
   margin-bottom: 16px;
 }
 .back-link:hover { opacity: .75; }
@@ -2286,7 +2290,7 @@ body {
   font: inherit;
   font-size: 13px;
   font-weight: 600;
-  color: var(--accent);
+  color: var(--accent-text);
   background: none;
   border: none;
   padding: 0;
@@ -2310,7 +2314,7 @@ body {
   font-weight: 700;
   color: var(--text);
 }
-.trip-day.today .trip-day-name { color: var(--accent); }
+.trip-day.today .trip-day-name { color: var(--accent-text); }
 .trip-day-meta {
   font-size: 12px;
   color: var(--text-3);
@@ -2357,18 +2361,26 @@ body {
 .trip-kind span { font-size: 20px; line-height: 1; }
 
 /* Item detail */
-.trip-row {
+.detail-hero { display: flex; align-items: center; gap: 16px; }
+.detail-hero-icon { width: 56px; height: 56px; font-size: 26px; border-radius: var(--r-lg); flex-shrink: 0; }
+.detail-hero-text { flex: 1; min-width: 0; }
+.detail-hero-title { font-size: 20px; font-weight: 700; color: var(--text); margin-bottom: 4px; overflow-wrap: anywhere; }
+.detail-hero-sub { font-size: 13px; color: var(--text-3); }
+.detail-hero-sub a { color: inherit; }
+.detail-hero-aside { text-align: right; flex-shrink: 0; }
+.detail-rows { display: flex; flex-direction: column; gap: 12px; }
+.detail-row {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   gap: 16px;
 }
-.trip-row-label {
+.detail-row-label {
   font-size: 13px;
   color: var(--text-3);
   flex-shrink: 0;
 }
-.trip-row-value {
+.detail-row-value {
   font-size: 13px;
   font-weight: 600;
   color: var(--text);
@@ -2376,14 +2388,54 @@ body {
   min-width: 0;
   overflow-wrap: anywhere;
 }
-.trip-row-value a { color: var(--accent); }
-.trip-row-sub {
+.detail-row-value a { color: var(--accent-text); }
+.detail-row-sub {
   display: block;
   font-weight: 400;
   font-size: 12px;
   color: var(--text-3);
   margin-top: 2px;
 }
+/* Trip item: booking reference, copy and directions under the head (the
+   same chips as the Today rows), then the time span like a boarding pass. */
+.item-quick { margin-top: 16px; }
+.today-nav { font-family: inherit; }
+.span-date { font-size: 13px; font-weight: 600; color: var(--text-2); margin-bottom: 8px; }
+.span { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 16px; }
+.span-side { flex: 1 1 0; min-width: 0; }
+.span-side.end { text-align: right; }
+.span-label { font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--text-3); }
+.span-time { font-family: var(--font-mono); font-size: 24px; font-weight: 600; line-height: 1.2; color: var(--text); margin-top: 2px; }
+.span-time.assumed { color: var(--text-3); font-style: italic; }
+.span-day { font-size: 12px; color: var(--text-2); margin-top: 2px; }
+.span-place { font-size: 13px; font-weight: 600; color: var(--text); margin-top: 6px; overflow-wrap: anywhere; }
+.span-place a { color: var(--accent-text); }
+.span-middle { flex: 0 1 auto; min-width: 48px; display: flex; flex-direction: column; align-items: center; gap: 4px; padding-top: 26px; }
+.span-line { display: block; width: 100%; min-width: 48px; border-top: 1px dashed var(--border-strong); }
+.span-duration { font-size: 11px; font-weight: 600; color: var(--text-2); white-space: nowrap; }
+/* Remove/unlink at the end of a list row: 36px, 44px to the touch. */
+.row-action {
+  position: relative;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  margin: -4px -8px -4px 0;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  color: var(--text-3);
+  cursor: pointer;
+}
+.row-action::after { content: ''; position: absolute; inset: -4px; }
+.row-action svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+.row-action:hover { color: var(--red); background: var(--red-light); }
+/* The confirm sheet (components/Confirm). */
+.confirm-message { font-size: 14px; line-height: 1.5; color: var(--text-2); margin: -8px 0 20px; }
+.confirm-actions { display: flex; flex-direction: column; gap: 8px; }
+.confirm-actions .btn { width: 100%; }
 .trip-ref {
   display: inline-flex;
   align-items: stretch;
@@ -2403,7 +2455,7 @@ body {
 .trip-ref button + button { border-left: 1px solid var(--border); }
 .trip-ref button:hover { background: var(--border); }
 .trip-ref .trip-ref-code {
-  color: var(--accent);
+  color: var(--accent-text);
   font-family: var(--font-mono);
   font-size: 13px;
   font-weight: 600;
@@ -2426,16 +2478,6 @@ body {
   stroke-linejoin: round;
 }
 .trip-ref-icon:hover svg { stroke: var(--text); }
-.trip-unlink {
-  font-size: 11px;
-  color: var(--text-3);
-  background: none;
-  border: none;
-  padding: 4px 0 0;
-  cursor: pointer;
-  flex-shrink: 0;
-}
-.trip-unlink:hover { color: var(--red); }
 a.expense-item { color: inherit; text-decoration: none; }
 
 /* Place picker */
@@ -2524,7 +2566,7 @@ a.expense-item { color: inherit; text-decoration: none; }
   filter: invert(1) hue-rotate(180deg) brightness(.92) contrast(.88) saturate(.8);
 }
 /* Pins and Leaflet's own white chrome (zoom buttons, pop-ups, attribution) follow the theme. */
-[data-theme="dark"] .trip-pin { background: var(--surface); border-color: var(--accent); color: var(--accent); }
+[data-theme="dark"] .trip-pin { background: var(--surface); border-color: var(--accent); color: var(--accent-text); }
 [data-theme="dark"] .trip-pin-n { background: var(--accent); }
 [data-theme="dark"] .leaflet-bar a,
 [data-theme="dark"] .leaflet-popup-content-wrapper,
@@ -2532,7 +2574,7 @@ a.expense-item { color: inherit; text-decoration: none; }
 [data-theme="dark"] .leaflet-bar a { border-bottom-color: var(--border); }
 [data-theme="dark"] .leaflet-bar a.leaflet-disabled { background: var(--surface-2); color: var(--text-3); }
 [data-theme="dark"] .leaflet-control-attribution { background: rgba(36, 30, 26, .8); color: var(--text-3); }
-[data-theme="dark"] .leaflet-control-attribution a { color: var(--accent); }
+[data-theme="dark"] .leaflet-control-attribution a { color: var(--accent-text); }
 .trip-pin {
   width: 34px;
   height: 34px;
@@ -2634,7 +2676,7 @@ a.expense-item { color: inherit; text-decoration: none; }
   font-weight: 600;
   cursor: pointer;
 }
-.route-swap:hover { color: var(--accent); border-color: var(--accent); }
+.route-swap:hover { color: var(--accent-text); border-color: var(--accent); }
 .route-results { scroll-margin-top: 12px; }
 .route-results > .section-label { margin-bottom: 8px; }
 .route-card {
@@ -2665,10 +2707,10 @@ a.expense-item { color: inherit; text-decoration: none; }
   font-family: var(--font-body);
   font-size: 12px;
   font-weight: 600;
-  color: var(--accent);
+  color: var(--accent-text);
   margin-right: 8px;
 }
-.route-card-plus { font-size: 11px; color: var(--accent); margin-left: 2px; }
+.route-card-plus { font-size: 11px; color: var(--accent-text); margin-left: 2px; }
 .route-card-meta { font-size: 13px; color: var(--text-2); }
 .route-chain {
   display: flex;
@@ -2739,7 +2781,7 @@ a.expense-item { color: inherit; text-decoration: none; }
   font-size: 12px;
   color: var(--text-3);
 }
-.route-card-choose { font-size: 13px; font-weight: 700; color: var(--accent); white-space: nowrap; }
+.route-card-choose { font-size: 13px; font-weight: 700; color: var(--accent-text); white-space: nowrap; }
 .route-card-actions { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
 /* The route map: the trip map's look (pins, arcs, arrows), sized for a list beside or above it. */
 .route-map { height: min(55vh, 380px); }
@@ -2752,7 +2794,7 @@ a.expense-item { color: inherit; text-decoration: none; }
 .route-page-btn { width: 100%; margin-bottom: 12px; }
 .route-empty { margin-bottom: 12px; }
 .route-hint { font-size: 13px; color: var(--text-3); margin-bottom: 12px; }
-.route-hint a, .route-attribution a { color: var(--accent); }
+.route-hint a, .route-attribution a { color: var(--accent-text); }
 .route-attribution { font-size: 11px; color: var(--text-3); margin: 4px 0 16px; }
 .route-back { background: none; border: none; padding: 0; cursor: pointer; }
 .route-confirm-head {
@@ -2867,7 +2909,7 @@ a.expense-item { color: inherit; text-decoration: none; }
 .privacy h1 { font-size: 30px; color: var(--text); margin: 16px 0 4px; }
 .privacy h2 { font-size: 18px; color: var(--text); margin: 28px 0 8px; }
 .privacy strong { color: var(--text); }
-.privacy a { color: var(--accent); }
+.privacy a { color: var(--accent-text); }
 .privacy ul { padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }
 .privacy-updated { font-size: 13px; color: var(--text-3); margin: 0 0 16px; }
 .privacy-back { font-size: 14px; font-weight: 600; }
@@ -2904,7 +2946,7 @@ a.expense-item { color: inherit; text-decoration: none; }
 }
 .file-viewer-back {
   display: inline-flex; align-items: center; gap: 2px; justify-self: start;
-  font-size: 15px; font-weight: 600; color: var(--accent);
+  font-size: 15px; font-weight: 600; color: var(--accent-text);
   padding: 6px 4px; background: none; border: 0; cursor: pointer;
 }
 .file-viewer-back svg {
@@ -2918,7 +2960,7 @@ a.expense-item { color: inherit; text-decoration: none; }
 }
 .file-viewer-action {
   justify-self: end;
-  font-size: 15px; font-weight: 600; color: var(--accent);
+  font-size: 15px; font-weight: 600; color: var(--accent-text);
   padding: 6px 8px; background: none; border: 0; cursor: pointer;
 }
 .file-viewer-error { margin: 12px 16px 0; }
@@ -2942,7 +2984,7 @@ a.expense-item { color: inherit; text-decoration: none; }
 .offline-docs-link-icon {
   display: grid; place-items: center; flex: none;
   width: 40px; height: 40px; border-radius: var(--r-md);
-  background: var(--accent-light); color: var(--accent);
+  background: var(--accent-light); color: var(--accent-text);
 }
 .offline-docs-link-icon svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .offline-docs-link-chevron { margin-left: auto; font-size: 22px; color: var(--text-3); }
@@ -2957,7 +2999,7 @@ a.expense-item { color: inherit; text-decoration: none; }
   display: inline-flex; align-items: center; gap: 6px;
   padding: 6px 12px; border-radius: 999px;
   border: 1px solid var(--accent-subtle); background: var(--accent-light);
-  font-size: 13px; font-weight: 600; color: var(--accent); text-decoration: none;
+  font-size: 13px; font-weight: 600; color: var(--accent-text); text-decoration: none;
 }
 a.trip-chip:hover { border-color: var(--accent); }
 .trip-chip-chevron { font-size: 15px; line-height: 1; }
@@ -2965,7 +3007,7 @@ a.trip-chip:hover { border-color: var(--accent); }
 
 /* Data that could not be loaded (components/LoadFailed). */
 .load-failed .btn-pill { margin-top: 4px; }
-.load-failed-docs { display: inline-block; margin-top: 14px; font-size: 14px; font-weight: 600; color: var(--accent); }
+.load-failed-docs { display: inline-block; margin-top: 14px; font-size: 14px; font-weight: 600; color: var(--accent-text); }
 
 /* Layout: the bar shown while Splitty cannot reach its server. */
 .offline-bar {
@@ -2973,4 +3015,4 @@ a.trip-chip:hover { border-color: var(--accent); }
   padding: 8px 16px; font-size: 13px;
   background: var(--surface-2); color: var(--text-2, var(--text)); border-bottom: 1px solid var(--border);
 }
-.offline-bar a { color: var(--accent); font-weight: 600; }
+.offline-bar a { color: var(--accent-text); font-weight: 600; }

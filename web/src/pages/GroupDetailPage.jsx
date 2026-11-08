@@ -402,7 +402,7 @@ export default function GroupDetailPage() {
         </div>
       </PageHeader>
 
-      {state?.notice && <p className="error" style={{ background: 'var(--accent-light)', color: 'var(--accent)', borderColor: 'var(--accent-subtle)' }}>{state.notice}</p>}
+      {state?.notice && <p className="error" style={{ background: 'var(--accent-light)', color: 'var(--accent-text)', borderColor: 'var(--accent-subtle)' }}>{state.notice}</p>}
       {error && <p className="error">{error}</p>}
 
       {!wide && balanceBanner}
@@ -519,7 +519,7 @@ export default function GroupDetailPage() {
                     onClick={() => navigate(`/groups/${id}/expenses/${e.id}`)}
                   >
                     <div className="expense-icon" style={
-                      e.isTransfer ? { background: 'var(--accent-light)', color: 'var(--accent)' }
+                      e.isTransfer ? { background: 'var(--accent-light)', color: 'var(--accent-text)' }
                       : e.isSettlement ? { background: 'var(--green-light)', color: 'var(--green-dark)' }
                       : {}
                     }>
