@@ -29,7 +29,7 @@
 }
 .bigref-label {
   font-family: var(--font-body);
-  font-size: 16px;
+  font-size: var(--fs-base);
   color: var(--bigref-label);
   text-align: center;
 }
@@ -45,7 +45,7 @@
 }
 .bigref-hint {
   font-family: var(--font-body);
-  font-size: 13px;
+  font-size: var(--fs-md);
   color: var(--bigref-hint);
 }
 

@@ -309,7 +309,7 @@ export default function InsightsPage() {
                             </div>
                           ))}
                         </div>
-                        <div style={{ borderTop: '1px solid var(--border)', marginTop: 10, paddingTop: 10, display: 'flex', justifyContent: 'space-between', fontWeight: 600, fontSize: 14 }}>
+                        <div style={{ borderTop: '1px solid var(--border)', marginTop: 10, paddingTop: 10, display: 'flex', justifyContent: 'space-between', fontWeight: 600, fontSize: 15 }}>
                           <span>Total</span>
                           <span style={{ color: 'var(--accent-text)' }}>{formatCurrency(d.total)}</span>
                         </div>
@@ -438,7 +438,7 @@ export default function InsightsPage() {
                       const label = activeCategory ? activeCategory.split(' - ').pop() : 'Total'
                       return (
                         <g style={{ pointerEvents: 'none' }}>
-                          <text x={cx} y={cy - 10} textAnchor="middle" dominantBaseline="middle" style={{ fontSize: 14, fill: 'var(--text-3)', fontWeight: 600 }}>
+                          <text x={cx} y={cy - 10} textAnchor="middle" dominantBaseline="middle" style={{ fontSize: 15, fill: 'var(--text-3)', fontWeight: 600 }}>
                             {label}
                           </text>
                           <text x={cx} y={cy + 16} textAnchor="middle" dominantBaseline="middle" style={{ fontSize: 22, fill: 'var(--text)', fontWeight: 700, fontFamily: 'var(--font-mono)' }}>
@@ -495,7 +495,7 @@ export default function InsightsPage() {
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 5, paddingLeft: 16 }}>
                       <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text)', fontFamily: 'var(--font-mono)' }}>{formatCurrency(cat.total)}</span>
-                      <span style={{ fontSize: 10, color: 'var(--text-3)' }}>{pct}%</span>
+                      <span style={{ fontSize: 11, color: 'var(--text-3)' }}>{pct}%</span>
                     </div>
                   </div>
                 )
@@ -541,11 +541,11 @@ export default function InsightsPage() {
             <div style={{ display: 'grid', gridTemplateColumns: 'auto repeat(7, 1fr)', gap: 4 }}>
               <div />
               {DOW_LABELS.map(d => (
-                <div key={d} style={{ fontSize: 10, textAlign: 'center', color: 'var(--text-3)', paddingBottom: 4, fontWeight: 600 }}>{d}</div>
+                <div key={d} style={{ fontSize: 11, textAlign: 'center', color: 'var(--text-3)', paddingBottom: 4, fontWeight: 600 }}>{d}</div>
               ))}
               {dowMatrix.map((row, w) => (
                 <Fragment key={w}>
-                  <div style={{ fontSize: 10, color: 'var(--text-3)', display: 'flex', alignItems: 'center', paddingRight: 8, whiteSpace: 'nowrap', fontWeight: 500 }}>Wk {w + 1}</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-3)', display: 'flex', alignItems: 'center', paddingRight: 8, whiteSpace: 'nowrap', fontWeight: 500 }}>Wk {w + 1}</div>
                   {row.map((cell, d) => {
                     const intensity = cell.total > 0 ? Math.sqrt(cell.total / dowMax) : 0
                     return (

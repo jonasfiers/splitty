@@ -8,7 +8,7 @@
 }
 .ph-meta {
   margin-top: 6px;
-  font-size: 13px;
+  font-size: var(--fs-md);
   color: var(--text-2);
 }
 
@@ -17,7 +17,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 13px;
+  font-size: var(--fs-md);
   margin-bottom: 6px;
   min-width: 0;
 }
@@ -35,9 +35,9 @@
   align-items: center;
   gap: 16px;
 }
-.ph-wide .ph-title { flex: 1; min-width: 0; font-size: 26px; line-height: 1.2; }
+.ph-wide .ph-title { flex: 1; min-width: 0; font-size: var(--fs-2xl); line-height: 1.2; }
 .ph-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
-.ph-btn { padding: 7px 16px; font-size: 13px; }
+.ph-btn { padding: 7px 16px; font-size: var(--fs-md); }
 
 /* ── Phone: sticky bar + large title ── */
 .ph-bar {
@@ -60,7 +60,7 @@
   align-items: center;
   gap: 2px;
   justify-self: start;
-  font-size: 15px;
+  font-size: var(--fs-base);
   font-weight: 600;
   color: var(--accent-text);
   min-height: 44px;
@@ -73,7 +73,7 @@
 }
 .ph-bar-name {
   max-width: 45vw;
-  font-size: 15px;
+  font-size: var(--fs-base);
   font-weight: 700;
   color: var(--text);
   white-space: nowrap;
@@ -97,12 +97,12 @@
   min-height: 44px;
   min-width: 44px;
   justify-content: center;
-  font-size: 15px;
+  font-size: var(--fs-base);
   font-weight: 600;
   color: var(--accent-text);
   padding: 0 8px;
 }
-.ph-narrow .ph-title { font-size: 28px; line-height: 1.15; }
+.ph-narrow .ph-title { font-size: var(--fs-2xl); line-height: 1.15; }
 
 /* ── ⋯ menu ── */
 .ph-more { position: relative; }
@@ -138,7 +138,7 @@
 .ph-menu button {
   padding: 9px 12px;
   text-align: left;
-  font-size: 14px;
+  font-size: var(--fs-base);
   color: var(--text);
   border-radius: var(--r-sm, 6px);
 }
@@ -161,14 +161,14 @@
   color: var(--text);
   min-width: 0;
 }
-.th-narrow .th-title { font-size: 30px; line-height: 1.15; }
-.th-wide .th-title { font-size: 26px; line-height: 1.2; }
+.th-narrow .th-title { font-size: var(--fs-2xl); line-height: 1.15; }
+.th-wide .th-title { font-size: var(--fs-2xl); line-height: 1.2; }
 .th-narrow { min-height: 40px; margin-top: 4px; }
-.th-logo { font-size: 26px; }
+.th-logo { font-size: var(--fs-2xl); }
 .th-aside { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
 .ph-spacer { flex: 1; }
 .ph-wide.ph-compact { margin-bottom: 12px; }
-.ph-wide .ph-crumbs .ph-back { padding: 0; font-size: 14px; }
+.ph-wide .ph-crumbs .ph-back { padding: 0; font-size: var(--fs-base); }
 .ph-wide .ph-crumbs .ph-back svg { width: 16px; height: 16px; }
 .ph-narrow .ph-head { display: flex; align-items: center; gap: 12px; }
 .ph-narrow .ph-head .ph-title { flex: 1; min-width: 0; }

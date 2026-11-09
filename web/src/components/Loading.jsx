@@ -53,7 +53,7 @@ export default function Loading() {
     // flashes it.
     <div className="empty-state loading" role="status" style={{ animationDelay: `${delay}ms` }}>
       <WaitingCat />
-      <p style={{ color: 'var(--text-3)', fontSize: 14 }}>
+      <p style={{ color: 'var(--text-3)', fontSize: 15 }}>
         {slow ? 'Still trying to reach Splitty…' : 'Loading…'}
       </p>
       {slow && kept?.length > 0 && (

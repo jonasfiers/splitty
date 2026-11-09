@@ -43,7 +43,7 @@
     .fab svg { width: 18px; height: 18px; }
     .fab-label {
         display: inline;
-        font-size: 14px;
+        font-size: var(--fs-base);
         font-weight: 600;
     }
 }

@@ -45,8 +45,8 @@ export default function InvitePage() {
         {group ? (
           <>
             <div style={{ fontSize: 40, marginBottom: 12 }}>{group.icon || '👥'}</div>
-            <p style={{ fontWeight: 600, fontSize: 18, marginBottom: 4 }}>{group.title}</p>
-            <p style={{ color: 'var(--text-3)', fontSize: 14, marginBottom: 24 }}>You've been invited to join this group</p>
+            <p style={{ fontWeight: 600, fontSize: 17, marginBottom: 4 }}>{group.title}</p>
+            <p style={{ color: 'var(--text-3)', fontSize: 15, marginBottom: 24 }}>You've been invited to join this group</p>
             {error && <p className="error">{error}</p>}
             {currentUser ? (
               <button className="btn btn-primary btn-block" onClick={handleJoin} disabled={joining}>
