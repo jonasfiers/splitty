@@ -55,8 +55,8 @@ export function AuthProvider({ children }) {
   // `autofill`: the browser offers the passkey in the email field's own
   // suggestions (conditional mediation) and this waits until one is picked;
   // starting another passkey sign-in (the button) cancels it.
-  const passkeyLogin = useCallback(async (email, { autofill = false } = {}) => {
-    const { data: { options, nonce } } = await client.post('/auth/passkey/login/options', autofill ? { autofill: true } : { email })
+  const passkeyLogin = useCallback(async ({ autofill = false } = {}) => {
+    const { data: { options, nonce } } = await client.post('/auth/passkey/login/options', autofill ? { autofill: true } : {})
     const assertionResponse = await startAuthentication({ optionsJSON: options, useBrowserAutofill: autofill })
     const { data } = await client.post('/auth/passkey/login/verify', { nonce, assertionResponse })
     forgetAdmin()

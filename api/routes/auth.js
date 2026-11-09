@@ -207,7 +207,9 @@ router.post('/passkey/register/options', authMiddleware, authLimiter, async (req
             userID: Buffer.from(req.user.id, 'utf-8'),
             userName: req.user.email,
             attestation: 'none',
-            authenticatorSelection: { residentKey: 'preferred', userVerification: 'preferred' },
+            // Discoverable, always: sign-in asks for any passkey of this site, never one
+            // looked up by email (that would tell anyone which emails have passkeys).
+            authenticatorSelection: { residentKey: 'required', userVerification: 'preferred' },
             excludeCredentials: passkeys.map(p => ({
                 id: p.credentialId,
                 transports: JSON.parse(p.transports || '[]'),
@@ -257,24 +259,16 @@ router.post('/passkey/register/verify', authMiddleware, authLimiter, async (req,
 router.post('/passkey/login/options', authLimiter, async (req, res) => {
     try {
         const { generateAuthenticationOptions } = await webauthn();
-        const { email, autofill } = req.body;
-        let allowCredentials = [];
-
-        if (email) {
-            const user = await userServiceNeo4j.getUserByEmail(email);
-            if (user && user.id) {
-                const { passkeys } = await passkeyService.getPasskeysByUserId(user.id);
-                allowCredentials = passkeys.map(p => ({
-                    id: p.credentialId,
-                    transports: JSON.parse(p.transports || '[]'),
-                }));
-            }
-        }
+        // An open request: any passkey of this site, whoever's it is. Not the
+        // passkeys of a given email: their list would tell anyone asking
+        // whether that email has an account with passkeys. (The account
+        // follows from the passkey chosen, in /login/verify.)
+        const { autofill } = req.body;
 
         const options = await generateAuthenticationOptions({
             rpID: process.env.RP_ID || 'localhost',
             userVerification: 'preferred',
-            allowCredentials,
+            allowCredentials: [],
         });
 
         const nonce = crypto.randomUUID();

@@ -71,7 +71,7 @@ export default function LoginPage() {
   const startAutofill = useCallback(async () => {
     try {
       if (!(await browserSupportsWebAuthnAutofill())) return
-      await passkeyLogin(undefined, { autofill: true })
+      await passkeyLogin({ autofill: true })
       triggerAvatar('success', 700)
       setTimeout(() => navigate(redirect), 650)
     } catch (e) {
@@ -95,7 +95,7 @@ export default function LoginPage() {
     setError('')
     setLoading(true)
     try {
-      await passkeyLogin(form.email || undefined)
+      await passkeyLogin()
       triggerAvatar('success', 700)
       setTimeout(() => navigate(redirect), 650)
     } catch (e) {
