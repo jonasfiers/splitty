@@ -40,6 +40,7 @@ export default function TripItemFormPage() {
     notes: '',
   })
   const [places, setPlaces] = useState([])
+  const [items, setItems] = useState([]) // the trip's other items, for the From suggestion
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const wide = useMediaQuery('(min-width: 768px)') // the header's own breakpoint
@@ -53,6 +54,7 @@ export default function TripItemFormPage() {
     ]).then(([tripRes, itemRes]) => {
       const trip = tripRes.data.trip
       setPlaces(tripRes.data.places || [])
+      setItems(tripRes.data.items || [])
 
       if (isEdit) {
         const i = itemRes.data.item
@@ -94,6 +96,13 @@ export default function TripItemFormPage() {
 
   const set = patch => setForm(f => ({ ...f, ...patch }))
   const backPath = isEdit ? `/trips/${tripId}/items/${itemId}` : `/trips/${tripId}`
+  // From: where the journey before this one ended (the train after the flight
+  // starts at the airport).
+  const startMoment = moment(form.startDate, form.startTime)
+  const lastArrival = items
+    .filter(i => i.kind === 'transport' && i.id !== itemId && i.toPlaceId && startMoment && (i.end || i.start) <= startMoment)
+    .sort((a, b) => (a.end || a.start).localeCompare(b.end || b.start))
+    .at(-1)?.toPlaceId
   const nameOf = ref => (ref?.id ? places.find(p => p.id === ref.id)?.name : ref?.name)
 
   const handleSubmit = async e => {
@@ -186,7 +195,7 @@ export default function TripItemFormPage() {
           {kind === 'transport' ? (
             <>
               <Field label="From">
-                <PlacePicker value={form.from} onChange={from => set({ from })} places={places} placeholder="Airport, station, address…" />
+                <PlacePicker value={form.from} onChange={from => set({ from })} places={places} placeholder="Airport, station, address…" suggested={lastArrival} suggestedNote="Where your last journey ended" />
               </Field>
               <Field label="To">
                 <PlacePicker value={form.to} onChange={to => set({ to })} places={places} placeholder="Airport, station, address…" />

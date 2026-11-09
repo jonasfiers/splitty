@@ -2266,68 +2266,64 @@ a.act-row { color: inherit; text-decoration: none; }
 }
 .trip-ref-icon:hover svg { stroke: var(--text); }
 
-/* Place picker */
-.place-picker {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+/* Place picker: one field, the list under it (in the flow, so the
+   keyboard never covers it and the sheet or page just grows) */
+.place-picker { display: flex; flex-direction: column; gap: 6px; }
+.place-field { position: relative; }
+.place-field svg {
+  position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+  width: 16px; height: 16px; fill: none; stroke: var(--text-3); stroke-width: 2; stroke-linecap: round;
+  pointer-events: none;
 }
-.place-search {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-.place-search input { flex: 1; min-width: 0; }
-.place-results {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.place-result {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  width: 100%;
-  text-align: left;
-  padding: 9px 12px;
-  background: var(--surface-2);
+.form-group .place-field input { padding-left: 36px; }
+.place-list {
+  display: flex; flex-direction: column;
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--r-md);
+  padding: 4px 0;
+  max-height: 320px;
+  overflow-y: auto;
+}
+.place-list-label {
+  font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+  color: var(--text-3);
+  padding: 8px 12px 4px;
+}
+.place-list-sep { height: 1px; background: var(--border); margin: 4px 0; }
+.place-list-hint { font-size: 13px; color: var(--text-3); margin: 0; padding: 10px 12px; }
+.place-row {
+  display: flex; align-items: center; gap: 10px;
+  width: 100%; min-height: 44px;
+  padding: 8px 12px;
+  background: none; border: none;
+  text-align: left; font: inherit; color: var(--text);
   cursor: pointer;
 }
-.place-result:hover { border-color: var(--accent); }
-.place-result-name {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text);
-}
-.place-result-address,
-.place-chosen-address {
-  font-size: 12px;
-  color: var(--text-3);
-  overflow-wrap: anywhere;
-}
-.place-hint {
-  font-size: 12px;
-  color: var(--text-3);
-  margin: 0;
-}
+.place-row:hover:not(:disabled), .place-row:focus-visible { background: var(--surface-2); outline: none; }
+.place-row:disabled { cursor: default; opacity: .6; }
+.place-row-icon { width: 20px; text-align: center; flex-shrink: 0; font-size: 15px; }
+.place-row-text { display: flex; flex-direction: column; min-width: 0; }
+.place-row-name { font-size: 14px; font-weight: 600; overflow-wrap: anywhere; }
+.place-row-meta { font-size: 12px; color: var(--text-3); overflow-wrap: anywhere; }
+.place-row-action .place-row-name { color: var(--accent-text); }
+.place-row-muted .place-row-name { font-weight: 500; color: var(--text-2); }
 .place-chosen {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 8px 8px 12px;
+  display: flex; align-items: center; gap: 10px;
+  width: 100%;
+  padding: 8px 12px;
   background: var(--surface-2);
   border: 1px solid var(--border);
   border-radius: var(--r-md);
+  text-align: left; font: inherit; color: var(--text);
+  cursor: pointer;
 }
+.place-chosen:hover { border-color: var(--border-strong); }
 .place-chosen-pin { font-size: 16px; flex-shrink: 0; }
-.place-chosen-name {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text);
-  overflow-wrap: anywhere;
-}
+.place-chosen-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.place-chosen-name { font-size: 14px; font-weight: 600; overflow-wrap: anywhere; }
+.place-chosen-address { font-size: 12px; color: var(--text-3); overflow-wrap: anywhere; }
+.place-chosen-change { font-size: 13px; font-weight: 600; color: var(--accent-text); flex-shrink: 0; }
 
 /* Map */
 .trip-map {
