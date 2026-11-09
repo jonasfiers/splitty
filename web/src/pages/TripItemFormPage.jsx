@@ -192,7 +192,7 @@ export default function TripItemFormPage() {
         actions={wide ? [] : [{ label: saving ? 'Saving…' : (isEdit ? 'Save' : 'Add'), form: 'trip-item-form', disabled: saving, primary: true }]}
       />
 
-      <div className="card item-form-card">
+      <div className="card form-card-wide">
         <form id="trip-item-form" onSubmit={handleSubmit}>
           {error && <p className="error">{error}</p>}
           <FormColumns>

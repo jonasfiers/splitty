@@ -11,6 +11,7 @@ import BackLink from '../components/BackLink.jsx'
 import CategoryPicker from '../components/CategoryPicker/CategoryPicker.jsx'
 import { useMediaQuery } from '../utils/useMediaQuery.js'
 import Field from '../components/Field/Field.jsx'
+import { FormColumns, FormColumn } from '../components/Field/FormColumns.jsx'
 import Picker from '../components/Picker/Picker.jsx'
 import { Avatar } from '../components/Avatar.jsx'
 import DatePicker from '../components/DatePicker/DatePicker.jsx'
@@ -236,11 +237,12 @@ export default function ExpenseFormPage() {
         <p style={{ fontSize: 13, color: 'var(--text-3)', margin: '-8px 0 12px' }}>For “{tripItem.title}”</p>
       )}
 
-      <div className="card expense-form-card">
+      <div className="card form-card-wide">
         <form id="expense-form" onSubmit={handleSubmit}>
           {error && <p className="error">{error}</p>}
-          <div className="expense-form-grid">
-            <div className="expense-form-fields">
+          {/* The expense | how it is split: side by side when the form is wide enough. */}
+          <FormColumns>
+            <FormColumn>
               <div className="form-row form-row-compact expense-amount">
                 <Field label="Currency">
                   <Picker
@@ -315,9 +317,10 @@ export default function ExpenseFormPage() {
                   </Field>
                 )}
               </div>
-            </div>
+            </FormColumn>
 
             {shares.length > 0 && (
+              <FormColumn>
               <Field label="Split" group className="expense-form-split" aside={<button type="button" className="btn btn-ghost btn-sm" onClick={splitEqually}>Split equally</button>}>
                 {shares.map((s, i) => {
                   const user = users.find(u => u.id === s.userId)
@@ -358,8 +361,9 @@ export default function ExpenseFormPage() {
                   ) : null
                 })()}
               </Field>
+              </FormColumn>
             )}
-          </div>
+          </FormColumns>
 
           {wide && <div className="panel-actions" style={{ marginTop: '0.5rem' }}>
             <BackLink to={backPath} replace className="btn btn-ghost">Cancel</BackLink>

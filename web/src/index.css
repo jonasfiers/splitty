@@ -1214,26 +1214,7 @@ body {
 
 /* Expense form: on desktop the narrow form is centred instead of hugging the
    left edge; from 1180px the split gets its own pane next to the fields. */
-.expense-form-card { max-width: 560px; }
 .expense-form-split { margin-top: 1rem; }
-@media (min-width: 768px) {
-  .page-wrap:has(.expense-form-card) { --wrap-w: 632px; }
-}
-@media (min-width: 1180px) {
-  .page-wrap:has(.expense-form-card) { --wrap-w: 1100px; }
-  .expense-form-card { max-width: none; }
-  .expense-form-grid {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    gap: 32px;
-    align-items: start;
-  }
-  .expense-form-split {
-    margin: 0;
-    padding-left: 32px;
-    border-left: 1px solid var(--border);
-  }
-}
 .member-av {
   width: 34px; height: 34px;
   border-radius: 50%;
@@ -2869,10 +2850,12 @@ a.trip-chip:hover { border-color: var(--accent); }
   /* Folded extras are shown where there is room; their "＋" button goes. */
   .form-more-fields.folded { display: block; }
   .form-more { display: none; }
+  .form-column > .expense-form-split { margin-top: 0; }
 }
-/* The trip item form: phone-width, wider where there is room for columns */
-.item-form-card { max-width: 560px; }
+/* A page form card (expense, trip item): phone-width, wider where there
+   is room for its FormColumns */
+.form-card-wide { max-width: 560px; }
 @media (min-width: 1024px) {
-  .page-wrap:has(.item-form-card) { --wrap-w: 1040px; }
-  .item-form-card { max-width: 980px; }
+  .page-wrap:has(.form-card-wide) { --wrap-w: 1040px; }
+  .form-card-wide { max-width: 980px; }
 }
