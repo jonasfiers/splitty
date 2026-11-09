@@ -73,6 +73,7 @@ function PlacePicker({ value, onChange, places = [], placeholder = 'Search a pla
         ref={buttonRef}
         type="button"
         id={id}
+        tabIndex={0} // in the Tab order like a field (Macs otherwise skip buttons)
         className={`place-trigger${shown ? '' : ' place-trigger-empty'}`}
         onClick={() => setOpen(true)}
         aria-haspopup="dialog"

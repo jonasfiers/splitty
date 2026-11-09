@@ -21,6 +21,7 @@ import { leaveTo } from '../utils/history.js'
 import { useConfirm } from '../components/Confirm/ConfirmProvider.jsx'
 import EmptyState from '../components/EmptyState/EmptyState.jsx'
 import { waitAtMost } from '../utils/pageGate.jsx'
+import { swrOne } from '../utils/cache.js'
 
 // Leaflet is only worth downloading once someone opens the map.
 const TripMap = lazy(() => import('../components/TripMap/TripMap.jsx'))
@@ -68,7 +69,10 @@ function TripDetailPage() {
   // The same list also tidies this trip's copies kept on the device: one
   // deleted or made private by its owner goes (utils/offlineDocs.js).
   const [docIds, setDocIds] = useState(null)
-  const loadDocs = useCallback(() => client.get(`/trips/${id}/documents`).then(({ data }) => setDocIds(data.documents.map(d => d.id))).catch(() => {}), [id])
+  const loadDocs = useCallback(({ fresh = true } = {}) => {
+    const { cached, fresh: answer } = swrOne(`/trips/${id}/documents`, ({ data }) => setDocIds(data.documents.map(d => d.id)), { fresh })
+    return cached ? Promise.resolve() : answer.catch(() => {})
+  }, [id])
   const docCount = docIds?.length ?? 0
   useEffect(() => {
     if (docIds && trip?.title) syncTrip({ id, title: trip.title }, docIds).catch(() => {})
@@ -76,11 +80,18 @@ function TripDetailPage() {
 
   // With the documents count, so the chip doesn't change after the page shows;
   // it waits for that at most 1.5 s (utils/pageGate.jsx).
-  const load = useCallback(async () => {
-    const [{ data }] = await Promise.all([client.get(`/trips/${id}`), waitAtMost(loadDocs())])
-    setTrip(data.trip)
-    setItems(data.items || [])
-    setPlaces(data.places || [])
+  // Opening it shows the last state at once and refreshes it (utils/cache.js);
+  // a reload after a change (the default) asks the server only.
+  const load = useCallback(async ({ fresh = true } = {}) => {
+    const { cached, fresh: answer } = swrOne(`/trips/${id}`, ({ data }) => {
+      setTrip(data.trip)
+      setItems(data.items || [])
+      setPlaces(data.places || [])
+    }, { fresh })
+    if (cached) setLoading(false)
+    const docs = loadDocs({ fresh })
+    // With the last state on screen a failed refresh changes nothing.
+    await Promise.all([answer.catch(err => { if (!cached) throw err }), waitAtMost(docs)])
   }, [id, loadDocs])
 
   // Loading failed (not "no such trip": that is a 404): the "couldn't load"
@@ -89,7 +100,7 @@ function TripDetailPage() {
   const [attempt, setAttempt] = useState(0)
   const retry = useCallback(() => { setLoadError(null); setLoading(true); setAttempt(n => n + 1) }, [])
   useEffect(() => {
-    load().catch(err => { setTrip(null); if (err.response?.status !== 404) setLoadError(err) }).finally(() => setLoading(false))
+    load({ fresh: attempt > 0 }).catch(err => { setTrip(null); if (err.response?.status !== 404) setLoadError(err) }).finally(() => setLoading(false))
   }, [load, attempt])
 
   const openItem = useCallback(item => navigate(`/trips/${id}/items/${item.id}`), [navigate, id])

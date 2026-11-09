@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo, Fragment, useCallback } from 'react'
 import LoadFailed from '../components/LoadFailed.jsx'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, Label } from 'recharts'
-import client from '../api/client'
 import { Link, useSearchParams } from 'react-router'
 import { formatCurrency, formatCompactCurrency } from '../utils/currency.js'
 import Loading from '../components/Loading.jsx'
@@ -9,6 +8,7 @@ import { COLOURS, STROKES } from '../utils/chartColors.js'
 import TabHeader from '../components/PageHeader/TabHeader.jsx'
 import Picker from '../components/Picker/Picker.jsx'
 import EmptyState from '../components/EmptyState/EmptyState.jsx'
+import { swr, swrOne } from '../utils/cache.js'
 const DOW_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 const PERIODS = [
   { key: 'month', label: 'This month' },
@@ -54,7 +54,7 @@ export default function InsightsPage() {
   const [error, setError] = useState('')
 
   useEffect(() => {
-    client.get('/dash/groups').then(r => setGroups(r.data.groups || [])).catch(() => {})
+    swrOne('/dash/groups', r => setGroups(r.data.groups || [])).fresh.catch(() => {})
   }, [])
 
   // Refetch on every filter change; the previous figures stay up (dimmed) meanwhile.
@@ -66,10 +66,15 @@ export default function InsightsPage() {
   useEffect(() => {
     let current = true
     const from = periodStart(period)
-    setRefreshing(true)
-    client.get('/dash/insights', { params: { ...(from && { from }), ...(groupId && { groupId }), ...(scope === 'mine' && { scope }) } })
-      .then(r => { if (current) { setData(r.data); setError(''); setActiveCategory(null); setHiddenPie([]) } })
-      .catch(err => { if (current) { setError('Insights could not be loaded. Please try again.'); setLoadError(err) } })
+    // Each selection's last figures at once (utils/cache.js), then fresh.
+    const params = { ...(from && { from }), ...(groupId && { groupId }), ...(scope === 'mine' && { scope }) }
+    const { cached, fresh } = swr([['/dash/insights', { params }]], ([r]) => {
+      if (current) { setData(r.data); setError(''); setActiveCategory(null); setHiddenPie([]) }
+    }, { fresh: attempt > 0 })
+    if (cached) setLoading(false)
+    else setRefreshing(true)
+    fresh
+      .catch(err => { if (current && !cached) { setError('Insights could not be loaded. Please try again.'); setLoadError(err) } })
       .finally(() => { if (current) { setLoading(false); setRefreshing(false) } })
     return () => { current = false }
   }, [period, groupId, scope, attempt])

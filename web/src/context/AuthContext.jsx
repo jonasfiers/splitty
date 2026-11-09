@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useCallback, useEffect } from 'rea
 import { startAuthentication } from '@simplewebauthn/browser'
 import client from '../api/client'
 import { clearOffline } from '../utils/offlineDocs.js'
+import { clearCache } from '../utils/cache.js'
 import { reactivatePushIfKnown } from '../utils/push.js'
 
 const AuthContext = createContext(null)
@@ -44,6 +45,7 @@ export function AuthProvider({ children }) {
     const { data } = await client.post('/auth/login', { email, password })
     forgetAdmin()
     localStorage.setItem('token', data.token)
+    clearCache() // nothing of a previous account
     setToken(data.token)
     reactivatePushIfKnown().catch(() => {})
   }, [])
@@ -61,6 +63,7 @@ export function AuthProvider({ children }) {
     const { data } = await client.post('/auth/passkey/login/verify', { nonce, assertionResponse })
     forgetAdmin()
     localStorage.setItem('token', data.token)
+    clearCache() // nothing of a previous account
     setToken(data.token)
     reactivatePushIfKnown().catch(() => {})
   }, [])
@@ -74,6 +77,7 @@ export function AuthProvider({ children }) {
   // this device; an expired session does not (utils/offlineDocs.js).
   const logout = useCallback(() => {
     clearOffline()
+    clearCache()
     localStorage.removeItem('token')
     forgetAdmin()
     setToken(null)

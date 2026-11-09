@@ -2,7 +2,6 @@ import { useState, useEffect, useMemo, useCallback } from 'react'
 import Picker from '../components/Picker/Picker.jsx'
 import LoadFailed from '../components/LoadFailed.jsx'
 import { Link } from 'react-router'
-import client from '../api/client'
 import { formatCurrency } from '../utils/currency'
 import Loading from '../components/Loading.jsx'
 import { useMediaQuery } from '../utils/useMediaQuery.js'
@@ -11,6 +10,7 @@ import { activityLink, activityVerb, activityMatches, activityIcon, activityTone
 import { summarizeChanges } from '../utils/expenseChanges.js'
 import EmptyState from '../components/EmptyState/EmptyState.jsx'
 import { waitAtMost } from '../utils/pageGate.jsx'
+import { swrOne } from '../utils/cache.js'
 
 const PAGE = 50
 // Nothing chosen means everything: tapping the active chip again clears it.
@@ -61,19 +61,19 @@ export default function ActivityPage() {
   const retry = useCallback(() => { setError(null); setLoading(true); setAttempt(n => n + 1) }, [])
 
   useEffect(() => {
+    // Each the last state at once, then fresh (utils/cache.js).
+    const fresh = { fresh: attempt > 0 }
     // Group names and icons are a nice-to-have: without them the rows just omit the group.
-    const groupsReq = client.get('/dash/groups')
-      .then(r => setGroups(new Map((r.data.groups || []).map(g => [g.id, g]))))
-      .catch(() => {})
+    const groups = swrOne('/dash/groups', r => setGroups(new Map((r.data.groups || []).map(g => [g.id, g]))), fresh)
     // Likewise the trips, for the group-or-trip picker.
-    const tripsReq = client.get('/trips').then(r => setTrips(r.data.trips || [])).catch(() => {})
+    const trips = swrOne('/trips', r => setTrips(r.data.trips || []), fresh)
+    const feed = swrOne('/dash/activity', r => setActivities(r.data.activities || []), fresh)
+    const extra = ({ cached, fresh }) => (cached ? null : waitAtMost(fresh))
+    if (feed.cached && groups.cached && trips.cached) setLoading(false)
     // The feed shows with them, so names don't pop in; for them it waits at
     // most 1.5 s (utils/pageGate.jsx).
-    Promise.all([
-      client.get('/dash/activity').then(r => setActivities(r.data.activities || [])),
-      waitAtMost(groupsReq), waitAtMost(tripsReq),
-    ])
-      .catch(err => setError(err))
+    Promise.all([feed.fresh, extra(groups), extra(trips)])
+      .catch(err => { if (!feed.cached) setError(err) })
       .finally(() => setLoading(false))
   }, [attempt])
 

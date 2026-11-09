@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import LoadFailed from '../components/LoadFailed.jsx'
 import { Link, useNavigate } from 'react-router'
-import client from '../api/client'
 import FabButton from '../components/FabButton/FabButton.jsx'
 import Loading from '../components/Loading.jsx'
 import TripList, { TripCards } from '../components/TripForm/TripList.jsx'
@@ -15,6 +14,7 @@ import { useOfflineDocs } from '../utils/useOfflineDocs.js'
 import EmptyState from '../components/EmptyState/EmptyState.jsx'
 import NextTrip from '../components/TripForm/NextTrip.jsx'
 import { PageGate } from '../utils/pageGate.jsx'
+import { swr } from '../utils/cache.js'
 
 export default function TripsPage() {
   const offline = useOfflineDocs()
@@ -27,13 +27,15 @@ export default function TripsPage() {
   const [attempt, setAttempt] = useState(0)
   const retry = useCallback(() => { setError(null); setLoading(true); setAttempt(n => n + 1) }, [])
 
+  // The last state at once, then fresh (utils/cache.js); "Try again" asks the server only.
   useEffect(() => {
-    Promise.all([client.get('/trips'), client.get('/groups')])
-      .then(([tr, gr]) => {
-        setTrips(tr.data.trips || [])
-        setGroups(gr.data.groups || [])
-      })
-      .catch(err => setError(err))
+    const { cached, fresh } = swr([['/trips'], ['/groups']], ([tr, gr]) => {
+      setTrips(tr.data.trips || [])
+      setGroups(gr.data.groups || [])
+    }, { fresh: attempt > 0 })
+    if (cached) setLoading(false)
+    fresh
+      .catch(err => { if (!cached) setError(err) })
       .finally(() => setLoading(false))
   }, [attempt])
 

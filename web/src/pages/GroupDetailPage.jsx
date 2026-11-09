@@ -26,6 +26,7 @@ import Field from '../components/Field/Field.jsx'
 import Picker from '../components/Picker/Picker.jsx'
 import DatePicker from '../components/DatePicker/DatePicker.jsx'
 import EmptyState from '../components/EmptyState/EmptyState.jsx'
+import { swr } from '../utils/cache.js'
 
 // Keep in sync with the .group-layout breakpoint in index.css.
 const WIDE_QUERY = '(min-width: 1180px)'
@@ -103,17 +104,13 @@ export default function GroupDetailPage() {
   // (member removed, settlement). Search and filters reload only the
   // expenses (below): six requests per letter typed ran into the server's
   // rate limit.
-  const load = useCallback(async () => {
+  // Opening the page shows what it showed last time at once (utils/cache.js)
+  // and refreshes it; a reload after a change asks the server only
+  // ({ fresh: true }, the default), so it never flashes the old state.
+  const load = useCallback(async ({ fresh = true } = {}) => {
     const seq = ++expensesSeq.current
     loadedQuery.current = queryRef.current
-    const [groupRes, expensesRes, membersRes, catRes, catsRes, tripsRes] = await Promise.all([
-      client.get(`/groups/${id}`),
-      client.get(`/groups/${id}/expenses?${queryRef.current}`),
-      client.get(`/groups/${id}/members`),
-      client.get(`/groups/${id}/category-totals`),
-      client.get('/categories'),
-      client.get(`/trips?groupId=${id}`),
-    ])
+    const apply = ([groupRes, expensesRes, membersRes, catRes, catsRes, tripsRes]) => {
     const g = groupRes.data.groups?.[0] ?? null
     setGroup(g)
     if (seq === expensesSeq.current) {
@@ -127,6 +124,18 @@ export default function GroupDetailPage() {
     setCategoryTotals(catRes.data.categories || [])
     setCategories(catsRes.data.categories || [])
     setTrips(tripsRes.data.trips || [])
+    }
+    const { cached, fresh: answer } = swr([
+      [`/groups/${id}`],
+      [`/groups/${id}/expenses?${queryRef.current}`],
+      [`/groups/${id}/members`],
+      [`/groups/${id}/category-totals`],
+      ['/categories'],
+      [`/trips?groupId=${id}`],
+    ], apply, { fresh })
+    if (cached) setLoading(false)
+    // With the last state on screen a failed refresh changes nothing: it stays.
+    await answer.catch(err => { if (!cached) throw err })
   }, [id])
 
   const loadMore = async () => {
@@ -146,7 +155,7 @@ export default function GroupDetailPage() {
   // Loading failed (not "no such group": that is a 404): the "couldn't load"
   // state, not "Group not found.".
   const [loadError, setLoadError] = useState(null)
-  const fetchAll = useCallback(() => load()
+  const fetchAll = useCallback(({ fresh = false } = {}) => load({ fresh })
     .then(() => setLoadError(null))
     .catch(err => { if (err.response?.status !== 404) setLoadError(err) })
     .finally(() => setLoading(false)), [load])
@@ -166,7 +175,7 @@ export default function GroupDetailPage() {
       })
       .catch(() => { if (seq === expensesSeq.current) setError('Couldn’t load the expenses for this search. Try again.') })
   }, [id, query])
-  const retry = useCallback(() => { setLoading(true); fetchAll() }, [fetchAll])
+  const retry = useCallback(() => { setLoading(true); fetchAll({ fresh: true }) }, [fetchAll])
 
   const handleRemoveMember = async userId => {
     const isSelf = userId === currentUser?.id

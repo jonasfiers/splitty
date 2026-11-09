@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router'
 import LoadFailed from '../components/LoadFailed.jsx'
-import client from '../api/client'
 import Loading from '../components/Loading.jsx'
 import { Avatar } from '../components/Avatar.jsx'
 import PageHeader from '../components/PageHeader/PageHeader.jsx'
@@ -9,6 +8,7 @@ import { List, ListRow } from '../components/List/List.jsx'
 import Sheet, { SheetActions } from '../components/Sheet/Sheet.jsx'
 import { formatCurrency } from '../utils/currency.js'
 import EmptyState from '../components/EmptyState/EmptyState.jsx'
+import { swrOne } from '../utils/cache.js'
 
 // What is open with someone, per currency: groups in the same currency add
 // up, different currencies are listed side by side rather than converted.
@@ -43,9 +43,10 @@ export default function FriendsPage() {
   const retry = useCallback(() => { setLoadError(null); setLoading(true); setAttempt(n => n + 1) }, [])
 
   useEffect(() => {
-    client.get('/dash/friends')
-      .then(r => setFriends(r.data.friends || []))
-      .catch(err => setLoadError(err))
+    const { cached, fresh } = swrOne('/dash/friends', r => setFriends(r.data.friends || []), { fresh: attempt > 0 })
+    if (cached) setLoading(false)
+    fresh
+      .catch(err => { if (!cached) setLoadError(err) })
       .finally(() => setLoading(false))
   }, [attempt])
 

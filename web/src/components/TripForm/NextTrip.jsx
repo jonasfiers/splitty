@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
-import client from '../../api/client'
 import { formatCurrency } from '../../utils/currency.js'
 import { buildTimeline, describe, itemIcon, formatDay, formatDateRange, daysBetween, today } from '../../utils/trip.js'
 import { useGate } from '../../utils/pageGate.jsx'
+import { swrOne } from '../../utils/cache.js'
 
 // The trip that is on, or the next one: what comes first, at a glance.
 // It loads the trip's items itself; until then (or if that fails) it shows
@@ -14,10 +14,13 @@ export default function NextTrip({ trip }) {
   const gate = useGate() // the Trips page shows once this card is filled (utils/pageGate.jsx)
 
   useEffect(() => {
-    gate(client.get(`/trips/${trip.id}`)
-      .then(({ data }) => setDetail({ items: data.items || [], places: data.places || [], paid: Number(data.trip?.paidBase || 0), iso: data.trip?.groupIso }))
-      .catch(() => {}))
-    gate(client.get(`/trips/${trip.id}/documents`).then(({ data }) => setDocCount(data.documents.length)).catch(() => {}))
+    // The last state at once (utils/cache.js); the page waits only for what wasn't kept.
+    const a = swrOne(`/trips/${trip.id}`, ({ data }) => setDetail({ items: data.items || [], places: data.places || [], paid: Number(data.trip?.paidBase || 0), iso: data.trip?.groupIso }))
+    const b = swrOne(`/trips/${trip.id}/documents`, ({ data }) => setDocCount(data.documents.length))
+    for (const { cached, fresh } of [a, b]) {
+      const done = fresh.catch(() => {})
+      if (!cached) gate(done)
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [trip.id])
 

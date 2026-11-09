@@ -46,7 +46,9 @@ const CalendarIcon = () => (
 
 function Trigger({ id, text, placeholder, onClick, buttonRef }) {
   return (
-    <button ref={buttonRef} type="button" id={id} className="picker-field-btn dp-trigger" onClick={onClick}
+    // tabIndex: in the Tab order like the field it replaces (Safari and Firefox on a
+    // Mac otherwise skip buttons: macOS's keyboard-navigation setting).
+    <button ref={buttonRef} type="button" id={id} tabIndex={0} className="picker-field-btn dp-trigger" onClick={onClick}
       aria-haspopup="dialog" aria-labelledby={id ? `${id}-label ${id}` : undefined}>
       <CalendarIcon />
       <span className={`picker-text${text ? '' : ' picker-placeholder'}`}>{text || placeholder}</span>

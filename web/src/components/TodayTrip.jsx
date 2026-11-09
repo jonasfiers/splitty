@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
-import client from '../api/client'
 import { itemIcon, buildTimeline, daysBetween, today, addDays } from '../utils/trip.js'
 import TodayEntries, { useClock } from './TodayEntries.jsx'
 import { useGate } from '../utils/pageGate.jsx'
+import { swrOne } from '../utils/cache.js'
 
 // Home's top card while a trip is on: what today holds, from the trip's own
 // day list (same entries, same order), and where you sleep tonight. One card
@@ -16,21 +16,38 @@ const EVENING = '18:00'
 export const isActive = (trip, day = today()) => trip.startDate <= day && day <= trip.endDate
 
 export default function TodayTrip() {
-  const [trips, setTrips] = useState([])
+  const [active, setActive] = useState([]) // ids of the trips that are on today
+  const [details, setDetails] = useState({}) // id -> { trip, items, places }
   const gate = useGate()
 
+  // The trips, then each one that is on: the last state at once, then fresh
+  // (utils/cache.js); Home waits only for what wasn't kept.
   useEffect(() => {
     let live = true
-    gate(client.get('/trips').then(async ({ data }) => {
-      const active = (data.trips || []).filter(t => isActive(t))
-      const full = await Promise.all(active.map(t => client.get(`/trips/${t.id}`).then(r => r.data).catch(() => null)))
-      if (live) setTrips(full.filter(Boolean))
-    }).catch(() => {}))
+    const loadTrip = id => {
+      const { cached, fresh } = swrOne(`/trips/${id}`, r => { if (live) setDetails(d => ({ ...d, [id]: r.data })) })
+      return cached ? Promise.resolve() : fresh.catch(() => {})
+    }
+    const asked = new Set()
+    let details = Promise.resolve() // the trips-that-are-on still loading
+    const { cached, fresh } = swrOne('/trips', ({ data }) => {
+      const ids = (data.trips || []).filter(t => isActive(t)).map(t => t.id)
+      if (!live) return
+      setActive(ids)
+      const fresh = ids.filter(id => !asked.has(id))
+      fresh.forEach(id => asked.add(id))
+      details = Promise.all([details, ...fresh.map(loadTrip)])
+    })
+    // Home waits for the list and the trips that are on (unless they were kept).
+    if (!cached) gate(fresh.then(() => details).catch(() => {}))
     return () => { live = false }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  return trips.map(t => <TodayCard key={t.trip.id} trip={t.trip} items={t.items || []} places={t.places || []} />)
+  return active.filter(id => details[id]).map(id => {
+    const t = details[id]
+    return <TodayCard key={id} trip={t.trip} items={t.items || []} places={t.places || []} />
+  })
 }
 
 function TodayCard({ trip, items, places }) {

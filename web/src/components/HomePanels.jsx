@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import { List, ListRow } from './List/List.jsx'
-import client from '../api/client'
 import { formatCurrency } from '../utils/currency.js'
 import { timeAgo } from '../utils/time.js'
 import { today, daysBetween, formatDateRange } from '../utils/trip.js'
 import { isActive } from './TodayTrip.jsx'
 import { activityLink, activityVerb, isTripActivity } from '../utils/activity.js'
 import { useGate } from '../utils/pageGate.jsx'
+import { swrOne } from '../utils/cache.js'
 
 const RECENT = 5
 const TOP_CATEGORIES = 3
@@ -22,9 +22,16 @@ export default function HomePanels() {
   const gate = useGate() // Home shows once these are in too (utils/pageGate.jsx)
 
   useEffect(() => {
-    gate(client.get('/dash/insights').then(r => setMonthly(r.data.monthly || [])).catch(() => {}))
-    gate(client.get('/trips').then(r => setTrips(r.data.trips || [])).catch(() => {}))
-    gate(client.get('/dash/activity').then(r => setActivity(r.data.activities || [])).catch(() => {}))
+    // Each shows its last state at once (utils/cache.js); Home waits only for what wasn't kept.
+    for (const [url, apply] of [
+      ['/dash/insights', r => setMonthly(r.data.monthly || [])],
+      ['/trips', r => setTrips(r.data.trips || [])],
+      ['/dash/activity', r => setActivity(r.data.activities || [])],
+    ]) {
+      const { cached, fresh } = swrOne(url, apply)
+      const done = fresh.catch(() => {})
+      if (!cached) gate(done)
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 

@@ -66,6 +66,7 @@ export default function ExpenseFormPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const wide = useMediaQuery('(min-width: 768px)') // the header's own breakpoint
+  const mouse = useMediaQuery('(hover: hover) and (pointer: fine)') // a real keyboard, most likely
   const [error, setError] = useState('')
   // The amount an edited expense was loaded with: filling it in is not a
   // change by the user and must not re-split the loaded shares.
@@ -276,6 +277,14 @@ export default function ExpenseFormPage() {
                   value={form.description}
                   onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
                   placeholder="What was this for?"
+                  // "Done", not "Next": a phone's Next only goes to the next typing
+                  // field, so it skipped the pickers below (category, date) and
+                  // jumped to the shares. Done closes the keyboard instead.
+                  enterKeyHint="done"
+                  // On a touch screen Done only closes the keyboard: it must not
+                  // submit the expense before the category and the rest are set.
+                  // With a mouse and keyboard Enter saves, as forms do there.
+                  onKeyDown={e => { if (e.key === 'Enter' && !mouse) { e.preventDefault(); e.currentTarget.blur() } }}
                   required
                 />
               </Field>

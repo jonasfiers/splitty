@@ -52,6 +52,9 @@ export default function Picker({
         ref={buttonRef}
         type="button"
         id={id}
+        // In the Tab order like the <select> it replaces (Safari and Firefox on a
+        // Mac otherwise skip buttons: macOS's keyboard-navigation setting).
+        tabIndex={0}
         className={variant === 'chip' ? `chip picker-chip-btn${value ? ' active' : ''}` : 'picker-field-btn'}
         onClick={() => setOpen(true)}
         disabled={disabled}

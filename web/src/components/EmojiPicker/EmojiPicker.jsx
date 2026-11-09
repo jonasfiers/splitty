@@ -26,6 +26,7 @@ function EmojiPicker({ value, onChange, id }) {
             <button
                 type="button"
                 id={id}
+                tabIndex={0} // in the Tab order like a field (Macs otherwise skip buttons)
                 onClick={() => setOpen(s => !s)}
                 aria-label={value ? `Icon: ${value}` : 'Pick an icon'}
                 style={{ fontSize: 22, width: 44, height: 44, border: `1px ${value ? 'solid' : 'dashed'} var(--border)`, borderRadius: 'var(--r-md)', background: 'var(--surface)', color: 'var(--text-2)' }}

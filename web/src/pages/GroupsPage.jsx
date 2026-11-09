@@ -17,6 +17,7 @@ import Field from '../components/Field/Field.jsx'
 import Picker from '../components/Picker/Picker.jsx'
 import EmptyState from '../components/EmptyState/EmptyState.jsx'
 import { PageGate } from '../utils/pageGate.jsx'
+import { swr } from '../utils/cache.js'
 
 export default function GroupsPage() {
   const navigate = useNavigate()
@@ -35,9 +36,9 @@ export default function GroupsPage() {
   const [attempt, setAttempt] = useState(0)
   const retry = useCallback(() => { setLoadError(null); setLoading(true); setAttempt(n => n + 1) }, [])
 
+  // The last state at once, then fresh (utils/cache.js); "Try again" asks the server only.
   useEffect(() => {
-    Promise.all([client.get('/dash/groups'), client.get('/currencies'), client.get('/dash/balance')])
-      .then(([gr, cr,bal]) => {
+    const { cached, fresh } = swr([['/dash/groups'], ['/currencies'], ['/dash/balance']], ([gr, cr, bal]) => {
         setGroups((gr.data.groups || []).sort((a, b) => (b.lastActivity ?? 0) - (a.lastActivity ?? 0)))
         const curs = cr.data.currencies || []
         setCurrencies(curs)
@@ -46,8 +47,10 @@ export default function GroupsPage() {
           balanceOwed: Number(bal.data.balanceOwed ?? 0),
           balanceLent: Number(bal.data.balanceLent ?? 0),
         })
-      })
-      .catch(err => setLoadError(err))
+    }, { fresh: attempt > 0 })
+    if (cached) setLoading(false)
+    fresh
+      .catch(err => { if (!cached) setLoadError(err) })
       .finally(() => setLoading(false))
   }, [attempt])
 
