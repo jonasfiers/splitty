@@ -33,7 +33,8 @@ export default function LoadFailed({ error, what, onRetry, docs = true }) {
 
   return (
     <div className="empty-state load-failed" role="alert">
-      <img src="/cat-empty.svg" alt="" />
+      {/* Not the empty-bowl cat: nothing is missing, it just could not be fetched. */}
+      <img src={noConnection ? '/cat-offline.svg' : '/cat-error.svg'} alt="" />
       <p className="empty-state-title">{noConnection ? 'No connection' : `Couldn’t load ${what}`}</p>
       <p className="empty-state-sub">
         {noConnection

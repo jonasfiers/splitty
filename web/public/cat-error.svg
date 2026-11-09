@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" fill="none">
+  <!-- Something broke: the cat sits by the cup it just knocked over. -->
+  <ellipse cx="80" cy="138" rx="56" ry="8" fill="#8B6F5A" opacity=".18"/>
+  <!-- tail, behind the body -->
+  <path d="M42 120 Q22 118 24 100 Q26 88 36 92" stroke="#E09415" stroke-width="8" fill="none" stroke-linecap="round"/>
+  <!-- body -->
+  <ellipse cx="58" cy="108" rx="24" ry="26" fill="#F5A623"/>
+  <!-- head, tilted a little toward the bowl -->
+  <g transform="rotate(10 62 70)">
+    <polygon points="44,58 47,40 58,53" fill="#F5A623"/>
+    <polygon points="68,53 79,40 82,58" fill="#F5A623"/>
+    <polygon points="47,56 49,45 56,53" fill="#F07167"/>
+    <polygon points="70,53 77,45 79,56" fill="#F07167"/>
+    <circle cx="63" cy="68" r="21" fill="#F5A623"/>
+    <!-- eyes open, looking down into the bowl -->
+    <ellipse cx="56" cy="68" rx="4.2" ry="4.6" fill="#fff"/>
+    <ellipse cx="70" cy="68" rx="4.2" ry="4.6" fill="#fff"/>
+    <circle cx="57.6" cy="70" r="2.8" fill="#2C1A0E"/>
+    <circle cx="71.6" cy="70" r="2.8" fill="#2C1A0E"/>
+    <ellipse cx="63" cy="76" rx="2" ry="1.4" fill="#F07167"/>
+    <!-- a small, unsure mouth -->
+    <path d="M59.5 81 Q63 78.5 66.5 81" stroke="#2C1A0E" stroke-width="1.4" fill="none" stroke-linecap="round"/>
+    <line x1="43" y1="74" x2="54" y2="76" stroke="#2C1A0E" stroke-width="0.8" opacity="0.4"/>
+    <line x1="43" y1="78" x2="54" y2="78" stroke="#2C1A0E" stroke-width="0.8" opacity="0.4"/>
+    <line x1="72" y1="76" x2="83" y2="74" stroke="#2C1A0E" stroke-width="0.8" opacity="0.4"/>
+    <line x1="72" y1="78" x2="83" y2="78" stroke="#2C1A0E" stroke-width="0.8" opacity="0.4"/>
+  </g>
+  <!-- front paws -->
+  <ellipse cx="50" cy="132" rx="8" ry="6" fill="#E09415"/>
+  <ellipse cx="68" cy="132" rx="8" ry="6" fill="#E09415"/>
+
+
+  <!-- spill -->
+  <path d="M96 137 Q104 128 118 132 Q134 128 140 136 Q130 141 112 140 Q100 141 96 137 Z" fill="#9FC5E8" opacity=".75"/>
+  <!-- the cup on its side -->
+  <g transform="rotate(-78 112 118)">
+    <path d="M100 104 L104 130 Q112 134 120 130 L124 104 Z" fill="#E8603A"/>
+    <ellipse cx="112" cy="104" rx="12" ry="4" fill="#F07452"/>
+    <ellipse cx="112" cy="104.4" rx="9" ry="2.6" fill="#C94D2C"/>
+    <path d="M124 110 Q132 112 130 120 Q128 126 122 124" stroke="#E8603A" stroke-width="3" fill="none" stroke-linecap="round"/>
+  </g>
+  <!-- oops -->
+  <text x="128" y="96" font-family="Plus Jakarta Sans, system-ui, sans-serif" font-size="16" font-weight="700" fill="#B9A595" text-anchor="middle">!</text>
+</svg>

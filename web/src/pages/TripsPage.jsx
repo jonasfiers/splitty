@@ -7,11 +7,13 @@ import Loading from '../components/Loading.jsx'
 import TripList, { TripCards } from '../components/TripForm/TripList.jsx'
 import { useMediaQuery } from '../utils/useMediaQuery.js'
 import TripFormSheet from '../components/TripForm/TripFormSheet.jsx'
-import { today } from '../utils/trip.js'
+import { today, formatDateRange } from '../utils/trip.js'
+import { List, ListRow } from '../components/List/List.jsx'
 import TabHeader from '../components/PageHeader/TabHeader.jsx'
 
 import { useOfflineDocs } from '../utils/useOfflineDocs.js'
 import EmptyState from '../components/EmptyState/EmptyState.jsx'
+import NextTrip from '../components/TripForm/NextTrip.jsx'
 
 export default function TripsPage() {
   const offline = useOfflineDocs()
@@ -40,26 +42,24 @@ export default function TripsPage() {
 
   const now = today()
   const upcoming = trips.filter(t => t.endDate >= now)
+  // The one that is on, or the soonest: shown large, with what comes first.
+  const [nextTrip, ...later] = upcoming
   // Most recent first: the trip you just came back from is the one you still open.
   const past = trips.filter(t => t.endDate < now).reverse()
 
   return (
     <>
-      <TabHeader title="Trips" />
-
-      {/* Before the error on purpose: offline, this is what still works. */}
-      {offline?.length > 0 && (
-        <Link to="/offline-documents" className="offline-docs-link">
-          <span className="offline-docs-link-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24"><polyline points="7.5 10 10.5 13 16.5 7" /><path d="M4 15v3a2 2 0 002 2h12a2 2 0 002-2v-3" /></svg>
-          </span>
-          <span>
-            <strong>Offline documents</strong>
-            <span className="offline-docs-link-sub">{offline.length} on this device · open without a connection</span>
-          </span>
-          <span className="offline-docs-link-chevron" aria-hidden="true">›</span>
-        </Link>
-      )}
+      {/* Offline documents: a plain link by the title, still the first thing
+          on the page (before the error on purpose: offline, this is what works). */}
+      <TabHeader
+        title="Trips"
+        aside={offline?.length > 0 && (
+          <Link to="/offline-documents" className="offline-link">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="7.5 10 10.5 13 16.5 7" /><path d="M4 15v3a2 2 0 002 2h12a2 2 0 002-2v-3" /></svg>
+            {offline.length} offline document{offline.length !== 1 ? 's' : ''}
+          </Link>
+        )}
+      />
 
       {error && <LoadFailed error={error} what="your trips" onRetry={retry} docs={false} />}
       {/* Below the offline documents: they must not wait for the trips. */}
@@ -73,15 +73,27 @@ export default function TripsPage() {
         </EmptyState>
       )}
 
-      {upcoming.length > 0 && <>
-        <div className="section-label">Upcoming</div>
-        {cards ? <TripCards trips={upcoming} /> : <TripList trips={upcoming} showGroup />}
+      {nextTrip && <NextTrip trip={nextTrip} />}
+
+      {later.length > 0 && <>
+        <div className="section-label">Later</div>
+        {cards ? <TripCards trips={later} /> : <TripList trips={later} showGroup />}
       </>}
 
-      {past.length > 0 && <>
-        <div className="section-label">Past</div>
-        {cards ? <TripCards trips={past} past /> : <TripList trips={past} showGroup />}
-      </>}
+      {/* For looking back: plain rows, not cards. */}
+      {past.length > 0 && <List label="Past" className="trips-past">
+        {past.map(t => (
+          <ListRow
+            key={t.id}
+            to={`/trips/${t.id}`}
+            icon={t.icon || '🧳'}
+            title={t.title}
+            meta={<>{formatDateRange(t.startDate, t.endDate)}{t.groupTitle ? ` · ${t.groupTitle}` : ''}</>}
+            value={`${t.itemCount} item${t.itemCount !== 1 ? 's' : ''}`}
+            chevron
+          />
+        ))}
+      </List>}
 
       {groups.length > 0 && <FabButton onClick={() => setShowNew(true)} label="New trip" />}
 

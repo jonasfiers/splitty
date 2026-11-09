@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" fill="none">
+  <!-- No connection: the cat looks up at a crossed-out wifi in a thought bubble. -->
+  <ellipse cx="80" cy="138" rx="56" ry="8" fill="#8B6F5A" opacity=".18"/>
+  <!-- tail, behind the body -->
+  <path d="M42 120 Q22 118 24 100 Q26 88 36 92" stroke="#E09415" stroke-width="8" fill="none" stroke-linecap="round"/>
+  <!-- body -->
+  <ellipse cx="58" cy="108" rx="24" ry="26" fill="#F5A623"/>
+  <!-- head, tilted a little toward the bowl -->
+  <g transform="rotate(-8 62 70)">
+    <polygon points="44,58 47,40 58,53" fill="#F5A623"/>
+    <polygon points="68,53 79,40 82,58" fill="#F5A623"/>
+    <polygon points="47,56 49,45 56,53" fill="#F07167"/>
+    <polygon points="70,53 77,45 79,56" fill="#F07167"/>
+    <circle cx="63" cy="68" r="21" fill="#F5A623"/>
+    <!-- eyes open, looking down into the bowl -->
+    <ellipse cx="56" cy="68" rx="4.2" ry="4.6" fill="#fff"/>
+    <ellipse cx="70" cy="68" rx="4.2" ry="4.6" fill="#fff"/>
+    <circle cx="57.6" cy="66.2" r="2.8" fill="#2C1A0E"/>
+    <circle cx="71.6" cy="66.2" r="2.8" fill="#2C1A0E"/>
+    <ellipse cx="63" cy="76" rx="2" ry="1.4" fill="#F07167"/>
+    <!-- a small, unsure mouth -->
+    <ellipse cx="63" cy="80.6" rx="1.6" ry="1.9" fill="#2C1A0E" opacity=".8"/>
+    <line x1="43" y1="74" x2="54" y2="76" stroke="#2C1A0E" stroke-width="0.8" opacity="0.4"/>
+    <line x1="43" y1="78" x2="54" y2="78" stroke="#2C1A0E" stroke-width="0.8" opacity="0.4"/>
+    <line x1="72" y1="76" x2="83" y2="74" stroke="#2C1A0E" stroke-width="0.8" opacity="0.4"/>
+    <line x1="72" y1="78" x2="83" y2="78" stroke="#2C1A0E" stroke-width="0.8" opacity="0.4"/>
+  </g>
+  <!-- front paws -->
+  <ellipse cx="50" cy="132" rx="8" ry="6" fill="#E09415"/>
+  <ellipse cx="68" cy="132" rx="8" ry="6" fill="#E09415"/>
+
+
+  <!-- thought bubble -->
+  <circle cx="92" cy="46" r="3" fill="#E8DDD4"/>
+  <circle cx="100" cy="36" r="4.5" fill="#E8DDD4"/>
+  <ellipse cx="122" cy="22" rx="26" ry="19" fill="#E8DDD4"/>
+  <!-- wifi, crossed out -->
+  <g stroke="#8B7B6B" stroke-width="3.2" stroke-linecap="round" fill="none">
+    <path d="M108 21 Q122 9 136 21"/>
+    <path d="M113 26 Q122 18 131 26"/>
+    <path d="M118 31 Q122 28 126 31"/>
+  </g>
+  <circle cx="122" cy="35" r="2" fill="#8B7B6B"/>
+  <line x1="110" y1="10" x2="134" y2="37" stroke="#E8603A" stroke-width="3.4" stroke-linecap="round"/>
+</svg>

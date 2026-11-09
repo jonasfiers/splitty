@@ -1439,7 +1439,7 @@ body {
 /* Trips overview from 768px: cards in a grid (3 across from 1180px). */
 .trip-cards {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: 12px;
   margin-bottom: 20px;
 }
@@ -2592,21 +2592,6 @@ a.act-row { color: inherit; text-decoration: none; }
 }
 
 /* Trips page: the way to the documents kept on this device (OfflineDocumentsPage). */
-.offline-docs-link {
-  display: flex; align-items: center; gap: 12px;
-  margin-bottom: 16px; padding: 12px 14px;
-  border: 1px solid var(--border); border-radius: var(--r-lg);
-  background: var(--surface); color: var(--text); text-decoration: none;
-}
-.offline-docs-link strong { display: block; font-size: 15px; }
-.offline-docs-link-sub { display: block; font-size: 12px; color: var(--text-3); }
-.offline-docs-link-icon {
-  display: grid; place-items: center; flex: none;
-  width: 40px; height: 40px; border-radius: var(--r-md);
-  background: var(--accent-light); color: var(--accent-text);
-}
-.offline-docs-link-icon svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-.offline-docs-link-chevron { margin-left: auto; font-size: 22px; color: var(--text-3); }
 .offline-docs-trip { margin-top: 20px; }
 .file-viewer-drawing { padding: 24px 0; text-align: center; font-size: 14px; color: var(--text-3); }
 
@@ -2875,3 +2860,46 @@ a.trip-chip:hover { border-color: var(--accent); }
 .sheet.picker-sheet-tall { height: calc(100dvh - 48px); }
 @media (max-width: 767px) { .sheet.picker-sheet-tall { height: calc(100dvh - 24px); } }
 @media (min-width: 768px) { .sheet.picker-sheet-tall { height: min(640px, calc(100dvh - 48px)); } }
+
+/* Trips page: offline documents as a plain link by the title */
+.offline-link {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 44px;
+  font-size: 14px; font-weight: 600; color: var(--accent-text); text-decoration: none; white-space: nowrap;
+}
+.offline-link svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+/* Trips page: the trip that is on, or next (NextTrip) */
+.next-trip {
+  display: block; margin-bottom: 24px; padding: 18px 20px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg);
+  box-shadow: var(--shadow-sm); color: var(--text); text-decoration: none;
+  transition: border-color .15s, box-shadow .15s;
+}
+.next-trip:hover { border-color: var(--border-strong); box-shadow: var(--shadow-md); }
+.next-trip-head { display: flex; align-items: center; gap: 14px; }
+.next-trip-title { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.next-trip-label { font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--accent-text); }
+.next-trip-name { font-size: 19px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.next-trip-dates { font-size: 13px; color: var(--text-2); }
+.next-trip-items { list-style: none; margin: 14px 0 0; padding: 12px 0 0; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 8px; }
+.next-trip-item { display: grid; grid-template-columns: 92px 52px 24px minmax(0, 1fr); align-items: baseline; gap: 8px; font-size: 14px; }
+.next-trip-day { font-size: 13px; font-weight: 600; color: var(--text-2); }
+.next-trip-time { font-variant-numeric: tabular-nums; color: var(--text-2); }
+.next-trip-icon { text-align: center; }
+.next-trip-what { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.next-trip-meta, .next-trip-phase { font-weight: 400; color: var(--text-3); }
+.next-trip-foot { display: flex; justify-content: space-between; gap: 12px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border); font-size: 13px; color: var(--text-2); }
+.next-trip-open { font-weight: 600; color: var(--accent-text); white-space: nowrap; }
+/* Phones: two entries, the day above them rather than in a column */
+@media (max-width: 600px) {
+  .next-trip { padding: 16px; }
+  .next-trip-item:nth-child(n+3) { display: none; }
+  .next-trip-item { grid-template-columns: 44px 22px minmax(0, 1fr); }
+  .next-trip-day { grid-column: 1 / -1; }
+  .next-trip-day:empty { display: none; }
+  .next-trip-open { display: none; }
+  .next-trip-meta { display: none; }
+  .next-trip-group { display: block; }
+  .next-trip-sep { display: none; }
+}
+.trips-past { margin-top: 8px; }
