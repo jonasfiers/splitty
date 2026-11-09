@@ -2,7 +2,7 @@ import { useRef } from 'react'
 import { NumericFormat} from 'react-number-format'
 import './CurrencyInput.css'
 
-function CurrencyInput({ iso = 'EUR', value, onChange, required }) {
+function CurrencyInput({ iso = 'EUR', value, onChange, required, autoFocus }) {
     const inputRef = useRef(null)
     const formatter = new Intl.NumberFormat('en', { style: 'currency', currency: iso })
     const symbol = formatter.formatToParts(0).find(p => p.type === 'currency')?.value
@@ -38,6 +38,7 @@ function CurrencyInput({ iso = 'EUR', value, onChange, required }) {
                 }, 0)
             }}
             required={required}
+            autoFocus={autoFocus}
             getInputRef={el => { inputRef.current = el }}
         />
     )

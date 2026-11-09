@@ -19,7 +19,8 @@ import './PageHeader.css'
 //          link (forms, where "back" is not a place in the hierarchy)
 // title:   node shown as the title        (may include an emoji/flag)
 // name:    plain text name                for the breadcrumb and the bar
-// actions: [{ label, onClick, primary?, danger? }]
+// actions: [{ label, onClick, primary?, danger?, form?, disabled? }]
+//          form: the id of a form the primary button submits (Save in the bar)
 //          the first `primary` one is the button; the rest go in the menu
 // children: the line(s) under the title (dates, counts...)
 // compact: no large title (the page shows its own, e.g. in a card); the bar
@@ -75,7 +76,7 @@ export default function PageHeader({ crumbs, back: plainBack, title, name, actio
             {aside}
             {actions.length > 0 && (
               <div className="ph-actions">
-                {primary && <button type="button" className="btn btn-ghost ph-btn" onClick={primary.onClick}>{primary.label}</button>}
+                {primary && <button type={primary.form ? 'submit' : 'button'} form={primary.form} disabled={primary.disabled} className="btn btn-ghost ph-btn" onClick={primary.onClick}>{primary.label}</button>}
                 <MoreMenu items={rest} />
               </div>
             )}
@@ -94,7 +95,7 @@ export default function PageHeader({ crumbs, back: plainBack, title, name, actio
         {backLink}
         <span className="ph-bar-name" aria-hidden={!barTitled}>{name}</span>
         <div className="ph-bar-actions">
-          {primary && <button type="button" className="ph-bar-btn" onClick={primary.onClick}>{primary.label}</button>}
+          {primary && <button type={primary.form ? 'submit' : 'button'} form={primary.form} disabled={primary.disabled} className="ph-bar-btn" onClick={primary.onClick}>{primary.label}</button>}
           <MoreMenu items={rest} />
         </div>
       </div>

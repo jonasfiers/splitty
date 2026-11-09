@@ -7,6 +7,7 @@ import PageHeader from '../components/PageHeader/PageHeader.jsx'
 import { leaveTo } from '../utils/history.js'
 import BackLink from '../components/BackLink.jsx'
 import { KINDS, TRANSPORT_MODES, dayOf, timeOf } from '../utils/trip.js'
+import { useMediaQuery } from '../utils/useMediaQuery.js'
 
 const LABELS = {
   transport: { start: 'Departure', end: 'Arrival', title: 'Title', titleHint: 'Leave empty to use the route' },
@@ -40,6 +41,7 @@ export default function TripItemFormPage() {
   const [places, setPlaces] = useState([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const wide = useMediaQuery('(min-width: 768px)') // the header's own breakpoint
   const [error, setError] = useState('')
   const [missing, setMissing] = useState(false)
 
@@ -140,16 +142,35 @@ export default function TripItemFormPage() {
   if (missing) return <><PageHeader compact crumbs={[{ to: '/trips', label: 'Trips' }]} name="Trip" /><div className="empty-state"><p className="empty-state-title">Trip not found.</p></div></>
 
   const labels = LABELS[kind]
+  const titleField = (
+    <div className="form-group">
+      <label>{labels.title}{kind === 'transport' && <> <span className="label-optional">optional</span></>}</label>
+      <input
+        value={form.title}
+        onChange={e => set({ title: e.target.value })}
+        placeholder={labels.titleHint}
+        maxLength={160}
+        required={kind !== 'transport'}
+      />
+    </div>
+  )
   const formTitle = `${isEdit ? 'Edit' : 'New'} ${(kind === 'transport' && form.mode !== 'other'
     ? TRANSPORT_MODES.find(m => m.value === form.mode).label
     : KINDS[kind].label).toLowerCase()}`
 
   return (
     <>
-      <PageHeader back={{ to: backPath }} title={formTitle} name={formTitle} />
+      <PageHeader
+        back={{ to: backPath }}
+        title={formTitle}
+        name={formTitle}
+        // On phones Save sits in the bar (as on the expense form).
+        actions={wide ? [] : [{ label: saving ? 'Saving…' : (isEdit ? 'Save' : 'Add'), form: 'trip-item-form', disabled: saving, primary: true }]}
+      />
 
       <div className="card" style={{ maxWidth: 560 }}>
-        <form onSubmit={handleSubmit}>
+        <form id="trip-item-form" onSubmit={handleSubmit}>
+          {error && <p className="error">{error}</p>}
           {kind === 'transport' && (
             <div className="form-group">
               <label>By</label>
@@ -176,36 +197,15 @@ export default function TripItemFormPage() {
             </>
           ) : null}
 
-          <div className="form-group">
-            <label>{labels.title}</label>
-            <input
-              value={form.title}
-              onChange={e => set({ title: e.target.value })}
-              placeholder={labels.titleHint}
-              maxLength={160}
-              required={kind !== 'transport'}
-            />
-          </div>
-
-          {kind !== 'transport' && (
+          {/* A stay or activity starts with what and where; a journey with its
+              route and times, its title is optional and comes later. */}
+          {kind !== 'transport' && <>
+            {titleField}
             <div className="form-group">
               <label>Where</label>
               <PlacePicker value={form.place} onChange={place => set({ place })} places={places} />
             </div>
-          )}
-
-          {kind === 'transport' && (
-            <div className="form-row">
-              <div className="form-group">
-                <label>{form.mode === 'flight' ? 'Airline' : form.mode === 'car' ? 'Rental company' : 'Operator'}</label>
-                <input value={form.carrier} onChange={e => set({ carrier: e.target.value })} maxLength={80} />
-              </div>
-              <div className="form-group">
-                <label>{form.mode === 'flight' ? 'Flight number' : form.mode === 'car' ? 'Car / plate' : 'Number'}</label>
-                <input value={form.number} onChange={e => set({ number: e.target.value })} maxLength={40} />
-              </div>
-            </div>
-          )}
+          </>}
 
           <div className="form-row form-row-compact form-row-when">
             <div className="form-group">
@@ -229,10 +229,25 @@ export default function TripItemFormPage() {
             </div>
           </div>
 
+          {kind === 'transport' && (
+            <div className="form-row">
+              <div className="form-group">
+                <label>{form.mode === 'flight' ? 'Airline' : form.mode === 'car' ? 'Rental company' : 'Operator'}</label>
+                <input value={form.carrier} onChange={e => set({ carrier: e.target.value })} maxLength={80} />
+              </div>
+              <div className="form-group">
+                <label>{form.mode === 'flight' ? 'Flight number' : form.mode === 'car' ? 'Car / plate' : 'Number'}</label>
+                <input value={form.number} onChange={e => set({ number: e.target.value })} maxLength={40} />
+              </div>
+            </div>
+          )}
+
           <div className="form-group">
             <label>Booking reference <span className="label-optional">optional</span></label>
             <input value={form.confirmationRef} onChange={e => set({ confirmationRef: e.target.value })} maxLength={80} autoCapitalize="characters" />
           </div>
+
+          {kind === 'transport' && titleField}
 
           <div className="form-group">
             <label>Link <span className="label-optional">optional</span></label>
@@ -244,14 +259,12 @@ export default function TripItemFormPage() {
             <textarea rows={3} value={form.notes} onChange={e => set({ notes: e.target.value })} maxLength={4000} />
           </div>
 
-          {error && <p className="error">{error}</p>}
-
-          <div className="panel-actions" style={{ marginTop: '0.5rem' }}>
+          {wide && <div className="panel-actions" style={{ marginTop: '0.5rem' }}>
             <BackLink to={backPath} replace className="btn btn-ghost">Cancel</BackLink>
             <button type="submit" className="btn btn-secondary" disabled={saving}>
               {saving ? 'Saving…' : (isEdit ? 'Save changes' : 'Add to trip')}
             </button>
-          </div>
+          </div>}
         </form>
       </div>
     </>

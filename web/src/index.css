@@ -2808,3 +2808,9 @@ a.trip-chip:hover { border-color: var(--accent); }
 .member-sheet-status .owe { color: var(--red-dark); font-family: var(--font-mono); }
 .member-sheet-status .owed { color: var(--green-dark); font-family: var(--font-mono); }
 .member-sheet-email { font-size: 13px; color: var(--text-3); }
+
+/* Expense form: the amount first, and large */
+.expense-amount .currency-input { font-family: var(--font-mono); font-size: 26px; font-weight: 700; padding: 10px 12px; }
+/* Both controls fill the row, so the currency is as tall as the amount, no taller */
+.expense-amount .form-group { display: flex; flex-direction: column; }
+.expense-amount select, .expense-amount .currency-input { flex: 1; }

@@ -89,6 +89,7 @@
   justify-self: end;
   gap: 2px;
 }
+.ph-bar-btn:disabled { opacity: .5; }
 .ph-bar-btn {
   font-size: 15px;
   font-weight: 600;

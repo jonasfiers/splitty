@@ -9,6 +9,7 @@ import { useAuth } from '../context/AuthContext.jsx'
 import { leaveTo } from '../utils/history.js'
 import BackLink from '../components/BackLink.jsx'
 import CategoryPicker from '../components/CategoryPicker/CategoryPicker.jsx'
+import { useMediaQuery } from '../utils/useMediaQuery.js'
 
 function recalculate(shares, total, payerId) {
   const included = shares.filter(s => s.included)
@@ -59,6 +60,7 @@ export default function ExpenseFormPage() {
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const wide = useMediaQuery('(min-width: 768px)') // the header's own breakpoint
   const [error, setError] = useState('')
   // The amount an edited expense was loaded with: filling it in is not a
   // change by the user and must not re-split the loaded shares.
@@ -217,27 +219,25 @@ export default function ExpenseFormPage() {
 
   return (
     <>
-      <PageHeader back={{ to: backPath }} title={isEdit ? 'Edit expense' : 'New expense'} name={isEdit ? 'Edit expense' : 'New expense'} />
+      <PageHeader
+        back={{ to: backPath }}
+        title={isEdit ? 'Edit expense' : 'New expense'}
+        name={isEdit ? 'Edit expense' : 'New expense'}
+        // On phones Save sits in the bar, always in reach above the keyboard;
+        // wider screens keep the buttons under the form.
+        actions={wide ? [] : [{ label: saving ? 'Saving…' : (isEdit ? 'Save' : 'Add'), form: 'expense-form', disabled: saving, primary: true }]}
+      />
 
       {tripItem && !isEdit && (
         <p style={{ fontSize: 13, color: 'var(--text-3)', margin: '-8px 0 12px' }}>For “{tripItem.title}”</p>
       )}
 
       <div className="card expense-form-card">
-        <form onSubmit={handleSubmit}>
+        <form id="expense-form" onSubmit={handleSubmit}>
+          {error && <p className="error">{error}</p>}
           <div className="expense-form-grid">
             <div className="expense-form-fields">
-              <div className="form-group">
-                <label>Description</label>
-                <input
-                  value={form.description}
-                  onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
-                  placeholder="What was this for?"
-                  required
-                />
-              </div>
-
-              <div className="form-row form-row-compact">
+              <div className="form-row form-row-compact expense-amount">
                 <div className="form-group">
                   <label>Currency</label>
                   <select
@@ -265,11 +265,30 @@ export default function ExpenseFormPage() {
                     iso={form.currencyIso}
                     value={form.amount}
                     onChange={val => setForm(f => ({ ...f, amount: val }))}
+                    autoFocus={!isEdit}
                     required
                   />
                 </div>
               </div>
 
+              <div className="form-group">
+                <label>Description</label>
+                <input
+                  value={form.description}
+                  onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
+                  placeholder="What was this for?"
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Category</label>
+                <CategoryPicker
+                  value={form.categoryId || null}
+                  onChange={id => setForm(f => ({ ...f, categoryId: id ?? '' }))}
+                  categories={categories}
+                />
+              </div>
               <div className="form-row">
                 <div className="form-group">
                   <label>Date</label>
@@ -280,17 +299,6 @@ export default function ExpenseFormPage() {
                     required
                   />
                 </div>
-                <div className="form-group">
-                  <label>Category</label>
-                  <CategoryPicker
-                    value={form.categoryId || null}
-                    onChange={id => setForm(f => ({ ...f, categoryId: id ?? '' }))}
-                    categories={categories}
-                  />
-                </div>
-              </div>
-
-              <div className="form-row">
                 <div className="form-group">
                   <label>Paid by</label>
                   <select
@@ -369,14 +377,12 @@ export default function ExpenseFormPage() {
             )}
           </div>
 
-          {error && <p className="error">{error}</p>}
-
-          <div className="panel-actions" style={{ marginTop: '0.5rem' }}>
+          {wide && <div className="panel-actions" style={{ marginTop: '0.5rem' }}>
             <BackLink to={backPath} replace className="btn btn-ghost">Cancel</BackLink>
             <button type="submit" className="btn btn-secondary" disabled={saving}>
               {saving ? 'Saving…' : (isEdit ? 'Save changes' : 'Add expense')}
             </button>
-          </div>
+          </div>}
         </form>
       </div>
     </>
