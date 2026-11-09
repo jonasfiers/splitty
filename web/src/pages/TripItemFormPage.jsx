@@ -9,6 +9,7 @@ import BackLink from '../components/BackLink.jsx'
 import { KINDS, TRANSPORT_MODES, dayOf, timeOf } from '../utils/trip.js'
 import { useMediaQuery } from '../utils/useMediaQuery.js'
 import Field from '../components/Field/Field.jsx'
+import { DateTimePicker } from '../components/DatePicker/DatePicker.jsx'
 
 const LABELS = {
   transport: { start: 'Departure', end: 'Arrival', title: 'Title', titleHint: 'Leave empty to use the route' },
@@ -40,6 +41,7 @@ export default function TripItemFormPage() {
     notes: '',
   })
   const [places, setPlaces] = useState([])
+  const [tripRange, setTripRange] = useState(null) // the trip's dates, tinted in the calendar
   const [items, setItems] = useState([]) // the trip's other items, for the From suggestion
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -53,6 +55,7 @@ export default function TripItemFormPage() {
       ...(isEdit ? [client.get(`/trips/items/${itemId}`)] : []),
     ]).then(([tripRes, itemRes]) => {
       const trip = tripRes.data.trip
+      setTripRange({ start: trip.startDate, end: trip.endDate })
       setPlaces(tripRes.data.places || [])
       setItems(tripRes.data.items || [])
 
@@ -212,21 +215,31 @@ export default function TripItemFormPage() {
             </Field>
           </>}
 
-          <div className="form-row form-row-compact form-row-when">
+          <div className="form-row">
             <Field label={labels.start}>
-              <input type="date" value={form.startDate} onChange={e => set({ startDate: e.target.value })} required />
+              <DateTimePicker
+                title={labels.start}
+                date={form.startDate}
+                time={form.startTime}
+                onChange={({ date, time }) => set({ startDate: date, startTime: time })}
+                range={tripRange}
+                shortcuts={[]}
+                required
+              />
             </Field>
-            <Field label="Time" optional>
-              <input type="time" value={form.startTime} onChange={e => set({ startTime: e.target.value })} />
-            </Field>
-          </div>
-
-          <div className="form-row form-row-compact form-row-when">
             <Field label={labels.end} optional>
-              <input type="date" value={form.endDate} min={form.startDate} onChange={e => set({ endDate: e.target.value })} />
-            </Field>
-            <Field label="Time" optional>
-              <input type="time" value={form.endTime} onChange={e => set({ endTime: e.target.value })} />
+              <DateTimePicker
+                title={labels.end}
+                placeholder="—"
+                date={form.endDate}
+                time={form.endTime}
+                min={form.startDate || undefined}
+                onChange={({ date, time }) => set({ endDate: date, endTime: time })}
+                range={tripRange}
+                shortcuts={[]}
+                optional
+                sameDayLabel
+              />
             </Field>
           </div>
 

@@ -2115,6 +2115,15 @@ a.act-row { color: inherit; text-decoration: none; }
 .confirm-message { font-size: 14px; line-height: 1.5; color: var(--text-2); margin: -8px 0 0; }
 /* Sheet footer (Sheet.jsx SheetActions): main action first, full width */
 .sheet-actions { display: flex; flex-direction: column; gap: 8px; margin-top: 20px; }
+/* In every sheet the buttons stay in view at the bottom while the content
+   scrolls under them (a short screen, the Fold's cover screen, a long form).
+   The negative margins reach over the body's side and bottom padding. */
+.sheet-body .sheet-actions {
+  position: sticky; bottom: -32px; z-index: 1;
+  margin: 8px -20px -32px; padding: 12px 20px 20px;
+  background: var(--surface);
+}
+@media (min-width: 768px) { .sheet-body .sheet-actions { margin: 8px -28px -32px; padding: 12px 28px 20px; } }
 .sheet-actions .btn { width: 100%; }
 .sheet-actions-row { display: flex; gap: 8px; }
 .sheet-actions-row .btn { flex: 1; }
@@ -2766,3 +2775,64 @@ a.trip-chip:hover { border-color: var(--accent); }
 .picker-option-icon { width: 28px; flex-shrink: 0; text-align: center; font-size: 18px; line-height: 1; }
 .picker-check { width: 18px; height: 18px; flex-shrink: 0; fill: none; stroke: var(--accent-text); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; margin-left: auto; }
 .picker-section { font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--text-3); padding: 14px 16px 6px; background: var(--surface-2); border-bottom: 1px solid var(--border); }
+
+/* Date and time pickers (components/DatePicker) */
+.dp-icon { width: 16px; height: 16px; flex-shrink: 0; fill: none; stroke: var(--text-3); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.dp-cal-head { display: flex; align-items: center; gap: 4px; margin-bottom: 8px; }
+.dp-cal-month { flex: 1; font-size: 15px; font-weight: 700; color: var(--text); }
+.dp-nav { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 50%; color: var(--accent-text); }
+.dp-nav:hover { background: var(--surface-2); }
+.dp-nav svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+.dp-grid { display: grid; grid-template-columns: repeat(7, 1fr); row-gap: 2px; }
+.dp-wd { text-align: center; font-size: 11px; font-weight: 700; color: var(--text-3); padding: 4px 0 6px; }
+.dp-day {
+  height: 40px; border-radius: 50%;
+  font: inherit; font-size: 15px; font-variant-numeric: tabular-nums; color: var(--text);
+  display: grid; place-items: center; justify-self: center; width: 40px; max-width: 100%;
+}
+.dp-day:hover:not(:disabled) { background: var(--surface-2); }
+.dp-day:disabled { color: var(--text-3); opacity: .45; cursor: default; }
+.dp-day.in-range { background: var(--accent-light); border-radius: 10px; }
+/* Today: a ringed rounded square, so it never looks like the chosen day (a filled circle). */
+.dp-day.today { box-shadow: inset 0 0 0 1.5px var(--accent); border-radius: 10px; }
+.dp-day.selected { background: var(--accent); color: #fff; font-weight: 700; border-radius: 50%; }
+.dp-shortcuts { display: flex; gap: 8px; margin: 8px 0 0; }
+.dp-time-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 12px 0 6px; padding-top: 12px; border-top: 1px solid var(--border); }
+.dp-time-label { font-size: 13px; font-weight: 600; color: var(--text-2); }
+.segmented.dp-time-toggle { margin: 0; flex: 0 1 220px; }
+.dp-time { position: relative; display: flex; justify-content: center; align-items: center; }
+.dp-wheels { position: relative; display: flex; align-items: center; justify-content: center; gap: 4px; }
+/* The band the chosen row sits in */
+.dp-wheels::before {
+  content: ''; position: absolute; left: 0; right: 0; top: var(--dp-pad); height: var(--dp-row);
+  background: var(--surface-2); border-radius: var(--r-md); pointer-events: none;
+}
+.dp-wheel {
+  position: relative; width: 72px; height: calc(var(--dp-row) * var(--dp-rows));
+  overflow-y: auto; scroll-snap-type: y mandatory; scrollbar-width: none; overscroll-behavior: contain;
+  -webkit-mask-image: linear-gradient(transparent, #000 30%, #000 70%, transparent);
+  mask-image: linear-gradient(transparent, #000 30%, #000 70%, transparent);
+}
+.dp-wheel::-webkit-scrollbar { display: none; }
+.dp-wheel:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: var(--r-md); }
+.dp-wheel-pad { height: var(--dp-pad); }
+.dp-wheel-item {
+  height: var(--dp-row); scroll-snap-align: center;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px; font-variant-numeric: tabular-nums; color: var(--text-3); cursor: pointer;
+}
+.dp-wheel-item.active { color: var(--text); font-weight: 700; }
+.dp-colon { position: relative; font-size: 22px; font-weight: 700; color: var(--text); }
+/* Beside the wheels, not under them: the sheet has to fit a phone screen. */
+.dp-exact { position: absolute; right: 0; top: 50%; transform: translateY(-50%); width: 72px; font-size: 12px; font-weight: 600; line-height: 1.3; color: var(--accent-text); min-height: 44px; }
+/* Wheel size: rows of --dp-row, --dp-rows of them visible, the middle one chosen. */
+.dp-sheet { --dp-row: 36px; --dp-rows: 5; --dp-pad: calc(var(--dp-row) * (var(--dp-rows) - 1) / 2); }
+/* Short screens (the Fold's cover screen, a phone on its side): tighter. */
+@media (max-height: 780px) {
+  .dp-sheet { --dp-rows: 3; }
+  .dp-day { height: 34px; width: 34px; font-size: 14px; }
+  .dp-wd { padding: 2px 0 4px; }
+  .dp-cal-head { margin-bottom: 2px; }
+  .dp-time-head { margin: 8px 0 4px; padding-top: 8px; }
+  .dp-sheet .sheet-title { margin-bottom: 8px; }
+}

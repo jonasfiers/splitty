@@ -4,6 +4,7 @@ import PlacePicker from '../PlacePicker/PlacePicker.jsx'
 import { KINDS, TRANSPORT_MODES, dayOf, timeOf } from '../../utils/trip.js'
 import Sheet, { SheetActions } from '../Sheet/Sheet.jsx'
 import Field from '../Field/Field.jsx'
+import { DateTimePicker } from '../DatePicker/DatePicker.jsx'
 
 const LABELS = {
   transport: { start: 'Departure', end: 'Arrival', title: 'Title', titleHint: 'Leave empty to use the route' },
@@ -118,13 +119,30 @@ function QuickAddSheet({ tripId, kind, start, end, places, onClose, onSaved, onM
         )}
 
         <div className="form-row">
-          <Field label={labels.start} id="quick-add-start">
-            <input id="quick-add-start" type="date" value={form.startDate} onChange={e => set({ startDate: e.target.value })} required />
-            {kind !== 'stay' && <input type="time" value={form.startTime} onChange={e => set({ startTime: e.target.value })} aria-label={`${labels.start} time`} style={{ marginTop: 6 }} />}
+          <Field label={labels.start}>
+            <DateTimePicker
+              title={labels.start}
+              date={form.startDate}
+              time={form.startTime}
+              onChange={({ date, time }) => set({ startDate: date, startTime: time })}
+              withTime={kind !== 'stay'}
+              shortcuts={[]}
+              required
+            />
           </Field>
-          <Field label={labels.end} id="quick-add-end">
-            <input id="quick-add-end" type="date" value={form.endDate} min={form.startDate} onChange={e => set({ endDate: e.target.value })} />
-            {kind !== 'stay' && <input type="time" value={form.endTime} onChange={e => set({ endTime: e.target.value })} aria-label={`${labels.end} time`} style={{ marginTop: 6 }} />}
+          <Field label={labels.end}>
+            <DateTimePicker
+              title={labels.end}
+              placeholder="—"
+              date={form.endDate}
+              time={form.endTime}
+              min={form.startDate || undefined}
+              onChange={({ date, time }) => set({ endDate: date, endTime: time })}
+              withTime={kind !== 'stay'}
+              shortcuts={[]}
+              optional
+              sameDayLabel
+            />
           </Field>
         </div>
 

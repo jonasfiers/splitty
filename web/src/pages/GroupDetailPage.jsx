@@ -24,6 +24,7 @@ import { List, ListRow } from '../components/List/List.jsx'
 import GroupEditSheet from '../components/GroupForm/GroupEditSheet.jsx'
 import Field from '../components/Field/Field.jsx'
 import Picker from '../components/Picker/Picker.jsx'
+import DatePicker from '../components/DatePicker/DatePicker.jsx'
 
 // Keep in sync with the .group-layout breakpoint in index.css.
 const WIDE_QUERY = '(min-width: 1180px)'
@@ -504,17 +505,25 @@ export default function GroupDetailPage() {
               <div className="card" style={{ marginBottom: 12, padding: 16 }}>
                 <div className="form-row" style={{ marginBottom: 12 }}>
                   <Field label="From" style={{ marginBottom: 0 }}>
-                    <input
-                      type="date"
+                    <DatePicker
+                      title="From"
+                      placeholder="Any date"
                       value={filters.startDate}
-                      onChange={e => setFilters(f => ({ ...f, startDate: e.target.value }))}
+                      max={filters.endDate || undefined}
+                      onChange={d => setFilters(f => ({ ...f, startDate: d }))}
+                      optional
+                      clearLabel="Any date"
                     />
                   </Field>
                   <Field label="To" style={{ marginBottom: 0 }}>
-                    <input
-                      type="date"
+                    <DatePicker
+                      title="To"
+                      placeholder="Any date"
                       value={filters.endDate}
-                      onChange={e => setFilters(f => ({ ...f, endDate: e.target.value }))}
+                      min={filters.startDate || undefined}
+                      onChange={d => setFilters(f => ({ ...f, endDate: d }))}
+                      optional
+                      clearLabel="Any date"
                     />
                   </Field>
                 </div>
@@ -784,10 +793,10 @@ export default function GroupDetailPage() {
               />
             </Field>
             <Field label="Date">
-              <input
-                type="date"
+              <DatePicker
                 value={settlementForm.date}
-                onChange={e => setSettlementForm(f => ({ ...f, date: e.target.value }))}
+                onChange={d => setSettlementForm(f => ({ ...f, date: d }))}
+                shortcuts={['today', 'yesterday']}
                 required
               />
             </Field>

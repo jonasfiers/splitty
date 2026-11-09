@@ -5,6 +5,7 @@ import { today } from '../../utils/trip.js'
 import Sheet, { SheetActions } from '../Sheet/Sheet.jsx'
 import Field from '../Field/Field.jsx'
 import Picker from '../Picker/Picker.jsx'
+import DatePicker from '../DatePicker/DatePicker.jsx'
 
 // Create or edit a trip. `groups` is only needed when the group is not fixed.
 function TripFormSheet({ trip, groupId, groups = [], onClose, onSaved }) {
@@ -65,19 +66,23 @@ function TripFormSheet({ trip, groupId, groups = [], onClose, onSaved }) {
 
         <div className="form-row">
           <Field label="From">
-            <input
-              type="date"
+            <DatePicker
+              title="From"
               value={form.startDate}
-              onChange={e => setForm(f => ({ ...f, startDate: e.target.value, endDate: f.endDate < e.target.value ? e.target.value : f.endDate }))}
+              onChange={d => setForm(f => ({ ...f, startDate: d, endDate: f.endDate < d ? d : f.endDate }))}
+              range={form.startDate ? { start: form.startDate, end: form.endDate } : undefined}
+              shortcuts={[]}
               required
             />
           </Field>
           <Field label="Until">
-            <input
-              type="date"
+            <DatePicker
+              title="Until"
               value={form.endDate}
-              min={form.startDate}
-              onChange={e => setForm(f => ({ ...f, endDate: e.target.value }))}
+              min={form.startDate || undefined}
+              onChange={d => setForm(f => ({ ...f, endDate: d }))}
+              range={form.startDate ? { start: form.startDate, end: form.endDate } : undefined}
+              shortcuts={[]}
               required
             />
           </Field>

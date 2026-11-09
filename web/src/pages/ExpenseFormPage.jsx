@@ -13,6 +13,7 @@ import { useMediaQuery } from '../utils/useMediaQuery.js'
 import Field from '../components/Field/Field.jsx'
 import Picker from '../components/Picker/Picker.jsx'
 import { Avatar } from '../components/Avatar.jsx'
+import DatePicker from '../components/DatePicker/DatePicker.jsx'
 
 function recalculate(shares, total, payerId) {
   const included = shares.filter(s => s.included)
@@ -286,10 +287,10 @@ export default function ExpenseFormPage() {
               </Field>
               <div className="form-row">
                 <Field label="Date">
-                  <input
-                    type="date"
+                  <DatePicker
                     value={form.date}
-                    onChange={e => setForm(f => ({ ...f, date: e.target.value }))}
+                    onChange={d => setForm(f => ({ ...f, date: d }))}
+                    shortcuts={['today', 'yesterday']}
                     required
                   />
                 </Field>

@@ -12,6 +12,7 @@ import Segmented from '../components/Segmented/Segmented.jsx'
 import { leaveTo } from '../utils/history.js'
 import { useMediaQuery } from '../utils/useMediaQuery.js'
 import Field from '../components/Field/Field.jsx'
+import { DateTimePicker } from '../components/DatePicker/DatePicker.jsx'
 
 const RouteMap = lazy(() => import('../components/TripRoute/RouteMap.jsx'))
 
@@ -207,14 +208,16 @@ export default function TripRoutePage() {
         <button type="button" className={`chip${form.arriveBy ? ' active' : ''}`} onClick={() => setArriveBy(true)}>Arrive by</button>
       </div>
 
-      <div className="form-row form-row-compact form-row-when">
-        <Field label="Date">
-          <input type="date" value={form.date} onChange={e => set({ date: e.target.value })} required />
-        </Field>
-        <Field label="Time" optional={form.arriveBy ? 'at the destination' : 'at the start'}>
-          <input type="time" value={form.time} onChange={e => set({ time: e.target.value })} required />
-        </Field>
-      </div>
+      <Field label="When" optional={form.arriveBy ? 'at the destination' : 'at the start'}>
+        <DateTimePicker
+          title={form.arriveBy ? 'Arrive by' : 'Depart after'}
+          date={form.date}
+          time={form.time}
+          onChange={({ date, time }) => set({ date, time })}
+          timeOptional={false}
+          required
+        />
+      </Field>
 
       <Field label="By" group>
         <div className="filter-chips filter-chips-field">
