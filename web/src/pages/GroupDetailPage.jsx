@@ -22,6 +22,7 @@ import Segmented from '../components/Segmented/Segmented.jsx'
 import { leaveTo } from '../utils/history.js'
 import { List, ListRow } from '../components/List/List.jsx'
 import GroupEditSheet from '../components/GroupForm/GroupEditSheet.jsx'
+import Field from '../components/Field/Field.jsx'
 
 // Keep in sync with the .group-layout breakpoint in index.css.
 const WIDE_QUERY = '(min-width: 1180px)'
@@ -483,33 +484,29 @@ export default function GroupDetailPage() {
             {showFilters && (
               <div className="card" style={{ marginBottom: 12, padding: 16 }}>
                 <div className="form-row" style={{ marginBottom: 12 }}>
-                  <div className="form-group" style={{ marginBottom: 0 }}>
-                    <label>From</label>
+                  <Field label="From" style={{ marginBottom: 0 }}>
                     <input
                       type="date"
                       value={filters.startDate}
                       onChange={e => setFilters(f => ({ ...f, startDate: e.target.value }))}
                     />
-                  </div>
-                  <div className="form-group" style={{ marginBottom: 0 }}>
-                    <label>To</label>
+                  </Field>
+                  <Field label="To" style={{ marginBottom: 0 }}>
                     <input
                       type="date"
                       value={filters.endDate}
                       onChange={e => setFilters(f => ({ ...f, endDate: e.target.value }))}
                     />
-                  </div>
+                  </Field>
                 </div>
-                <div className="form-group" style={{ marginBottom: 12 }}>
-                  <label>Category</label>
+                <Field label="Category" style={{ marginBottom: 12 }}>
                   <CategoryPicker
                     value={filters.categoryId}
                     onChange={id => setFilters(f => ({ ...f, categoryId: id }))}
                     categories={categories}
                   />
-                </div>
-                <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label>Paid by</label>
+                </Field>
+                <Field label="Paid by" style={{ marginBottom: 0 }}>
                   <select
                     value={filters.paidByUserId}
                     onChange={e => setFilters(f => ({ ...f, paidByUserId: e.target.value }))}
@@ -517,7 +514,7 @@ export default function GroupDetailPage() {
                     <option value="">Anyone</option>
                     {members.map(m => <option key={m.id} value={m.id}>{m.id === currentUser?.id ? 'You' : m.name}</option>)}
                   </select>
-                </div>
+                </Field>
                 {panelFilterCount > 0 && (
                   <button type="button" className="btn btn-ghost btn-sm" style={{ marginTop: 12 }} onClick={clearFilters}>Clear filters</button>
                 )}
@@ -663,8 +660,7 @@ export default function GroupDetailPage() {
               <p style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 16 }}>
                 Move the full balance of {formatCurrency(Math.abs(transferBilateral), balance?.iso)} with {transferTarget?.name} from this group to:
               </p>
-              <div className="form-group">
-                <label>Destination group</label>
+              <Field label="Destination group">
                 <select
                   value={transferGroupId}
                   onChange={e => setTransferGroupId(e.target.value)}
@@ -674,7 +670,7 @@ export default function GroupDetailPage() {
                     <option key={g.id} value={g.id}>{g.icon} {g.title}</option>
                   ))}
                 </select>
-              </div>
+              </Field>
               <SheetActions>
                 <button type="submit" className="btn btn-primary">Transfer balance</button>
                 <button type="button" className="btn btn-ghost" onClick={() => setShowTransfer(false)}>Cancel</button>
@@ -743,8 +739,7 @@ export default function GroupDetailPage() {
       {showSettlement && (
         <Sheet title="Record a settlement" onClose={() => setShowSettlement(false)}>
           <form onSubmit={handleSettlement}>
-            <div className="form-group">
-              <label>Who paid?</label>
+            <Field label="Who paid?">
               <select
                 value={settlementForm.paidByUserId}
                 onChange={e => setSettlementForm(f => ({ ...f, paidByUserId: e.target.value }))}
@@ -753,9 +748,8 @@ export default function GroupDetailPage() {
                 <option value="">Select user…</option>
                 {members.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
               </select>
-            </div>
-            <div className="form-group">
-              <label>Who received?</label>
+            </Field>
+            <Field label="Who received?">
               <select
                 value={settlementForm.receivedByUserId}
                 onChange={e => setSettlementForm(f => ({ ...f, receivedByUserId: e.target.value }))}
@@ -764,25 +758,23 @@ export default function GroupDetailPage() {
                 <option value="">Select user…</option>
                 {members.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
               </select>
-            </div>
-            <div className="form-group">
-              <label>Amount</label>
+            </Field>
+            <Field label="Amount">
               <CurrencyInput
                 iso={group.iso}
                 value={settlementForm.amount}
                 onChange={val => setSettlementForm(f => ({ ...f, amount: val }))}
                 required
               />
-            </div>
-            <div className="form-group">
-              <label>Date</label>
+            </Field>
+            <Field label="Date">
               <input
                 type="date"
                 value={settlementForm.date}
                 onChange={e => setSettlementForm(f => ({ ...f, date: e.target.value }))}
                 required
               />
-            </div>
+            </Field>
             <SheetActions>
               <button type="submit" className="btn btn-primary">Record settlement</button>
               <button type="button" className="btn btn-ghost" onClick={() => setShowSettlement(false)}>Cancel</button>

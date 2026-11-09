@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import client from '../../api/client'
 import EmojiPicker from '../EmojiPicker/EmojiPicker.jsx'
 import Sheet, { SheetActions } from '../Sheet/Sheet.jsx'
+import Field from '../Field/Field.jsx'
 
 // Name, icon and currency of a group. The currency only while nothing has
 // been spent: amounts are stored without one, so changing it later would
@@ -35,10 +36,9 @@ export default function GroupEditSheet({ group, canChangeCurrency, onClose, onSa
       <form onSubmit={save}>
         {error && <p className="error">{error}</p>}
         <div className="form-row form-row-compact">
-          <div className="form-group">
-            <label>Icon</label>
+          <Field label="Icon">
             <EmojiPicker value={form.icon} onChange={icon => setForm(f => ({ ...f, icon }))} />
-          </div>
+          </Field>
           <div className="form-group">
             <label htmlFor="group-edit-title">Group name</label>
             <input

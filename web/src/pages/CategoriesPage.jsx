@@ -5,6 +5,7 @@ import IconCard from '../components/IconCard/IconCard.jsx'
 import Loading from '../components/Loading.jsx'
 import PageHeader from '../components/PageHeader/PageHeader.jsx'
 import { useConfirm } from '../components/Confirm/ConfirmProvider.jsx'
+import Field from '../components/Field/Field.jsx'
 
 export default function CategoriesPage() {
   const confirm = useConfirm()
@@ -87,22 +88,19 @@ export default function CategoriesPage() {
           <h3>New category</h3>
           <form onSubmit={handleCreate}>
             <div className="form-row form-row-compact" style={{ alignItems: 'end' }}>
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label>Icon</label>
+              <Field label="Icon" style={{ marginBottom: 0 }}>
                 <EmojiPicker value={form.icon} onChange={icon => setForm(f => ({ ...f, icon }))} />
-              </div>
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label>Name</label>
+              </Field>
+              <Field label="Name" style={{ marginBottom: 0 }}>
                 <input
                   value={form.name}
                   onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
                   placeholder="e.g. Transport"
                   required
                 />
-              </div>
+              </Field>
             </div>
-            <div className="form-group" style={{ marginTop: 12 }}>
-              <label>Parent category</label>
+            <Field label="Parent category" style={{ marginTop: 12 }}>
               <select
                 value={form.parentId}
                 onChange={e => setForm(f => ({ ...f, parentId: e.target.value }))}
@@ -112,7 +110,7 @@ export default function CategoriesPage() {
                   <option key={c.id} value={c.id}>{c.full_name}</option>
                 ))}
               </select>
-            </div>
+            </Field>
             {error && <p className="error">{error}</p>}
             <div className="panel-actions">
               <button type="button" className="btn btn-ghost" onClick={() => setShowForm(false)}>Cancel</button>
@@ -131,21 +129,18 @@ export default function CategoriesPage() {
               <div key={c.id} className="card" style={{ padding: '16px' }}>
                 <form onSubmit={handleUpdate}>
                   <div className="form-row form-row-compact" style={{ alignItems: 'end' }}>
-                    <div className="form-group" style={{ marginBottom: 0 }}>
-                      <label>Icon</label>
+                    <Field label="Icon" style={{ marginBottom: 0 }}>
                       <EmojiPicker value={editForm.icon} onChange={icon => setEditForm(f => ({ ...f, icon }))} />
-                    </div>
-                    <div className="form-group" style={{ marginBottom: 0 }}>
-                      <label>Name</label>
+                    </Field>
+                    <Field label="Name" style={{ marginBottom: 0 }}>
                       <input
                         value={editForm.name}
                         onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))}
                         required
                       />
-                    </div>
+                    </Field>
                   </div>
-                  <div className="form-group" style={{ marginTop: 12 }}>
-                    <label>Parent category</label>
+                  <Field label="Parent category" style={{ marginTop: 12 }}>
                     <select
                       value={editForm.parentId}
                       onChange={e => setEditForm(f => ({ ...f, parentId: e.target.value }))}
@@ -155,7 +150,7 @@ export default function CategoriesPage() {
                         <option key={cat.id} value={cat.id}>{cat.full_name}</option>
                       ))}
                     </select>
-                  </div>
+                  </Field>
                   {error && <p className="error">{error}</p>}
                   <div className="panel-actions">
                     <button type="button" className="btn btn-ghost btn-sm" onClick={() => setEditId(null)}>Cancel</button>

@@ -10,6 +10,7 @@ import { leaveTo } from '../utils/history.js'
 import BackLink from '../components/BackLink.jsx'
 import CategoryPicker from '../components/CategoryPicker/CategoryPicker.jsx'
 import { useMediaQuery } from '../utils/useMediaQuery.js'
+import Field from '../components/Field/Field.jsx'
 
 function recalculate(shares, total, payerId) {
   const included = shares.filter(s => s.included)
@@ -238,8 +239,7 @@ export default function ExpenseFormPage() {
           <div className="expense-form-grid">
             <div className="expense-form-fields">
               <div className="form-row form-row-compact expense-amount">
-                <div className="form-group">
-                  <label>Currency</label>
+                <Field label="Currency">
                   <select
                     value={form.currencyIso}
                     onChange={e => {
@@ -258,9 +258,8 @@ export default function ExpenseFormPage() {
                       <option key={c.iso} value={c.iso}>{c.symbol} {c.iso}</option>
                     ))}
                   </select>
-                </div>
-                <div className="form-group">
-                  <label>Amount</label>
+                </Field>
+                <Field label="Amount">
                   <CurrencyInput
                     iso={form.currencyIso}
                     value={form.amount}
@@ -268,39 +267,35 @@ export default function ExpenseFormPage() {
                     autoFocus={!isEdit}
                     required
                   />
-                </div>
+                </Field>
               </div>
 
-              <div className="form-group">
-                <label>Description</label>
+              <Field label="Description">
                 <input
                   value={form.description}
                   onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
                   placeholder="What was this for?"
                   required
                 />
-              </div>
+              </Field>
 
-              <div className="form-group">
-                <label>Category</label>
+              <Field label="Category">
                 <CategoryPicker
                   value={form.categoryId || null}
                   onChange={id => setForm(f => ({ ...f, categoryId: id ?? '' }))}
                   categories={categories}
                 />
-              </div>
+              </Field>
               <div className="form-row">
-                <div className="form-group">
-                  <label>Date</label>
+                <Field label="Date">
                   <input
                     type="date"
                     value={form.date}
                     onChange={e => setForm(f => ({ ...f, date: e.target.value }))}
                     required
                   />
-                </div>
-                <div className="form-group">
-                  <label>Paid by</label>
+                </Field>
+                <Field label="Paid by">
                   <select
                     value={form.paidByUserId}
                     onChange={e => setForm(f => ({ ...f, paidByUserId: e.target.value }))}
@@ -311,10 +306,9 @@ export default function ExpenseFormPage() {
                       <option key={u.id} value={u.id}>{u.id === currentUser?.id ? 'Me' : u.name}</option>
                     ))}
                   </select>
-                </div>
+                </Field>
                 {(!groupId || isEdit) && (
-                  <div className="form-group">
-                    <label>Group</label>
+                  <Field label="Group">
                     <select
                       value={form.groupId}
                       onChange={e => setForm(f => ({ ...f, groupId: e.target.value }))}
@@ -325,17 +319,13 @@ export default function ExpenseFormPage() {
                         <option key={g.id} value={g.id}>{g.title}</option>
                       ))}
                     </select>
-                  </div>
+                  </Field>
                 )}
               </div>
             </div>
 
             {shares.length > 0 && (
-              <div className="form-group expense-form-split">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                  <label>Split</label>
-                  <button type="button" className="btn btn-ghost btn-sm" onClick={splitEqually}>Split equally</button>
-                </div>
+              <Field label="Split" group className="expense-form-split" aside={<button type="button" className="btn btn-ghost btn-sm" onClick={splitEqually}>Split equally</button>}>
                 {shares.map((s, i) => {
                   const user = users.find(u => u.id === s.userId)
                   return (
@@ -356,6 +346,7 @@ export default function ExpenseFormPage() {
                             iso={form.currencyIso}
                             value={s.amount}
                             onChange={val => setShares(prev => prev.map((x, j) => j === i ? { ...x, amount: val } : x))}
+                            aria-label={`${user?.name ?? 'Their'} share`}
                             required={s.included}
                         />
                       </div>
@@ -373,7 +364,7 @@ export default function ExpenseFormPage() {
                     </div>
                   ) : null
                 })()}
-              </div>
+              </Field>
             )}
           </div>
 

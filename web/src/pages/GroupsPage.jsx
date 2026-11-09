@@ -13,6 +13,7 @@ import TodayTrip from '../components/TodayTrip.jsx'
 import TabHeader from '../components/PageHeader/TabHeader.jsx'
 import Sheet, { SheetActions } from '../components/Sheet/Sheet.jsx'
 import { List, ListRow } from '../components/List/List.jsx'
+import Field from '../components/Field/Field.jsx'
 
 export default function GroupsPage() {
   const navigate = useNavigate()
@@ -201,13 +202,10 @@ export default function GroupsPage() {
         <Sheet title="New group" onClose={() => setShowNewGroup(false)}>
           <form onSubmit={handleCreate}>
             <div className="form-row form-row-compact">
-              <div className="form-group">
-                  <label>Icon</label>
+              <Field label="Icon">
                 <EmojiPicker value={form.icon} onChange={icon => setForm(f => ({ ...f, icon }))}/>
-              </div>
-              <div className="form-group">
-
-                <label>Group name</label>
+              </Field>
+              <Field label="Group name">
                 <input
                   value={form.title}
                   onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
@@ -215,10 +213,9 @@ export default function GroupsPage() {
                   autoFocus
                   required
                 />
-              </div>
+              </Field>
             </div>
-            <div className="form-group">
-              <label>Currency</label>
+            <Field label="Currency">
               <select
                 value={form.currencyIso}
                 onChange={e => setForm(f => ({ ...f, currencyIso: e.target.value }))}
@@ -228,7 +225,7 @@ export default function GroupsPage() {
                   <option key={c.iso} value={c.iso}>{c.iso}</option>
                 ))}
               </select>
-            </div>
+            </Field>
             {error && <p className="error">{error}</p>}
             <SheetActions>
               <button type="submit" className="btn btn-primary">Create group</button>

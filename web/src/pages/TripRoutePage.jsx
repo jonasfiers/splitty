@@ -11,6 +11,7 @@ import { dayOf, timeOf, today, daysBetween, formatDay } from '../utils/trip.js'
 import Segmented from '../components/Segmented/Segmented.jsx'
 import { leaveTo } from '../utils/history.js'
 import { useMediaQuery } from '../utils/useMediaQuery.js'
+import Field from '../components/Field/Field.jsx'
 
 const RouteMap = lazy(() => import('../components/TripRoute/RouteMap.jsx'))
 
@@ -191,17 +192,15 @@ export default function TripRoutePage() {
 
   const searchForm = (
     <form className="card route-form" onSubmit={handleSearch}>
-      <div className="form-group">
-        <label>From</label>
+      <Field label="From">
         <PlacePicker value={form.from} onChange={from => set({ from })} places={places} placeholder="Station, hotel, address…" />
-      </div>
+      </Field>
       <div className="route-swap-row">
         <button type="button" className="route-swap" onClick={swap} aria-label="Swap from and to">⇅ Swap</button>
       </div>
-      <div className="form-group">
-        <label>To</label>
+      <Field label="To">
         <PlacePicker value={form.to} onChange={to => set({ to })} places={places} placeholder="Station, hotel, address…" />
-      </div>
+      </Field>
 
       <div className="filter-chips" style={{ paddingTop: 0 }}>
         <button type="button" className={`chip${!form.arriveBy ? ' active' : ''}`} onClick={() => setArriveBy(false)}>Depart after</button>
@@ -209,18 +208,15 @@ export default function TripRoutePage() {
       </div>
 
       <div className="form-row form-row-compact form-row-when">
-        <div className="form-group">
-          <label>Date</label>
+        <Field label="Date">
           <input type="date" value={form.date} onChange={e => set({ date: e.target.value })} required />
-        </div>
-        <div className="form-group">
-          <label>Time <span className="label-optional">{form.arriveBy ? 'at the destination' : 'at the start'}</span></label>
+        </Field>
+        <Field label="Time" optional={form.arriveBy ? 'at the destination' : 'at the start'}>
           <input type="time" value={form.time} onChange={e => set({ time: e.target.value })} required />
-        </div>
+        </Field>
       </div>
 
-      <div className="form-group">
-        <label>By</label>
+      <Field label="By" group>
         <div className="filter-chips" style={{ padding: 0 }}>
           {MODES.map(m => (
             <button key={m.value} type="button" className={`chip${form.modes === m.value ? ' active' : ''}`} onClick={() => set({ modes: m.value })}>
@@ -228,7 +224,7 @@ export default function TripRoutePage() {
             </button>
           ))}
         </div>
-      </div>
+      </Field>
 
       {error && <p className="error">{error}</p>}
 

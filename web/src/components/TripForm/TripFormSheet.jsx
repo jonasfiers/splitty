@@ -3,6 +3,7 @@ import client from '../../api/client'
 import EmojiPicker from '../EmojiPicker/EmojiPicker.jsx'
 import { today } from '../../utils/trip.js'
 import Sheet, { SheetActions } from '../Sheet/Sheet.jsx'
+import Field from '../Field/Field.jsx'
 
 // Create or edit a trip. `groups` is only needed when the group is not fixed.
 function TripFormSheet({ trip, groupId, groups = [], onClose, onSaved }) {
@@ -40,11 +41,11 @@ function TripFormSheet({ trip, groupId, groups = [], onClose, onSaved }) {
   return (
     <Sheet title={isEdit ? 'Edit trip' : 'New trip'} onClose={onClose}>
       <form onSubmit={handleSubmit}>
-        <div className="form-group">
-          <label>Name</label>
+        <Field label="Name" id="trip-form-title">
           <div style={{ display: 'flex', gap: 8 }}>
             <EmojiPicker value={form.icon} onChange={icon => setForm(f => ({ ...f, icon }))} />
             <input
+              id="trip-form-title"
               style={{ flex: 1 }}
               value={form.title}
               onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
@@ -53,29 +54,26 @@ function TripFormSheet({ trip, groupId, groups = [], onClose, onSaved }) {
               required
             />
           </div>
-        </div>
+        </Field>
 
         {!isEdit && !groupId && (
-          <div className="form-group">
-            <label>Group</label>
+          <Field label="Group">
             <select value={form.groupId} onChange={e => setForm(f => ({ ...f, groupId: e.target.value }))} required>
               {groups.map(g => <option key={g.id} value={g.id}>{g.icon} {g.title}</option>)}
             </select>
-          </div>
+          </Field>
         )}
 
         <div className="form-row">
-          <div className="form-group">
-            <label>From</label>
+          <Field label="From">
             <input
               type="date"
               value={form.startDate}
               onChange={e => setForm(f => ({ ...f, startDate: e.target.value, endDate: f.endDate < e.target.value ? e.target.value : f.endDate }))}
               required
             />
-          </div>
-          <div className="form-group">
-            <label>Until</label>
+          </Field>
+          <Field label="Until">
             <input
               type="date"
               value={form.endDate}
@@ -83,13 +81,12 @@ function TripFormSheet({ trip, groupId, groups = [], onClose, onSaved }) {
               onChange={e => setForm(f => ({ ...f, endDate: e.target.value }))}
               required
             />
-          </div>
+          </Field>
         </div>
 
-        <div className="form-group">
-          <label>Notes</label>
+        <Field label="Notes">
           <textarea rows={2} value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} maxLength={4000} />
-        </div>
+        </Field>
 
         {error && <p className="error">{error}</p>}
 

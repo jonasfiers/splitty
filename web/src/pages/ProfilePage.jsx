@@ -14,6 +14,7 @@ import TabHeader from '../components/PageHeader/TabHeader.jsx'
 import Sheet, { SheetActions } from '../components/Sheet/Sheet.jsx'
 import { List, ListRow } from '../components/List/List.jsx'
 import { useConfirm } from '../components/Confirm/ConfirmProvider.jsx'
+import Field from '../components/Field/Field.jsx'
 
 export default function ProfilePage() {
   const confirm = useConfirm()
@@ -337,15 +338,12 @@ export default function ProfilePage() {
                 </div>
               </div>
             </div>
-            <div className="form-group">
-              <label>Name</label>
+            <Field label="Name">
               <input value={editForm.name} onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))} required />
-            </div>
-            <div className="form-group">
-              <label>Email</label>
+            </Field>
+            <Field label="Email" hint="A new address only takes effect once you confirm it from that inbox.">
               <input type="email" value={editForm.email} onChange={e => setEditForm(f => ({ ...f, email: e.target.value }))} required />
-              <p className="form-hint">A new address only takes effect once you confirm it from that inbox.</p>
-            </div>
+            </Field>
             {editError && <p className="error">{editError}</p>}
             <SheetActions>
               <button type="submit" className="btn btn-primary" disabled={editSaving}>{editSaving ? 'Saving…' : 'Save'}</button>
@@ -371,18 +369,15 @@ export default function ProfilePage() {
       {showPasswordForm && (
         <Sheet title="Change password" onClose={() => { setShowPasswordForm(false); setPasswordError('') }}>
           <form onSubmit={handleChangePassword}>
-            <div className="form-group">
-              <label>Current password</label>
+            <Field label="Current password">
               <input type="password" autoComplete="current-password" value={passwordForm.currentPassword} onChange={e => setPasswordForm(f => ({ ...f, currentPassword: e.target.value }))} required />
-            </div>
-            <div className="form-group">
-              <label>New password</label>
+            </Field>
+            <Field label="New password">
               <input type="password" autoComplete="new-password" value={passwordForm.newPassword} onChange={e => setPasswordForm(f => ({ ...f, newPassword: e.target.value }))} minLength={8} required />
-            </div>
-            <div className="form-group">
-              <label>Confirm new password</label>
+            </Field>
+            <Field label="Confirm new password">
               <input type="password" autoComplete="new-password" value={passwordForm.confirmPassword} onChange={e => setPasswordForm(f => ({ ...f, confirmPassword: e.target.value }))} required />
-            </div>
+            </Field>
             {passwordError && <p className="error">{passwordError}</p>}
             <SheetActions>
               <button type="submit" className="btn btn-primary" disabled={passwordSaving}>{passwordSaving ? 'Saving…' : 'Change password'}</button>
@@ -451,8 +446,7 @@ function DeleteAccountSheet({ email, userId, onClose, onDeleted }) {
             <p>You can still delete your account; these balances stay in the groups as they are.</p>
           </div>
         )}
-        <div className="form-group">
-          <label>Type your email address to confirm</label>
+        <Field label="Type your email address to confirm">
           <input
             type="email"
             autoComplete="off"
@@ -460,7 +454,7 @@ function DeleteAccountSheet({ email, userId, onClose, onDeleted }) {
             value={typed}
             onChange={e => setTyped(e.target.value)}
           />
-        </div>
+        </Field>
         {error && <p className="error">{error}</p>}
         <SheetActions>
           <button type="submit" className="btn btn-danger" disabled={!matches || busy}>

@@ -5,6 +5,7 @@ import client from '../api/client'
 import CatAvatar from '../components/CatAvatar/CatAvatar'
 
 import { useOfflineDocs } from '../utils/useOfflineDocs.js'
+import Field from '../components/Field/Field.jsx'
 
 export default function LoginPage() {
   const offline = useOfflineDocs()
@@ -88,8 +89,7 @@ export default function LoginPage() {
         <h1>Split<span>ty</span></h1>
         <h2>Sign in to your account</h2>
         <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label>Email</label>
+          <Field label="Email">
             <input
               type="email"
               value={form.email}
@@ -97,12 +97,8 @@ export default function LoginPage() {
               autoComplete="email"
               required
             />
-          </div>
-          <div className="form-group">
-            <label style={{ display: 'flex', justifyContent: 'space-between' }}>
-              Password
-              <Link to="/forgot-password" style={{ fontWeight: 400, fontSize: 12 }}>Forgot password?</Link>
-            </label>
+          </Field>
+          <Field label="Password" aside={<Link to="/forgot-password" className="field-aside-link">Forgot password?</Link>}>
             <input
               type="password"
               value={form.password}
@@ -110,7 +106,7 @@ export default function LoginPage() {
               autoComplete="current-password"
               required
             />
-          </div>
+          </Field>
           {state?.notice && <p className="error" style={{ background: 'var(--accent-light)', color: 'var(--accent-text)', borderColor: 'var(--accent-subtle)' }}>{state.notice}</p>}
           {error && <p className="error">{error}</p>}
           {unverified && (

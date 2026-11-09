@@ -4,7 +4,8 @@ import client from '../../api/client'
 // A place slot on a trip item. The value is null, {id} for a place the trip
 // already has, or {name, address, lat, lon} for a new one — which is only
 // created when the item is saved, so abandoning the form leaves nothing behind.
-function PlacePicker({ value, onChange, places = [], placeholder = 'Search a place or address…' }) {
+// id: for a <Field> label; it goes on whichever control is showing.
+function PlacePicker({ value, onChange, places = [], placeholder = 'Search a place or address…', id }) {
   const [adding, setAdding] = useState(false)
   const [query, setQuery] = useState('')
   const [results, setResults] = useState(null)
@@ -43,11 +44,11 @@ function PlacePicker({ value, onChange, places = [], placeholder = 'Search a pla
       <div className="place-chosen">
         <span className="place-chosen-pin">{shown.lat != null ? '📍' : '◌'}</span>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div className="place-chosen-name">{shown.name}</div>
+          <div className="place-chosen-name" id={id && `${id}-name`}>{shown.name}</div>
           {shown.address && <div className="place-chosen-address">{shown.address}</div>}
           {shown.lat == null && <div className="place-chosen-address">Not on the map</div>}
         </div>
-        <button type="button" className="btn btn-ghost btn-sm" onClick={() => onChange(null)}>Change</button>
+        <button type="button" id={id} aria-labelledby={id ? `${id}-label ${id}-name ${id}` : undefined} className="btn btn-ghost btn-sm" onClick={() => onChange(null)}>Change</button>
       </div>
     )
   }
@@ -55,7 +56,7 @@ function PlacePicker({ value, onChange, places = [], placeholder = 'Search a pla
   return (
     <div className="place-picker">
       {places.length > 0 && !adding && (
-        <select value="" onChange={e => {
+        <select id={id} value="" onChange={e => {
           if (e.target.value === '__new') setAdding(true)
           else if (e.target.value) choose({ id: e.target.value })
         }}>
@@ -69,6 +70,7 @@ function PlacePicker({ value, onChange, places = [], placeholder = 'Search a pla
         <>
           <div className="place-search">
             <input
+              id={places.length === 0 || adding ? id : undefined}
               value={query}
               onChange={e => setQuery(e.target.value)}
               // Enter searches; it must not submit the surrounding item form.

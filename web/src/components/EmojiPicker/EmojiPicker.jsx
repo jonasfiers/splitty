@@ -18,13 +18,14 @@ function EmojiMartPicker({ onEmojiSelect }) {
     return <div ref={ref} />
 }
 
-function EmojiPicker({ value, onChange }) {
+function EmojiPicker({ value, onChange, id }) {
     const [open, setOpen] = useState(false)
 
     return (
         <div style={{ position: 'relative' }}>
             <button
                 type="button"
+                id={id}
                 onClick={() => setOpen(s => !s)}
                 aria-label={value ? `Icon: ${value}` : 'Pick an icon'}
                 style={{ fontSize: 22, width: 44, height: 44, border: `1px ${value ? 'solid' : 'dashed'} var(--border)`, borderRadius: 'var(--r-md)', background: 'var(--surface)', color: 'var(--text-2)' }}

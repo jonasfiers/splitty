@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router'
 import client from '../api/client'
+import Field from '../components/Field/Field.jsx'
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('')
@@ -40,8 +41,7 @@ export default function ForgotPasswordPage() {
           <>
             <h2>Reset your password</h2>
             <form onSubmit={handleSubmit}>
-              <div className="form-group">
-                <label>Email</label>
+              <Field label="Email">
                 <input
                   type="email"
                   value={email}
@@ -49,7 +49,7 @@ export default function ForgotPasswordPage() {
                   autoComplete="email"
                   required
                 />
-              </div>
+              </Field>
               {error && <p className="error">{error}</p>}
               <button className="btn btn-primary" type="submit" disabled={loading}>
                 {loading ? 'Sending…' : 'Send reset link'}

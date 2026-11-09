@@ -3,6 +3,7 @@ import client from '../../api/client'
 import PlacePicker from '../PlacePicker/PlacePicker.jsx'
 import { KINDS, TRANSPORT_MODES, dayOf, timeOf } from '../../utils/trip.js'
 import Sheet, { SheetActions } from '../Sheet/Sheet.jsx'
+import Field from '../Field/Field.jsx'
 
 const LABELS = {
   transport: { start: 'Departure', end: 'Arrival', title: 'Title', titleHint: 'Leave empty to use the route' },
@@ -97,40 +98,34 @@ function QuickAddSheet({ tripId, kind, start, end, places, onClose, onSaved, onM
           </div>
         )}
 
-        <div className="form-group">
-          <label>{labels.title}</label>
+        <Field label={labels.title}>
           <input value={form.title} onChange={e => set({ title: e.target.value })} placeholder={labels.titleHint} autoFocus />
-        </div>
+        </Field>
 
         {kind === 'transport' ? (
           <div className="form-row">
-            <div className="form-group">
-              <label>From</label>
+            <Field label="From">
               <PlacePicker value={form.from} onChange={from => set({ from })} places={places} placeholder="Airport, station…" />
-            </div>
-            <div className="form-group">
-              <label>To</label>
+            </Field>
+            <Field label="To">
               <PlacePicker value={form.to} onChange={to => set({ to })} places={places} placeholder="Airport, station…" />
-            </div>
+            </Field>
           </div>
         ) : (
-          <div className="form-group">
-            <label>Where</label>
+          <Field label="Where">
             <PlacePicker value={form.place} onChange={place => set({ place })} places={places} />
-          </div>
+          </Field>
         )}
 
         <div className="form-row">
-          <div className="form-group">
-            <label>{labels.start}</label>
-            <input type="date" value={form.startDate} onChange={e => set({ startDate: e.target.value })} required />
-            {kind !== 'stay' && <input type="time" value={form.startTime} onChange={e => set({ startTime: e.target.value })} style={{ marginTop: 6 }} />}
-          </div>
-          <div className="form-group">
-            <label>{labels.end}</label>
-            <input type="date" value={form.endDate} min={form.startDate} onChange={e => set({ endDate: e.target.value })} />
-            {kind !== 'stay' && <input type="time" value={form.endTime} onChange={e => set({ endTime: e.target.value })} style={{ marginTop: 6 }} />}
-          </div>
+          <Field label={labels.start} id="quick-add-start">
+            <input id="quick-add-start" type="date" value={form.startDate} onChange={e => set({ startDate: e.target.value })} required />
+            {kind !== 'stay' && <input type="time" value={form.startTime} onChange={e => set({ startTime: e.target.value })} aria-label={`${labels.start} time`} style={{ marginTop: 6 }} />}
+          </Field>
+          <Field label={labels.end} id="quick-add-end">
+            <input id="quick-add-end" type="date" value={form.endDate} min={form.startDate} onChange={e => set({ endDate: e.target.value })} />
+            {kind !== 'stay' && <input type="time" value={form.endTime} onChange={e => set({ endTime: e.target.value })} aria-label={`${labels.end} time`} style={{ marginTop: 6 }} />}
+          </Field>
         </div>
 
         {error && <p className="error">{error}</p>}

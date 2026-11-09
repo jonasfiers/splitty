@@ -4,6 +4,7 @@ import IconCard from '../components/IconCard/IconCard.jsx'
 import Loading from '../components/Loading.jsx'
 import PageHeader from '../components/PageHeader/PageHeader.jsx'
 import { useConfirm } from '../components/Confirm/ConfirmProvider.jsx'
+import Field from '../components/Field/Field.jsx'
 
 function getCurrencyInfo(iso) {
   try {
@@ -78,8 +79,7 @@ export default function CurrenciesPage() {
         <div className="panel">
           <h3>New currency</h3>
           <form onSubmit={handleCreate}>
-            <div className="form-group">
-              <label>ISO code</label>
+            <Field label="ISO code">
               <input
                 value={iso}
                 onChange={e => setIso(e.target.value.toUpperCase())}
@@ -87,7 +87,7 @@ export default function CurrenciesPage() {
                 maxLength={3}
                 required
               />
-            </div>
+            </Field>
             {error && <p className="error">{error}</p>}
             <div className="panel-actions">
               <button type="button" className="btn btn-ghost" onClick={() => setShowForm(false)}>Cancel</button>

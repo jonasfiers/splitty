@@ -1,6 +1,7 @@
 import { useState } from 'react'
 
-export default function CategoryPicker({ value, onChange, categories, nullable = true }) {
+// id: for a <Field> label; the trigger is then read as "Category, Eat out".
+export default function CategoryPicker({ value, onChange, categories, nullable = true, id }) {
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
 
@@ -18,7 +19,7 @@ export default function CategoryPicker({ value, onChange, categories, nullable =
 
   return (
     <div style={{ position: 'relative' }}>
-      <button type="button" className="cat-picker-trigger" onClick={() => setOpen(p => !p)}>
+      <button type="button" id={id} aria-labelledby={id ? `${id}-label ${id}` : undefined} aria-expanded={open} className="cat-picker-trigger" onClick={() => setOpen(p => !p)}>
         {selected ? (
           <><span className="cat-picker-option-icon">{selected.icon}</span><span style={{ flex: 1, textAlign: 'left' }}>{selected.full_name}</span></>
         ) : (

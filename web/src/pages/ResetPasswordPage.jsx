@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router'
 import client from '../api/client'
+import Field from '../components/Field/Field.jsx'
 
 export default function ResetPasswordPage() {
   const [searchParams] = useSearchParams()
@@ -45,8 +46,7 @@ export default function ResetPasswordPage() {
         <h1>Split<span>ty</span></h1>
         <h2>Choose a new password</h2>
         <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label>New password</label>
+          <Field label="New password">
             <input
               type="password"
               value={password}
@@ -55,9 +55,8 @@ export default function ResetPasswordPage() {
               minLength={8}
               required
             />
-          </div>
-          <div className="form-group">
-            <label>Confirm password</label>
+          </Field>
+          <Field label="Confirm password">
             <input
               type="password"
               value={confirm}
@@ -65,7 +64,7 @@ export default function ResetPasswordPage() {
               autoComplete="new-password"
               required
             />
-          </div>
+          </Field>
           {error && <p className="error">{error}</p>}
           <button className="btn btn-primary" type="submit" disabled={loading}>
             {loading ? 'Saving…' : 'Set new password'}

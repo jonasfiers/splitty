@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import client from '../../api/client'
 import Sheet, { SheetActions } from '../Sheet/Sheet.jsx'
+import Field from '../Field/Field.jsx'
 
 // Copy a trip under a new name: same group, dates, places and items; the
 // expenses and files stay with the original.
@@ -26,10 +27,9 @@ function DuplicateTripSheet({ trip, onClose, onCopied }) {
   return (
     <Sheet title="Copy trip" onClose={onClose}>
       <form onSubmit={handleSubmit}>
-        <div className="form-group">
-          <label>Name of the copy</label>
+        <Field label="Name of the copy">
           <input value={title} onChange={e => setTitle(e.target.value)} maxLength={120} required autoFocus onFocus={e => e.target.select()} />
-        </div>
+        </Field>
         <p style={{ fontSize: 12, color: 'var(--text-3)', margin: '0 0 12px' }}>
           Dates, stays, travel, activities and places are copied. Expenses and attached files stay with the original.
         </p>

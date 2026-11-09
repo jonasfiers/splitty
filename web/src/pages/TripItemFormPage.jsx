@@ -8,6 +8,7 @@ import { leaveTo } from '../utils/history.js'
 import BackLink from '../components/BackLink.jsx'
 import { KINDS, TRANSPORT_MODES, dayOf, timeOf } from '../utils/trip.js'
 import { useMediaQuery } from '../utils/useMediaQuery.js'
+import Field from '../components/Field/Field.jsx'
 
 const LABELS = {
   transport: { start: 'Departure', end: 'Arrival', title: 'Title', titleHint: 'Leave empty to use the route' },
@@ -143,8 +144,7 @@ export default function TripItemFormPage() {
 
   const labels = LABELS[kind]
   const titleField = (
-    <div className="form-group">
-      <label>{labels.title}{kind === 'transport' && <> <span className="label-optional">optional</span></>}</label>
+    <Field label={labels.title} optional={kind === 'transport'}>
       <input
         value={form.title}
         onChange={e => set({ title: e.target.value })}
@@ -152,7 +152,7 @@ export default function TripItemFormPage() {
         maxLength={160}
         required={kind !== 'transport'}
       />
-    </div>
+    </Field>
   )
   const formTitle = `${isEdit ? 'Edit' : 'New'} ${(kind === 'transport' && form.mode !== 'other'
     ? TRANSPORT_MODES.find(m => m.value === form.mode).label
@@ -172,8 +172,7 @@ export default function TripItemFormPage() {
         <form id="trip-item-form" onSubmit={handleSubmit}>
           {error && <p className="error">{error}</p>}
           {kind === 'transport' && (
-            <div className="form-group">
-              <label>By</label>
+            <Field label="By" group>
               <div className="filter-chips" style={{ padding: 0 }}>
                 {TRANSPORT_MODES.map(m => (
                   <button type="button" key={m.value} className={`chip${form.mode === m.value ? ' active' : ''}`} onClick={() => set({ mode: m.value })}>
@@ -181,19 +180,17 @@ export default function TripItemFormPage() {
                   </button>
                 ))}
               </div>
-            </div>
+            </Field>
           )}
 
           {kind === 'transport' ? (
             <>
-              <div className="form-group">
-                <label>From</label>
+              <Field label="From">
                 <PlacePicker value={form.from} onChange={from => set({ from })} places={places} placeholder="Airport, station, address…" />
-              </div>
-              <div className="form-group">
-                <label>To</label>
+              </Field>
+              <Field label="To">
                 <PlacePicker value={form.to} onChange={to => set({ to })} places={places} placeholder="Airport, station, address…" />
-              </div>
+              </Field>
             </>
           ) : null}
 
@@ -201,63 +198,53 @@ export default function TripItemFormPage() {
               route and times, its title is optional and comes later. */}
           {kind !== 'transport' && <>
             {titleField}
-            <div className="form-group">
-              <label>Where</label>
+            <Field label="Where">
               <PlacePicker value={form.place} onChange={place => set({ place })} places={places} />
-            </div>
+            </Field>
           </>}
 
           <div className="form-row form-row-compact form-row-when">
-            <div className="form-group">
-              <label>{labels.start}</label>
+            <Field label={labels.start}>
               <input type="date" value={form.startDate} onChange={e => set({ startDate: e.target.value })} required />
-            </div>
-            <div className="form-group">
-              <label>Time <span className="label-optional">optional</span></label>
+            </Field>
+            <Field label="Time" optional>
               <input type="time" value={form.startTime} onChange={e => set({ startTime: e.target.value })} />
-            </div>
+            </Field>
           </div>
 
           <div className="form-row form-row-compact form-row-when">
-            <div className="form-group">
-              <label>{labels.end} <span className="label-optional">optional</span></label>
+            <Field label={labels.end} optional>
               <input type="date" value={form.endDate} min={form.startDate} onChange={e => set({ endDate: e.target.value })} />
-            </div>
-            <div className="form-group">
-              <label>Time <span className="label-optional">optional</span></label>
+            </Field>
+            <Field label="Time" optional>
               <input type="time" value={form.endTime} onChange={e => set({ endTime: e.target.value })} />
-            </div>
+            </Field>
           </div>
 
           {kind === 'transport' && (
             <div className="form-row">
-              <div className="form-group">
-                <label>{form.mode === 'flight' ? 'Airline' : form.mode === 'car' ? 'Rental company' : 'Operator'}</label>
+              <Field label={form.mode === 'flight' ? 'Airline' : form.mode === 'car' ? 'Rental company' : 'Operator'}>
                 <input value={form.carrier} onChange={e => set({ carrier: e.target.value })} maxLength={80} />
-              </div>
-              <div className="form-group">
-                <label>{form.mode === 'flight' ? 'Flight number' : form.mode === 'car' ? 'Car / plate' : 'Number'}</label>
+              </Field>
+              <Field label={form.mode === 'flight' ? 'Flight number' : form.mode === 'car' ? 'Car / plate' : 'Number'}>
                 <input value={form.number} onChange={e => set({ number: e.target.value })} maxLength={40} />
-              </div>
+              </Field>
             </div>
           )}
 
-          <div className="form-group">
-            <label>Booking reference <span className="label-optional">optional</span></label>
+          <Field label="Booking reference" optional>
             <input value={form.confirmationRef} onChange={e => set({ confirmationRef: e.target.value })} maxLength={80} autoCapitalize="characters" />
-          </div>
+          </Field>
 
           {kind === 'transport' && titleField}
 
-          <div className="form-group">
-            <label>Link <span className="label-optional">optional</span></label>
+          <Field label="Link" optional>
             <input type="url" value={form.url} onChange={e => set({ url: e.target.value })} placeholder="https://…" maxLength={600} />
-          </div>
+          </Field>
 
-          <div className="form-group">
-            <label>Notes <span className="label-optional">optional</span></label>
+          <Field label="Notes" optional>
             <textarea rows={3} value={form.notes} onChange={e => set({ notes: e.target.value })} maxLength={4000} />
-          </div>
+          </Field>
 
           {wide && <div className="panel-actions" style={{ marginTop: '0.5rem' }}>
             <BackLink to={backPath} replace className="btn btn-ghost">Cancel</BackLink>

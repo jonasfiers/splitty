@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useLocation } from 'react-router'
 import { useAuth } from '../context/AuthContext'
+import Field from '../components/Field/Field.jsx'
 
 export default function RegisterPage() {
   const [form, setForm] = useState({ name: '', email: '', password: '' })
@@ -50,17 +51,15 @@ export default function RegisterPage() {
           <>
             <h2>Create your account</h2>
             <form onSubmit={handleSubmit}>
-              <div className="form-group">
-                <label>Name</label>
+              <Field label="Name">
                 <input
                   value={form.name}
                   onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
                   autoComplete="name"
                   required
                 />
-              </div>
-              <div className="form-group">
-                <label>Email</label>
+              </Field>
+              <Field label="Email">
                 <input
                   type="email"
                   value={form.email}
@@ -68,9 +67,8 @@ export default function RegisterPage() {
                   autoComplete="email"
                   required
                 />
-              </div>
-              <div className="form-group">
-                <label>Password</label>
+              </Field>
+              <Field label="Password">
                 <input
                   type="password"
                   value={form.password}
@@ -78,7 +76,7 @@ export default function RegisterPage() {
                   autoComplete="new-password"
                   required
                 />
-              </div>
+              </Field>
               {error && <p className="error">{error}</p>}
               <button className="btn btn-primary" type="submit" disabled={loading}>
                 {loading ? 'Creating account…' : 'Create account'}

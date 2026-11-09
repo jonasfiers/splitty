@@ -434,7 +434,8 @@ body {
 .form-group {
   margin-bottom: 16px;
 }
-.form-group label {
+.form-group label,
+.form-group .field-label {
   display: block;
   font-size: 13px;
   font-weight: 600;
@@ -2814,3 +2815,8 @@ a.trip-chip:hover { border-color: var(--accent); }
 /* Both controls fill the row, so the currency is as tall as the amount, no taller */
 .expense-amount .form-group { display: flex; flex-direction: column; }
 .expense-amount select, .expense-amount .currency-input { flex: 1; }
+
+/* Field: the label with something at its end (Forgot password?, Split equally) */
+.field-label-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+.field-label-row > label, .field-label-row > .field-label { margin-bottom: 0; }
+.field-aside-link { font-size: 12px; font-weight: 400; padding: 8px 0; margin: -8px 0; }
