@@ -243,6 +243,8 @@ body {
     border-right: 1px solid var(--sb-border);
     flex-shrink: 0;
     height: 100%;
+    overflow: hidden;
+    transition: width .2s ease;
   }
 
   .sidebar-logo {
@@ -318,23 +320,32 @@ body {
     white-space: nowrap;
   }
 
-  .sidebar-signout {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 12px;
-    border-radius: var(--r-md);
-    color: var(--sb-text);
-    font-size: 13px;
-    font-weight: 500;
-    width: 100%;
-    transition: background .15s, color .15s;
-    margin-top: 2px;
+
+  /* Collapse button: small and dim, at the end of the profile row (open) or
+     under the avatar (folded); a setting, not a destination. */
+  .sidebar-footer { display: flex; align-items: center; gap: 4px; }
+  .sidebar-footer .sidebar-user { flex: 1; min-width: 0; }
+  .sidebar-collapse {
+    flex-shrink: 0; display: grid; place-items: center;
+    width: 32px; height: 32px; border-radius: var(--r-md);
+    color: var(--sb-text); opacity: .55;
+    transition: background .15s, opacity .15s, color .15s;
   }
-  .sidebar-signout:hover {
-    background: rgba(239,68,68,.12);
-    color: #FCA5A5;
+  .sidebar-collapse:hover, .sidebar-collapse:focus-visible { opacity: 1; background: var(--sb-active-bg); color: var(--sb-text-hover); }
+  .sidebar-collapsed .sidebar-footer { flex-direction: column; gap: 6px; }
+  .sidebar-collapsed .sidebar-footer .sidebar-user { flex: none; width: 100%; }
+  .sidebar-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  /* Collapsed: a rail of icons; the labels are still there for screen readers */
+  .app-shell.sidebar-collapsed { --sidebar-w: 72px; }
+  .sidebar-collapsed .sidebar-logo { padding: 28px 0 24px; justify-content: center; }
+  .sidebar-collapsed .sidebar-logo > span,
+  .sidebar-collapsed .sidebar-label {
+    position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;
   }
+  .sidebar-collapsed .sidebar-nav-item,
+  .sidebar-collapsed .sidebar-user { justify-content: center; padding-left: 0; padding-right: 0; }
+  .sidebar-collapsed .sidebar-nav-item { min-height: 44px; }
 
   /* Content */
   .app-content {
@@ -2832,4 +2843,36 @@ a.trip-chip:hover { border-color: var(--accent); }
   .member-sheet-head { padding-top: 12px; }
   /* Pairs of fields stack in the narrow column. */
   .sheet-section-narrow .form-row { grid-template-columns: 1fr; }
+}
+
+/* Trip item form: the kinds of transport as a 3 x 2 grid */
+.mode-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.mode-tile {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  min-height: 64px; padding: 8px;
+  border: 1px solid var(--border); border-radius: var(--r-md); background: var(--surface);
+  font: inherit; font-size: 13px; font-weight: 500; color: var(--text-2); cursor: pointer;
+  transition: border-color .15s, background .15s, color .15s;
+}
+.mode-tile:hover { border-color: var(--border-strong); color: var(--text); }
+.mode-tile.active { border-color: var(--accent); background: var(--accent-subtle); color: var(--accent-text); font-weight: 600; }
+.mode-tile-icon { font-size: 22px; line-height: 1; }
+/* "+ Link and notes": opens the rarely used fields */
+.form-more { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; margin: -4px 0 8px; font: inherit; font-size: 14px; font-weight: 600; color: var(--accent-text); }
+
+/* Page forms in columns (components/Field/FormColumns.jsx) */
+.form-more-fields.folded { display: none; } /* shown again in the wide layout below */
+.form-columns { container-type: inline-size; }
+@container (min-width: 720px) {
+  .form-columns-grid { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 32px; align-items: start; }
+  .form-column + .form-column { border-left: 1px solid var(--border); padding-left: 32px; }
+  /* Folded extras are shown where there is room; their "＋" button goes. */
+  .form-more-fields.folded { display: block; }
+  .form-more { display: none; }
+}
+/* The trip item form: phone-width, wider where there is room for columns */
+.item-form-card { max-width: 560px; }
+@media (min-width: 1024px) {
+  .page-wrap:has(.item-form-card) { --wrap-w: 1040px; }
+  .item-form-card { max-width: 980px; }
 }

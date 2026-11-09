@@ -218,9 +218,11 @@ router.put('/items/:itemId', async (req, res) => {
     try {
         const existing = await tripService.getItemById(req.params.itemId, req.user.id);
         if (!existing.success) return res.status(404).json(existing);
-        const { item, error } = parseItem(existing.item.kind, req.body);
+        // The kind can be changed too (a stay that was entered as an activity).
+        const kind = tripService.KIND_LABELS[req.body.kind] ? req.body.kind : existing.item.kind;
+        const { item, error } = parseItem(kind, req.body);
         if (error) return res.status(400).json({ error });
-        const result = await tripService.updateItem(req.params.itemId, req.user.id, item);
+        const result = await tripService.updateItem(req.params.itemId, req.user.id, item, kind);
         if (!result.success) return res.status(404).json(result);
         res.json(result);
     } catch (error) {

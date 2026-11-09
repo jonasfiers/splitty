@@ -1,4 +1,6 @@
-import { Outlet, NavLink, Link, useNavigate } from 'react-router'
+import { useState } from 'react'
+import { Outlet, NavLink, Link } from 'react-router'
+import { useMediaQuery } from '../utils/useMediaQuery.js'
 import { useOffline } from '../utils/connection.js'
 import { useHistoryTracker } from '../utils/history.js'
 import { useOfflineDocs } from '../utils/useOfflineDocs.js'
@@ -50,6 +52,34 @@ function InsightsIcon({ size = 20 }) {
   )
 }
 
+function CollapseIcon({ collapsed }) {
+  return (
+    <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="3" y="4" width="18" height="16" rx="2" />
+      <line x1="9" y1="4" x2="9" y2="20" />
+      {collapsed ? <polyline points="13 10 15 12 13 14" /> : <polyline points="15 10 13 12 15 14" />}
+    </svg>
+  )
+}
+
+// The sidebar folds to a rail of icons. It starts folded where space is
+// short (a tablet, an opened Fold) and open on a wider screen; once toggled,
+// the choice is kept on this device (a convenience: it may be forgotten).
+const COLLAPSE_KEY = 'splitty.sidebarCollapsed'
+function useSidebarCollapsed() {
+  const roomy = useMediaQuery('(min-width: 1180px)')
+  const [pref, setPref] = useState(() => {
+    try { const v = localStorage.getItem(COLLAPSE_KEY); return v === null ? null : v === '1' } catch { return null }
+  })
+  const collapsed = pref ?? !roomy
+  const toggle = () => {
+    const next = !collapsed
+    setPref(next)
+    try { localStorage.setItem(COLLAPSE_KEY, next ? '1' : '0') } catch { /* private mode: just this visit */ }
+  }
+  return [collapsed, toggle]
+}
+
 function AdminIcon({ size = 20 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -62,15 +92,15 @@ export default function Layout() {
   useHistoryTracker()
   const offline = useOffline()
   const kept = useOfflineDocs()
-  const { currentUser, isAdmin, logout } = useAuth()
-  const navigate = useNavigate()
+  const { currentUser, isAdmin } = useAuth()
+  const [collapsed, toggleCollapsed] = useSidebarCollapsed()
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell${collapsed ? ' sidebar-collapsed' : ''}`}>
 
       {/* ── SIDEBAR (desktop) ── */}
       <aside className="app-sidebar">
-        <Link to="/groups" className="sidebar-logo">
+        <Link to="/groups" className="sidebar-logo" aria-label="Splitty, home">
           <CatAvatar className="sidebar-logo-icon" />
           <span>Split<span className="sidebar-logo-accent">ty</span></span>
         </Link>
@@ -82,24 +112,30 @@ export default function Layout() {
               to={to}
               end={end}
               className={({ isActive }) => 'sidebar-nav-item' + (isActive ? ' active' : '')}
+              title={collapsed ? label : undefined}
             >
               <Icon size={18} />
-              {label}
+              <span className="sidebar-label">{label}</span>
             </NavLink>
           ))}
           {isAdmin && (
-            <NavLink to="/admin" className={({ isActive }) => 'sidebar-nav-item sidebar-nav-admin' + (isActive ? ' active' : '')}>
+            <NavLink to="/admin" className={({ isActive }) => 'sidebar-nav-item sidebar-nav-admin' + (isActive ? ' active' : '')} title={collapsed ? 'Admin' : undefined}>
               <AdminIcon size={18} />
-              Admin
+              <span className="sidebar-label">Admin</span>
             </NavLink>
           )}
         </nav>
 
         <div className="sidebar-footer">
-          <Link to="/profile" className="sidebar-user">
+          <Link to="/profile" className="sidebar-user" title={collapsed ? currentUser?.name : undefined} aria-label={collapsed ? `Profile, ${currentUser?.name ?? ''}` : undefined}>
             <Avatar name={currentUser?.name} size={28} colorIndex={currentUser?.avatarColor} emoji={currentUser?.avatarEmoji} />
-            <span className="sidebar-user-name">{currentUser?.name ?? ''}</span>
+            <span className="sidebar-user-name sidebar-label">{currentUser?.name ?? ''}</span>
           </Link>
+          <button type="button" className="sidebar-collapse" onClick={toggleCollapsed}
+            aria-label={collapsed ? 'Expand the sidebar' : 'Collapse the sidebar'} aria-expanded={!collapsed}
+            title={collapsed ? 'Expand' : 'Collapse'}>
+            <CollapseIcon collapsed={collapsed} />
+          </button>
         </div>
       </aside>
 

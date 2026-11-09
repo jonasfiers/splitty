@@ -9,6 +9,8 @@ import BackLink from '../components/BackLink.jsx'
 import { KINDS, TRANSPORT_MODES, dayOf, timeOf } from '../utils/trip.js'
 import { useMediaQuery } from '../utils/useMediaQuery.js'
 import Field from '../components/Field/Field.jsx'
+import { FormColumns, FormColumn } from '../components/Field/FormColumns.jsx'
+import Segmented from '../components/Segmented/Segmented.jsx'
 import { DateTimePicker } from '../components/DatePicker/DatePicker.jsx'
 
 const LABELS = {
@@ -41,6 +43,7 @@ export default function TripItemFormPage() {
     notes: '',
   })
   const [places, setPlaces] = useState([])
+  const [showMore, setShowMore] = useState(false) // Link and Notes
   const [tripRange, setTripRange] = useState(null) // the trip's dates, tinted in the calendar
   const [items, setItems] = useState([]) // the trip's other items, for the From suggestion
   const [loading, setLoading] = useState(true)
@@ -98,6 +101,15 @@ export default function TripItemFormPage() {
   }, [tripId, itemId, isEdit])
 
   const set = patch => setForm(f => ({ ...f, ...patch }))
+  // Another kind (a stay entered as an activity): the place goes along, as
+  // the journey's destination or the stay's or activity's place.
+  const switchKind = next => {
+    if (next === kind) return
+    setForm(f => next === 'transport'
+      ? { ...f, to: f.to ?? f.place, place: null }
+      : kind === 'transport' ? { ...f, place: f.place ?? f.to ?? f.from, from: null, to: null } : f)
+    setKind(next)
+  }
   const backPath = isEdit ? `/trips/${tripId}/items/${itemId}` : `/trips/${tripId}`
   // From: where the journey before this one ended (the train after the flight
   // starts at the airport).
@@ -180,15 +192,29 @@ export default function TripItemFormPage() {
         actions={wide ? [] : [{ label: saving ? 'Saving…' : (isEdit ? 'Save' : 'Add'), form: 'trip-item-form', disabled: saving, primary: true }]}
       />
 
-      <div className="card" style={{ maxWidth: 560 }}>
+      <div className="card item-form-card">
         <form id="trip-item-form" onSubmit={handleSubmit}>
           {error && <p className="error">{error}</p>}
+          <FormColumns>
+          <FormColumn>
+          <Segmented
+            label="Kind"
+            value={kind}
+            onChange={switchKind}
+            options={[
+              { value: 'transport', label: `${KINDS.transport.icon} Travel` },
+              { value: 'stay', label: `${KINDS.stay.icon} Stay` },
+              { value: 'activity', label: `${KINDS.activity.icon} Activity` },
+            ]}
+          />
           {kind === 'transport' && (
             <Field label="By" group>
-              <div className="filter-chips filter-chips-field">
+              <div className="mode-grid">
                 {TRANSPORT_MODES.map(m => (
-                  <button type="button" key={m.value} className={`chip${form.mode === m.value ? ' active' : ''}`} onClick={() => set({ mode: m.value })}>
-                    {m.icon} {m.label}
+                  <button type="button" key={m.value} className={`mode-tile${form.mode === m.value ? ' active' : ''}`}
+                    aria-pressed={form.mode === m.value} onClick={() => set({ mode: m.value })}>
+                    <span className="mode-tile-icon" aria-hidden="true">{m.icon}</span>
+                    {m.label}
                   </button>
                 ))}
               </div>
@@ -243,6 +269,9 @@ export default function TripItemFormPage() {
             </Field>
           </div>
 
+          </FormColumn>
+
+          <FormColumn>
           {kind === 'transport' && (
             <div className="form-row">
               <Field label={form.mode === 'flight' ? 'Airline' : form.mode === 'car' ? 'Rental company' : 'Operator'}>
@@ -260,13 +289,29 @@ export default function TripItemFormPage() {
 
           {kind === 'transport' && titleField}
 
-          <Field label="Link" optional>
-            <input type="url" value={form.url} onChange={e => set({ url: e.target.value })} placeholder="https://…" maxLength={600} />
-          </Field>
-
-          <Field label="Notes" optional>
-            <textarea rows={3} value={form.notes} onChange={e => set({ notes: e.target.value })} maxLength={4000} />
-          </Field>
+          {/* Rarely needed, so folded away on a phone, and open by itself when
+              there is something in them. With room for two columns they are
+              always shown (index.css: the right column would be empty anyway). */}
+          {(() => {
+            const open = showMore || form.url || form.notes
+            return <>
+              <div className={`form-more-fields${open ? '' : ' folded'}`}>
+                <Field label="Link" optional>
+                  <input type="url" value={form.url} onChange={e => set({ url: e.target.value })} placeholder="https://…" maxLength={600} />
+                </Field>
+                <Field label="Notes" optional>
+                  <textarea rows={3} value={form.notes} onChange={e => set({ notes: e.target.value })} maxLength={4000} />
+                </Field>
+              </div>
+              {!open && (
+                <button type="button" className="form-more" onClick={() => setShowMore(true)} aria-expanded={false}>
+                  <span aria-hidden="true">＋</span> Link and notes
+                </button>
+              )}
+            </>
+          })()}
+          </FormColumn>
+          </FormColumns>
 
           {wide && <div className="panel-actions" style={{ marginTop: '0.5rem' }}>
             <BackLink to={backPath} replace className="btn btn-ghost">Cancel</BackLink>

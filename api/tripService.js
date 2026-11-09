@@ -91,11 +91,12 @@ const itemProps = (kind, data) => ({
     url: data.url ?? '',
     notes: data.notes ?? '',
     price: data.price ?? null,
+    // Not a journey (any more, when its kind was changed): no transport fields.
     ...(kind === 'transport' ? {
         mode: data.mode,
         carrier: data.carrier ?? '',
         number: data.number ?? '',
-    } : {}),
+    } : { mode: null, carrier: null, number: null }),
 });
 
 // One new item and its places, inside a write transaction. Null when the
@@ -472,7 +473,8 @@ const tripService = {
 
     // UPDATE ITEM — the kind is fixed at creation; places and currency are
     // re-pointed, and any place left without an item is removed.
-    updateItem: async (itemId, userId, data) => {
+    // `newKind`: the item becomes a different kind (a stay entered as an activity).
+    updateItem: async (itemId, userId, data, newKind = null) => {
         const session = driver.session();
         try {
             return await session.executeWrite(async tx => {
@@ -481,8 +483,16 @@ const tripService = {
                     { itemId, userId }
                 );
                 if (records.length === 0) return { success: false, message: 'Trip item not found or access denied' };
-                const kind = kindOf(records[0].get('labels'));
+                const oldKind = kindOf(records[0].get('labels'));
+                const kind = newKind && KIND_LABELS[newKind] ? newKind : oldKind;
                 const tripId = records[0].get('tripId');
+                if (kind !== oldKind) {
+                    // Labels can't be parameters; both come from KIND_LABELS.
+                    await tx.run(
+                        `MATCH (i:TripItem {id: $itemId}) REMOVE i:${KIND_LABELS[oldKind]} SET i:${KIND_LABELS[kind]}`,
+                        { itemId }
+                    );
+                }
 
                 await tx.run(
                     `MATCH (i:TripItem {id: $itemId})
