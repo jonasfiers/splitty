@@ -2070,16 +2070,22 @@ a.act-row { color: inherit; text-decoration: none; }
 
 /* Timeline */
 .trip-past-toggle {
-  align-self: flex-start;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 44px;
   font: inherit;
   font-size: 13px;
   font-weight: 600;
   color: var(--accent-text);
   background: none;
-  border: none;
-  padding: 0;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--r-md);
+  padding: 0 12px;
   cursor: pointer;
 }
+.trip-past-toggle:hover { background: var(--surface-2); }
 .trip-timeline {
   display: flex;
   flex-direction: column;
@@ -2816,3 +2822,17 @@ a.trip-chip:hover { border-color: var(--accent); }
 .field-label-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
 .field-label-row > label, .field-label-row > .field-label { margin-bottom: 0; }
 .field-aside-link { font-size: 12px; font-weight: 400; padding: 8px 0; margin: -8px 0; }
+
+/* Tap targets: small to see, 44px to tap. The invisible area reaches past
+   the edges; rows of chips have enough gap and padding for it. */
+.chip, .btn-sm, .trip-chip, .trip-ref-icon { position: relative; }
+.chip::after, .btn-sm::after, .trip-chip::after {
+  content: ''; position: absolute; left: 0; right: 0; top: 50%;
+  height: 44px; transform: translateY(-50%);
+}
+.trip-ref-icon::after {
+  content: ''; position: absolute; top: 50%; left: 50%;
+  width: 44px; height: 44px; transform: translate(-50%, -50%);
+}
+/* Chips under a field label: room inside the scroller for the taller tap area */
+.filter-chips-field { padding: 8px 0; margin: -8px 0; }

@@ -217,7 +217,7 @@ export default function TripRoutePage() {
       </div>
 
       <Field label="By" group>
-        <div className="filter-chips" style={{ padding: 0 }}>
+        <div className="filter-chips filter-chips-field">
           {MODES.map(m => (
             <button key={m.value} type="button" className={`chip${form.modes === m.value ? ' active' : ''}`} onClick={() => set({ modes: m.value })}>
               {m.label}

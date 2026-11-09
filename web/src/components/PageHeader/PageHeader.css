@@ -63,7 +63,8 @@
   font-size: 15px;
   font-weight: 600;
   color: var(--accent-text);
-  padding: 6px 4px;
+  min-height: 44px;
+  padding: 0 8px 0 0;
 }
 .ph-back svg {
   width: 20px; height: 20px;
@@ -91,10 +92,15 @@
 }
 .ph-bar-btn:disabled { opacity: .5; }
 .ph-bar-btn {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  min-width: 44px;
+  justify-content: center;
   font-size: 15px;
   font-weight: 600;
   color: var(--accent-text);
-  padding: 6px 8px;
+  padding: 0 8px;
 }
 .ph-narrow .ph-title { font-size: 28px; line-height: 1.15; }
 
@@ -107,7 +113,10 @@
   width: 36px; height: 36px;
   border-radius: 50%;
   color: var(--text-2);
+  position: relative;
 }
+/* 36px to see, 44px to tap */
+.ph-more-btn::after { content: ''; position: absolute; inset: -4px; }
 .ph-wide .ph-more-btn { border: 1px solid var(--border-strong); border-radius: var(--r-md); width: 36px; height: 34px; }
 .ph-more-btn:hover, .ph-more-btn[aria-expanded="true"] { background: var(--surface-2); color: var(--text); }
 .ph-narrow .ph-more-btn { color: var(--accent-text); }

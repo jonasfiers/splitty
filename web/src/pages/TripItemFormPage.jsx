@@ -182,7 +182,7 @@ export default function TripItemFormPage() {
           {error && <p className="error">{error}</p>}
           {kind === 'transport' && (
             <Field label="By" group>
-              <div className="filter-chips" style={{ padding: 0 }}>
+              <div className="filter-chips filter-chips-field">
                 {TRANSPORT_MODES.map(m => (
                   <button type="button" key={m.value} className={`chip${form.mode === m.value ? ' active' : ''}`} onClick={() => set({ mode: m.value })}>
                     {m.icon} {m.label}
