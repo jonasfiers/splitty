@@ -12,6 +12,7 @@ import Field from '../components/Field/Field.jsx'
 import { FormColumns, FormColumn } from '../components/Field/FormColumns.jsx'
 import Segmented from '../components/Segmented/Segmented.jsx'
 import { DateTimePicker } from '../components/DatePicker/DatePicker.jsx'
+import EmptyState from '../components/EmptyState/EmptyState.jsx'
 
 const LABELS = {
   transport: { start: 'Departure', end: 'Arrival', title: 'Title', titleHint: 'Leave empty to use the route' },
@@ -164,7 +165,7 @@ export default function TripItemFormPage() {
   }
 
   if (loading) return <><PageHeader compact back={{ to: backPath }} name={isEdit ? 'Edit item' : 'New item'} /><Loading /></>
-  if (missing) return <><PageHeader compact crumbs={[{ to: '/trips', label: 'Trips' }]} name="Trip" /><div className="empty-state"><p className="empty-state-title">Trip not found.</p></div></>
+  if (missing) return <><PageHeader compact crumbs={[{ to: '/trips', label: 'Trips' }]} name="Trip" /><EmptyState art={false} title="Trip not found" /></>
 
   const labels = LABELS[kind]
   const titleField = (

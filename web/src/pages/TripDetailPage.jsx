@@ -19,6 +19,7 @@ import TodayEntries from '../components/TodayEntries.jsx'
 import Segmented from '../components/Segmented/Segmented.jsx'
 import { leaveTo } from '../utils/history.js'
 import { useConfirm } from '../components/Confirm/ConfirmProvider.jsx'
+import EmptyState from '../components/EmptyState/EmptyState.jsx'
 
 // Leaflet is only worth downloading once someone opens the map.
 const TripMap = lazy(() => import('../components/TripMap/TripMap.jsx'))
@@ -198,7 +199,7 @@ function TripDetailPage() {
   const bare = <PageHeader compact crumbs={[{ to: '/trips', label: 'Trips' }]} name="Trip" />
   if (loading) return <>{bare}<Loading /></>
   if (loadError) return <>{bare}<LoadFailed error={loadError} what="this trip" onRetry={retry} /></>
-  if (!trip) return <>{bare}<div className="empty-state"><p className="empty-state-title">Trip not found.</p></div></>
+  if (!trip) return <>{bare}<EmptyState art={false} title="Trip not found" /></>
 
   const placeById = new Map(places.map(p => [p.id, p]))
   const placeName = placeId => placeById.get(placeId)?.name
@@ -265,10 +266,7 @@ function TripDetailPage() {
   )
 
   const emptyPlan = (
-    <div className="empty-state" style={{ padding: '32px 24px' }}>
-      <img src="/cat-empty.svg" alt="" style={{ width: 80, height: 80 }} />
-      <p style={{ color: 'var(--text-3)', fontSize: 14 }}>Nothing planned yet. Add a flight, a stay or something to do.</p>
-    </div>
+    <EmptyState compact title="Nothing planned yet">Add a flight, a stay or something to do.</EmptyState>
   )
 
   const ganttView = (
@@ -336,11 +334,11 @@ function TripDetailPage() {
 
       {wide ? (
         <>
-        {items.length === 0 ? emptyPlan : ganttView}
+        {ganttView}
         <div className="trip-split">
           <div>
             <div className="section-label">Day by day</div>
-            {items.length > 0 && dayList}
+            {items.length > 0 ? dayList : emptyPlan}
           </div>
           <div className="trip-split-map">
             <div className="section-label">Map {places.length > 0 && `· ${places.length}`}</div>
@@ -360,9 +358,8 @@ function TripDetailPage() {
               { value: 'map', label: places.length > 0 ? `Map · ${places.length}` : 'Map' },
             ]}
           />
-          {view !== 'map' && items.length === 0 && emptyPlan}
-          {view === 'plan' && items.length > 0 && dayList}
-          {view === 'timeline' && items.length > 0 && ganttView}
+          {view === 'plan' && (items.length > 0 ? dayList : emptyPlan)}
+          {view === 'timeline' && ganttView}
           {view === 'map' && mapView}
         </>
       )}

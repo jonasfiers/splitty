@@ -8,6 +8,7 @@ import Loading from '../components/Loading.jsx'
 import { COLOURS, STROKES } from '../utils/chartColors.js'
 import TabHeader from '../components/PageHeader/TabHeader.jsx'
 import Picker from '../components/Picker/Picker.jsx'
+import EmptyState from '../components/EmptyState/EmptyState.jsx'
 const DOW_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 const PERIODS = [
   { key: 'month', label: 'This month' },
@@ -571,12 +572,9 @@ export default function InsightsPage() {
       )}
 
       {!error && total === 0 && (
-        <div className="empty-state">
-          <img src="/cat-empty.svg" alt="" style={{ width: 80, height: 80 }} />
-          <p style={{ color: 'var(--text-3)', fontSize: 14 }}>
-            {period === 'all' && !groupId ? 'No data yet. Add some expenses to see insights.' : 'No expenses for this selection.'}
-          </p>
-        </div>
+        period === 'all' && !groupId
+          ? <EmptyState title="No insights yet">Add some expenses and they'll show up here.</EmptyState>
+          : <EmptyState compact art={false} title="No expenses in this selection" />
       )}
       </div>
     </>

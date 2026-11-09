@@ -8,6 +8,7 @@ import PageHeader from '../components/PageHeader/PageHeader.jsx'
 import { List, ListRow } from '../components/List/List.jsx'
 import Sheet, { SheetActions } from '../components/Sheet/Sheet.jsx'
 import { formatCurrency } from '../utils/currency.js'
+import EmptyState from '../components/EmptyState/EmptyState.jsx'
 
 // What is open with someone, per currency: groups in the same currency add
 // up, different currencies are listed side by side rather than converted.
@@ -78,11 +79,7 @@ export default function FriendsPage() {
       <PageHeader crumbs={[{ to: '/profile', label: 'Profile' }]} title="Friends" name="Friends" />
 
       {friends.length === 0 ? (
-        <div className="empty-state">
-          <img src="/cat-empty.svg" alt="" />
-          <p className="empty-state-title">No friends yet</p>
-          <p className="empty-state-sub">People you share a group with appear here. Invite someone from a group's Members tab.</p>
-        </div>
+        <EmptyState title="No friends yet">People you share a group with appear here. Invite someone from a group's Members tab.</EmptyState>
       ) : <>
         {openRows.length > 0 && <List label="Open balances">{openRows.map(row)}</List>}
         {settled.length > 0 && <List label={openRows.length ? 'Settled up' : undefined}>{settled.map(row)}</List>}

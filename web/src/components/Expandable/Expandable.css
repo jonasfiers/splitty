@@ -95,3 +95,6 @@
     flex-direction: column;
 }
 .expandable-extra .trip-map { flex: 1; height: auto; }
+/* TripMap sits in a wrapper (for its "nothing yet" hint): that one stretches. */
+.expandable.expanded .trip-map-wrap,
+.expandable-extra .trip-map-wrap { flex: 1; display: flex; flex-direction: column; min-height: 0; }

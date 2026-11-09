@@ -25,6 +25,7 @@ import GroupEditSheet from '../components/GroupForm/GroupEditSheet.jsx'
 import Field from '../components/Field/Field.jsx'
 import Picker from '../components/Picker/Picker.jsx'
 import DatePicker from '../components/DatePicker/DatePicker.jsx'
+import EmptyState from '../components/EmptyState/EmptyState.jsx'
 
 // Keep in sync with the .group-layout breakpoint in index.css.
 const WIDE_QUERY = '(min-width: 1180px)'
@@ -302,7 +303,7 @@ export default function GroupDetailPage() {
   const bare = <PageHeader compact crumbs={[{ to: '/groups', label: 'Home' }]} name="Group" />
   if (loading) return <>{bare}<Loading /></>
   if (loadError) return <>{bare}<LoadFailed error={loadError} what="this group" onRetry={retry} /></>
-  if (!group) return <>{bare}<div className="empty-state"><p className="empty-state-title">Group not found.</p></div></>
+  if (!group) return <>{bare}<EmptyState art={false} title="Group not found" /></>
 
   // Expense icon: use emoji field if present, otherwise first letter of description
   const expenseIcon = e => e.isTransfer ? '⇄' : e.isSettlement ? '✓' : (e.categoryIcon || (e.description?.[0]?.toUpperCase() ?? '?'))
@@ -549,13 +550,10 @@ export default function GroupDetailPage() {
             )}
 
             {expenses.length === 0 ? (
-              <div className="empty-state" style={{ padding: '32px 24px' }}>
-                <img src="/cat-empty.svg" alt="" style={{ width: 80, height: 80 }} />
-                {activeFilterCount > 0 ? <>
-                  <p style={{ color: 'var(--text-3)', fontSize: 14 }}>Nothing matches.</p>
-                  <button type="button" className="btn btn-ghost btn-sm" onClick={clearFilters}>Clear search and filters</button>
-                </> : <p style={{ color: 'var(--text-3)', fontSize: 14 }}>No expenses yet.</p>}
-              </div>
+              activeFilterCount > 0
+                ? <EmptyState compact art={false} title="Nothing matches"
+                    action={<button type="button" className="btn btn-ghost btn-sm" onClick={clearFilters}>Clear search and filters</button>} />
+                : <EmptyState compact title="No expenses yet">Add the first one with the + button.</EmptyState>
             ) : months.map(month => (
               <section key={month.key} className="expense-month">
               <div className="section-label">{month.label}</div>
@@ -619,10 +617,7 @@ export default function GroupDetailPage() {
 
           {tab === 'trips' && (
             trips.length === 0 ? (
-              <div className="empty-state" style={{ padding: '32px 24px' }}>
-                <img src="/cat-empty.svg" alt="" style={{ width: 80, height: 80 }} />
-                <p style={{ color: 'var(--text-3)', fontSize: 14 }}>No trips planned with this group yet.</p>
-              </div>
+              <EmptyState compact title="No trips with this group yet">Plan one with the + button.</EmptyState>
             ) : (
               <TripList trips={trips} />
             )

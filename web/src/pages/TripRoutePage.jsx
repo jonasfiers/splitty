@@ -13,6 +13,7 @@ import { leaveTo } from '../utils/history.js'
 import { useMediaQuery } from '../utils/useMediaQuery.js'
 import Field from '../components/Field/Field.jsx'
 import { DateTimePicker } from '../components/DatePicker/DatePicker.jsx'
+import EmptyState from '../components/EmptyState/EmptyState.jsx'
 
 const RouteMap = lazy(() => import('../components/TripRoute/RouteMap.jsx'))
 
@@ -171,7 +172,7 @@ export default function TripRoutePage() {
 
   const bare = <PageHeader compact crumbs={[{ to: '/trips', label: 'Trips' }]} name="Find a route" />
   if (loading) return <>{bare}<Loading /></>
-  if (missing) return <>{bare}<div className="empty-state"><p className="empty-state-title">Trip not found.</p></div></>
+  if (missing) return <>{bare}<EmptyState art={false} title="Trip not found" /></>
 
   const header = (
     <PageHeader crumbs={[{ to: '/trips', label: 'Trips' }, { to: `/trips/${tripId}`, label: tripTitle || 'Trip' }]} title="Find a route" name="Find a route" />

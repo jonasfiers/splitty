@@ -599,11 +599,11 @@ body {
   padding: 48px 24px;
   text-align: center;
 }
-.empty-state img {
-  width: 72px; height: 72px;
-  opacity: .6;
-  margin-bottom: 8px;
-}
+.empty-state-art { width: 112px; height: 112px; margin-bottom: 4px; }
+.empty-state-compact { padding: 28px 24px; }
+.empty-state-compact .empty-state-art { width: 84px; height: 84px; }
+.empty-state-compact .empty-state-title { font-size: 15px; }
+.empty-state-action { margin-top: 8px; }
 .empty-state-title {
   font-size: 17px;
   font-weight: 700;
@@ -2626,6 +2626,7 @@ a.trip-chip:hover { border-color: var(--accent); }
 
 /* Data that could not be loaded (components/LoadFailed). */
 .load-failed .btn { margin-top: 4px; }
+.load-failed img { width: 112px; height: 112px; }
 .load-failed-docs { display: inline-block; margin-top: 14px; font-size: 14px; font-weight: 600; color: var(--accent-text); }
 
 /* Layout: the bar shown while Splitty cannot reach its server. */
@@ -2858,4 +2859,14 @@ a.trip-chip:hover { border-color: var(--accent); }
 @media (min-width: 1024px) {
   .page-wrap:has(.form-card-wide) { --wrap-w: 1040px; }
   .form-card-wide { max-width: 980px; }
+}
+.invite-missing { padding-top: 80px; }
+
+/* The trip map with nothing on it yet (TripMap) */
+.trip-map-wrap { position: relative; }
+.trip-map-hint {
+  position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 500;
+  margin: 0; padding: 6px 12px; border-radius: var(--r-pill);
+  background: var(--surface); box-shadow: var(--shadow-sm);
+  font-size: 13px; color: var(--text-2); white-space: nowrap; pointer-events: none;
 }

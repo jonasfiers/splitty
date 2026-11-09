@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router'
 import client from '../api/client'
 import { useAuth } from '../context/AuthContext'
+import EmptyState from '../components/EmptyState/EmptyState.jsx'
 
 export default function InvitePage() {
   const { token } = useParams()
@@ -33,11 +34,9 @@ export default function InvitePage() {
   }
 
   if (notFound) return (
-    <div className="empty-state" style={{ paddingTop: 80 }}>
-      <p className="empty-state-title">Invite not found</p>
-      <p className="empty-state-sub">This link may have expired or already been used.</p>
-      <Link className="btn btn-primary" to="/groups">Go to app</Link>
-    </div>
+    <EmptyState art={false} className="invite-missing" title="Invite not found" action={<Link className="btn btn-primary" to="/groups">Go to app</Link>}>
+      This link may have expired or already been used.
+    </EmptyState>
   )
 
   return (

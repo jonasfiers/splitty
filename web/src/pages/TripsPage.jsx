@@ -11,6 +11,7 @@ import { today } from '../utils/trip.js'
 import TabHeader from '../components/PageHeader/TabHeader.jsx'
 
 import { useOfflineDocs } from '../utils/useOfflineDocs.js'
+import EmptyState from '../components/EmptyState/EmptyState.jsx'
 
 export default function TripsPage() {
   const offline = useOfflineDocs()
@@ -65,15 +66,11 @@ export default function TripsPage() {
       {loading && <Loading />}
 
       {!loading && trips.length === 0 && !error && (
-        <div className="empty-state">
-          <img src="/cat-empty.svg" alt="" style={{ width: 80, height: 80 }} />
-          <p className="empty-state-title">No trips yet</p>
-          <p className="empty-state-sub">
-            {groups.length === 0
-              ? 'A trip is planned with a group. Create a group first.'
-              : 'Plan the transport, the stays and the things to do, and split what they cost.'}
-          </p>
-        </div>
+        <EmptyState title="No trips yet">
+          {groups.length === 0
+            ? 'A trip is planned with a group. Create a group first.'
+            : 'Plan the transport, the stays and the things to do, and split what they cost.'}
+        </EmptyState>
       )}
 
       {upcoming.length > 0 && <>

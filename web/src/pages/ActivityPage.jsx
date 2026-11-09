@@ -9,6 +9,7 @@ import { useMediaQuery } from '../utils/useMediaQuery.js'
 import TabHeader from '../components/PageHeader/TabHeader.jsx'
 import { activityLink, activityVerb, activityMatches, activityIcon, activityTone, isTripActivity, isDeletedActivity, actionOf } from '../utils/activity.js'
 import { summarizeChanges } from '../utils/expenseChanges.js'
+import EmptyState from '../components/EmptyState/EmptyState.jsx'
 
 const PAGE = 50
 // Nothing chosen means everything: tapping the active chip again clears it.
@@ -124,11 +125,7 @@ export default function ActivityPage() {
   if (activities.length === 0) return (
     <>
       {header}
-      <div className="empty-state">
-        <img src="/cat-empty.svg" alt="" />
-        <p className="empty-state-title">No activity yet</p>
-        <p className="empty-state-sub">When expenses are added or updated, they'll show up here.</p>
-      </div>
+      <EmptyState title="No activity yet">When expenses are added or updated, they'll show up here.</EmptyState>
     </>
   )
 
@@ -191,9 +188,8 @@ export default function ActivityPage() {
   )
 
   const feed = filtered.length === 0 ? (
-    <div className="empty-state" style={{ padding: '32px 24px' }}>
-      <p style={{ color: 'var(--text-3)', fontSize: 14 }}>Nothing matches these filters.</p>
-    </div>
+    <EmptyState compact art={false} title="Nothing matches these filters"
+      action={<button type="button" className="btn btn-ghost btn-sm" onClick={() => { setContext('all'); setAction('all'); setScope(''); setShown(PAGE) }}>Clear filters</button>} />
   ) : (
     <>
       {days.map(([key, items]) => (

@@ -41,7 +41,7 @@ function TripMap({ places, items, onOpenItem, highlight = null, onHover = () => 
 
   useEffect(() => {
     const located = places.filter(p => p.lat != null && p.lon != null)
-    if (!el.current || located.length === 0) return
+    if (!el.current) return
 
     // In the page the wheel scrolls the page until the map is clicked; full
     // screen there is nothing else to scroll.
@@ -133,9 +133,11 @@ function TripMap({ places, items, onOpenItem, highlight = null, onHover = () => 
     }
     map.on('zoomend moveend resize', placeArrows)
 
-    const bounds = L.latLngBounds(located.map(p => [p.lat, p.lon]))
+    const bounds = located.length ? L.latLngBounds(located.map(p => [p.lat, p.lon])) : null
     const frame = () => {
-      if (located.length === 1) map.setView(bounds.getCenter(), 13)
+      // Nothing placed yet: the world, waiting for the first pin.
+      if (!bounds) map.setView([30, 10], 2)
+      else if (located.length === 1) map.setView(bounds.getCenter(), 13)
       else map.fitBounds(bounds, { padding: [36, 36], maxZoom: 14 })
     }
     frame()
@@ -165,17 +167,14 @@ function TripMap({ places, items, onOpenItem, highlight = null, onHover = () => 
   }
   useEffect(() => { applyHighlight.current(highlight) }, [highlight, places, items])
 
-  if (!places.some(p => p.lat != null && p.lon != null)) {
-    return (
-      <div className="empty-state" style={{ padding: '32px 24px' }}>
-        <p style={{ color: 'var(--text-3)', fontSize: 14 }}>
-          Nothing to show yet. Add a place to an item and pick it from the search results to put it on the map.
-        </p>
-      </div>
-    )
-  }
-
-  return <div ref={el} className="trip-map" />
+  // An empty map is still a map: the places come with the first items.
+  const empty = !places.some(p => p.lat != null && p.lon != null)
+  return (
+    <div className="trip-map-wrap">
+      <div ref={el} className="trip-map" />
+      {empty && <p className="trip-map-hint">Places you add show up here</p>}
+    </div>
+  )
 }
 
 export default TripMap

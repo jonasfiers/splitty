@@ -15,6 +15,7 @@ import Sheet, { SheetActions } from '../components/Sheet/Sheet.jsx'
 import { List, ListRow } from '../components/List/List.jsx'
 import Field from '../components/Field/Field.jsx'
 import Picker from '../components/Picker/Picker.jsx'
+import EmptyState from '../components/EmptyState/EmptyState.jsx'
 
 export default function GroupsPage() {
   const navigate = useNavigate()
@@ -121,12 +122,9 @@ export default function GroupsPage() {
           </div>
 
           {groups.length === 0 ? (
-            <div className="empty-state">
-              <img src="/cat-empty.svg" alt="" />
-              <p className="empty-state-title">No groups yet</p>
-              <p className="empty-state-sub">Create a group to start splitting expenses with friends.</p>
-              <button className="btn btn-primary" onClick={() => setShowNewGroup(true)}>+ New group</button>
-            </div>
+            <EmptyState title="No groups yet" action={<button className="btn btn-primary" onClick={() => setShowNewGroup(true)}>+ New group</button>}>
+              Create a group to start splitting expenses with friends.
+            </EmptyState>
           ) : (
             <List>
               {groups.map(g => {
