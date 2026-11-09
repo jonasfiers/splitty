@@ -40,7 +40,7 @@ export default function LoadFailed({ error, what, onRetry, docs = true }) {
           ? `Splitty can’t reach its server right now, so ${what} can’t be shown. It tries again once you’re back online.`
           : 'Something went wrong on Splitty’s side. Try again in a moment.'}
       </p>
-      <button className="btn-pill" onClick={onRetry}>Try again</button>
+      <button className="btn btn-primary" onClick={onRetry}>Try again</button>
       {docs && noConnection && kept?.length > 0 && (
         <Link to="/offline-documents" className="load-failed-docs">Offline documents · {kept.length} ›</Link>
       )}

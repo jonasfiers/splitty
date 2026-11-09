@@ -587,7 +587,7 @@ export default function GroupDetailPage() {
             ))}
 
             {hasMore && (
-              <button className="btn-outline-amber" style={{ width: '100%', marginTop: 8 }} onClick={loadMore} disabled={loadingMore}>
+              <button className="btn btn-secondary btn-block" style={{ marginTop: 8 }} onClick={loadMore} disabled={loadingMore}>
                 {loadingMore ? 'Loading…' : 'Load more'}
               </button>
             )}

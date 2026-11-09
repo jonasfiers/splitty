@@ -125,7 +125,7 @@ export default function GroupsPage() {
               <img src="/cat-empty.svg" alt="" />
               <p className="empty-state-title">No groups yet</p>
               <p className="empty-state-sub">Create a group to start splitting expenses with friends.</p>
-              <button className="btn-pill" onClick={() => setShowNewGroup(true)}>+ New group</button>
+              <button className="btn btn-primary" onClick={() => setShowNewGroup(true)}>+ New group</button>
             </div>
           ) : (
             <List>

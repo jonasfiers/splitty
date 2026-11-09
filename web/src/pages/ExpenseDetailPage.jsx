@@ -188,7 +188,7 @@ export default function ExpenseDetailPage() {
             <div className="card">{details}</div>
             <div className="expense-detail-actions">
               {!expense.isSettlement && !expense.isTransfer && (
-                <button className="btn btn-secondary" onClick={() => navigate(`/groups/${groupId}/expenses/${id}/edit`)}>
+                <button className="btn btn-primary" onClick={() => navigate(`/groups/${groupId}/expenses/${id}/edit`)}>
                   Edit expense
                 </button>
               )}

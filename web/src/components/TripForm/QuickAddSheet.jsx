@@ -88,7 +88,7 @@ function QuickAddSheet({ tripId, kind, start, end, places, onClose, onSaved, onM
         <SheetColumns>
         <SheetSection>
         {kind === 'transport' && onFindRoute && (
-          <button type="button" className="btn btn-pill-outline quick-add-route" onClick={findRoute}>
+          <button type="button" className="btn btn-secondary quick-add-route" onClick={findRoute}>
             🔎 Find a train or bus connection
           </button>
         )}

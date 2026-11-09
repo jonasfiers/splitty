@@ -194,7 +194,7 @@ export default function TripDocuments({ tripId, tripTitle, heading = true }) {
         </div>
       )}
       <input ref={fileInput} type="file" accept="application/pdf,image/jpeg,image/png,image/webp" hidden onChange={upload} />
-      <button className="btn-pill-outline trip-docs-add" onClick={() => fileInput.current?.click()} disabled={uploading}>
+      <button className="btn btn-secondary trip-docs-add" onClick={() => fileInput.current?.click()} disabled={uploading}>
         {uploading ? 'Uploading…' : 'Add a document'}
       </button>
       <p className="trip-docs-hint">

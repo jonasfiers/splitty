@@ -39,7 +39,7 @@ export default function VerifyEmailPage() {
             <p style={{ fontSize: 14, color: 'var(--text-3)', marginBottom: 24 }}>
               Your account is now active. You can sign in.
             </p>
-            <Link to="/login" className="btn btn-primary" style={{ display: 'block', textAlign: 'center', textDecoration: 'none' }}>
+            <Link to="/login" className="btn btn-primary btn-block">
               Sign in
             </Link>
           </>

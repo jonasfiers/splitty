@@ -330,7 +330,7 @@ export default function TripItemDetailPage() {
         <aside className="item-aside">
           {wide && (
             <div className="item-actions">
-              <button className="btn btn-secondary" onClick={() => navigate(`/trips/${tripId}/items/${itemId}/edit`)}>Edit item</button>
+              <button className="btn btn-primary" onClick={() => navigate(`/trips/${tripId}/items/${itemId}/edit`)}>Edit item</button>
               <button className="btn btn-ghost" onClick={handleDelete}>Delete</button>
             </div>
           )}
@@ -356,7 +356,7 @@ export default function TripItemDetailPage() {
             </div>
           )}
           <input ref={fileInput} type="file" accept="application/pdf,image/jpeg,image/png,image/webp" hidden onChange={handleUpload} />
-          <button className="btn-pill-outline" style={{ width: '100%', padding: '10px' }} onClick={() => fileInput.current?.click()} disabled={uploading}>
+          <button className="btn btn-secondary btn-block" onClick={() => fileInput.current?.click()} disabled={uploading}>
             {uploading ? 'Uploading…' : 'Add a file'}
           </button>
           <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 8 }}>PDF or image, 10 MB at most.</p>
@@ -382,10 +382,10 @@ export default function TripItemDetailPage() {
             </p>
           )}
           <div className="trip-expense-actions">
-            <button className="btn-pill-outline" onClick={handleCreateExpense}>
+            <button className="btn btn-secondary" onClick={handleCreateExpense}>
               {item.expenses.length > 0 ? 'Add another expense' : 'Create expense'}
             </button>
-            <button className="btn-pill-outline" onClick={() => setLinking(true)}>Link existing expense</button>
+            <button className="btn btn-secondary" onClick={() => setLinking(true)}>Link existing expense</button>
           </div>
           {linking && (
             <LinkExpenseSheet

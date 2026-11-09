@@ -67,7 +67,7 @@ export default function CurrenciesPage() {
         name="Currencies"
         aside={
           <button
-            className="btn btn-secondary"
+            className="btn btn-primary"
             onClick={() => { setShowForm(s => !s); setError('') }}
           >
             {showForm ? 'Cancel' : '+ New currency'}
@@ -91,7 +91,7 @@ export default function CurrenciesPage() {
             {error && <p className="error">{error}</p>}
             <div className="panel-actions">
               <button type="button" className="btn btn-ghost" onClick={() => setShowForm(false)}>Cancel</button>
-              <button type="submit" className="btn btn-secondary">Create</button>
+              <button type="submit" className="btn btn-primary">Create</button>
             </div>
           </form>
         </div>

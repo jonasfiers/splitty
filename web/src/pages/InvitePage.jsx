@@ -36,7 +36,7 @@ export default function InvitePage() {
     <div className="empty-state" style={{ paddingTop: 80 }}>
       <p className="empty-state-title">Invite not found</p>
       <p className="empty-state-sub">This link may have expired or already been used.</p>
-      <Link className="btn-pill" to="/groups">Go to app</Link>
+      <Link className="btn btn-primary" to="/groups">Go to app</Link>
     </div>
   )
 
@@ -50,13 +50,13 @@ export default function InvitePage() {
             <p style={{ color: 'var(--text-3)', fontSize: 14, marginBottom: 24 }}>You've been invited to join this group</p>
             {error && <p className="error">{error}</p>}
             {currentUser ? (
-              <button className="btn btn-primary" style={{ width: '100%' }} onClick={handleJoin} disabled={joining}>
+              <button className="btn btn-primary btn-block" onClick={handleJoin} disabled={joining}>
                 {joining ? 'Joining…' : 'Join group'}
               </button>
             ) : (
               <>
                 <p style={{ color: 'var(--text-3)', fontSize: 13, marginBottom: 16 }}>Sign in to continue</p>
-                <Link to="/login" state={{ redirect: `/invite/${token}` }} className="btn btn-primary" style={{ display: 'block', marginBottom: 8 }}>Sign in</Link>
+                <Link to="/login" state={{ redirect: `/invite/${token}` }} className="btn btn-primary btn-block" style={{ marginBottom: 8 }}>Sign in</Link>
                 <Link to="/register" state={{ redirect: `/invite/${token}` }} className="btn btn-ghost" style={{ display: 'block' }}>Create account</Link>
               </>
             )}

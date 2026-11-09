@@ -244,7 +244,7 @@ function ConfirmConnection({ tripId, itinerary, onBack, onSaved }) {
 
       <div className="panel-actions route-confirm-actions">
         <button type="button" className="btn btn-ghost" onClick={onBack}>Back</button>
-        <button type="button" className="btn btn-secondary" onClick={handleSave} disabled={saving || places === null || chosen.length === 0}>
+        <button type="button" className="btn btn-primary" onClick={handleSave} disabled={saving || places === null || chosen.length === 0}>
           {saving ? 'Adding…' : `Add ${chosen.length} item${chosen.length !== 1 ? 's' : ''} to trip`}
         </button>
       </div>

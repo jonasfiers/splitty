@@ -66,7 +66,7 @@ export default function ResetPasswordPage() {
             />
           </Field>
           {error && <p className="error">{error}</p>}
-          <button className="btn btn-primary" type="submit" disabled={loading}>
+          <button className="btn btn-primary btn-block" type="submit" disabled={loading}>
             {loading ? 'Saving…' : 'Set new password'}
           </button>
         </form>

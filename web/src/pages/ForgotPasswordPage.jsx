@@ -51,7 +51,7 @@ export default function ForgotPasswordPage() {
                 />
               </Field>
               {error && <p className="error">{error}</p>}
-              <button className="btn btn-primary" type="submit" disabled={loading}>
+              <button className="btn btn-primary btn-block" type="submit" disabled={loading}>
                 {loading ? 'Sending…' : 'Send reset link'}
               </button>
             </form>

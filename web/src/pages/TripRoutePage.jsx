@@ -231,7 +231,7 @@ export default function TripRoutePage() {
 
       {error && <p className="error">{error}</p>}
 
-      <button type="submit" className="btn btn-primary" disabled={Boolean(searching)}>
+      <button type="submit" className="btn btn-primary btn-block" disabled={Boolean(searching)}>
         {searching === 'search' ? 'Searching…' : 'Search connections'}
       </button>
     </form>

@@ -234,7 +234,7 @@ export default function ActivityPage() {
         </section>
       ))}
       {filtered.length > shown && (
-        <button className="btn-outline-amber" style={{ width: '100%', marginTop: 8 }} onClick={() => setShown(n => n + PAGE)}>
+        <button className="btn btn-secondary btn-block" style={{ marginTop: 8 }} onClick={() => setShown(n => n + PAGE)}>
           Load more
         </button>
       )}

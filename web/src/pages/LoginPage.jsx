@@ -128,7 +128,7 @@ export default function LoginPage() {
               {resendStatus === 'error' && <span style={{ fontSize: 13, color: 'var(--text-3)' }}>Failed to send. Please try again.</span>}
             </div>
           )}
-          <button className="btn btn-primary" type="submit" disabled={loading}>
+          <button className="btn btn-primary btn-block" type="submit" disabled={loading}>
             {loading ? 'Signing in…' : 'Sign in'}
           </button>
         </form>

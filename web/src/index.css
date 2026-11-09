@@ -501,108 +501,51 @@ body {
 }
 
 /* ══════════════════════════════════════════
-   BUTTONS
+   BUTTONS — four kinds, two modifiers:
+   .btn-primary   filled: the one main action
+   .btn-secondary outlined in the accent: another useful action (Load more, Upload)
+   .btn-ghost     neutral outline: Cancel, Back, Edit
+   .btn-danger    red: delete, remove
+   .btn-sm        smaller;  .btn-block  full width
+   Width is decided by where a button sits (.btn-block, a sheet's
+   buttons), never by its kind. Links can be buttons too: <Link className="btn …">.
 ══════════════════════════════════════════ */
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
+  min-height: 42px;
   padding: 10px 18px;
   border-radius: var(--r-md);
+  border: 1px solid transparent;
+  font: inherit;
   font-size: 14px;
   font-weight: 600;
-  transition: background .15s, box-shadow .15s;
-  cursor: pointer;
-  border: none;
+  line-height: 1.2;
+  text-align: center;
+  text-decoration: none;
   white-space: nowrap;
+  cursor: pointer;
+  transition: background .15s, border-color .15s, color .15s, box-shadow .15s;
 }
 .btn:disabled { opacity: .5; cursor: not-allowed; }
+.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-.btn-primary {
-  background: var(--accent);
-  color: #fff;
-  width: 100%;
-}
-.btn-primary:hover:not(:disabled) {
-  background: var(--accent-hover);
-  box-shadow: var(--shadow-sm);
-}
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover:not(:disabled) { background: var(--accent-hover); box-shadow: var(--shadow-sm); }
 
-.btn-ghost {
-  background: transparent;
-  color: var(--text-2);
-  border: 1px solid var(--border-strong);
-}
-.btn-ghost:hover:not(:disabled) {
-  background: var(--surface-2);
-  color: var(--text);
-}
+.btn-secondary { background: transparent; color: var(--accent-text); border-color: var(--accent); }
+.btn-secondary:hover:not(:disabled) { background: var(--accent-light); }
 
-.btn-sm {
-  padding: 6px 12px;
-  font-size: 12px;
-}
+.btn-ghost { background: transparent; color: var(--text-2); border-color: var(--border-strong); }
+.btn-ghost:hover:not(:disabled) { background: var(--surface-2); color: var(--text); }
 
-.btn-danger {
-  background: var(--red-light);
-  color: var(--red-dark);
-  border: 1px solid var(--red);
-  width: 100%;
-}
-.btn-danger:hover:not(:disabled) {
-  background: var(--red);
-  color: #fff;
-}
+.btn-danger { background: var(--red-light); color: var(--red-dark); border-color: var(--red); }
+.btn-danger:hover:not(:disabled) { background: var(--red); color: #fff; }
 
-/* Pill buttons */
-.btn-pill {
-  background: var(--accent);
-  color: #fff;
-  padding: 7px 16px;
-  border-radius: var(--r-pill);
-  font-size: 13px;
-  font-weight: 600;
-}
-.btn-pill:hover { background: var(--accent-hover); }
-
-.btn-pill-outline {
-  background: transparent;
-  color: var(--accent-text);
-  border: 1px solid var(--accent);
-  padding: 7px 16px;
-  border-radius: var(--r-pill);
-  font-size: 13px;
-  font-weight: 600;
-}
-.btn-pill-outline:hover {
-  background: var(--accent-light);
-}
-
-/* Legacy class names still used in some pages */
-.btn-amber-pill {
-  background: var(--accent);
-  color: #fff;
-  padding: 7px 16px;
-  border-radius: var(--r-pill);
-  font-size: 13px;
-  font-weight: 600;
-  border: none;
-  cursor: pointer;
-}
-.btn-amber-pill:hover { background: var(--accent-hover); }
-
-.btn-outline-amber {
-  background: transparent;
-  color: var(--accent-text);
-  border: 1px solid var(--accent);
-  padding: 8px 16px;
-  border-radius: var(--r-md);
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-}
-.btn-outline-amber:hover { background: var(--accent-light); }
+.btn-sm { min-height: 32px; padding: 6px 12px; font-size: 12px; }
+.btn-block { display: flex; width: 100%; }
 
 /* ══════════════════════════════════════════
    COMMON COMPONENTS
@@ -992,7 +935,7 @@ body {
 .balance-card-main .owe { color: var(--red-dark); }
 .balance-card-main .owed { color: var(--green-dark); }
 .balance-card-sub { font-size: 12px; color: var(--text-3); margin-top: 2px; }
-.balance-card .btn { flex-shrink: 0; width: auto; min-height: 36px; padding: 8px 16px; font-size: 13px; border-radius: var(--r-pill); }
+.balance-card .btn { flex-shrink: 0; min-height: 36px; padding: 8px 16px; font-size: 13px; border-radius: var(--r-pill); }
 
 /* Segmented control (tabs) */
 .segmented {
@@ -1575,7 +1518,7 @@ body {
 
 /* Trip item: create or link an expense, and the picker for linking one. */
 .trip-expense-actions { display: flex; gap: 8px; }
-.trip-expense-actions .btn-pill-outline { flex: 1; padding: 10px; }
+.trip-expense-actions .btn { flex: 1; }
 .link-expense-list {
   max-height: min(50vh, 420px);
   overflow-y: auto;
@@ -1885,11 +1828,6 @@ a.act-row { color: inherit; text-decoration: none; }
 }
 .panel-actions .btn { width: auto; }
 
-.btn-secondary {
-  background: var(--accent);
-  color: #fff;
-}
-.btn-secondary:hover:not(:disabled) { background: var(--accent-hover); }
 
 /* ══════════════════════════════════════════
    CURRENCY INPUT
@@ -2695,7 +2633,7 @@ a.trip-chip:hover { border-color: var(--accent); }
 .trip-paid { font-family: var(--font-mono); font-size: 13px; color: var(--text-3); }
 
 /* Data that could not be loaded (components/LoadFailed). */
-.load-failed .btn-pill { margin-top: 4px; }
+.load-failed .btn { margin-top: 4px; }
 .load-failed-docs { display: inline-block; margin-top: 14px; font-size: 14px; font-weight: 600; color: var(--accent-text); }
 
 /* Layout: the bar shown while Splitty cannot reach its server. */
