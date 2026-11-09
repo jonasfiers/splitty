@@ -1,5 +1,6 @@
-import { useState } from 'react'
-import { Outlet, NavLink, Link } from 'react-router'
+import { useState, useRef } from 'react'
+import { Outlet, NavLink, Link, useLocation } from 'react-router'
+import { markPageOpened } from '../utils/pageStart.js'
 import { useMediaQuery } from '../utils/useMediaQuery.js'
 import { useOffline } from '../utils/connection.js'
 import { useHistoryTracker } from '../utils/history.js'
@@ -90,6 +91,10 @@ function AdminIcon({ size = 20 }) {
 
 export default function Layout() {
   useHistoryTracker()
+  // Marked while rendering, before the new page's own parts mount.
+  const { pathname } = useLocation()
+  const lastPath = useRef(pathname)
+  if (lastPath.current !== pathname) { lastPath.current = pathname; markPageOpened() }
   const offline = useOffline()
   const kept = useOfflineDocs()
   const { currentUser, isAdmin } = useAuth()

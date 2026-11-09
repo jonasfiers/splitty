@@ -3,6 +3,7 @@ import { Link } from 'react-router'
 import client from '../../api/client'
 import { formatCurrency } from '../../utils/currency.js'
 import { buildTimeline, describe, itemIcon, formatDay, formatDateRange, daysBetween, today } from '../../utils/trip.js'
+import { useGate } from '../../utils/pageGate.jsx'
 
 // The trip that is on, or the next one: what comes first, at a glance.
 // It loads the trip's items itself; until then (or if that fails) it shows
@@ -10,12 +11,14 @@ import { buildTimeline, describe, itemIcon, formatDay, formatDateRange, daysBetw
 export default function NextTrip({ trip }) {
   const [detail, setDetail] = useState(null) // { items, places, paid, iso }
   const [docCount, setDocCount] = useState(null)
+  const gate = useGate() // the Trips page shows once this card is filled (utils/pageGate.jsx)
 
   useEffect(() => {
-    client.get(`/trips/${trip.id}`)
+    gate(client.get(`/trips/${trip.id}`)
       .then(({ data }) => setDetail({ items: data.items || [], places: data.places || [], paid: Number(data.trip?.paidBase || 0), iso: data.trip?.groupIso }))
-      .catch(() => {})
-    client.get(`/trips/${trip.id}/documents`).then(({ data }) => setDocCount(data.documents.length)).catch(() => {})
+      .catch(() => {}))
+    gate(client.get(`/trips/${trip.id}/documents`).then(({ data }) => setDocCount(data.documents.length)).catch(() => {}))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [trip.id])
 
   const now = today()

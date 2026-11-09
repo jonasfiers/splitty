@@ -15,6 +15,18 @@ export function reportReachable(ok) {
   window.dispatchEvent(new Event(CHANGED))
 }
 
+// One request without an answer is not yet "offline": it may be a one-off
+// hiccup. Ask the server's health check (a few seconds at most); only when
+// that gets no answer either is the server marked unreachable.
+let probing = null
+export function suspectUnreachable() {
+  if (unreachable || probing) return
+  probing = fetch('/api/health', { cache: 'no-store', signal: AbortSignal.timeout(4000) })
+    .then(res => { if (res) reportReachable(true) })
+    .catch(() => reportReachable(false))
+    .finally(() => { probing = null })
+}
+
 export const isOffline = () => navigator.onLine === false || unreachable
 export const isUnreachable = () => unreachable
 

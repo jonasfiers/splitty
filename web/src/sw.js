@@ -22,16 +22,49 @@ const OFFLINE_DOCS = 'splitty-offline-docs'   // also utils/offlineDocs.js
 // duplicate makes saving the whole list fail.
 const APP_URLS = [...new Set(MANIFEST.map(e => new URL(e.url, self.location).pathname))]
 const INDEX = '/index.html'
+// What each file is, per build: a name with a content hash has no revision
+// (a new content gets a new name); others (index.html, icons) do. Saved in
+// every app cache, so the next build can tell which of its files it has
+// already (install, below).
+const REVISIONS_KEY = '/__splitty-revisions'
+const REVISIONS = Object.fromEntries(MANIFEST.map(e => [new URL(e.url, self.location).pathname, e.revision ?? null]))
 const NAVIGATION_TIMEOUT_MS = 4000
 
-// Three files at a time and at low priority, so the app's own requests (the
-// trips, the groups) are not stuck behind ~2 MB of program files on a slow
-// connection. All or nothing, as cache.addAll: one missing file and this
-// version does not install (the previous one keeps working).
+// Only what changed is downloaded: a file the previous build saved as it is
+// now (the same hashed name, or the same revision) is copied from its cache.
+// Otherwise every deploy fetched all of the app (5 MB: the map, pdf.js...)
+// again, and pages loaded slowly while that ran. What is left goes three
+// files at a time and at low priority, so the app's own requests (the trips,
+// the groups) are not stuck behind it. All or nothing, as cache.addAll: one
+// missing file and this version does not install (the previous one keeps
+// working).
+async function reusable() {
+    const found = new Map() // path -> saved response
+    // This build's own cache counts too: it already exists, under the same
+    // name, when only this worker changed and the app files did not.
+    const older = (await caches.keys()).filter(k => k.startsWith('splitty-app-'))
+    for (const key of older) {
+        const old = await caches.open(key)
+        const saved = await old.match(REVISIONS_KEY)
+        const revisions = saved ? await saved.json().catch(() => ({})) : {}
+        for (const path of APP_URLS) {
+            if (found.has(path)) continue
+            const rev = REVISIONS[path]
+            // A hashed name is the same file wherever it is; others only with the same revision.
+            if (rev !== null && revisions[path] !== rev) continue
+            const hit = await old.match(path)
+            if (hit) found.set(path, hit)
+        }
+    }
+    return found
+}
+
 self.addEventListener('install', event => {
     event.waitUntil((async () => {
         const cache = await caches.open(APP_CACHE)
-        const queue = [...APP_URLS]
+        const have = await reusable().catch(() => new Map())
+        for (const [path, res] of have) await cache.put(path, res)
+        const queue = APP_URLS.filter(path => !have.has(path))
         const worker = async () => {
             for (let url; (url = queue.shift()); ) {
                 // 'reload': past the browser's HTTP cache, so index.html is current.
@@ -42,6 +75,7 @@ self.addEventListener('install', event => {
         }
         try {
             await Promise.all([worker(), worker(), worker()])
+            await cache.put(REVISIONS_KEY, new Response(JSON.stringify(REVISIONS), { headers: { 'Content-Type': 'application/json' } }))
         } catch (err) {
             await caches.delete(APP_CACHE)
             throw err

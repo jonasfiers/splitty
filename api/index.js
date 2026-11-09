@@ -18,6 +18,7 @@ app.use(helmet());
 // never reads the answer, so an unexpected Origin (e.g. "null") must not
 // turn them into errors. The route logs each kind once an hour.
 app.use('/csp-report', require('./routes/cspReport.js'));
+app.use('/client-log', require('./routes/clientLog.js'));
 app.use(cors({
     origin: (origin, callback) => {
         // Allow requests with no origin (like mobile apps or curl requests)

@@ -16,6 +16,7 @@ import { List, ListRow } from '../components/List/List.jsx'
 import Field from '../components/Field/Field.jsx'
 import Picker from '../components/Picker/Picker.jsx'
 import EmptyState from '../components/EmptyState/EmptyState.jsx'
+import { PageGate } from '../utils/pageGate.jsx'
 
 export default function GroupsPage() {
   const navigate = useNavigate()
@@ -88,6 +89,8 @@ export default function GroupsPage() {
   return (
     <>
       <TabHeader logo />
+      {/* In one go: the Today card and the panels load their own data (utils/pageGate.jsx). */}
+      <PageGate>
       <div className="home-layout">
         <div className="home-main">
           {/* on a trip: today's plan comes first */}
@@ -157,6 +160,7 @@ export default function GroupsPage() {
           <HomePanels />
         </aside>
       </div>
+      </PageGate>
 
       {/* FAB — add expense */}
       <FabButton onClick={handleFabClick} label="Add expense" />

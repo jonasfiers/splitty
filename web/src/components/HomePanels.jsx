@@ -7,6 +7,7 @@ import { timeAgo } from '../utils/time.js'
 import { today, daysBetween, formatDateRange } from '../utils/trip.js'
 import { isActive } from './TodayTrip.jsx'
 import { activityLink, activityVerb, isTripActivity } from '../utils/activity.js'
+import { useGate } from '../utils/pageGate.jsx'
 
 const RECENT = 5
 const TOP_CATEGORIES = 3
@@ -18,11 +19,13 @@ export default function HomePanels() {
   const [monthly, setMonthly] = useState(null)
   const [trips, setTrips] = useState(null)
   const [activity, setActivity] = useState(null)
+  const gate = useGate() // Home shows once these are in too (utils/pageGate.jsx)
 
   useEffect(() => {
-    client.get('/dash/insights').then(r => setMonthly(r.data.monthly || [])).catch(() => {})
-    client.get('/trips').then(r => setTrips(r.data.trips || [])).catch(() => {})
-    client.get('/dash/activity').then(r => setActivity(r.data.activities || [])).catch(() => {})
+    gate(client.get('/dash/insights').then(r => setMonthly(r.data.monthly || [])).catch(() => {}))
+    gate(client.get('/trips').then(r => setTrips(r.data.trips || [])).catch(() => {}))
+    gate(client.get('/dash/activity').then(r => setActivity(r.data.activities || [])).catch(() => {}))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   return (

@@ -10,6 +10,7 @@ import TabHeader from '../components/PageHeader/TabHeader.jsx'
 import { activityLink, activityVerb, activityMatches, activityIcon, activityTone, isTripActivity, isDeletedActivity, actionOf } from '../utils/activity.js'
 import { summarizeChanges } from '../utils/expenseChanges.js'
 import EmptyState from '../components/EmptyState/EmptyState.jsx'
+import { waitAtMost } from '../utils/pageGate.jsx'
 
 const PAGE = 50
 // Nothing chosen means everything: tapping the active chip again clears it.
@@ -60,16 +61,20 @@ export default function ActivityPage() {
   const retry = useCallback(() => { setError(null); setLoading(true); setAttempt(n => n + 1) }, [])
 
   useEffect(() => {
-    client.get('/dash/activity')
-      .then(r => setActivities(r.data.activities || []))
-      .catch(err => setError(err))
-      .finally(() => setLoading(false))
     // Group names and icons are a nice-to-have: without them the rows just omit the group.
-    client.get('/dash/groups')
+    const groupsReq = client.get('/dash/groups')
       .then(r => setGroups(new Map((r.data.groups || []).map(g => [g.id, g]))))
       .catch(() => {})
     // Likewise the trips, for the group-or-trip picker.
-    client.get('/trips').then(r => setTrips(r.data.trips || [])).catch(() => {})
+    const tripsReq = client.get('/trips').then(r => setTrips(r.data.trips || [])).catch(() => {})
+    // The feed shows with them, so names don't pop in; for them it waits at
+    // most 1.5 s (utils/pageGate.jsx).
+    Promise.all([
+      client.get('/dash/activity').then(r => setActivities(r.data.activities || [])),
+      waitAtMost(groupsReq), waitAtMost(tripsReq),
+    ])
+      .catch(err => setError(err))
+      .finally(() => setLoading(false))
   }, [attempt])
 
   const filtered = useMemo(

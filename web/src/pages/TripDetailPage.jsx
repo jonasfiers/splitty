@@ -20,6 +20,7 @@ import Segmented from '../components/Segmented/Segmented.jsx'
 import { leaveTo } from '../utils/history.js'
 import { useConfirm } from '../components/Confirm/ConfirmProvider.jsx'
 import EmptyState from '../components/EmptyState/EmptyState.jsx'
+import { waitAtMost } from '../utils/pageGate.jsx'
 
 // Leaflet is only worth downloading once someone opens the map.
 const TripMap = lazy(() => import('../components/TripMap/TripMap.jsx'))
@@ -67,20 +68,20 @@ function TripDetailPage() {
   // The same list also tidies this trip's copies kept on the device: one
   // deleted or made private by its owner goes (utils/offlineDocs.js).
   const [docIds, setDocIds] = useState(null)
-  useEffect(() => {
-    client.get(`/trips/${id}/documents`).then(({ data }) => setDocIds(data.documents.map(d => d.id))).catch(() => {})
-  }, [id])
+  const loadDocs = useCallback(() => client.get(`/trips/${id}/documents`).then(({ data }) => setDocIds(data.documents.map(d => d.id))).catch(() => {}), [id])
   const docCount = docIds?.length ?? 0
   useEffect(() => {
     if (docIds && trip?.title) syncTrip({ id, title: trip.title }, docIds).catch(() => {})
   }, [docIds, trip?.title, id])
 
+  // With the documents count, so the chip doesn't change after the page shows;
+  // it waits for that at most 1.5 s (utils/pageGate.jsx).
   const load = useCallback(async () => {
-    const { data } = await client.get(`/trips/${id}`)
+    const [{ data }] = await Promise.all([client.get(`/trips/${id}`), waitAtMost(loadDocs())])
     setTrip(data.trip)
     setItems(data.items || [])
     setPlaces(data.places || [])
-  }, [id])
+  }, [id, loadDocs])
 
   // Loading failed (not "no such trip": that is a 404): the "couldn't load"
   // state, not "Trip not found.".

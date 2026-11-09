@@ -3,6 +3,7 @@ import { Link } from 'react-router'
 import client from '../api/client'
 import { itemIcon, buildTimeline, daysBetween, today, addDays } from '../utils/trip.js'
 import TodayEntries, { useClock } from './TodayEntries.jsx'
+import { useGate } from '../utils/pageGate.jsx'
 
 // Home's top card while a trip is on: what today holds, from the trip's own
 // day list (same entries, same order), and where you sleep tonight. One card
@@ -16,15 +17,17 @@ export const isActive = (trip, day = today()) => trip.startDate <= day && day <=
 
 export default function TodayTrip() {
   const [trips, setTrips] = useState([])
+  const gate = useGate()
 
   useEffect(() => {
     let live = true
-    client.get('/trips').then(async ({ data }) => {
+    gate(client.get('/trips').then(async ({ data }) => {
       const active = (data.trips || []).filter(t => isActive(t))
       const full = await Promise.all(active.map(t => client.get(`/trips/${t.id}`).then(r => r.data).catch(() => null)))
       if (live) setTrips(full.filter(Boolean))
-    }).catch(() => {})
+    }).catch(() => {}))
     return () => { live = false }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   return trips.map(t => <TodayCard key={t.trip.id} trip={t.trip} items={t.items || []} places={t.places || []} />)

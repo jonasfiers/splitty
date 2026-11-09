@@ -2903,3 +2903,18 @@ a.trip-chip:hover { border-color: var(--accent); }
   .next-trip-sep { display: none; }
 }
 .trips-past { margin-top: 8px; }
+
+/* Loading (components/Loading.jsx): nothing for the first 400ms, then a soft
+   fade-in, so a fast load shows no loader at all. */
+.loading { animation: loading-in .25s ease .4s both; }
+@keyframes loading-in { from { opacity: 0; } to { opacity: 1; } }
+.loading-cat { width: 88px; height: 88px; }
+.loading-cat-tail { transform-box: view-box; transform-origin: 100px 124px; animation: tail-swish 1.6s ease-in-out infinite alternate; }
+@keyframes tail-swish { from { transform: rotate(-14deg); } to { transform: rotate(10deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .loading { animation-duration: 0s; }
+  .loading-cat-tail { animation: none; }
+}
+
+/* PageGate (utils/pageGate.jsx): the content is laid out but hidden until ready */
+.page-gate.waiting { visibility: hidden; height: 0; overflow: hidden; }

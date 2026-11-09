@@ -14,6 +14,7 @@ import TabHeader from '../components/PageHeader/TabHeader.jsx'
 import { useOfflineDocs } from '../utils/useOfflineDocs.js'
 import EmptyState from '../components/EmptyState/EmptyState.jsx'
 import NextTrip from '../components/TripForm/NextTrip.jsx'
+import { PageGate } from '../utils/pageGate.jsx'
 
 export default function TripsPage() {
   const offline = useOfflineDocs()
@@ -73,6 +74,9 @@ export default function TripsPage() {
         </EmptyState>
       )}
 
+      {/* Only once the list is in: a gate opened before the Next up card
+          existed would have nothing to wait for (utils/pageGate.jsx). */}
+      {!loading && <PageGate>
       {nextTrip && <NextTrip trip={nextTrip} />}
 
       {later.length > 0 && <>
@@ -94,6 +98,7 @@ export default function TripsPage() {
           />
         ))}
       </List>}
+      </PageGate>}
 
       {groups.length > 0 && <FabButton onClick={() => setShowNew(true)} label="New trip" />}
 

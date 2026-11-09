@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { reportReachable, isUnreachable, requestStarted, requestEnded } from '../utils/connection.js'
+import { reportReachable, suspectUnreachable, isUnreachable, requestStarted, requestEnded } from '../utils/connection.js'
 
 // A time limit: without a connection a request does not always fail at once
 // (on a phone with a VPN in airplane mode it just never gets an answer), and
@@ -22,16 +22,62 @@ client.interceptors.request.use(config => {
   }
   if (isUnreachable() && (config.timeout ?? DEFAULT_TIMEOUT_MS) <= DEFAULT_TIMEOUT_MS) config.timeout = UNREACHABLE_TIMEOUT
   config.splittyRequest = requestStarted()
+  config.splittyStarted = performance.now()
   return config
 })
 
+// Requests that ended without any answer, reported to the server once it
+// answers again (api/routes/clientLog.js): which ones break off, and how.
+const brokenOff = []
+function noteBrokenOff(err, retry) {
+  const config = err.config || {}
+  brokenOff.push({
+    method: (config.method || 'get').toUpperCase(),
+    path: String(config.url || '').split('?')[0],
+    code: err.code || err.message,
+    ms: performance.now() - (config.splittyStarted ?? performance.now()),
+    online: navigator.onLine,
+    retry,
+    page: location.pathname,
+  })
+  if (brokenOff.length > 20) brokenOff.shift()
+  console.warn('[splitty] request ended without an answer:', brokenOff.at(-1))
+}
+function sendBrokenOff() {
+  if (!brokenOff.length) return
+  const body = JSON.stringify({ events: brokenOff.splice(0) })
+  fetch('/api/client-log', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body, keepalive: true }).catch(() => {})
+}
+
+const RETRY_AFTER_MS = 400
+
 client.interceptors.response.use(
-  res => { requestEnded(res.config.splittyRequest); reportReachable(true); return res },
-  err => {
+  res => {
+    requestEnded(res.config.splittyRequest)
+    reportReachable(true)
+    sendBrokenOff()
+    return res
+  },
+  async err => {
     requestEnded(err.config?.splittyRequest)
     // Any answer, even an error, means the server is reachable.
     if (err.response) reportReachable(true)
-    else if (err.code !== 'ERR_CANCELED') reportReachable(false)
+    else if (err.code !== 'ERR_CANCELED') {
+      const config = err.config
+      // A read that broke off without an answer (not one that timed out:
+      // that would only wait twice as long) is tried once more: a one-off
+      // hiccup should not empty a card or flash the offline bar.
+      const retryable = config && (config.method || 'get') === 'get' && !config.splittyRetried
+        && err.code !== 'ECONNABORTED' && navigator.onLine !== false
+      noteBrokenOff(err, retryable ? 'retrying' : 'none')
+      if (retryable) {
+        config.splittyRetried = true
+        await new Promise(r => setTimeout(r, RETRY_AFTER_MS))
+        return client(config)
+      }
+      // The offline bar only once the server is confirmed out of reach.
+      suspectUnreachable()
+    }
     if (err.response?.status === 401 && !err.config?.url?.includes('/auth/')) {
       localStorage.removeItem('token')
       window.location.href = '/login'
