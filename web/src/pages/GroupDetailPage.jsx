@@ -21,6 +21,7 @@ import { useConfirm } from '../components/Confirm/ConfirmProvider.jsx'
 import Segmented from '../components/Segmented/Segmented.jsx'
 import { leaveTo } from '../utils/history.js'
 import { List, ListRow } from '../components/List/List.jsx'
+import GroupEditSheet from '../components/GroupForm/GroupEditSheet.jsx'
 
 // Keep in sync with the .group-layout breakpoint in index.css.
 const WIDE_QUERY = '(min-width: 1180px)'
@@ -38,6 +39,9 @@ export default function GroupDetailPage() {
   const [members, setMembers] = useState([])
   const [balance, setBalance] = useState(null)
   const [tab, setTab] = useState('expenses')
+  const [showEdit, setShowEdit] = useState(false)
+  const [showSettlePick, setShowSettlePick] = useState(false) // Settle up with several people: who first
+  const [memberSheet, setMemberSheet] = useState(null) // the member tapped on the Members tab
   const [showSettlement, setShowSettlement] = useState(false)
   const [settlementForm, setSettlementForm] = useState({
     paidByUserId: '',
@@ -183,14 +187,6 @@ export default function GroupDetailPage() {
     } catch { setError('Failed to delete group.') }
   }
 
-  const handleDeleteExpense = async expenseId => {
-    if (!(await confirm({ title: 'Delete this expense?', confirmLabel: 'Delete', danger: true }))) return
-    try {
-      await client.delete(`/expenses/${expenseId}`)
-      setExpenses(es => es.filter(e => e.id !== expenseId))
-    } catch { setError('Failed to delete expense.') }
-  }
-
   const handleNewExpense = () => navigate(`/groups/${id}/expenses/new`);
 
   const handleInvite = async () => {
@@ -329,6 +325,7 @@ export default function GroupDetailPage() {
     m.id !== currentUser?.id && (balance.amount > 0 ? m.balance < 0 : m.balance > 0))
   const openSettleUp = () => {
     if (counterparts.length === 1) openSettlement(counterparts[0])
+    else if (counterparts.length > 1) setShowSettlePick(true)
     else setShowSettlement(true)
   }
   const withWhom = counterparts.length === 1 ? counterparts[0].name
@@ -427,6 +424,8 @@ export default function GroupDetailPage() {
         name={group.title}
         actions={[
           { label: 'Invite', onClick: handleInvite, primary: true },
+          { label: 'Edit group', onClick: () => setShowEdit(true) },
+          { label: 'Leave group', onClick: () => handleRemoveMember(currentUser.id) },
           { label: 'Delete group', onClick: handleDeleteGroup, danger: true },
         ]}
       >
@@ -571,45 +570,27 @@ export default function GroupDetailPage() {
           </>}
 
           {tab === 'members' && <>
-            <div className="members-section">
-              {members.map(m => (
-                <div key={m.id} className="member-row">
-                  <Avatar name={m.name} size={34} colorIndex={m.avatarColor} emoji={m.avatarEmoji} />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div className="member-name">{m.name}</div>
-                    <div className="member-email">{m.email}</div>
-                  </div>
-                  <span className="member-bal" style={{ color: m.balance > 0 ? 'var(--green)' : m.balance < 0 ? 'var(--red)' : 'var(--text-3)' }}>
-                    {m.balance ? formatCurrency(Math.abs(m.balance), balance?.iso) : '—'}
-                  </span>
-                  <div className="member-actions">
-                    {m.id !== currentUser.id && m.balance !== 0 && (
-                      <>
-                        <button className="btn-pill-outline" style={{ fontSize: 11, padding: '4px 8px' }} onClick={() => openSettlement(m)}>
-                          Settle
-                        </button>
-                        <button className="btn-pill-outline" style={{ fontSize: 11, padding: '4px 8px' }} onClick={() => openTransfer(m)}>
-                          Transfer
-                        </button>
-                      </>
-                    )}
-                    <button className="member-rm-btn" onClick={() => handleRemoveMember(m.id)} title="Remove">
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <polyline points="3 6 5 6 21 6"/>
-                        <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-                        <path d="M10 11v6M14 11v6"/>
-                        <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-              ))}
-
-              <button className="btn-pill-outline" style={{ marginTop: 12, width: '100%', padding: '10px' }} onClick={handleInvite}>
-                Invite via link
-              </button>
-
-            </div>
+            <List>
+              {members.map(m => {
+                const self = m.id === currentUser.id
+                return (
+                  <ListRow
+                    key={m.id}
+                    onClick={self ? undefined : () => setMemberSheet(m)}
+                    icon={<Avatar name={m.name} size={36} colorIndex={m.avatarColor} emoji={m.avatarEmoji} />}
+                    className="list-row-person"
+                    title={self ? `${m.name} (you)` : m.name}
+                    meta={m.email}
+                    aside={m.balance ? <>
+                      <span className={`list-row-amt ${m.balance > 0 ? 'positive' : 'negative'}`}>{formatCurrency(Math.abs(m.balance), group.iso)}</span>
+                      <span className="list-row-sub">{m.balance > 0 ? 'gets back' : 'owes'}</span>
+                    </> : <span className="list-row-amt settled">Settled</span>}
+                    chevron={!self}
+                  />
+                )
+              })}
+              <ListRow onClick={handleInvite} action icon="+" title="Invite people" />
+            </List>
           </>}
 
           {tab === 'trips' && (
@@ -702,6 +683,61 @@ export default function GroupDetailPage() {
           )}
         </Sheet>
       )}
+
+      {showEdit && (
+        <GroupEditSheet
+          group={group}
+          canChangeCurrency={expenses.length === 0 && activeFilterCount === 0}
+          onClose={() => setShowEdit(false)}
+          onSaved={async () => { setShowEdit(false); await load() }}
+        />
+      )}
+
+      {showSettlePick && (
+        <Sheet title="Settle up with…" onClose={() => setShowSettlePick(false)}>
+          <List>
+            {counterparts.map(m => (
+              <ListRow
+                key={m.id}
+                onClick={() => { setShowSettlePick(false); openSettlement(m) }}
+                icon={<Avatar name={m.name} size={36} colorIndex={m.avatarColor} emoji={m.avatarEmoji} />}
+                className="list-row-person"
+                title={m.name}
+                aside={<>
+                  <span className={`list-row-amt ${m.balance > 0 ? 'positive' : 'negative'}`}>{formatCurrency(Math.abs(m.balance), group.iso)}</span>
+                  <span className="list-row-sub">{m.balance > 0 ? 'gets back' : 'owes'}</span>
+                </>}
+                chevron
+              />
+            ))}
+          </List>
+          <SheetActions><button type="button" className="btn btn-ghost" onClick={() => setShowSettlePick(false)}>Cancel</button></SheetActions>
+        </Sheet>
+      )}
+
+      {memberSheet && (() => {
+        const m = memberSheet
+        const close = () => setMemberSheet(null)
+        return (
+          <Sheet title={m.name} onClose={close}>
+            <div className="member-sheet-head">
+              <Avatar name={m.name} size={56} colorIndex={m.avatarColor} emoji={m.avatarEmoji} />
+              <div className="member-sheet-status">
+                {!m.balance ? 'Settled up in this group'
+                  : m.balance < 0 ? <>Owes <span className="owe">{formatCurrency(Math.abs(m.balance), group.iso)}</span> in this group</>
+                  : <>Gets back <span className="owed">{formatCurrency(m.balance, group.iso)}</span> in this group</>}
+              </div>
+              {m.email && <div className="member-sheet-email">{m.email}</div>}
+            </div>
+            <SheetActions>
+              {!!m.balance && <button type="button" className="btn btn-primary" onClick={() => { close(); openSettlement(m) }}>Settle up</button>}
+              {!!m.balance && <button type="button" className="btn btn-ghost" onClick={() => { close(); openTransfer(m) }}>Move balance to another group</button>}
+              <button type="button" className="btn btn-danger" onClick={() => { close(); handleRemoveMember(m.id) }}>Remove from group</button>
+              <button type="button" className="btn btn-ghost" onClick={close}>Cancel</button>
+            </SheetActions>
+          </Sheet>
+        )
+      })()}
 
       {/* Settlement sheet */}
       {showSettlement && (

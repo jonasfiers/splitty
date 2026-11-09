@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react'
 import LoadFailed from '../components/LoadFailed.jsx'
-import { useParams, useNavigate, useLocation, Link } from 'react-router'
+import { useParams, useNavigate, useLocation, useSearchParams, Link } from 'react-router'
 import { syncTrip } from '../utils/offlineDocs.js'
 import client from '../api/client'
 import FabButton from '../components/FabButton/FabButton.jsx'
@@ -42,7 +42,11 @@ function TripDetailPage() {
   const [trip, setTrip] = useState(null)
   const [items, setItems] = useState([])
   const [places, setPlaces] = useState([])
-  const [tab, setTab] = useState('timeline')
+  // Narrower than that: Plan (the day list, opening on today), Timeline or
+  // Map. Kept in the URL, so coming back from an item lands on the same view.
+  const [searchParams, setSearchParams] = useSearchParams()
+  const view = ['timeline', 'map'].includes(searchParams.get('view')) ? searchParams.get('view') : 'plan'
+  const setView = v => setSearchParams(v === 'plan' ? {} : { view: v }, { replace: true })
   // Item ids under the pointer in the timeline or on the map; the other one lights them up.
   const [highlight, setHighlight] = useState(null)
   const [showKinds, setShowKinds] = useState(false)
@@ -260,6 +264,27 @@ function TripDetailPage() {
     </div>
   )
 
+  const emptyPlan = (
+    <div className="empty-state" style={{ padding: '32px 24px' }}>
+      <img src="/cat-empty.svg" alt="" style={{ width: 80, height: 80 }} />
+      <p style={{ color: 'var(--text-3)', fontSize: 14 }}>Nothing planned yet. Add a flight, a stay or something to do.</p>
+    </div>
+  )
+
+  const ganttView = (
+    <Expandable
+      label={`${trip.title} · Timeline`}
+      splitKey="trip-timeline"
+      extra={places.some(p => p.lat != null) && (
+        <Suspense fallback={<Loading />}>
+          <TripMap places={places} items={items} onOpenItem={openItem} highlight={highlight} onHover={setHighlight} />
+        </Suspense>
+      )}
+    >
+      <TripGantt trip={trip} items={items} placeName={placeName} onOpenItem={openItem} onCreate={createFromTimeline} onReschedule={reschedule} onDelete={removeItem} highlight={highlight} onHover={setHighlight} />
+    </Expandable>
+  )
+
   const mapView = (
     <Suspense fallback={<Loading />}>
       <Expandable label={`${trip.title} · Map`}>
@@ -309,26 +334,9 @@ function TripDetailPage() {
       {trip.notes && <p className="trip-notes">{trip.notes}</p>}
 
 
-      {items.length === 0 ? (
-        <div className="empty-state" style={{ padding: '32px 24px' }}>
-          <img src="/cat-empty.svg" alt="" style={{ width: 80, height: 80 }} />
-          <p style={{ color: 'var(--text-3)', fontSize: 14 }}>Nothing planned yet. Add a flight, a stay or something to do.</p>
-        </div>
-      ) : (
-        <Expandable
-          label={`${trip.title} · Timeline`}
-          splitKey="trip-timeline"
-          extra={places.some(p => p.lat != null) && (
-            <Suspense fallback={<Loading />}>
-              <TripMap places={places} items={items} onOpenItem={openItem} highlight={highlight} onHover={setHighlight} />
-            </Suspense>
-          )}
-        >
-          <TripGantt trip={trip} items={items} placeName={placeName} onOpenItem={openItem} onCreate={createFromTimeline} onReschedule={reschedule} onDelete={removeItem} highlight={highlight} onHover={setHighlight} />
-        </Expandable>
-      )}
-
       {wide ? (
+        <>
+        {items.length === 0 ? emptyPlan : ganttView}
         <div className="trip-split">
           <div>
             <div className="section-label">Day by day</div>
@@ -339,19 +347,23 @@ function TripDetailPage() {
             {mapView}
           </div>
         </div>
+        </>
       ) : (
         <>
           <Segmented
             label="Show"
-            value={tab}
-            onChange={setTab}
+            value={view}
+            onChange={setView}
             options={[
-              { value: 'timeline', label: 'Day by day' },
+              { value: 'plan', label: 'Plan' },
+              { value: 'timeline', label: 'Timeline' },
               { value: 'map', label: places.length > 0 ? `Map · ${places.length}` : 'Map' },
             ]}
           />
-          {tab === 'timeline' && items.length > 0 && dayList}
-          {tab === 'map' && mapView}
+          {view !== 'map' && items.length === 0 && emptyPlan}
+          {view === 'plan' && items.length > 0 && dayList}
+          {view === 'timeline' && items.length > 0 && ganttView}
+          {view === 'map' && mapView}
         </>
       )}
 

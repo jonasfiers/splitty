@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useParams, useNavigate, useSearchParams, Link } from 'react-router'
+import { useParams, useNavigate, useSearchParams } from 'react-router'
 import client from '../api/client'
 import PlacePicker from '../components/PlacePicker/PlacePicker.jsx'
 import Loading from '../components/Loading.jsx'

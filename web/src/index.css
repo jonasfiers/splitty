@@ -1296,37 +1296,9 @@ body {
   color: var(--text-2);
   flex-shrink: 0;
 }
-.member-actions {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-shrink: 0;
-}
-.member-rm-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px; height: 28px;
-  border-radius: var(--r-sm);
-  color: var(--text-3);
-  flex-shrink: 0;
-  transition: background .12s, color .12s;
-}
-.member-rm-btn:hover {
-  background: var(--red-light);
-  color: var(--red-dark);
-}
 @media (max-width: 520px) {
   .member-row { flex-wrap: wrap; }
   .member-email { display: none; }
-  .member-actions {
-    width: 100%;
-    justify-content: flex-end;
-    padding-left: 44px;
-    padding-top: 6px;
-    margin-top: 2px;
-    border-top: 1px solid var(--border);
-  }
 }
 
 .add-member-panel {
@@ -2827,3 +2799,12 @@ a.trip-chip:hover { border-color: var(--accent); }
   background: var(--surface-2); color: var(--text-2, var(--text)); border-bottom: 1px solid var(--border);
 }
 .offline-bar a { color: var(--accent-text); font-weight: 600; }
+
+/* Members tab: an avatar instead of the rounded icon square */
+.list-row-person .list-row-icon { background: none; width: auto; height: auto; }
+/* The sheet a member opens */
+.member-sheet-head { display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; padding: 4px 0 8px; }
+.member-sheet-status { font-size: 15px; font-weight: 600; color: var(--text); margin-top: 6px; }
+.member-sheet-status .owe { color: var(--red-dark); font-family: var(--font-mono); }
+.member-sheet-status .owed { color: var(--green-dark); font-family: var(--font-mono); }
+.member-sheet-email { font-size: 13px; color: var(--text-3); }
