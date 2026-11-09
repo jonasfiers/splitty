@@ -10,6 +10,11 @@
   --accent-light:  #FEF0EB;
   --accent-hover:  #D4512B;
   --accent-subtle: #FDE2D8;
+  /* Orange behind white text or icons (buttons, badges, the chosen day): deep
+     enough for 4.5:1 with white, in both themes. --accent stays for orange
+     without text on it (borders, checks, toggles, bars). */
+  --accent-fill:       #C9502A;
+  --accent-fill-hover: #B5441F;
 
   --green:       #059669;
   --green-light: #D1FAE5;
@@ -65,6 +70,8 @@
   --accent-light:  #2E1E17;
   --accent-hover:  #E8603A;
   --accent-subtle: #3A2218;
+  --accent-fill:       #C9502A;
+  --accent-fill-hover: #B5441F;
 
   --green:       #34D399;
   --green-light: #052E1C;
@@ -75,7 +82,7 @@
 
   --sb-bg:        #1E1008;
   --sb-border:    rgba(255,255,255,0.07);
-  --sb-text:      #9A7550;
+  --sb-text:      #A88560; /* was #9A7550 (4.4:1); now 5.5:1 */
   --sb-text-hover:#FDF6EE;
   --sb-active-bg: rgba(255,255,255,0.10);
   --sb-active:    #FDF6EE;
@@ -88,7 +95,7 @@
 
   --text:         #FAF7F4;
   --text-2:       #B5A89A;
-  --text-3:       #7A6C61;
+  --text-3:       #968878; /* was #7A6C61 (3.2:1 on cards); now 4.8:1 */
 
   --shadow-sm: 0 1px 3px rgba(0,0,0,.3), 0 1px 2px rgba(0,0,0,.2);
   --shadow-md: 0 4px 12px rgba(0,0,0,.4), 0 1px 3px rgba(0,0,0,.2);
@@ -543,8 +550,8 @@ body {
 .btn:disabled { opacity: .5; cursor: not-allowed; }
 .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-.btn-primary { background: var(--accent); color: #fff; }
-.btn-primary:hover:not(:disabled) { background: var(--accent-hover); box-shadow: var(--shadow-sm); }
+.btn-primary { background: var(--accent-fill); color: #fff; }
+.btn-primary:hover:not(:disabled) { background: var(--accent-fill-hover); box-shadow: var(--shadow-sm); }
 
 .btn-secondary { background: transparent; color: var(--accent-text); border-color: var(--accent); }
 .btn-secondary:hover:not(:disabled) { background: var(--accent-light); }
@@ -859,8 +866,8 @@ body {
   font-size: 11px;
   font-weight: 700;
   line-height: 20px;
-  color: var(--surface);
-  background: var(--accent);
+  color: #fff;
+  background: var(--accent-fill);
 }
 .today-badge.next { color: var(--accent-text); background: var(--accent-light); }
 /* Earlier entries fold into one line, like the trip page's earlier days. */
@@ -1024,7 +1031,7 @@ body {
   min-width: 18px;
   padding: 1px 5px;
   border-radius: var(--r-pill);
-  background: var(--accent);
+  background: var(--accent-fill);
   color: #fff;
   font-size: 10px; font-weight: 700; line-height: 16px;
 }
@@ -1317,7 +1324,7 @@ body {
   transition: background .12s, color .12s;
 }
 .add-member-btn:hover {
-  background: var(--accent);
+  background: var(--accent-fill);
   color: #fff;
 }
 .add-member-empty {
@@ -1617,7 +1624,7 @@ a.act-row { color: inherit; text-decoration: none; }
 }
 .act-badge.edited svg { stroke-width: 2.6; }
 /* Green and red mean balances in this app; the badge's icon says what happened. */
-.act-badge.added { background: var(--accent); }
+.act-badge.added { background: var(--accent-fill); }
 .act-badge.edited { background: var(--text-3); }
 .act-badge.deleted { background: var(--text-2); }
 .act-row-deleted { cursor: default; }
@@ -2188,7 +2195,7 @@ a.act-row { color: inherit; text-decoration: none; }
 }
 /* Pins and Leaflet's own white chrome (zoom buttons, pop-ups, attribution) follow the theme. */
 [data-theme="dark"] .trip-pin { background: var(--surface); border-color: var(--accent); color: var(--accent-text); }
-[data-theme="dark"] .trip-pin-n { background: var(--accent); }
+[data-theme="dark"] .trip-pin-n { background: var(--accent-fill); }
 [data-theme="dark"] .leaflet-bar a,
 [data-theme="dark"] .leaflet-popup-content-wrapper,
 [data-theme="dark"] .leaflet-popup-tip { background: var(--surface); color: var(--text); }
@@ -2222,7 +2229,7 @@ a.act-row { color: inherit; text-decoration: none; }
   height: 17px;
   padding: 0 4px;
   border-radius: 9px;
-  background: #E8603A;
+  background: var(--accent-fill);
   color: #fff;
   font: 700 10px/17px var(--font-body);
   text-align: center;
@@ -2712,7 +2719,7 @@ a.trip-chip:hover { border-color: var(--accent); }
 .dp-day.in-range { background: var(--accent-light); border-radius: 10px; }
 /* Today: a ringed rounded square, so it never looks like the chosen day (a filled circle). */
 .dp-day.today { box-shadow: inset 0 0 0 1.5px var(--accent); border-radius: 10px; }
-.dp-day.selected { background: var(--accent); color: #fff; font-weight: 700; border-radius: 50%; }
+.dp-day.selected { background: var(--accent-fill); color: #fff; font-weight: 700; border-radius: 50%; }
 .dp-shortcuts { display: flex; gap: 8px; margin: 8px 0 0; }
 .dp-time-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 12px 0 6px; padding-top: 12px; border-top: 1px solid var(--border); }
 .dp-time-label { font-size: 13px; font-weight: 600; color: var(--text-2); }
@@ -2775,7 +2782,7 @@ a.trip-chip:hover { border-color: var(--accent); }
   font: inherit; font-size: 14px; font-variant-numeric: tabular-nums; text-align: left; color: var(--text);
 }
 .dp-typed-option:hover { background: var(--surface-2); }
-.dp-typed-option.active { background: var(--accent); color: #fff; font-weight: 700; }
+.dp-typed-option.active { background: var(--accent-fill); color: #fff; font-weight: 700; }
 .dp-typed-hint { grid-column: 1; grid-row: 2; font-size: 12px; line-height: 1.35; color: var(--red-dark); margin: 0; }
 /* The last good time, while the field holds something unreadable. */
 .dp-typed-option.stale { box-shadow: inset 0 0 0 1.5px var(--border-strong); }

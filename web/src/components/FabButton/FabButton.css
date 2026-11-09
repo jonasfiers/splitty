@@ -5,7 +5,7 @@
     right: 16px;
     width: 52px; height: 52px;
     border-radius: 50%;
-    background: var(--accent);
+    background: var(--accent-fill);
     color: white;
     box-shadow: var(--shadow-lg);
     display: flex;
@@ -15,7 +15,7 @@
     transition: background .15s, transform .15s, box-shadow .15s;
 }
 .fab:hover {
-    background: var(--accent-hover);
+    background: var(--accent-fill-hover);
     transform: scale(1.05);
     box-shadow: 0 12px 28px rgba(124,58,237,.30);
 }
