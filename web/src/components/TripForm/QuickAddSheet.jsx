@@ -93,7 +93,7 @@ function QuickAddSheet({ tripId, kind, start, end, places, onClose, onSaved, onM
           </button>
         )}
         {kind === 'transport' && (
-          <div className="filter-chips" style={{ paddingTop: 0, flexWrap: 'wrap' }}>
+          <div className="filter-chips chips-flush-top chips-wrap">
             {TRANSPORT_MODES.map(m => (
               <button key={m.value} type="button" className={`chip${form.mode === m.value ? ' active' : ''}`} onClick={() => set({ mode: m.value })}>
                 {m.icon} {m.label}

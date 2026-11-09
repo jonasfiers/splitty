@@ -149,7 +149,7 @@ export default function ExpenseDetailPage() {
               )}
             </div>
 
-            {!wide && <hr className="divider" style={{ margin: '20px 0 16px' }} />}
+            {!wide && <hr className="divider detail-divider" />}
 
             {!wide && details}
           </div>
@@ -173,7 +173,7 @@ export default function ExpenseDetailPage() {
                     return (
                       <div key={sh.userId} className="member-row">
                         <Avatar name={member?.name} size={34} colorIndex={member?.avatarColor} emoji={member?.avatarEmoji} />
-                        <div style={{ flex: 1, minWidth: 0 }}>
+                        <div className="grow-text">
                           <div className="member-name">{member?.name ?? sh.userId}{sh.userId === currentUser?.id && ' (you)'}</div>
                           {isPayer && <div className="member-sub">paid {formatCurrency(expense.amount, expense.currencyIso)}</div>}
                         </div>

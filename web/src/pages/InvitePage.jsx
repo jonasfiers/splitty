@@ -40,13 +40,13 @@ export default function InvitePage() {
   )
 
   return (
-    <div style={{ maxWidth: 400, margin: '80px auto', padding: '0 24px' }}>
-      <div className="card" style={{ textAlign: 'center', padding: '32px 24px' }}>
+    <div className="invite-page">
+      <div className="card invite-card">
         {group ? (
           <>
-            <div style={{ fontSize: 40, marginBottom: 12 }}>{group.icon || '👥'}</div>
-            <p style={{ fontWeight: 600, fontSize: 17, marginBottom: 4 }}>{group.title}</p>
-            <p style={{ color: 'var(--text-3)', fontSize: 15, marginBottom: 24 }}>You've been invited to join this group</p>
+            <div className="invite-icon">{group.icon || '👥'}</div>
+            <p className="invite-title">{group.title}</p>
+            <p className="invite-sub">You've been invited to join this group</p>
             {error && <p className="error">{error}</p>}
             {currentUser ? (
               <button className="btn btn-primary btn-block" onClick={handleJoin} disabled={joining}>
@@ -54,14 +54,14 @@ export default function InvitePage() {
               </button>
             ) : (
               <>
-                <p style={{ color: 'var(--text-3)', fontSize: 13, marginBottom: 16 }}>Sign in to continue</p>
-                <Link to="/login" state={{ redirect: `/invite/${token}` }} className="btn btn-primary btn-block" style={{ marginBottom: 8 }}>Sign in</Link>
-                <Link to="/register" state={{ redirect: `/invite/${token}` }} className="btn btn-ghost" style={{ display: 'block' }}>Create account</Link>
+                <p className="sheet-intro">Sign in to continue</p>
+                <Link to="/login" state={{ redirect: `/invite/${token}` }} className="btn btn-primary btn-block invite-signin">Sign in</Link>
+                <Link to="/register" state={{ redirect: `/invite/${token}` }} className="btn btn-ghost btn-block">Create account</Link>
               </>
             )}
           </>
         ) : !error ? (
-          <p style={{ color: 'var(--text-3)' }}>Loading…</p>
+          <p className="invite-loading">Loading…</p>
         ) : (
           <p className="error">{error}</p>
         )}

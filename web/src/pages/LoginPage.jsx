@@ -138,25 +138,24 @@ export default function LoginPage() {
               required
             />
           </Field>
-          {state?.notice && <p className="error" style={{ background: 'var(--accent-light)', color: 'var(--accent-text)', borderColor: 'var(--accent-subtle)' }}>{state.notice}</p>}
+          {state?.notice && <p className="notice">{state.notice}</p>}
           {error && <p className="error">{error}</p>}
           {unverified && (
-            <div className="error" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div className="error auth-unverified">
               <span>Please verify your email before signing in.</span>
               {resendStatus === 'sent' ? (
-                <span style={{ fontSize: 13, color: 'var(--text-3)' }}>Verification email sent — check your inbox.</span>
+                <span className="auth-unverified-note">Verification email sent — check your inbox.</span>
               ) : (
                 <button
                   type="button"
-                  className="btn btn-ghost"
-                  style={{ padding: '4px 0', fontSize: 13, height: 'auto' }}
+                  className="auth-unverified-resend"
                   onClick={handleResend}
                   disabled={resendStatus === 'sending'}
                 >
                   {resendStatus === 'sending' ? 'Sending…' : 'Resend verification email'}
                 </button>
               )}
-              {resendStatus === 'error' && <span style={{ fontSize: 13, color: 'var(--text-3)' }}>Failed to send. Please try again.</span>}
+              {resendStatus === 'error' && <span className="auth-unverified-note">Failed to send. Please try again.</span>}
             </div>
           )}
           <button className="btn btn-primary btn-block" type="submit" disabled={loading}>

@@ -387,8 +387,8 @@ export default function GroupDetailPage() {
 
   const categoryCard = categoryTotals.length > 0 && (
     <div className="card">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-        <div className="section-label" style={{ padding: 0 }}>Spending by category</div>
+      <div className="group-card-head">
+        <div className="section-label">Spending by category</div>
         {filters.categoryId && (
           <button className="btn btn-ghost btn-sm" onClick={() => setFilters(f => ({ ...f, categoryId: null }))}>Clear filter</button>
         )}
@@ -417,12 +417,12 @@ export default function GroupDetailPage() {
           }} />
         </PieChart>
       </ResponsiveContainer>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 16px', justifyContent: 'center', marginTop: 8 }}>
+      <div className="group-donut-legend">
         {donutData.map((cat, i) => {
           const isSelected = !filters.categoryId || filters.categoryId === cat.categoryId
           return (
-            <span key={cat.name} onClick={() => setFilters(f => ({ ...f, categoryId: f.categoryId === cat.categoryId ? null : cat.categoryId }))} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, color: 'var(--text-2)', opacity: isSelected ? 1 : 0.3, cursor: 'pointer', transition: 'opacity 0.2s' }}>
-              <span style={{ width: 8, height: 8, borderRadius: '50%', background: STROKES[i % STROKES.length], flexShrink: 0 }} />
+            <span key={cat.name} onClick={() => setFilters(f => ({ ...f, categoryId: f.categoryId === cat.categoryId ? null : cat.categoryId }))} className={`group-donut-key${isSelected ? '' : ' off'}`}>
+              <span className="ins-dot" style={{ background: STROKES[i % STROKES.length] }} />
               {cat.icon} {cat.name}
             </span>
           )
@@ -434,12 +434,12 @@ export default function GroupDetailPage() {
   // Wide screens only: who owes what, always in view next to the expenses.
   const membersCard = (
     <div className="card">
-      <div className="section-label" style={{ padding: 0, marginBottom: 8 }}>Members</div>
+      <div className="section-label group-card-label">Members</div>
       {members.map(m => (
         <div key={m.id} className="group-aside-member">
           <Avatar name={m.name} size={28} colorIndex={m.avatarColor} emoji={m.avatarEmoji} />
-          <span className="member-name" style={{ flex: 1, minWidth: 0 }}>{m.name}</span>
-          <span className="member-bal" style={{ color: m.balance > 0 ? 'var(--green)' : m.balance < 0 ? 'var(--red)' : 'var(--text-3)' }}>
+          <span className="member-name group-aside-name">{m.name}</span>
+          <span className={`member-bal${m.balance > 0 ? ' positive' : m.balance < 0 ? ' negative' : ''}`}>
             {m.balance ? formatCurrency(Math.abs(m.balance), balance?.iso) : '—'}
           </span>
         </div>
@@ -469,7 +469,7 @@ export default function GroupDetailPage() {
         </div>
       </PageHeader>
 
-      {state?.notice && <p className="error" style={{ background: 'var(--accent-light)', color: 'var(--accent-text)', borderColor: 'var(--accent-subtle)' }}>{state.notice}</p>}
+      {state?.notice && <p className="notice">{state.notice}</p>}
       {error && <p className="error">{error}</p>}
 
       {!wide && balanceCard}
@@ -512,9 +512,9 @@ export default function GroupDetailPage() {
             </div>
 
             {showFilters && (
-              <div className="card" style={{ marginBottom: 12, padding: 16 }}>
-                <div className="form-row" style={{ marginBottom: 12 }}>
-                  <Field label="From" style={{ marginBottom: 0 }}>
+              <div className="card group-filters">
+                <div className="form-row">
+                  <Field label="From">
                     <DatePicker
                       title="From"
                       placeholder="Any date"
@@ -525,7 +525,7 @@ export default function GroupDetailPage() {
                       clearLabel="Any date"
                     />
                   </Field>
-                  <Field label="To" style={{ marginBottom: 0 }}>
+                  <Field label="To">
                     <DatePicker
                       title="To"
                       placeholder="Any date"
@@ -537,14 +537,14 @@ export default function GroupDetailPage() {
                     />
                   </Field>
                 </div>
-                <Field label="Category" style={{ marginBottom: 12 }}>
+                <Field label="Category">
                   <CategoryPicker
                     value={filters.categoryId}
                     onChange={id => setFilters(f => ({ ...f, categoryId: id }))}
                     categories={categories}
                   />
                 </Field>
-                <Field label="Paid by" style={{ marginBottom: 0 }}>
+                <Field label="Paid by">
                   <Picker
                     title="Paid by"
                     value={filters.paidByUserId}
@@ -553,7 +553,7 @@ export default function GroupDetailPage() {
                   />
                 </Field>
                 {panelFilterCount > 0 && (
-                  <button type="button" className="btn btn-ghost btn-sm" style={{ marginTop: 12 }} onClick={clearFilters}>Clear filters</button>
+                  <button type="button" className="btn btn-ghost btn-sm group-filters-clear" onClick={clearFilters}>Clear filters</button>
                 )}
               </div>
             )}
@@ -594,7 +594,7 @@ export default function GroupDetailPage() {
             ))}
 
             {hasMore && (
-              <button className="btn btn-secondary btn-block" style={{ marginTop: 8 }} onClick={loadMore} disabled={loadingMore}>
+              <button className="btn btn-secondary btn-block load-more" onClick={loadMore} disabled={loadingMore}>
                 {loadingMore ? 'Loading…' : 'Load more'}
               </button>
             )}
@@ -656,9 +656,9 @@ export default function GroupDetailPage() {
       {/* Invite sheet */}
       {inviteLink && (
         <Sheet title="Invite to group" onClose={() => setInviteLink(null)}>
-          <p style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 16 }}>Share this link. It expires in 7 days and can only be used once.</p>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center', background: 'var(--surface-2)', borderRadius: 8, padding: '10px 12px', marginBottom: 16, wordBreak: 'break-all', fontSize: 13 }}>
-            <span style={{ flex: 1 }}>{inviteLink}</span>
+          <p className="sheet-intro">Share this link. It expires in 7 days and can only be used once.</p>
+          <div className="invite-link-box">
+            <span>{inviteLink}</span>
           </div>
           <SheetActions>
             <button className="btn btn-primary" onClick={() => { navigator.clipboard.writeText(inviteLink); setCopied(true); setTimeout(() => setCopied(false), 2000) }}>
@@ -674,21 +674,21 @@ export default function GroupDetailPage() {
         <Sheet title="Transfer balance" onClose={() => setShowTransfer(false)}>
           {sharedGroups.length === 0 ? (
             <>
-              <p style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 16 }}>
+              <p className="sheet-intro">
                 You and {transferTarget?.name} don't share any other groups to transfer the balance to.
               </p>
               <SheetActions><button className="btn btn-ghost" onClick={() => setShowTransfer(false)}>Close</button></SheetActions>
             </>
           ) : transferBilateral === 0 ? (
             <>
-              <p style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 16 }}>
+              <p className="sheet-intro">
                 You have no direct balance with {transferTarget?.name} in this group to transfer.
               </p>
               <SheetActions><button className="btn btn-ghost" onClick={() => setShowTransfer(false)}>Close</button></SheetActions>
             </>
           ) : (
             <form onSubmit={handleTransfer}>
-              <p style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 16 }}>
+              <p className="sheet-intro">
                 Move the full balance of {formatCurrency(Math.abs(transferBilateral), balance?.iso)} with {transferTarget?.name} from this group to:
               </p>
               <Field label="Destination group">

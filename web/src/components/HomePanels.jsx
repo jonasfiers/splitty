@@ -60,7 +60,7 @@ function ThisMonth({ monthly }) {
   return (
     <div className="card home-panel">
       <div className="home-panel-head">
-        <span className="section-label" style={{ padding: 0, margin: 0 }}>This month</span>
+        <span className="section-label home-panel-label">This month</span>
         <Link to="/insights" className="home-panel-link">Insights</Link>
       </div>
       <div className="home-month-total">{formatCurrency(total)}</div>
@@ -99,7 +99,7 @@ function NextTrip({ trips }) {
   return (
     <Link to={`/trips/${next.id}`} className="card home-panel home-trip">
       <div className="home-panel-head">
-        <span className="section-label" style={{ padding: 0, margin: 0 }}>Up next</span>
+        <span className="section-label home-panel-label">Up next</span>
         <span className="home-trip-when">{when}</span>
       </div>
       <div className="home-trip-title">
@@ -120,7 +120,7 @@ function RecentActivity({ activity }) {
   return (
     <div className="card home-panel home-panel-flush">
       <div className="home-panel-head">
-        <span className="section-label" style={{ padding: 0, margin: 0 }}>Recent activity</span>
+        <span className="section-label home-panel-label">Recent activity</span>
         <Link to="/activity" className="home-panel-link">All</Link>
       </div>
       <List className="list-flush">

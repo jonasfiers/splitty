@@ -304,7 +304,7 @@ export default function TripItemDetailPage() {
               </div>
             )}
 
-            <hr className="divider" style={{ margin: '20px 0 16px' }} />
+            <hr className="divider detail-divider" />
 
             <Span item={item} />
 
@@ -322,7 +322,7 @@ export default function TripItemDetailPage() {
               )}
             </DetailRows>
 
-            {item.notes && <p className="trip-notes" style={{ margin: '16px 0 0' }}>{item.notes}</p>}
+            {item.notes && <p className="trip-notes item-notes">{item.notes}</p>}
           </div>
           {wide && mapData && (
             <Suspense fallback={<Loading />}>
@@ -363,7 +363,7 @@ export default function TripItemDetailPage() {
           <button className="btn btn-secondary btn-block" onClick={() => fileInput.current?.click()} disabled={uploading}>
             {uploading ? 'Uploading…' : 'Add a file'}
           </button>
-          <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 8 }}>PDF or image, 10 MB at most.</p>
+          <p className="field-note">PDF or image, 10 MB at most.</p>
           <div className="section-label">Paid for with</div>
           {item.expenses.length > 0 && (
             <div className="list">
@@ -381,7 +381,7 @@ export default function TripItemDetailPage() {
             </div>
           )}
           {item.expenses.length > 1 && (
-            <p style={{ fontSize: 12, color: 'var(--text-3)', margin: '-8px 0 12px', textAlign: 'right' }}>
+            <p className="field-note item-paid-note">
               {formatCurrency(paid, item.groupIso)} paid in total
             </p>
           )}

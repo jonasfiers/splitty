@@ -18,7 +18,7 @@ export default function ExpenseHistory({ expenseId, reloadKey }) {
   if (!history?.length) return null
   return (
     <div className="card expense-history">
-      <div className="section-label" style={{ padding: 0, margin: '0 0 10px' }}>History</div>
+      <div className="section-label history-label">History</div>
       <ol className="eh-list">
         {[...history].reverse().map((h, i) => (
           <li key={i} className="eh-item">

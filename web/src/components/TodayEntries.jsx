@@ -66,7 +66,7 @@ export default function TodayEntries({ tripId, day, entries, places }) {
 
   return (
     <>
-      <div className="list today-list" style={{ marginBottom: 0 }}>
+      <div className="list list-tight today-list">
           {entries.map(entry => {
             const { item, time: at, phase } = entry
             const on = isOn(item)

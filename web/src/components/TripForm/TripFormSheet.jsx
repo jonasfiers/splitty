@@ -44,11 +44,10 @@ function TripFormSheet({ trip, groupId, groups = [], onClose, onSaved }) {
     <Sheet title={isEdit ? 'Edit trip' : 'New trip'} onClose={onClose}>
       <form onSubmit={handleSubmit}>
         <Field label="Name" id="trip-form-title">
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div className="name-with-icon">
             <EmojiPicker value={form.icon} onChange={icon => setForm(f => ({ ...f, icon }))} />
             <input
               id="trip-form-title"
-              style={{ flex: 1 }}
               value={form.title}
               onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
               placeholder="Where are you going?"

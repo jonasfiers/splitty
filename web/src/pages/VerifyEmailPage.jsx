@@ -30,13 +30,13 @@ export default function VerifyEmailPage() {
         {status === 'loading' && (
           <>
             <h2>Verifying…</h2>
-            <p style={{ fontSize: 15, color: 'var(--text-3)' }}>Just a moment while we confirm your email.</p>
+            <p className="auth-message">Just a moment while we confirm your email.</p>
           </>
         )}
         {status === 'success' && (
           <>
             <h2>Email verified</h2>
-            <p style={{ fontSize: 15, color: 'var(--text-3)', marginBottom: 24 }}>
+            <p className="auth-message auth-message-gap">
               Your account is now active. You can sign in.
             </p>
             <Link to="/login" className="btn btn-primary btn-block">
@@ -47,7 +47,7 @@ export default function VerifyEmailPage() {
         {status === 'invalid' && (
           <>
             <h2>Link expired</h2>
-            <p style={{ fontSize: 15, color: 'var(--text-3)', marginBottom: 24 }}>
+            <p className="auth-message auth-message-gap">
               This verification link is invalid or has expired. Try signing in to request a new one.
             </p>
             <p className="auth-footer"><Link to="/login">Back to sign in</Link></p>

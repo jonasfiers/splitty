@@ -112,7 +112,7 @@ export default function Picker({
                 )}
               </button>,
             ])}
-            {shown.length === 0 && <p className="list-hint" style={{ padding: '12px 16px' }}>Nothing matches “{query.trim()}”.</p>}
+            {shown.length === 0 && <p className="list-hint picker-none">Nothing matches “{query.trim()}”.</p>}
           </div>
         </Sheet>,
         document.body,

@@ -22,19 +22,19 @@ function EmojiPicker({ value, onChange, id }) {
     const [open, setOpen] = useState(false)
 
     return (
-        <div style={{ position: 'relative' }}>
+        <div className="emoji-picker">
             <button
                 type="button"
                 id={id}
                 tabIndex={0} // in the Tab order like a field (Macs otherwise skip buttons)
                 onClick={() => setOpen(s => !s)}
                 aria-label={value ? `Icon: ${value}` : 'Pick an icon'}
-                style={{ fontSize: 22, width: 44, height: 44, border: `1px ${value ? 'solid' : 'dashed'} var(--border)`, borderRadius: 'var(--r-md)', background: 'var(--surface)', color: 'var(--text-2)' }}
+                className={`emoji-picker-btn${value ? '' : ' empty'}`}
             >
                 {value || '+'}
             </button>
             {open && (
-                <div style={{ position: 'absolute', zIndex: 50, top: '100%', left: 0 }}>
+                <div className="emoji-picker-pop">
                     <EmojiMartPicker onEmojiSelect={e => { onChange(e.native); setOpen(false) }} />
                 </div>
             )}

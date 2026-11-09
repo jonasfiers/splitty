@@ -32,7 +32,7 @@ export default function ForgotPasswordPage() {
         {submitted ? (
           <>
             <h2>Check your inbox</h2>
-            <p style={{ fontSize: 15, color: 'var(--text-3)', marginBottom: 24 }}>
+            <p className="auth-message auth-message-gap">
               If that email is registered, a reset link has been sent. It expires in 1 hour.
             </p>
             <p className="auth-footer"><Link to="/login">Back to sign in</Link></p>

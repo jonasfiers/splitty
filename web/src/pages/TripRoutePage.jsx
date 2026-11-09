@@ -204,7 +204,7 @@ export default function TripRoutePage() {
         <PlacePicker title="To" value={form.to} onChange={to => set({ to })} places={places} placeholder="Station, hotel, address…" />
       </Field>
 
-      <div className="filter-chips" style={{ paddingTop: 0 }}>
+      <div className="filter-chips chips-flush-top">
         <button type="button" className={`chip${!form.arriveBy ? ' active' : ''}`} onClick={() => setArriveBy(false)}>Depart after</button>
         <button type="button" className={`chip${form.arriveBy ? ' active' : ''}`} onClick={() => setArriveBy(true)}>Arrive by</button>
       </div>

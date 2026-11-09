@@ -30,7 +30,7 @@ function DuplicateTripSheet({ trip, onClose, onCopied }) {
         <Field label="Name of the copy">
           <input value={title} onChange={e => setTitle(e.target.value)} maxLength={120} required autoFocus onFocus={e => e.target.select()} />
         </Field>
-        <p style={{ fontSize: 12, color: 'var(--text-3)', margin: '0 0 12px' }}>
+        <p className="field-note duplicate-note">
           Dates, stays, travel, activities and places are copied. Expenses and attached files stay with the original.
         </p>
 

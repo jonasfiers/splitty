@@ -285,7 +285,7 @@ export default function InsightsPage() {
       {period !== 'month' && monthly.length > 0 && (
         <>
           <div className="section-label">Monthly spending</div>
-          <div className="card" style={{ padding: '24px 16px 16px' }}>
+          <div className="card ins-chart-card">
             <ResponsiveContainer width="100%" height={240}>
               <BarChart data={chartData} barSize={28} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <XAxis dataKey="month" tickFormatter={shortMonth} tick={{ fontSize: 12, fill: 'var(--text-3)' }} axisLine={false} tickLine={false} />
@@ -296,22 +296,22 @@ export default function InsightsPage() {
                     if (!active || !payload?.length) return null
                     const d = payload[0].payload
                     return (
-                      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '12px', fontSize: 13, boxShadow: 'var(--shadow-lg)', minWidth: 160 }}>
-                        <div style={{ color: 'var(--text-3)', marginBottom: 8, fontWeight: 500 }}>{shortMonth(d.month)} {d.month.split('-')[0]}</div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      <div className="ins-tip ins-tip-wide">
+                        <div className="ins-tip-head">{shortMonth(d.month)} {d.month.split('-')[0]}</div>
+                        <div className="ins-tip-rows">
                           {stackKeys.map(key => (d[key] > 0 && !hiddenMonthly.includes(key)) && (
-                            <div key={key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
-                               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                 <span style={{ width: 6, height: 6, borderRadius: '50%', background: getCategoryStroke(key) }} />
-                                 <span style={{ color: 'var(--text-2)' }}>{key}</span>
+                            <div key={key} className="ins-tip-row">
+                               <div className="ins-tip-key">
+                                 <span className="ins-dot ins-dot-sm" style={{ background: getCategoryStroke(key) }} />
+                                 <span className="ins-tip-label">{key}</span>
                                </div>
-                               <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 500 }}>{formatCurrency(d[key])}</span>
+                               <span className="ins-tip-amt">{formatCurrency(d[key])}</span>
                             </div>
                           ))}
                         </div>
-                        <div style={{ borderTop: '1px solid var(--border)', marginTop: 10, paddingTop: 10, display: 'flex', justifyContent: 'space-between', fontWeight: 600, fontSize: 15 }}>
+                        <div className="ins-tip-total">
                           <span>Total</span>
-                          <span style={{ color: 'var(--accent-text)' }}>{formatCurrency(d.total)}</span>
+                          <span className="ins-accent">{formatCurrency(d.total)}</span>
                         </div>
                       </div>
                     )
@@ -322,24 +322,16 @@ export default function InsightsPage() {
                   align="right"
                   iconType="circle"
                   content={({ payload }) => (
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 16px', justifyContent: 'center', marginBottom: 20 }}>
+                    <div className="ins-legend">
                       {payload.map((entry) => {
                         const isHidden = hiddenMonthly.includes(entry.value)
                         return (
                           <span
                             key={entry.value}
                             onClick={() => toggleMonthly(entry.value)}
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: 6,
-                              fontSize: 12,
-                              color: isHidden ? 'var(--text-3)' : 'var(--text-2)',
-                              cursor: 'pointer',
-                              transition: 'opacity 0.2s'
-                            }}
+                            className={`ins-legend-item${isHidden ? ' hidden' : ''}`}
                           >
-                            <span style={{ width: 8, height: 8, borderRadius: '50%', background: isHidden ? 'var(--border)' : entry.color, flexShrink: 0 }} />
+                            <span className="ins-dot" style={{ background: isHidden ? 'var(--border)' : entry.color }} />
                             {entry.value}
                           </span>
                         )
@@ -367,13 +359,13 @@ export default function InsightsPage() {
       <div className="insights-pair">
       {categories.length > 0 && (
         <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+          <div className="ins-section-head">
             <div className="section-label">Spending by category</div>
             {activeCategory && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, paddingBottom: 8 }}>
+              <div className="ins-crumbs">
                 <span
                   onClick={() => { setActiveCategory(null); setHiddenPie([]) }}
-                  style={{ color: 'var(--accent-text)', cursor: 'pointer', fontWeight: 500 }}
+                  className="ins-crumb-link"
                 >
                   All
                 </span>
@@ -381,14 +373,14 @@ export default function InsightsPage() {
                   const path = arr.slice(0, i + 1).join(' - ')
                   const isLast = i === arr.length - 1
                   return (
-                    <span key={path} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                      <span style={{ color: 'var(--text-3)' }}>/</span>
+                    <span key={path} className="ins-crumb">
+                      <span className="ins-crumb-sep">/</span>
                       {isLast ? (
-                        <span style={{ color: 'var(--text-2)', fontWeight: 500 }}>{part}</span>
+                        <span className="ins-crumb-current">{part}</span>
                       ) : (
                         <span
                           onClick={() => { setActiveCategory(path); setHiddenPie([]) }}
-                          style={{ color: 'var(--accent-text)', cursor: 'pointer', fontWeight: 500 }}
+                          className="ins-crumb-link"
                         >
                           {part}
                         </span>
@@ -399,7 +391,7 @@ export default function InsightsPage() {
               </div>
             )}
           </div>
-          <div className="card" style={{ padding: '24px 16px' }}>
+          <div className="card ins-pie-card">
             <ResponsiveContainer width="100%" height={260}>
               <PieChart>
                 <Pie
@@ -437,11 +429,11 @@ export default function InsightsPage() {
                       if (cx === undefined || cy === undefined) return null
                       const label = activeCategory ? activeCategory.split(' - ').pop() : 'Total'
                       return (
-                        <g style={{ pointerEvents: 'none' }}>
-                          <text x={cx} y={cy - 10} textAnchor="middle" dominantBaseline="middle" style={{ fontSize: 15, fill: 'var(--text-3)', fontWeight: 600 }}>
+                        <g className="ins-no-pointer">
+                          <text x={cx} y={cy - 10} textAnchor="middle" dominantBaseline="middle" className="ins-pie-label">
                             {label}
                           </text>
-                          <text x={cx} y={cy + 16} textAnchor="middle" dominantBaseline="middle" style={{ fontSize: 22, fill: 'var(--text)', fontWeight: 700, fontFamily: 'var(--font-mono)' }}>
+                          <text x={cx} y={cy + 16} textAnchor="middle" dominantBaseline="middle" className="ins-pie-total">
                             {formatCurrency(totalPieAmount, iso)}
                           </text>
                         </g>
@@ -454,18 +446,18 @@ export default function InsightsPage() {
                   const { name, icon, total } = payload[0].payload
                 const pct = totalPieAmount > 0 ? ((total / totalPieAmount) * 100).toFixed(1) : '0.0'
                   return (
-                    <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '10px 14px', fontSize: 13, boxShadow: 'var(--shadow-lg)' }}>
-                      <div style={{ fontWeight: 600, color: 'var(--text)', marginBottom: 4 }}>{icon} {name}</div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'baseline' }}>
-                        <span style={{ color: 'var(--accent-text)', fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 600 }}>{formatCurrency(total)}</span>
-                        <span style={{ color: 'var(--text-3)', fontSize: 11 }}>{pct}%</span>
+                    <div className="ins-tip">
+                      <div className="ins-tip-title">{icon} {name}</div>
+                      <div className="ins-tip-line">
+                        <span className="ins-tip-amt-lg">{formatCurrency(total)}</span>
+                        <span className="ins-tip-pct">{pct}%</span>
                       </div>
                     </div>
                   )
                 }} />
               </PieChart>
             </ResponsiveContainer>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '8px 12px', marginTop: 16 }}>
+            <div className="ins-cat-grid">
               {displayCategories.map((cat) => {
                 const isHidden = hiddenPie.includes(cat.id)
                 const pct = totalPieAmount > 0 ? ((cat.total / totalPieAmount) * 100).toFixed(0) : 0
@@ -473,29 +465,17 @@ export default function InsightsPage() {
                   <div
                     key={cat.id}
                     onClick={() => togglePie(cat.id)}
-                    style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: 2,
-                      padding: '6px 10px',
-                      borderRadius: 10,
-                      background: isHidden ? 'transparent' : 'var(--surface-2)',
-                      border: `1px solid ${isHidden ? 'transparent' : 'var(--border)'}`,
-                      cursor: 'pointer',
-                      opacity: isHidden ? 0.5 : 1,
-                      transition: 'all 0.2s',
-                      overflow: 'hidden'
-                    }}
+                    className={`ins-cat${isHidden ? ' hidden' : ''}`}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, overflow: 'hidden' }}>
-                      <span style={{ width: 8, height: 8, borderRadius: '50%', background: getCategoryStroke(cat.rootName), flexShrink: 0 }} />
-                      <span style={{ fontSize: 12, color: 'var(--text-2)', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden', fontWeight: 500 }}>
+                    <div className="ins-cat-name-row">
+                      <span className="ins-dot" style={{ background: getCategoryStroke(cat.rootName) }} />
+                      <span className="ins-cat-name">
                         {cat.icon} {cat.name}
                       </span>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 5, paddingLeft: 16 }}>
-                      <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text)', fontFamily: 'var(--font-mono)' }}>{formatCurrency(cat.total)}</span>
-                      <span style={{ fontSize: 11, color: 'var(--text-3)' }}>{pct}%</span>
+                    <div className="ins-cat-figures">
+                      <span className="ins-cat-amt">{formatCurrency(cat.total)}</span>
+                      <span className="ins-cat-pct">{pct}%</span>
                     </div>
                   </div>
                 )
@@ -508,7 +488,7 @@ export default function InsightsPage() {
       {members.length > 0 && (
         <div>
           <div className="section-label">{mine ? 'Who paid for your share' : 'Paid by member'}</div>
-          <div className="card" style={{ padding: '24px 16px 16px' }}>
+          <div className="card ins-chart-card">
             <ResponsiveContainer width="100%" height={members.length * 44 + 16}>
               <BarChart data={members} layout="vertical" margin={{ top: 0, right: 16, left: 0, bottom: 0 }}>
                 <XAxis type="number" tickFormatter={v => formatCompactCurrency(v, iso)} tick={{ fontSize: 11, fill: 'var(--text-3)' }} axisLine={false} tickLine={false} />
@@ -519,9 +499,9 @@ export default function InsightsPage() {
                     if (!active || !payload?.length) return null
                     const { name, total } = payload[0].payload
                     return (
-                      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '10px 14px', fontSize: 13, boxShadow: 'var(--shadow-lg)' }}>
-                        <div style={{ fontWeight: 600, color: 'var(--text)', marginBottom: 4 }}>{name}</div>
-                        <span style={{ color: 'var(--accent-text)', fontFamily: 'var(--font-mono)', fontWeight: 600 }}>{formatCurrency(total)}</span>
+                      <div className="ins-tip">
+                        <div className="ins-tip-title">{name}</div>
+                        <span className="ins-tip-amt-sm">{formatCurrency(total)}</span>
                       </div>
                     )
                   }}
@@ -537,15 +517,15 @@ export default function InsightsPage() {
       {dowMatrix.some(row => row.some(cell => cell.total > 0)) && (
         <>
           <div className="section-label">Spending by day of week</div>
-          <div className="card" style={{ padding: '20px 16px 16px' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'auto repeat(7, 1fr)', gap: 4 }}>
+          <div className="card ins-heat-card">
+            <div className="ins-heat">
               <div />
               {DOW_LABELS.map(d => (
-                <div key={d} style={{ fontSize: 11, textAlign: 'center', color: 'var(--text-3)', paddingBottom: 4, fontWeight: 600 }}>{d}</div>
+                <div key={d} className="ins-heat-day">{d}</div>
               ))}
               {dowMatrix.map((row, w) => (
                 <Fragment key={w}>
-                  <div style={{ fontSize: 11, color: 'var(--text-3)', display: 'flex', alignItems: 'center', paddingRight: 8, whiteSpace: 'nowrap', fontWeight: 500 }}>Wk {w + 1}</div>
+                  <div className="ins-heat-week">Wk {w + 1}</div>
                   {row.map((cell, d) => {
                     const intensity = cell.total > 0 ? Math.sqrt(cell.total / dowMax) : 0
                     return (
@@ -553,21 +533,15 @@ export default function InsightsPage() {
                         key={d}
                         onMouseEnter={() => setHoveredCell({ w, d, ...cell })}
                         onMouseLeave={() => setHoveredCell(null)}
-                        style={{
-                          height: 36,
-                          borderRadius: 6,
-                          background: cell.total > 0
-                            ? `rgba(232, 96, 58, ${(0.12 + intensity * 0.88).toFixed(2)})`
-                            : 'var(--surface-2)',
-                          transition: 'background 0.15s',
-                        }}
+                        className="ins-heat-cell"
+                        style={{ background: cell.total > 0 ? `rgba(232, 96, 58, ${(0.12 + intensity * 0.88).toFixed(2)})` : 'var(--surface-2)' }}
                       />
                     )
                   })}
                 </Fragment>
               ))}
             </div>
-            <div style={{ minHeight: 20, fontSize: 12, color: 'var(--text-3)', textAlign: 'center', marginTop: 12 }}>
+            <div className="ins-heat-caption">
               {hoveredCell?.total > 0
                 ? `${DOW_LABELS[hoveredCell.d]}, Week ${hoveredCell.w + 1} — ${formatCurrency(hoveredCell.total)} · ${hoveredCell.count} expense${hoveredCell.count !== 1 ? 's' : ''}`
                 : ' '}

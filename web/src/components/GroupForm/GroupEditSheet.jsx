@@ -61,7 +61,7 @@ export default function GroupEditSheet({ group, canChangeCurrency, onClose, onSa
             disabled={!canChangeCurrency}
           />
           {!canChangeCurrency && (
-            <p className="list-hint" style={{ padding: '6px 0 0' }}>Fixed once the group has expenses.</p>
+            <p className="field-note">Fixed once the group has expenses.</p>
           )}
         </div>
         <SheetActions>

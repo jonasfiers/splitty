@@ -37,13 +37,13 @@ export default function VerifyEmailChangePage() {
         {status === 'loading' && (
           <>
             <h2>Verifying…</h2>
-            <p style={{ fontSize: 15, color: 'var(--text-3)' }}>Just a moment while we confirm your new email.</p>
+            <p className="auth-message">Just a moment while we confirm your new email.</p>
           </>
         )}
         {status === 'success' && (
           <>
             <h2>Email updated</h2>
-            <p style={{ fontSize: 15, color: 'var(--text-3)' }}>
+            <p className="auth-message">
               Your email address has been changed. Redirecting to your profile…
             </p>
           </>
@@ -51,7 +51,7 @@ export default function VerifyEmailChangePage() {
         {status === 'invalid' && (
           <>
             <h2>Link expired</h2>
-            <p style={{ fontSize: 15, color: 'var(--text-3)', marginBottom: 24 }}>
+            <p className="auth-message auth-message-gap">
               This link is invalid or has expired. You can request a new one from your profile.
             </p>
             <p className="auth-footer"><Link to="/profile">Back to profile</Link></p>

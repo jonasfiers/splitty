@@ -32,7 +32,7 @@ export default function ResetPasswordPage() {
     <div className="auth-page">
       <div className="auth-card">
         <h2>Invalid link</h2>
-        <p style={{ fontSize: 15, color: 'var(--text-3)', marginBottom: 24 }}>This reset link is missing a token.</p>
+        <p className="auth-message auth-message-gap">This reset link is missing a token.</p>
         <p className="auth-footer"><Link to="/forgot-password">Request a new link</Link></p>
       </div>
     </div>

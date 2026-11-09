@@ -153,7 +153,7 @@ function PlacePicker({ value, onChange, places = [], placeholder = 'Search a pla
                   </span>
                 </button>
               )}
-              {error && <p className="place-list-hint" style={{ color: 'var(--red-dark)' }}>{error}</p>}
+              {error && <p className="place-list-hint error-text">{error}</p>}
               <button type="button" className="place-row" onClick={() => choose({ name: q, address: '', lat: null, lon: null })}>
                 <span className="place-row-icon" aria-hidden="true">✎</span>
                 <span className="place-row-text">

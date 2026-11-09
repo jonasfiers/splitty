@@ -171,34 +171,17 @@ export default function GroupsPage() {
       {/* Group picker sheet (when multiple groups) */}
       {showExpensePicker && (
         <Sheet title="Add expense to…" onClose={() => setShowExpensePicker(false)}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <List>
             {groups.map(g => (
-              <button
+              <ListRow
                 key={g.id}
                 onClick={() => { setShowExpensePicker(false); navigate(`/groups/${g.id}/expenses/new`) }}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 12,
-                  padding: '12px 14px', borderRadius: 'var(--r-md)',
-                  background: 'var(--surface-2)', border: '1px solid var(--border)',
-                  textAlign: 'left', cursor: 'pointer',
-                  font: '500 14px var(--font-body)', color: 'var(--text)',
-                  transition: 'background .12s',
-                }}
-                onMouseEnter={e => e.currentTarget.style.background = 'var(--accent-light)'}
-                onMouseLeave={e => e.currentTarget.style.background = 'var(--surface-2)'}
-              >
-                <span style={{
-                  width: 32, height: 32, borderRadius: 8,
-                  background: 'var(--accent-subtle)', color: 'var(--accent-text)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 13, fontWeight: 700, flexShrink: 0,
-                }}>
-                  {g.icon}
-                </span>
-                {g.title}
-              </button>
+                icon={g.icon}
+                title={g.title}
+                chevron
+              />
             ))}
-          </div>
+          </List>
           <SheetActions><button className="btn btn-ghost" onClick={() => setShowExpensePicker(false)}>Cancel</button></SheetActions>
         </Sheet>
       )}

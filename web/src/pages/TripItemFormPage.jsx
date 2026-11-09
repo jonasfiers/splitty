@@ -317,7 +317,7 @@ export default function TripItemFormPage() {
           </FormColumn>
           </FormColumns>
 
-          {wide && <div className="panel-actions" style={{ marginTop: '0.5rem' }}>
+          {wide && <div className="panel-actions form-actions">
             <BackLink to={backPath} replace className="btn btn-ghost">Cancel</BackLink>
             <button type="submit" className="btn btn-primary" disabled={saving}>
               {saving ? 'Saving…' : (isEdit ? 'Save changes' : 'Add to trip')}

@@ -21,7 +21,7 @@ function TripList({ trips, showGroup = false }) {
           title={t.title}
           meta={<>{formatDateRange(t.startDate, t.endDate)}{showGroup && t.groupTitle ? ` · ${t.groupTitle}` : ''}</>}
           aside={<>
-            <span className="list-row-amt" style={{ fontFamily: 'var(--font-body)', fontSize: 13 }}>{countdown(t)}</span>
+            <span className="list-row-amt list-row-when">{countdown(t)}</span>
             <span className="list-row-sub">{t.itemCount} item{t.itemCount !== 1 ? 's' : ''}</span>
           </>}
         />

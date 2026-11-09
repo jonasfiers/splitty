@@ -177,7 +177,7 @@ export default function ActivityPage() {
 
   const summary = (
     <div className="card act-summary">
-      <div className="section-label" style={{ padding: 0, margin: '0 0 8px' }}>Last 7 days</div>
+      <div className="section-label act-card-label">Last 7 days</div>
       {week.total === 0 ? (
         <div className="act-summary-line">Nothing changed this week.</div>
       ) : (
@@ -216,7 +216,7 @@ export default function ActivityPage() {
                     <span aria-hidden="true">{activityIcon(a)}</span>
                     <ActionBadge action={activityTone(a)} />
                   </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
+                  <div className="act-text">
                     <div className="act-desc">{a.description}</div>
                     <div className="act-meta">
                       {g && <>{g.icon ? `${g.icon} ` : ''}{g.title} · </>}
@@ -224,7 +224,7 @@ export default function ActivityPage() {
                     </div>
                     {a.changes?.length > 0 && <div className="act-changes">{summarizeChanges(a.changes)}</div>}
                   </div>
-                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                  <div className="act-end">
                     {!trip && <div className="act-amt">{formatCurrency(a.amount, a.currencyIso)}</div>}
                     <div className="act-meta">{timeLabel(a.timestamp)}</div>
                   </div>
@@ -235,7 +235,7 @@ export default function ActivityPage() {
         </section>
       ))}
       {filtered.length > shown && (
-        <button className="btn btn-secondary btn-block" style={{ marginTop: 8 }} onClick={() => setShown(n => n + PAGE)}>
+        <button className="btn btn-secondary btn-block load-more" onClick={() => setShown(n => n + PAGE)}>
           Load more
         </button>
       )}
@@ -254,7 +254,7 @@ export default function ActivityPage() {
           <aside className="act-aside">
             {summary}
             <div className="card">
-              <div className="section-label" style={{ padding: 0, margin: '0 0 8px' }}>Show</div>
+              <div className="section-label act-card-label">Show</div>
               {filters}
             </div>
           </aside>

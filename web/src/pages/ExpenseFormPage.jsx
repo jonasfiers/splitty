@@ -238,7 +238,7 @@ export default function ExpenseFormPage() {
       />
 
       {tripItem && !isEdit && (
-        <p style={{ fontSize: 13, color: 'var(--text-3)', margin: '-8px 0 12px' }}>For “{tripItem.title}”</p>
+        <p className="expense-form-for">For “{tripItem.title}”</p>
       )}
 
       <div className="card form-card-wide">
@@ -337,19 +337,18 @@ export default function ExpenseFormPage() {
                 {shares.map((s, i) => {
                   const user = users.find(u => u.id === s.userId)
                   return (
-                    <div key={s.userId} className="form-row form-row-compact-reverse" style={{ alignItems: 'center', marginBottom: '0.4rem' }}>
-                      <label style={{ flex: 2, marginBottom: 0, display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                    <div key={s.userId} className="form-row form-row-compact-reverse share-row">
+                      <label className="share-who">
                         <input
                           type="checkbox"
                           checked={s.included}
                           onChange={() => toggleMember(i)}
-                          style={{ margin: 0 }}
                         />
-                        <span style={{ color: s.included ? 'inherit' : 'var(--text-3)'}}>
+                        <span className={s.included ? undefined : 'share-left-out'}>
                           {user?.name ?? s.userId}
                         </span>
                       </label>
-                      <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
+                      <div className="form-group share-amount">
                         <CurrencyInput
                             iso={form.currencyIso}
                             value={s.amount}
@@ -367,7 +366,7 @@ export default function ExpenseFormPage() {
                   const diff = total - sum
                   const ok = diff === 0
                   return total > 0 ? (
-                    <div style={{ fontSize: 12, marginTop: 8, textAlign: 'right', color: ok ? 'var(--text-3)' : 'var(--red-dark)', fontWeight: ok ? 500 : 600 }}>
+                    <div className={`share-check${ok ? '' : ' off'}`}>
                       {ok ? '✓ Shares match total' : `${diff > 0 ? '+' : ''}${formatCurrency(diff, form.currencyIso)} unassigned`}
                     </div>
                   ) : null
@@ -377,7 +376,7 @@ export default function ExpenseFormPage() {
             )}
           </FormColumns>
 
-          {wide && <div className="panel-actions" style={{ marginTop: '0.5rem' }}>
+          {wide && <div className="panel-actions form-actions">
             <BackLink to={backPath} replace className="btn btn-ghost">Cancel</BackLink>
             <button type="submit" className="btn btn-primary" disabled={saving}>
               {saving ? 'Saving…' : (isEdit ? 'Save changes' : 'Add expense')}

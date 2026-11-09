@@ -251,7 +251,7 @@ function TripDetailPage() {
             // Today is live, the same rows as Home's Today card.
             <TodayEntries tripId={id} day={day} entries={entries} places={places} />
           ) : (
-            <div className="list" style={{ marginBottom: 0 }}>
+            <div className="list list-tight">
               {entries.map(({ item, time, phase, assumed }) => (
                 <button key={`${item.id}-${phase}`} type="button" className="list-row list-row-link" onClick={() => openItem(item)}>
                   <span className={`trip-entry-time${assumed ? ' assumed' : ''}`} title={assumed ? 'Usual hotel time; no time set on this stay' : undefined}>{time || 'All day'}</span>
@@ -301,7 +301,7 @@ function TripDetailPage() {
         <TripMap places={places} items={items} onOpenItem={openItem} highlight={highlight} onHover={setHighlight} />
       </Expandable>
       {places.some(p => p.lat == null) && (
-        <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 8 }}>
+        <p className="field-note">
           Not on the map: {places.filter(p => p.lat == null).map(p => p.name).join(', ')}
         </p>
       )}
@@ -323,7 +323,7 @@ function TripDetailPage() {
         {formatDateRange(trip.startDate, trip.endDate)}
         {nights > 0 && ` · ${nights} night${nights !== 1 ? 's' : ''}`}
         {' · '}
-        <Link to={`/groups/${trip.groupId}`} style={{ color: 'var(--accent-text)' }}>{trip.groupIcon} {trip.groupTitle}</Link>
+        <Link to={`/groups/${trip.groupId}`} className="accent-link">{trip.groupIcon} {trip.groupTitle}</Link>
       </PageHeader>
 
       {/* Documents and money: a row of chips, so the page opens on the plan. */}
@@ -338,7 +338,7 @@ function TripDetailPage() {
         )}
       </div>
 
-      {state?.notice && <p className="error" style={{ background: 'var(--accent-light)', color: 'var(--accent-text)', borderColor: 'var(--accent-subtle)' }}>{state.notice}</p>}
+      {state?.notice && <p className="notice">{state.notice}</p>}
       {error && <p className="error">{error}</p>}
 
       {trip.notes && <p className="trip-notes">{trip.notes}</p>}

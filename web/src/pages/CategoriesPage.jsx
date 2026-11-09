@@ -88,11 +88,11 @@ export default function CategoriesPage() {
         <div className="panel">
           <h3>New category</h3>
           <form onSubmit={handleCreate}>
-            <div className="form-row form-row-compact" style={{ alignItems: 'end' }}>
-              <Field label="Icon" style={{ marginBottom: 0 }}>
+            <div className="form-row form-row-compact cat-form-row">
+              <Field label="Icon">
                 <EmojiPicker value={form.icon} onChange={icon => setForm(f => ({ ...f, icon }))} />
               </Field>
-              <Field label="Name" style={{ marginBottom: 0 }}>
+              <Field label="Name">
                 <input
                   value={form.name}
                   onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
@@ -101,7 +101,7 @@ export default function CategoriesPage() {
                 />
               </Field>
             </div>
-            <Field label="Parent category" style={{ marginTop: 12 }}>
+            <Field label="Parent category" className="cat-parent">
               <Picker
                 title="Parent category"
                 value={form.parentId}
@@ -124,13 +124,13 @@ export default function CategoriesPage() {
         <div className="category-grid">
           {categories.map(c =>
             editId === c.id ? (
-              <div key={c.id} className="card" style={{ padding: '16px' }}>
+              <div key={c.id} className="card cat-edit-card">
                 <form onSubmit={handleUpdate}>
-                  <div className="form-row form-row-compact" style={{ alignItems: 'end' }}>
-                    <Field label="Icon" style={{ marginBottom: 0 }}>
+                  <div className="form-row form-row-compact cat-form-row">
+                    <Field label="Icon">
                       <EmojiPicker value={editForm.icon} onChange={icon => setEditForm(f => ({ ...f, icon }))} />
                     </Field>
-                    <Field label="Name" style={{ marginBottom: 0 }}>
+                    <Field label="Name">
                       <input
                         value={editForm.name}
                         onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))}
@@ -138,7 +138,7 @@ export default function CategoriesPage() {
                       />
                     </Field>
                   </div>
-                  <Field label="Parent category" style={{ marginTop: 12 }}>
+                  <Field label="Parent category" className="cat-parent">
                     <Picker
                       title="Parent category"
                       value={editForm.parentId}
