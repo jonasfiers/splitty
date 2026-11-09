@@ -52,9 +52,12 @@ export function AuthProvider({ children }) {
     await client.post('/auth/register', { name, email, password })
   }, [])
 
-  const passkeyLogin = useCallback(async (email) => {
-    const { data: { options, nonce } } = await client.post('/auth/passkey/login/options', { email })
-    const assertionResponse = await startAuthentication({ optionsJSON: options })
+  // `autofill`: the browser offers the passkey in the email field's own
+  // suggestions (conditional mediation) and this waits until one is picked;
+  // starting another passkey sign-in (the button) cancels it.
+  const passkeyLogin = useCallback(async (email, { autofill = false } = {}) => {
+    const { data: { options, nonce } } = await client.post('/auth/passkey/login/options', autofill ? { autofill: true } : { email })
+    const assertionResponse = await startAuthentication({ optionsJSON: options, useBrowserAutofill: autofill })
     const { data } = await client.post('/auth/passkey/login/verify', { nonce, assertionResponse })
     forgetAdmin()
     localStorage.setItem('token', data.token)

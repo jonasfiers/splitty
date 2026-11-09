@@ -1,4 +1,5 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
+import { browserSupportsWebAuthnAutofill, WebAuthnAbortService } from '@simplewebauthn/browser'
 import { Link, useNavigate, useLocation } from 'react-router'
 import { useAuth } from '../context/AuthContext'
 import client from '../api/client'
@@ -63,6 +64,33 @@ export default function LoginPage() {
     }
   }
 
+  // The passkey in the email field's suggestions. The request lives five
+  // minutes on the server, so it is renewed a little before that while the
+  // page is open; a new one cancels the previous one in the browser.
+  const autofillRef = useRef(null)
+  const startAutofill = useCallback(async () => {
+    try {
+      if (!(await browserSupportsWebAuthnAutofill())) return
+      await passkeyLogin(undefined, { autofill: true })
+      triggerAvatar('success', 700)
+      setTimeout(() => navigate(redirect), 650)
+    } catch (e) {
+      // Cancelled (renewed, the button, leaving the page): nothing to tell.
+      if (e?.name === 'AbortError' || e?.code === 'ERROR_CEREMONY_ABORTED') return
+      if (e?.response) {
+        setError('Passkey sign-in failed. Make sure you have a passkey registered for this device.')
+        triggerAvatar('fail', 1300)
+      }
+    }
+  }, [passkeyLogin, navigate, redirect])
+  autofillRef.current = startAutofill
+  useEffect(() => {
+    autofillRef.current()
+    const RENEW_MS = 4.5 * 60_000
+    const timer = setInterval(() => { if (!document.hidden) autofillRef.current() }, RENEW_MS)
+    return () => { clearInterval(timer); WebAuthnAbortService.cancelCeremony() }
+  }, [])
+
   const handlePasskey = async () => {
     setError('')
     setLoading(true)
@@ -78,6 +106,8 @@ export default function LoginPage() {
       }
       triggerAvatar('fail', 1300)
       setLoading(false)
+      // The button's attempt cancelled the autofill one: offer it again.
+      autofillRef.current()
     }
   }
 
@@ -94,7 +124,8 @@ export default function LoginPage() {
               type="email"
               value={form.email}
               onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
-              autoComplete="email"
+              // "webauthn": the browser may offer the passkey here, among its suggestions.
+              autoComplete="username webauthn"
               required
             />
           </Field>
@@ -133,7 +164,9 @@ export default function LoginPage() {
           </button>
         </form>
         <div className="auth-divider">or</div>
-        <button className="btn btn-ghost" onClick={handlePasskey} disabled={loading} style={{ width: '100%' }}>
+        {/* Stays for browsers without passkey autofill, and for a passkey on
+            another device (a phone's QR code). */}
+        <button className="btn btn-ghost btn-block" onClick={handlePasskey} disabled={loading}>
           Sign in with passkey
         </button>
         <p className="auth-footer">

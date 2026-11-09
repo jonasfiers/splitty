@@ -39,8 +39,18 @@ async function webauthn() {
 const registrationChallenges = new Map();
 const loginChallenges = new Map();
 
-function storeChallenge(map, key, challenge) {
-    map.set(key, { challenge, expires: Date.now() + 60_000 });
+// A minute to answer a challenge; five for the passkey autofill on the login
+// page, which asks on page load and is answered whenever the field is tapped
+// (the page renews it before then). Expired ones are swept out here, so
+// challenges nobody answered don't pile up.
+// At most this many waiting at once, whatever floods the (unauthenticated)
+// options endpoint: past it the oldest go first.
+const MAX_CHALLENGES = 10_000;
+function storeChallenge(map, key, challenge, ttl = 60_000) {
+    const now = Date.now();
+    for (const [k, v] of map) if (now > v.expires) map.delete(k);
+    while (map.size >= MAX_CHALLENGES) map.delete(map.keys().next().value);
+    map.set(key, { challenge, expires: now + ttl });
 }
 
 function consumeChallenge(map, key) {
@@ -247,7 +257,7 @@ router.post('/passkey/register/verify', authMiddleware, authLimiter, async (req,
 router.post('/passkey/login/options', authLimiter, async (req, res) => {
     try {
         const { generateAuthenticationOptions } = await webauthn();
-        const { email } = req.body;
+        const { email, autofill } = req.body;
         let allowCredentials = [];
 
         if (email) {
@@ -268,7 +278,7 @@ router.post('/passkey/login/options', authLimiter, async (req, res) => {
         });
 
         const nonce = crypto.randomUUID();
-        storeChallenge(loginChallenges, nonce, options.challenge);
+        storeChallenge(loginChallenges, nonce, options.challenge, autofill ? 5 * 60_000 : 60_000);
         res.json({ options, nonce });
     } catch (err) {
         res.status(500).json({ error: err.message });
