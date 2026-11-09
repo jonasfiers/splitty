@@ -19,6 +19,50 @@ const MY_SHARE = `
 
 const dashService = {
 
+    // FRIENDS — everyone the user shares a group with, and per shared group
+    // what is open between the two of them: what the user paid that they owe,
+    // minus what they paid that the user owes (settlements included: they are
+    // expenses too). In the group's currency, so a total is only shown per
+    // currency (FriendsPage).
+    getFriends: async (userId) => {
+        try {
+            const { records } = await driver.executeQuery(
+                `MATCH (u:User {id: $userId})-[:MEMBER_OF]->(g:Group)<-[:MEMBER_OF]-(other:User)
+                WHERE other <> u
+                OPTIONAL MATCH (g)-[:EXPRESSED_IN]->(c:Currency)
+                CALL {
+                    WITH u, other, g
+                    OPTIONAL MATCH (u)-[:PAID]->(e:Expense)-[o:OWED_BY]->(other)
+                    WHERE (e)-[:BALANCE_IN]->(g)
+                    RETURN sum(coalesce(o.amount, 0) * coalesce(e.rateSnapshot, 1)) AS lent
+                }
+                CALL {
+                    WITH u, other, g
+                    OPTIONAL MATCH (other)-[:PAID]->(e:Expense)-[o:OWED_BY]->(u)
+                    WHERE (e)-[:BALANCE_IN]->(g)
+                    RETURN sum(coalesce(o.amount, 0) * coalesce(e.rateSnapshot, 1)) AS owed
+                }
+                WITH other, g, c, lent - owed AS net
+                ORDER BY g.title
+                RETURN other.id AS id, other.name AS name, other.avatarColor AS avatarColor, other.avatarEmoji AS avatarEmoji,
+                       collect({ id: g.id, title: g.title, icon: g.icon, iso: c.iso, net: net }) AS groups`,
+                { userId }
+            );
+            return {
+                success: true,
+                friends: records.map(r => ({
+                    id: r.get('id'),
+                    name: r.get('name'),
+                    avatarColor: r.get('avatarColor') == null ? null : neo4j.integer.toNumber(r.get('avatarColor')),
+                    avatarEmoji: r.get('avatarEmoji'),
+                    groups: r.get('groups').map(g => ({ ...g, net: Math.round(neo4j.integer.toNumber(g.net)) })),
+                })),
+            };
+        } catch (err) {
+            throw new Error(`Failed to get friends: ${err.message}`);
+        }
+    },
+
     // BALANCE HEADER
     getBalances: async (userId) => {
         try {

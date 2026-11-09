@@ -249,6 +249,24 @@ export default function GroupDetailPage() {
     setShowSettlement(true)
   }
 
+  // From the Friends page: open the settlement with that person, for what is
+  // open between the two of you (state.settleWith.amount, positive when they
+  // owe you). Once: the state is dropped so going back doesn't reopen it.
+  const settleHandled = useRef(false)
+  useEffect(() => {
+    const w = state?.settleWith
+    if (!w || settleHandled.current || loading || !group || !currentUser) return
+    settleHandled.current = true
+    setSettlementForm({
+      paidByUserId: w.amount > 0 ? w.userId : currentUser.id,
+      receivedByUserId: w.amount > 0 ? currentUser.id : w.userId,
+      amount: Math.abs(w.amount),
+      date: new Date().toISOString().slice(0, 10),
+    })
+    setShowSettlement(true)
+    navigate('.', { replace: true, state: null })
+  }, [state, loading, group, currentUser, navigate])
+
   const openTransfer = async (member) => {
     try {
       const res = await client.get(`/groups/${id}/shared-groups/${member.id}`)

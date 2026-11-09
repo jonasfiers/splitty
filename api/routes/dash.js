@@ -13,6 +13,15 @@ router.get('/balance', async (req, res) => {
     }
 });
 
+router.get('/friends', async (req, res) => {
+    try {
+        res.json(await dashService.getFriends(req.user.id));
+    }
+    catch (error) {
+        res.status(500).json({error: error.message});
+    }
+});
+
 router.get('/groups', async (req, res) => {
     try {
         const userId = req.user.id;
