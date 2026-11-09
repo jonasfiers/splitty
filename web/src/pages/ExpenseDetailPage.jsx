@@ -11,6 +11,7 @@ import { DetailHero, DetailRows, DetailRow } from '../components/Detail/Detail.j
 import { useConfirm } from '../components/Confirm/ConfirmProvider.jsx'
 import { leaveTo } from '../utils/history.js'
 import { useAuth } from '../context/AuthContext.jsx'
+import { swr } from '../utils/cache.js'
 
 export default function ExpenseDetailPage() {
   const confirm = useConfirm()
@@ -43,11 +44,12 @@ export default function ExpenseDetailPage() {
   }
 
   useEffect(() => {
-    Promise.all([
-      client.get(`/expenses/${id}`),
-      client.get(`/shares/expense/${id}`),
-      client.get(`/groups/${groupId}/members`),
-    ]).then(([expRes, sharesRes, membersRes]) => {
+    // The last state at once, then fresh (utils/cache.js).
+    const { cached, fresh } = swr([
+      [`/expenses/${id}`],
+      [`/shares/expense/${id}`],
+      [`/groups/${groupId}/members`],
+    ], ([expRes, sharesRes, membersRes]) => {
       const expense = expRes.data.expense
       if (!expense) {
         navigate(`/groups/${groupId}`, { state: { notice: 'This expense no longer exists.' }, replace: true })
@@ -56,8 +58,10 @@ export default function ExpenseDetailPage() {
       setExpense(expense)
       setShares(sharesRes.data.shares || [])
       setMembers(membersRes.data.members || [])
-    }).catch(() => {
-      navigate(`/groups/${groupId}`, { state: { notice: 'This expense could not be found.' }, replace: true })
+    })
+    if (cached) setLoading(false)
+    fresh.catch(() => {
+      if (!cached) navigate(`/groups/${groupId}`, { state: { notice: 'This expense could not be found.' }, replace: true })
     }).finally(() => setLoading(false))
   }, [id, groupId])
 

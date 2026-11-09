@@ -7,6 +7,10 @@ import { formatBytes } from '../../utils/trip.js'
 import { keepOffline, removeOffline, syncTrip, offlineSupported } from '../../utils/offlineDocs.js'
 import { useOfflineDocs } from '../../utils/useOfflineDocs.js'
 import './TripDocuments.css'
+import { swrOne } from '../../utils/cache.js'
+import Loading from '../Loading.jsx'
+import LoadFailed from '../LoadFailed.jsx'
+import EmptyState from '../EmptyState/EmptyState.jsx'
 import { useConfirm } from '../Confirm/ConfirmProvider.jsx'
 
 // A trip's travel documents: arrival cards, visas, insurance, passport copies
@@ -26,7 +30,8 @@ export default function TripDocuments({ tripId, tripTitle, heading = true }) {
   const confirm = useConfirm()
   const navigate = useNavigate()
   const standalone = useMemo(isStandalone, [])
-  const [documents, setDocuments] = useState(null)
+  const [documents, setDocuments] = useState(null) // null: not loaded yet
+  const [loadError, setLoadError] = useState(null) // the first load failed (nothing to show)
   const [error, setError] = useState('')
   const [uploading, setUploading] = useState(false)
   const [busy, setBusy] = useState(null)
@@ -37,22 +42,35 @@ export default function TripDocuments({ tripId, tripTitle, heading = true }) {
   const kept = useMemo(() => new Set((offline ?? []).map(d => d.id)), [offline])
   const canKeep = useMemo(offlineSupported, [])
 
-  const load = useCallback(async () => {
-    const { data } = await client.get(`/trips/${tripId}/documents`)
-    setDocuments(data.documents)
-    loadedAt.current = Date.now()
-    // Kept copies of documents that are gone (deleted, made private) go too.
-    syncTrip({ id: tripId, title: tripTitle }, data.documents.map(d => d.id)).catch(() => {})
+  // The list as the trip page last loaded it at once (utils/cache.js: the
+  // same request as its Documents count), then fresh. After a change here
+  // ({ fresh: true }) only the server's answer.
+  const load = useCallback(async ({ fresh = true } = {}) => {
+    const { cached, fresh: answer } = swrOne(`/trips/${tripId}/documents`, ({ data }) => {
+      setDocuments(data.documents)
+      setLoadError(null)
+      loadedAt.current = Date.now()
+      // Kept copies of documents that are gone (deleted, made private) go too.
+      syncTrip({ id: tripId, title: tripTitle }, data.documents.map(d => d.id)).catch(() => {})
+    }, { fresh })
+    // With a list on screen a failed refresh changes nothing.
+    await answer.catch(err => { if (!cached) throw err })
   }, [tripId, tripTitle])
 
+  const [attempt, setAttempt] = useState(0)
+  const retry = useCallback(() => { setLoadError(null); setAttempt(n => n + 1) }, [])
+
   useEffect(() => {
-    load().catch(() => setDocuments([]))
+    // Failing with nothing loaded: "couldn't load" (not an empty list, which
+    // would say there are no documents).
+    // (load only fails here when there was nothing cached to show.)
+    load({ fresh: attempt > 0 }).catch(err => setLoadError(err))
     const refresh = () => { if (document.visibilityState === 'visible') load().catch(() => {}) }
     const timer = setInterval(refresh, 4 * 60 * 1000)
     const onVisible = () => { if (Date.now() - loadedAt.current > 60 * 1000) refresh() }
     document.addEventListener('visibilitychange', onVisible)
     return () => { clearInterval(timer); document.removeEventListener('visibilitychange', onVisible) }
-  }, [load])
+  }, [load, attempt])
 
   // As on the item page: with a PDF here, fetch the viewer and pdf.js while
   // the phone is idle, so opening it is instant.
@@ -130,10 +148,25 @@ export default function TripDocuments({ tripId, tripTitle, heading = true }) {
     return kept.has(doc.id) ? `${base} · on this device` : base
   }
 
+  if (loadError) return (
+    <section className="trip-docs">
+      {heading && <div className="section-label">Documents</div>}
+      <LoadFailed error={loadError} what="the documents" onRetry={retry} />
+    </section>
+  )
+  // Loading: the waiting cat (only if it takes a moment), not an empty list.
+  if (documents === null) return (
+    <section className="trip-docs">
+      {heading && <div className="section-label">Documents</div>}
+      <Loading />
+    </section>
+  )
+
   return (
     <section className="trip-docs">
       {heading && <div className="section-label">Documents{documents?.length ? ` · ${documents.length}` : ''}</div>}
       {error && <p className="error">{error}</p>}
+      {documents.length === 0 && <EmptyState compact art={false} title="No documents yet" />}
       {documents?.length > 0 && (
         <div className="list">
           {documents.map(doc => {

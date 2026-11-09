@@ -15,6 +15,7 @@ import { FormColumns, FormColumn } from '../components/Field/FormColumns.jsx'
 import Picker from '../components/Picker/Picker.jsx'
 import { Avatar } from '../components/Avatar.jsx'
 import DatePicker from '../components/DatePicker/DatePicker.jsx'
+import { getOnce } from '../utils/cache.js'
 
 function recalculate(shares, total, payerId) {
   const included = shares.filter(s => s.included)
@@ -74,10 +75,12 @@ export default function ExpenseFormPage() {
 
   useEffect(() => {
     const fetches = [
-      client.get(`/categories?groupId=${groupId}`),
-      client.get('/currencies'),
-      client.get('/groups'),
-      ...(groupId ? [client.get(`/groups/${groupId}/members`)] : []),
+      // The lists around the form from the cache when kept (utils/cache.js);
+      // the expense being edited always fresh.
+      getOnce(`/categories?groupId=${groupId}`),
+      getOnce('/currencies'),
+      getOnce('/groups'),
+      ...(groupId ? [getOnce(`/groups/${groupId}/members`)] : []),
       ...(isEdit ? [client.get(`/expenses/${id}`)] : []),
       ...(isEdit ? [client.get(`/shares/expense/${id}`)] : []),
     ]

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import LoadFailed from '../components/LoadFailed.jsx'
 import { useParams } from 'react-router'
-import client from '../api/client'
+import { swr } from '../utils/cache.js'
 import Loading from '../components/Loading.jsx'
 import PageHeader from '../components/PageHeader/PageHeader.jsx'
 import TripDocuments from '../components/TripDocuments/TripDocuments.jsx'
@@ -16,15 +16,19 @@ export default function TripDocumentsPage() {
   const [attempt, setAttempt] = useState(0)
   const retry = useCallback(() => { setError(null); setTrip(null); setAttempt(n => n + 1) }, [])
 
+  // The trip (for its name) and its documents together, so the page shows once,
+  // complete; usually both are in the cache already from the trip page
+  // (utils/cache.js). The list below then finds the documents there at once.
   useEffect(() => {
-    client.get(`/trips/${tripId}`)
-      .then(({ data }) => setTrip(data.trip))
-      .catch(err => setError(err))
+    const { cached, fresh } = swr([[`/trips/${tripId}`], [`/trips/${tripId}/documents`]],
+      ([tripRes]) => setTrip(tripRes.data.trip), { fresh: attempt > 0 })
+    fresh.catch(err => { if (!cached) setError(err) })
   }, [tripId, attempt])
 
-  if (error?.response?.status === 404) return <p className="error">This trip no longer exists.</p>
-  if (error) return <LoadFailed error={error} what="this trip’s documents" onRetry={retry} />
-  if (!trip) return <Loading />
+  const bare = <PageHeader compact crumbs={[{ to: '/trips', label: 'Trips' }]} name="Documents" />
+  if (error?.response?.status === 404) return <>{bare}<p className="error">This trip no longer exists.</p></>
+  if (error) return <>{bare}<LoadFailed error={error} what="this trip’s documents" onRetry={retry} /></>
+  if (!trip) return <>{bare}<Loading /></>
 
   return (
     <>

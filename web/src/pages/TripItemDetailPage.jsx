@@ -18,6 +18,7 @@ import { formatCurrency, formatDate } from '../utils/currency.js'
 import { ListRow } from '../components/List/List.jsx'
 import { leaveTo } from '../utils/history.js'
 import { KINDS, TRANSPORT_MODES, itemIcon, dayOf, timeOf, formatDay, formatDuration, daysBetween, mapsLink, linkTarget, formatBytes, DEFAULT_CHECK_IN, DEFAULT_CHECK_OUT } from '../utils/trip.js'
+import { swrOne } from '../utils/cache.js'
 
 const START_LABEL = { transport: 'Departure', stay: 'Check-in', activity: 'Starts' }
 const END_LABEL = { transport: 'Arrival', stay: 'Check-out', activity: 'Ends' }
@@ -106,9 +107,12 @@ export default function TripItemDetailPage() {
   const standalone = useMemo(isStandalone, [])
   const [error, setError] = useState('')
 
-  const load = useCallback(async () => {
-    const { data } = await client.get(`/trips/items/${itemId}`)
-    setItem(data.item)
+  // Opening it: the last state at once if its file links still work (4 min,
+  // utils/cache.js), then fresh; the refreshes below ask the server only.
+  const load = useCallback(async ({ fresh = true } = {}) => {
+    const { cached, fresh: answer } = swrOne(`/trips/items/${itemId}`, ({ data }) => setItem(data.item), { fresh })
+    if (cached) setLoading(false)
+    await answer.catch(err => { if (!cached) throw err })
   }, [itemId])
 
   // Loading failed (not "no such item": that is a 404): the "couldn't load" state.
@@ -117,7 +121,7 @@ export default function TripItemDetailPage() {
   const retry = useCallback(() => { setLoading(true); setAttempt(n => n + 1) }, [])
   useEffect(() => {
     setLoadError(null)
-    load()
+    load({ fresh: attempt > 0 })
       .catch(err => {
         if (err.response?.status === 404) navigate(`/trips/${tripId}`, { state: { notice: 'This item no longer exists.' }, replace: true })
         else setLoadError(err)

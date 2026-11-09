@@ -13,6 +13,7 @@ import { FormColumns, FormColumn } from '../components/Field/FormColumns.jsx'
 import Segmented from '../components/Segmented/Segmented.jsx'
 import { DateTimePicker } from '../components/DatePicker/DatePicker.jsx'
 import EmptyState from '../components/EmptyState/EmptyState.jsx'
+import { getOnce } from '../utils/cache.js'
 
 const LABELS = {
   transport: { start: 'Departure', end: 'Arrival', title: 'Title', titleHint: 'Leave empty to use the route' },
@@ -55,7 +56,9 @@ export default function TripItemFormPage() {
 
   useEffect(() => {
     Promise.all([
-      client.get(`/trips/${tripId}`),
+      // The trip (its places, its dates) from the cache when kept
+      // (utils/cache.js); the item being edited always fresh.
+      getOnce(`/trips/${tripId}`),
       ...(isEdit ? [client.get(`/trips/items/${itemId}`)] : []),
     ]).then(([tripRes, itemRes]) => {
       const trip = tripRes.data.trip
