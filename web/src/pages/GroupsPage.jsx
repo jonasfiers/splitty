@@ -14,6 +14,7 @@ import TabHeader from '../components/PageHeader/TabHeader.jsx'
 import Sheet, { SheetActions } from '../components/Sheet/Sheet.jsx'
 import { List, ListRow } from '../components/List/List.jsx'
 import Field from '../components/Field/Field.jsx'
+import Picker from '../components/Picker/Picker.jsx'
 
 export default function GroupsPage() {
   const navigate = useNavigate()
@@ -216,15 +217,13 @@ export default function GroupsPage() {
               </Field>
             </div>
             <Field label="Currency">
-              <select
+              <Picker
+                title="Currency"
                 value={form.currencyIso}
-                onChange={e => setForm(f => ({ ...f, currencyIso: e.target.value }))}
+                onChange={v => setForm(f => ({ ...f, currencyIso: v }))}
+                options={currencies.map(c => ({ value: c.iso, label: c.iso, icon: c.symbol }))}
                 required
-              >
-                {currencies.map(c => (
-                  <option key={c.iso} value={c.iso}>{c.iso}</option>
-                ))}
-              </select>
+              />
             </Field>
             {error && <p className="error">{error}</p>}
             <SheetActions>

@@ -6,6 +6,7 @@ import Loading from '../components/Loading.jsx'
 import PageHeader from '../components/PageHeader/PageHeader.jsx'
 import { useConfirm } from '../components/Confirm/ConfirmProvider.jsx'
 import Field from '../components/Field/Field.jsx'
+import Picker from '../components/Picker/Picker.jsx'
 
 export default function CategoriesPage() {
   const confirm = useConfirm()
@@ -101,15 +102,12 @@ export default function CategoriesPage() {
               </Field>
             </div>
             <Field label="Parent category" style={{ marginTop: 12 }}>
-              <select
+              <Picker
+                title="Parent category"
                 value={form.parentId}
-                onChange={e => setForm(f => ({ ...f, parentId: e.target.value }))}
-              >
-                <option value="">None (top-level)</option>
-                {categories.map(c => (
-                  <option key={c.id} value={c.id}>{c.full_name}</option>
-                ))}
-              </select>
+                onChange={v => setForm(f => ({ ...f, parentId: v }))}
+                options={[{ value: '', label: 'None (top-level)' }, ...categories.map(c => ({ value: c.id, label: c.full_name, icon: c.icon }))]}
+              />
             </Field>
             {error && <p className="error">{error}</p>}
             <div className="panel-actions">
@@ -141,15 +139,12 @@ export default function CategoriesPage() {
                     </Field>
                   </div>
                   <Field label="Parent category" style={{ marginTop: 12 }}>
-                    <select
+                    <Picker
+                      title="Parent category"
                       value={editForm.parentId}
-                      onChange={e => setEditForm(f => ({ ...f, parentId: e.target.value }))}
-                    >
-                      <option value="">None (top-level)</option>
-                      {categories.filter(cat => cat.id !== editId).map(cat => (
-                        <option key={cat.id} value={cat.id}>{cat.full_name}</option>
-                      ))}
-                    </select>
+                      onChange={v => setEditForm(f => ({ ...f, parentId: v }))}
+                      options={[{ value: '', label: 'None (top-level)' }, ...categories.filter(cat => cat.id !== editId).map(cat => ({ value: cat.id, label: cat.full_name, icon: cat.icon }))]}
+                    />
                   </Field>
                   {error && <p className="error">{error}</p>}
                   <div className="panel-actions">

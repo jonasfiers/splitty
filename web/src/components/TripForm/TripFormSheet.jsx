@@ -4,6 +4,7 @@ import EmojiPicker from '../EmojiPicker/EmojiPicker.jsx'
 import { today } from '../../utils/trip.js'
 import Sheet, { SheetActions } from '../Sheet/Sheet.jsx'
 import Field from '../Field/Field.jsx'
+import Picker from '../Picker/Picker.jsx'
 
 // Create or edit a trip. `groups` is only needed when the group is not fixed.
 function TripFormSheet({ trip, groupId, groups = [], onClose, onSaved }) {
@@ -58,9 +59,7 @@ function TripFormSheet({ trip, groupId, groups = [], onClose, onSaved }) {
 
         {!isEdit && !groupId && (
           <Field label="Group">
-            <select value={form.groupId} onChange={e => setForm(f => ({ ...f, groupId: e.target.value }))} required>
-              {groups.map(g => <option key={g.id} value={g.id}>{g.icon} {g.title}</option>)}
-            </select>
+            <Picker title="Group" value={form.groupId} onChange={v => setForm(f => ({ ...f, groupId: v }))} options={groups.map(g => ({ value: g.id, label: g.title, icon: g.icon }))} required />
           </Field>
         )}
 

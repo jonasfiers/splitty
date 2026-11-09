@@ -759,13 +759,22 @@ body {
   max-width: 480px;
   background: var(--surface);
   border-radius: var(--r-xl) var(--r-xl) 0 0;
-  padding: 20px 20px 32px;
   box-shadow: var(--shadow-lg);
-  /* A tall form on a short screen scrolls inside the sheet instead of running off it. */
   max-height: calc(100vh - 16px);
   max-height: calc(100dvh - 16px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.sheet-head { flex-shrink: 0; padding: 20px 20px 0; }
+/* A tall form or long list scrolls here, under the grip and title. The
+   small top padding keeps a focused field's ring from being cut off. */
+.sheet-body {
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
+  padding: 4px 20px 32px;
 }
 .sheet-handle {
   position: relative;
@@ -773,19 +782,19 @@ body {
   border-radius: 2px;
   background: var(--border-strong);
   margin: 0 auto 16px;
-  cursor: grab;
-  touch-action: none;
 }
-/* A finger-sized area to grab, much bigger than the bar itself. */
-.sheet-handle::before {
-  content: '';
-  position: absolute;
-  inset: -16px -60px -12px;
+/* The whole top of a bottom sheet is the place to drag it down. */
+@media (max-width: 767px) {
+  .sheet-head { touch-action: none; cursor: grab; }
+  /* The sheet reaches 24px past the bottom of the screen, out of sight, so
+     pulling it up (SheetHandle: LIFT_MAX) shows more sheet, never a gap. */
+  .sheet { margin-bottom: -24px; padding-bottom: 24px; }
+  .sheet.place-sheet { height: calc(100dvh - 24px); }
 }
 .sheet-title {
   font-size: 17px;
   font-weight: 700;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
   color: var(--text);
 }
 
@@ -794,8 +803,9 @@ body {
   .sheet {
     max-width: 440px;
     border-radius: var(--r-xl);
-    padding: 28px 28px 32px;
   }
+  .sheet-head { padding: 28px 28px 0; }
+  .sheet-body { padding: 4px 28px 32px; }
   .sheet-handle { display: none; }
 }
 
@@ -837,8 +847,8 @@ body {
 }
 .home-panel-link { font-size: 12px; font-weight: 600; color: var(--accent-text); }
 .home-panel-sub { font-size: 12px; color: var(--text-3); margin-top: 2px; }
-.home-up { color: var(--red-dark); font-weight: 600; }
-.home-down { color: var(--green-dark); font-weight: 600; }
+/* Spending more or less is not owing: no balance colours, an arrow instead. */
+.home-up, .home-down { color: var(--text-2); font-weight: 600; }
 .home-month-total {
   font-family: var(--font-mono);
   font-size: 24px;
@@ -1385,85 +1395,6 @@ body {
 /* ══════════════════════════════════════════
    CATEGORY PICKER
 ══════════════════════════════════════════ */
-.cat-picker-trigger {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  padding: 10px 12px;
-  background: var(--surface);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--r-md);
-  font-size: 14px;
-  color: var(--text);
-  cursor: pointer;
-  transition: border-color .15s, box-shadow .15s;
-}
-.cat-picker-trigger:hover {
-  border-color: var(--accent);
-}
-.cat-picker-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 99;
-}
-.cat-picker-dropdown {
-  position: absolute;
-  top: calc(100% + 4px);
-  left: 0;
-  right: 0;
-  background: var(--surface);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--r-md);
-  box-shadow: var(--shadow-md);
-  z-index: 100;
-  overflow: hidden;
-}
-.cat-picker-search-wrap {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 10px;
-  border-bottom: 1px solid var(--border);
-  color: var(--text-3);
-}
-.cat-picker-search {
-  flex: 1;
-  border: none;
-  background: transparent;
-  font-size: 13px;
-  color: var(--text);
-  outline: none;
-}
-.cat-picker-search::placeholder { color: var(--text-3); }
-.cat-picker-list {
-  max-height: 200px;
-  overflow-y: auto;
-}
-.cat-picker-option {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  padding: 8px 12px;
-  font-size: 13px;
-  color: var(--text);
-  cursor: pointer;
-  transition: background .1s;
-}
-.cat-picker-option:hover { background: var(--bg); }
-.cat-picker-option.selected { background: var(--accent-light); color: var(--accent-text); font-weight: 600; }
-.cat-picker-option-icon {
-  font-size: 15px;
-  width: 20px;
-  text-align: center;
-  flex-shrink: 0;
-}
-.cat-picker-empty {
-  padding: 14px 12px;
-  text-align: center;
-  font-size: 13px;
-  color: var(--text-3);
-}
 
 /* ══════════════════════════════════════════
    PROFILE PAGE
@@ -1526,7 +1457,7 @@ body {
   margin: 0 0 8px; padding: 10px 14px;
   background: var(--surface-2); border-radius: var(--r-md);
 }
-.set-ok { font-size: 13px; color: var(--green-dark); font-weight: 600; margin: 8px 4px 0; }
+.set-ok { font-size: 13px; color: var(--text-2); font-weight: 600; margin: 8px 4px 0; }
 
 /* Edit profile sheet */
 .edit-avatar { display: flex; gap: 16px; align-items: flex-start; margin-bottom: 20px; }
@@ -1711,7 +1642,8 @@ body {
    phones, in a column beside it (with a weekly summary) from 1180px. */
 .act-filters { margin-bottom: 14px; }
 .act-aside .act-filters { margin-bottom: 0; }
-.act-filters .filter-chips { padding-top: 0; flex-wrap: wrap; }
+.act-filters .filter-chips { padding: 8px 0; margin-top: -8px; align-items: center; }
+.act-aside .act-filters .filter-chips { flex-wrap: wrap; }
 .act-day { margin-bottom: 16px; }
 .act-day-label { margin: 0 0 6px; padding: 0; }
 .card.act-day-card { padding: 0; overflow: hidden; margin-bottom: 0; }
@@ -1749,13 +1681,12 @@ a.act-row { color: inherit; text-decoration: none; }
   fill: none; stroke: #fff; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round;
 }
 .act-badge.edited svg { stroke-width: 2.6; }
-.act-badge.added { background: var(--green); }
-.act-badge.edited { background: var(--accent); }
-.act-badge.deleted { background: var(--red); }
+/* Green and red mean balances in this app; the badge's icon says what happened. */
+.act-badge.added { background: var(--accent); }
+.act-badge.edited { background: var(--text-3); }
+.act-badge.deleted { background: var(--text-2); }
 .act-row-deleted { cursor: default; }
 .act-row-deleted .act-desc { text-decoration: line-through; text-decoration-color: var(--text-3); color: var(--text-2); }
-.act-actions { margin-top: 8px; }
-.chip.chip-sm { padding: 4px 12px; font-size: 12px; }
 .act-desc { font-weight: 600; font-size: 14px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; transition: color .15s; }
 .act-meta { font-size: 12px; color: var(--text-3); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .act-amt { font-weight: 600; font-size: 14px; font-family: var(--font-mono); flex-shrink: 0; }
@@ -2230,16 +2161,37 @@ a.act-row { color: inherit; text-decoration: none; }
 }
 .trip-ref-icon:hover svg { stroke: var(--text); }
 
-/* Place picker: one field, the list under it (in the flow, so the
-   keyboard never covers it and the sheet or page just grows) */
-.place-picker { display: flex; flex-direction: column; gap: 6px; }
+/* Place picker: a button in the form, the search in a tall sheet */
+.place-trigger {
+  display: flex; align-items: center; gap: 10px;
+  width: 100%; min-height: 42px;
+  padding: 8px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-md);
+  font: inherit; color: var(--text); text-align: left; cursor: pointer;
+}
+.place-trigger:focus-visible { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-subtle); }
+.place-trigger-pin { font-size: 16px; flex-shrink: 0; }
+.place-trigger-search { width: 16px; height: 16px; flex-shrink: 0; fill: none; stroke: var(--text-3); stroke-width: 2; stroke-linecap: round; }
+.place-trigger-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.place-trigger-name { font-size: 14px; font-weight: 600; overflow-wrap: anywhere; }
+.place-trigger-address { font-size: 12px; color: var(--text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.place-trigger-address:empty { display: none; }
+.place-trigger-placeholder { font-size: 14px; color: var(--text-3); }
+.sheet.place-sheet { height: calc(100dvh - 48px); }
+/* The search stays at the top; the list under it is what scrolls. */
+.place-sheet .sheet-body { display: flex; flex-direction: column; overflow: hidden; }
+@media (min-width: 768px) { .sheet.place-sheet { height: min(640px, calc(100dvh - 48px)); } }
+.place-sheet .place-list { flex: 1; min-height: 0; overflow-y: auto; border: none; padding: 0; margin: 8px -4px 0; max-height: none; }
 .place-field { position: relative; }
 .place-field svg {
   position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
   width: 16px; height: 16px; fill: none; stroke: var(--text-3); stroke-width: 2; stroke-linecap: round;
   pointer-events: none;
 }
-.form-group .place-field input { padding-left: 36px; }
+.place-field input { width: 100%; padding: 10px 12px 10px 36px; background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--r-md); font: inherit; font-size: 16px; color: var(--text); }
+.place-field input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-subtle); }
 .place-list {
   display: flex; flex-direction: column;
   background: var(--surface);
@@ -2272,22 +2224,6 @@ a.act-row { color: inherit; text-decoration: none; }
 .place-row-meta { font-size: 12px; color: var(--text-3); overflow-wrap: anywhere; }
 .place-row-action .place-row-name { color: var(--accent-text); }
 .place-row-muted .place-row-name { font-weight: 500; color: var(--text-2); }
-.place-chosen {
-  display: flex; align-items: center; gap: 10px;
-  width: 100%;
-  padding: 8px 12px;
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  border-radius: var(--r-md);
-  text-align: left; font: inherit; color: var(--text);
-  cursor: pointer;
-}
-.place-chosen:hover { border-color: var(--border-strong); }
-.place-chosen-pin { font-size: 16px; flex-shrink: 0; }
-.place-chosen-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.place-chosen-name { font-size: 14px; font-weight: 600; overflow-wrap: anywhere; }
-.place-chosen-address { font-size: 12px; color: var(--text-3); overflow-wrap: anywhere; }
-.place-chosen-change { font-size: 13px; font-weight: 600; color: var(--accent-text); flex-shrink: 0; }
 
 /* Map */
 .trip-map {
@@ -2774,7 +2710,9 @@ a.trip-chip:hover { border-color: var(--accent); }
 .expense-amount .currency-input { font-family: var(--font-mono); font-size: 26px; font-weight: 700; padding: 10px 12px; }
 /* Both controls fill the row, so the currency is as tall as the amount, no taller */
 .expense-amount .form-group { display: flex; flex-direction: column; }
-.expense-amount select, .expense-amount .currency-input { flex: 1; }
+.expense-amount .currency-input { flex: 1; }
+.expense-amount .picker { flex: 1; display: flex; flex-direction: column; }
+.expense-amount .picker-field-btn { flex: 1; }
 
 /* Field: the label with something at its end (Forgot password?, Split equally) */
 .field-label-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
@@ -2795,3 +2733,36 @@ a.trip-chip:hover { border-color: var(--accent); }
 /* Chips under a field label: room inside the scroller for the taller tap area */
 .filter-chips-field { padding: 8px 0; margin: -8px 0; }
 .list-row-link-text { font-size: 13px; font-weight: 600; color: var(--accent-text); }
+
+.chip-sep { color: var(--text-3); padding: 0 2px; flex-shrink: 0; }
+
+/* Picker (components/Picker): the app's own list instead of <select> */
+.picker { position: relative; display: block; min-width: 0; }
+.picker-chip { display: inline-block; flex-shrink: 0; }
+.picker-field-btn {
+  display: flex; align-items: center; gap: 8px;
+  width: 100%; min-height: 42px;
+  padding: 8px 10px 8px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-md);
+  font: inherit; font-size: 14px; color: var(--text);
+  text-align: left; cursor: pointer;
+}
+.picker-field-btn:focus-visible { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-subtle); }
+.picker-field-btn:disabled { opacity: .6; cursor: default; }
+.picker-chip-btn { display: inline-flex; align-items: center; gap: 4px; max-width: 60vw; }
+.picker-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.picker-placeholder { color: var(--text-3); }
+.picker-icon { flex-shrink: 0; line-height: 1; }
+.picker-chev { width: 12px; height: 12px; flex-shrink: 0; fill: none; stroke: currentColor; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; color: var(--text-3); }
+.picker-chip-btn .picker-chev { color: inherit; }
+.picker-required { position: absolute; left: 50%; bottom: 0; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.picker-search { width: 100%; padding: 10px 12px; margin-bottom: 10px; background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--r-md); font: inherit; font-size: 16px; color: var(--text); }
+.list.picker-list { margin-bottom: 8px; }
+.picker-option { width: 100%; border: none; background: none; font: inherit; text-align: left; color: var(--text); cursor: pointer; }
+.picker-option[aria-selected="true"] .list-row-title { color: var(--accent-text); }
+.picker-option-indent { padding-left: 40px; }
+.picker-option-icon { width: 28px; flex-shrink: 0; text-align: center; font-size: 18px; line-height: 1; }
+.picker-check { width: 18px; height: 18px; flex-shrink: 0; fill: none; stroke: var(--accent-text); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; margin-left: auto; }
+.picker-section { font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--text-3); padding: 14px 16px 6px; background: var(--surface-2); border-bottom: 1px solid var(--border); }

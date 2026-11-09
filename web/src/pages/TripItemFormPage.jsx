@@ -195,10 +195,10 @@ export default function TripItemFormPage() {
           {kind === 'transport' ? (
             <>
               <Field label="From">
-                <PlacePicker value={form.from} onChange={from => set({ from })} places={places} placeholder="Airport, station, address…" suggested={lastArrival} suggestedNote="Where your last journey ended" />
+                <PlacePicker title="From" value={form.from} onChange={from => set({ from })} places={places} placeholder="Airport, station, address…" suggested={lastArrival} suggestedNote="Where your last journey ended" />
               </Field>
               <Field label="To">
-                <PlacePicker value={form.to} onChange={to => set({ to })} places={places} placeholder="Airport, station, address…" />
+                <PlacePicker title="To" value={form.to} onChange={to => set({ to })} places={places} placeholder="Airport, station, address…" />
               </Field>
             </>
           ) : null}
@@ -208,7 +208,7 @@ export default function TripItemFormPage() {
           {kind !== 'transport' && <>
             {titleField}
             <Field label="Where">
-              <PlacePicker value={form.place} onChange={place => set({ place })} places={places} />
+              <PlacePicker title="Where" value={form.place} onChange={place => set({ place })} places={places} />
             </Field>
           </>}
 

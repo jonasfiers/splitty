@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
+import Picker from '../components/Picker/Picker.jsx'
 import LoadFailed from '../components/LoadFailed.jsx'
 import { Link } from 'react-router'
 import client from '../api/client'
@@ -10,13 +11,12 @@ import { activityLink, activityVerb, activityMatches, activityIcon, activityTone
 import { summarizeChanges } from '../utils/expenseChanges.js'
 
 const PAGE = 50
+// Nothing chosen means everything: tapping the active chip again clears it.
 const CONTEXTS = [
-  { key: 'all', label: 'All' },
   { key: 'expenses', label: 'Expenses' },
   { key: 'trips', label: 'Trips' },
 ]
 const ACTIONS = [
-  { key: 'all', label: 'Any change' },
   { key: 'added', label: 'Added' },
   { key: 'edited', label: 'Edited' },
   { key: 'deleted', label: 'Deleted' },
@@ -48,7 +48,9 @@ export default function ActivityPage() {
   const [error, setError] = useState('')
   const [context, setContext] = useState('all')
   const [action, setAction] = useState('all')
-  const [groupId, setGroupId] = useState('')
+  // '' for everything, 'g:<id>' for a group (its trips included), 't:<id>' for one trip.
+  const [scope, setScope] = useState('')
+  const [trips, setTrips] = useState([])
   const [shown, setShown] = useState(PAGE)
   // Same breakpoint as the other two-column pages (see index.css).
   const wide = useMediaQuery('(min-width: 1180px)')
@@ -65,11 +67,17 @@ export default function ActivityPage() {
     client.get('/dash/groups')
       .then(r => setGroups(new Map((r.data.groups || []).map(g => [g.id, g]))))
       .catch(() => {})
+    // Likewise the trips, for the group-or-trip picker.
+    client.get('/trips').then(r => setTrips(r.data.trips || [])).catch(() => {})
   }, [attempt])
 
   const filtered = useMemo(
-    () => activities.filter(a => activityMatches(a, context, action) && (!groupId || a.groupId === groupId)),
-    [activities, context, action, groupId],
+    () => {
+      const [kind, id] = scope ? scope.split(':') : []
+      return activities.filter(a => activityMatches(a, kind === 't' ? 'all' : context, action)
+        && (!kind || (kind === 'g' ? a.groupId === id : a.tripId === id)))
+    },
+    [activities, context, action, scope],
   )
 
   const days = useMemo(() => {
@@ -96,9 +104,9 @@ export default function ActivityPage() {
     }
   }, [activities])
 
-  const pickContext = key => { setContext(key); setShown(PAGE) }
-  const pickAction = key => { setAction(key); setShown(PAGE) }
-  const pickGroup = id => { setGroupId(id); setShown(PAGE) }
+  const pickContext = key => { setContext(c => (c === key ? 'all' : key)); setShown(PAGE) }
+  const pickAction = key => { setAction(a => (a === key ? 'all' : key)); setShown(PAGE) }
+  const pickScope = value => { setScope(value); setShown(PAGE) }
 
   if (loading) return <Loading />
 
@@ -124,26 +132,44 @@ export default function ActivityPage() {
     </>
   )
 
+  // The picker: each group, with its trips under it.
+  const tripsOf = gid => trips.filter(t => t.groupId === gid)
+  const scopeLabel = (() => {
+    const [kind, id] = scope ? scope.split(':') : []
+    const thing = kind === 'g' ? groups.get(id) : kind === 't' ? trips.find(t => t.id === id) : null
+    return thing ? `${thing.icon ? `${thing.icon} ` : ''}${thing.title}` : 'All groups'
+  })()
+  const showPicker = groups.size > 1 || trips.length > 0
+  const tripScope = scope.startsWith('t:')
+
   const filters = (
     <div className="act-filters">
-      <div className="filter-chips" role="group" aria-label="Show">
-        {CONTEXTS.map(t => (
-          <button key={t.key} className={`chip${context === t.key ? ' active' : ''}`} aria-pressed={context === t.key} onClick={() => pickContext(t.key)}>{t.label}</button>
+      <div className="filter-chips" role="group" aria-label="Filter the activity">
+        {showPicker && (
+          <Picker
+            variant="chip"
+            title="Show activity of"
+            aria-label={`Group or trip: ${scopeLabel}`}
+            value={scope}
+            onChange={pickScope}
+            options={[
+              { value: '', label: 'All groups and trips', short: 'All groups' },
+              ...[...groups.values()].flatMap(g => [
+                { value: `g:${g.id}`, label: g.title, icon: g.icon || '·' },
+                ...tripsOf(g.id).map(t => ({ value: `t:${t.id}`, label: t.title, icon: t.icon || '🧳', indent: true })),
+              ]),
+            ]}
+          />
+        )}
+        {/* With one trip picked there is nothing left to choose between. */}
+        {!tripScope && CONTEXTS.map(t => (
+          <button key={t.key} type="button" className={`chip${context === t.key ? ' active' : ''}`} aria-pressed={context === t.key} onClick={() => pickContext(t.key)}>{t.label}</button>
         ))}
-      </div>
-      <div className="filter-chips act-actions" role="group" aria-label="Change">
+        <span className="chip-sep" aria-hidden="true">·</span>
         {ACTIONS.map(t => (
-          <button key={t.key} className={`chip chip-sm${action === t.key ? ' active' : ''}`} aria-pressed={action === t.key} onClick={() => pickAction(t.key)}>{t.label}</button>
+          <button key={t.key} type="button" className={`chip${action === t.key ? ' active' : ''}`} aria-pressed={action === t.key} onClick={() => pickAction(t.key)}>{t.label}</button>
         ))}
       </div>
-      {groups.size > 1 && (
-        <div className="form-group" style={{ marginBottom: 0 }}>
-          <select value={groupId} onChange={e => pickGroup(e.target.value)} aria-label="Group">
-            <option value="">All groups</option>
-            {[...groups.values()].map(g => <option key={g.id} value={g.id}>{g.icon ? `${g.icon} ` : ''}{g.title}</option>)}
-          </select>
-        </div>
-      )}
     </div>
   )
 

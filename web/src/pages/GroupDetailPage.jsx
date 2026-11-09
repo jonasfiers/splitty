@@ -23,6 +23,7 @@ import { leaveTo } from '../utils/history.js'
 import { List, ListRow } from '../components/List/List.jsx'
 import GroupEditSheet from '../components/GroupForm/GroupEditSheet.jsx'
 import Field from '../components/Field/Field.jsx'
+import Picker from '../components/Picker/Picker.jsx'
 
 // Keep in sync with the .group-layout breakpoint in index.css.
 const WIDE_QUERY = '(min-width: 1180px)'
@@ -525,13 +526,12 @@ export default function GroupDetailPage() {
                   />
                 </Field>
                 <Field label="Paid by" style={{ marginBottom: 0 }}>
-                  <select
+                  <Picker
+                    title="Paid by"
                     value={filters.paidByUserId}
-                    onChange={e => setFilters(f => ({ ...f, paidByUserId: e.target.value }))}
-                  >
-                    <option value="">Anyone</option>
-                    {members.map(m => <option key={m.id} value={m.id}>{m.id === currentUser?.id ? 'You' : m.name}</option>)}
-                  </select>
+                    onChange={v => setFilters(f => ({ ...f, paidByUserId: v }))}
+                    options={[{ value: '', label: 'Anyone' }, ...members.map(m => ({ value: m.id, label: m.id === currentUser?.id ? 'You' : m.name, icon: <Avatar name={m.name} size={28} colorIndex={m.avatarColor} emoji={m.avatarEmoji} /> }))]}
+                  />
                 </Field>
                 {panelFilterCount > 0 && (
                   <button type="button" className="btn btn-ghost btn-sm" style={{ marginTop: 12 }} onClick={clearFilters}>Clear filters</button>
@@ -679,15 +679,13 @@ export default function GroupDetailPage() {
                 Move the full balance of {formatCurrency(Math.abs(transferBilateral), balance?.iso)} with {transferTarget?.name} from this group to:
               </p>
               <Field label="Destination group">
-                <select
+                <Picker
+                  title="Destination group"
                   value={transferGroupId}
-                  onChange={e => setTransferGroupId(e.target.value)}
+                  onChange={setTransferGroupId}
+                  options={sharedGroups.map(g => ({ value: g.id, label: g.title, icon: g.icon }))}
                   required
-                >
-                  {sharedGroups.map(g => (
-                    <option key={g.id} value={g.id}>{g.icon} {g.title}</option>
-                  ))}
-                </select>
+                />
               </Field>
               <SheetActions>
                 <button type="submit" className="btn btn-primary">Transfer balance</button>
@@ -758,24 +756,24 @@ export default function GroupDetailPage() {
         <Sheet title="Record a settlement" onClose={() => setShowSettlement(false)}>
           <form onSubmit={handleSettlement}>
             <Field label="Who paid?">
-              <select
+              <Picker
+                title="Who paid?"
+                placeholder="Select someone…"
                 value={settlementForm.paidByUserId}
-                onChange={e => setSettlementForm(f => ({ ...f, paidByUserId: e.target.value }))}
+                onChange={v => setSettlementForm(f => ({ ...f, paidByUserId: v }))}
+                options={members.map(m => ({ value: m.id, label: m.id === currentUser?.id ? 'You' : m.name, icon: <Avatar name={m.name} size={28} colorIndex={m.avatarColor} emoji={m.avatarEmoji} /> }))}
                 required
-              >
-                <option value="">Select user…</option>
-                {members.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
-              </select>
+              />
             </Field>
             <Field label="Who received?">
-              <select
+              <Picker
+                title="Who received?"
+                placeholder="Select someone…"
                 value={settlementForm.receivedByUserId}
-                onChange={e => setSettlementForm(f => ({ ...f, receivedByUserId: e.target.value }))}
+                onChange={v => setSettlementForm(f => ({ ...f, receivedByUserId: v }))}
+                options={members.map(m => ({ value: m.id, label: m.id === currentUser?.id ? 'You' : m.name, icon: <Avatar name={m.name} size={28} colorIndex={m.avatarColor} emoji={m.avatarEmoji} /> }))}
                 required
-              >
-                <option value="">Select user…</option>
-                {members.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
-              </select>
+              />
             </Field>
             <Field label="Amount">
               <CurrencyInput

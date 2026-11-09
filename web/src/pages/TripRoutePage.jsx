@@ -193,13 +193,13 @@ export default function TripRoutePage() {
   const searchForm = (
     <form className="card route-form" onSubmit={handleSearch}>
       <Field label="From">
-        <PlacePicker value={form.from} onChange={from => set({ from })} places={places} placeholder="Station, hotel, address…" />
+        <PlacePicker title="From" value={form.from} onChange={from => set({ from })} places={places} placeholder="Station, hotel, address…" />
       </Field>
       <div className="route-swap-row">
         <button type="button" className="route-swap" onClick={swap} aria-label="Swap from and to">⇅ Swap</button>
       </div>
       <Field label="To">
-        <PlacePicker value={form.to} onChange={to => set({ to })} places={places} placeholder="Station, hotel, address…" />
+        <PlacePicker title="To" value={form.to} onChange={to => set({ to })} places={places} placeholder="Station, hotel, address…" />
       </Field>
 
       <div className="filter-chips" style={{ paddingTop: 0 }}>

@@ -421,6 +421,8 @@ const categoryServiceNeo4j = {
                     full_name: record.get('fullName'),
                     icon: record.get('icon'),
                     parentId: record.get('parentId'),
+                    // How often this group used it (0 without a groupId): the picker's "used most".
+                    usageCount: neo4j.integer.toNumber(record.get('usageCount') ?? 0),
                 }))};
         }
         catch (err) {

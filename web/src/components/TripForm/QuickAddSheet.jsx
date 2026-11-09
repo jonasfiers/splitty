@@ -105,15 +105,15 @@ function QuickAddSheet({ tripId, kind, start, end, places, onClose, onSaved, onM
         {kind === 'transport' ? (
           <div className="form-row">
             <Field label="From">
-              <PlacePicker value={form.from} onChange={from => set({ from })} places={places} placeholder="Airport, station…" />
+              <PlacePicker title="From" value={form.from} onChange={from => set({ from })} places={places} placeholder="Airport, station…" />
             </Field>
             <Field label="To">
-              <PlacePicker value={form.to} onChange={to => set({ to })} places={places} placeholder="Airport, station…" />
+              <PlacePicker title="To" value={form.to} onChange={to => set({ to })} places={places} placeholder="Airport, station…" />
             </Field>
           </div>
         ) : (
           <Field label="Where">
-            <PlacePicker value={form.place} onChange={place => set({ place })} places={places} />
+            <PlacePicker title="Where" value={form.place} onChange={place => set({ place })} places={places} />
           </Field>
         )}
 

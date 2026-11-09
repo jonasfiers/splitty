@@ -7,6 +7,7 @@ import { formatCurrency, formatCompactCurrency } from '../utils/currency.js'
 import Loading from '../components/Loading.jsx'
 import { COLOURS, STROKES } from '../utils/chartColors.js'
 import TabHeader from '../components/PageHeader/TabHeader.jsx'
+import Picker from '../components/Picker/Picker.jsx'
 const DOW_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 const PERIODS = [
   { key: 'month', label: 'This month' },
@@ -223,12 +224,14 @@ export default function InsightsPage() {
       </div>
       <div className="insights-controls-row">
         {groups.length > 1 && (
-          <div className="form-group" style={{ marginBottom: 0, flex: 1, minWidth: 0 }}>
-            <select value={groupId} onChange={e => setGroupId(e.target.value)} aria-label="Group">
-              <option value="">All groups</option>
-              {groups.map(g => <option key={g.id} value={g.id}>{g.icon ? `${g.icon} ` : ''}{g.title}</option>)}
-            </select>
-          </div>
+          <Picker
+            variant="chip"
+            title="Show insights for"
+            aria-label="Group"
+            value={groupId}
+            onChange={setGroupId}
+            options={[{ value: '', label: 'All groups' }, ...groups.map(g => ({ value: g.id, label: g.title, icon: g.icon }))]}
+          />
         )}
         <div className="insights-scope" role="group" aria-label="Amounts">
           <button className={`chip${!mine ? ' active' : ''}`} onClick={() => setScope('group')}>Group total</button>
@@ -548,7 +551,7 @@ export default function InsightsPage() {
                           height: 36,
                           borderRadius: 6,
                           background: cell.total > 0
-                            ? `rgba(220, 38, 38, ${(0.12 + intensity * 0.88).toFixed(2)})`
+                            ? `rgba(232, 96, 58, ${(0.12 + intensity * 0.88).toFixed(2)})`
                             : 'var(--surface-2)',
                           transition: 'background 0.15s',
                         }}

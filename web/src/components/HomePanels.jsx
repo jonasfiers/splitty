@@ -57,7 +57,7 @@ function ThisMonth({ monthly }) {
       <div className="home-panel-sub">
         spent across your groups
         {change !== null && (
-          <> · <span className={change > 0 ? 'home-up' : 'home-down'}>{change > 0 ? '+' : ''}{change}%</span> vs last month</>
+          <> · <span className={change > 0 ? 'home-up' : 'home-down'}>{change > 0 ? '↑' : change < 0 ? '↓' : ''}{Math.abs(change)}%</span> vs last month</>
         )}
       </div>
       {top.length > 0 && (

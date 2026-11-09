@@ -3,6 +3,7 @@ import client from '../../api/client'
 import EmojiPicker from '../EmojiPicker/EmojiPicker.jsx'
 import Sheet, { SheetActions } from '../Sheet/Sheet.jsx'
 import Field from '../Field/Field.jsx'
+import Picker from '../Picker/Picker.jsx'
 
 // Name, icon and currency of a group. The currency only while nothing has
 // been spent: amounts are stored without one, so changing it later would
@@ -51,14 +52,14 @@ export default function GroupEditSheet({ group, canChangeCurrency, onClose, onSa
         </div>
         <div className="form-group">
           <label htmlFor="group-edit-currency">Currency</label>
-          <select
+          <Picker
             id="group-edit-currency"
+            title="Currency"
             value={form.currencyIso}
-            onChange={e => setForm(f => ({ ...f, currencyIso: e.target.value }))}
+            onChange={v => setForm(f => ({ ...f, currencyIso: v }))}
+            options={currencies.map(c => ({ value: c.iso, label: c.iso, icon: c.symbol }))}
             disabled={!canChangeCurrency}
-          >
-            {currencies.map(c => <option key={c.iso} value={c.iso}>{c.iso}</option>)}
-          </select>
+          />
           {!canChangeCurrency && (
             <p className="list-hint" style={{ padding: '6px 0 0' }}>Fixed once the group has expenses.</p>
           )}

@@ -368,7 +368,6 @@ export default function TripItemDetailPage() {
                   key={e.id}
                   to={`/groups/${item.groupId}/expenses/${e.id}`}
                   icon="✓"
-                  iconStyle={{ background: 'var(--green-light)', color: 'var(--green-dark)' }}
                   title={e.description}
                   meta={<>Paid by {e.paidByName ?? '—'}{e.date ? ` · ${formatDate(e.date)}` : ''}</>}
                   aside={<span className="list-row-amt">{formatCurrency(e.amount, e.currencyIso)}</span>}

@@ -11,6 +11,8 @@ import BackLink from '../components/BackLink.jsx'
 import CategoryPicker from '../components/CategoryPicker/CategoryPicker.jsx'
 import { useMediaQuery } from '../utils/useMediaQuery.js'
 import Field from '../components/Field/Field.jsx'
+import Picker from '../components/Picker/Picker.jsx'
+import { Avatar } from '../components/Avatar.jsx'
 
 function recalculate(shares, total, payerId) {
   const included = shares.filter(s => s.included)
@@ -240,10 +242,10 @@ export default function ExpenseFormPage() {
             <div className="expense-form-fields">
               <div className="form-row form-row-compact expense-amount">
                 <Field label="Currency">
-                  <select
+                  <Picker
+                    title="Currency"
                     value={form.currencyIso}
-                    onChange={e => {
-                      const newIso = e.target.value
+                    onChange={newIso => {
                       const newDec = currencies.find(c => c.iso === newIso)?.amountOfDecimals ?? 2
                       setForm(f => ({
                         ...f,
@@ -251,13 +253,9 @@ export default function ExpenseFormPage() {
                         amount: f.amount ? parseFloat(f.amount).toFixed(newDec) : '',
                       }))
                     }}
+                    options={currencies.map(c => ({ value: c.iso, label: c.iso, icon: c.symbol }))}
                     required
-                  >
-                    <option value="">Select…</option>
-                    {currencies.map(c => (
-                      <option key={c.iso} value={c.iso}>{c.symbol} {c.iso}</option>
-                    ))}
-                  </select>
+                  />
                 </Field>
                 <Field label="Amount">
                   <CurrencyInput
@@ -296,29 +294,23 @@ export default function ExpenseFormPage() {
                   />
                 </Field>
                 <Field label="Paid by">
-                  <select
+                  <Picker
+                    title="Paid by"
                     value={form.paidByUserId}
-                    onChange={e => setForm(f => ({ ...f, paidByUserId: e.target.value }))}
+                    onChange={v => setForm(f => ({ ...f, paidByUserId: v }))}
+                    options={users.map(u => ({ value: u.id, label: u.id === currentUser?.id ? 'Me' : u.name, icon: <Avatar name={u.name} size={28} colorIndex={u.avatarColor} emoji={u.avatarEmoji} /> }))}
                     required
-                  >
-                    <option value="">Select…</option>
-                    {users.map(u => (
-                      <option key={u.id} value={u.id}>{u.id === currentUser?.id ? 'Me' : u.name}</option>
-                    ))}
-                  </select>
+                  />
                 </Field>
                 {(!groupId || isEdit) && (
                   <Field label="Group">
-                    <select
+                    <Picker
+                      title="Group"
                       value={form.groupId}
-                      onChange={e => setForm(f => ({ ...f, groupId: e.target.value }))}
+                      onChange={v => setForm(f => ({ ...f, groupId: v }))}
+                      options={groups.map(g => ({ value: g.id, label: g.title, icon: g.icon }))}
                       required
-                    >
-                      <option value="">Select…</option>
-                      {groups.map(g => (
-                        <option key={g.id} value={g.id}>{g.title}</option>
-                      ))}
-                    </select>
+                    />
                   </Field>
                 )}
               </div>
@@ -359,7 +351,7 @@ export default function ExpenseFormPage() {
                   const diff = total - sum
                   const ok = diff === 0
                   return total > 0 ? (
-                    <div style={{ fontSize: 12, marginTop: 8, textAlign: 'right', color: ok ? 'var(--green-dark)' : 'var(--red-dark)', fontWeight: 600 }}>
+                    <div style={{ fontSize: 12, marginTop: 8, textAlign: 'right', color: ok ? 'var(--text-3)' : 'var(--red-dark)', fontWeight: ok ? 500 : 600 }}>
                       {ok ? '✓ Shares match total' : `${diff > 0 ? '+' : ''}${formatCurrency(diff, form.currencyIso)} unassigned`}
                     </div>
                   ) : null
