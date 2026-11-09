@@ -68,6 +68,12 @@ export default function PrivacyPage() {
           looking at it. For exchange rates, Splitty’s server asks Frankfurter (frankfurter.app) for the rate
           between two currencies on a day; nothing about you is sent.
         </p>
+        <p>
+          Emoji are drawn by <a href="https://openmoji.org/" target="_blank" rel="noopener noreferrer">OpenMoji</a>,
+          the open-source emoji and icon project, licensed under{' '}
+          <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener noreferrer">CC BY-SA 4.0</a>.
+          They are part of the app: showing them sends nothing to anyone.
+        </p>
 
         <h2>Where it is kept</h2>
         <p>

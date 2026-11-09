@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router'
 import { startRegistration } from '@simplewebauthn/browser'
 import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
+import { EMOJI_STYLES, getEmojiStyle, setEmojiStyle } from '../utils/emojiStyle.js'
 import Loading from '../components/Loading.jsx'
 import client from '../api/client'
 import { timeAgo } from '../utils/time.js'
@@ -20,6 +21,7 @@ export default function ProfilePage() {
   const confirm = useConfirm()
   const { currentUser, isAdmin, logout, updateToken } = useAuth()
   const { theme, setTheme } = useTheme()
+  const [emojiStyle, setEmojiStyleState] = useState(getEmojiStyle)
   const navigate = useNavigate()
 
   const [profile, setProfile] = useState(null)
@@ -281,6 +283,22 @@ export default function ProfilePage() {
                     onClick={() => setTheme(opt)}
                   >
                     {opt.charAt(0).toUpperCase() + opt.slice(1)}
+                  </button>
+                ))}
+              </div>
+              }
+            />
+            <SetRow
+              label="Emoji"
+              aside={
+              <div className="theme-segment">
+                {EMOJI_STYLES.map(opt => (
+                  <button
+                    key={opt.value}
+                    className={`theme-segment-btn${emojiStyle === opt.value ? ' active' : ''}`}
+                    onClick={() => { setEmojiStyle(opt.value); setEmojiStyleState(opt.value) }}
+                  >
+                    {opt.label}
                   </button>
                 ))}
               </div>
