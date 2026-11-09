@@ -2766,7 +2766,8 @@ a.trip-chip:hover { border-color: var(--accent); }
 .picker-icon { flex-shrink: 0; line-height: 1; }
 .picker-chev { width: 12px; height: 12px; flex-shrink: 0; fill: none; stroke: currentColor; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; color: var(--text-3); }
 .picker-chip-btn .picker-chev { color: inherit; }
-.picker-required { position: absolute; left: 50%; bottom: 0; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+/* Inside a .form-group too, where inputs are otherwise full width (it made sheets scroll sideways). */
+.picker-required, .form-group .picker-required { position: absolute; left: 50%; bottom: 0; width: 1px; height: 1px; padding: 0; border: 0; opacity: 0; pointer-events: none; }
 .picker-search { width: 100%; padding: 10px 12px; margin-bottom: 10px; background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--r-md); font: inherit; font-size: 16px; color: var(--text); }
 .list.picker-list { margin-bottom: 8px; }
 .picker-option { width: 100%; border: none; background: none; font: inherit; text-align: left; color: var(--text); cursor: pointer; }
@@ -2835,4 +2836,62 @@ a.trip-chip:hover { border-color: var(--accent); }
   .dp-cal-head { margin-bottom: 2px; }
   .dp-time-head { margin: 8px 0 4px; padding-top: 8px; }
   .dp-sheet .sheet-title { margin-bottom: 8px; }
+}
+
+/* Time with a mouse: typed, or picked from quarter hours */
+.dp-typed { display: grid; grid-template-columns: 120px 1fr; grid-template-rows: auto 1fr; column-gap: 12px; row-gap: 8px; align-items: start; }
+.dp-typed-input {
+  width: 100%; padding: 10px 12px;
+  font: inherit; font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; text-align: center;
+  color: var(--text); background: var(--surface);
+  border: 1px solid var(--border-strong); border-radius: var(--r-md);
+}
+.dp-typed-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-subtle); }
+.dp-typed-input.bad { border-color: var(--red); }
+.dp-typed-list {
+  /* Both rows: the error sits right under the field, not under the list. */
+  grid-row: 1 / span 2; grid-column: 2;
+  position: relative; height: 168px; overflow-y: auto; overscroll-behavior: contain;
+  border: 1px solid var(--border); border-radius: var(--r-md); padding: 4px;
+}
+.dp-typed-option {
+  display: block; width: 100%; padding: 6px 12px; border-radius: 6px;
+  font: inherit; font-size: 14px; font-variant-numeric: tabular-nums; text-align: left; color: var(--text);
+}
+.dp-typed-option:hover { background: var(--surface-2); }
+.dp-typed-option.active { background: var(--accent); color: #fff; font-weight: 700; }
+.dp-typed-hint { grid-column: 1; grid-row: 2; font-size: 12px; line-height: 1.35; color: var(--red-dark); margin: 0; }
+/* The last good time, while the field holds something unreadable. */
+.dp-typed-option.stale { box-shadow: inset 0 0 0 1.5px var(--border-strong); }
+
+/* Sheet sections side by side on a wide screen (Sheet.jsx SheetColumns);
+   the dialog widens to hold them. */
+@media (min-width: 768px) {
+  .sheet:has(.sheet-columns) { max-width: 720px; }
+  .sheet-columns { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 32px; align-items: start; }
+  .sheet-columns:has(> .sheet-section-narrow) { grid-template-columns: minmax(0, 1fr); grid-auto-columns: 260px; }
+  .sheet-section + .sheet-section { border-left: 1px solid var(--border); padding-left: 28px; margin-left: -4px; align-self: stretch; }
+  /* Actions on the right in a wide dialog: the main one last, others beside it. */
+  .sheet:has(.sheet-columns) .sheet-actions { flex-direction: row-reverse; justify-content: flex-start; }
+  .sheet:has(.sheet-columns) .sheet-actions .btn { width: auto; min-width: 120px; }
+
+  /* The date-and-time sheet's time column */
+  .dp-time-col .dp-time-head { margin-top: 0; padding-top: 0; border-top: none; flex-wrap: wrap; gap: 8px; }
+  .dp-time-col .segmented.dp-time-toggle { flex: 1 1 100%; }
+  .dp-time-col .dp-typed { grid-template-columns: 1fr; grid-template-rows: auto auto auto; }
+  .dp-time-col .dp-typed-list { grid-row: auto; grid-column: auto; height: 190px; }
+  .dp-time-col .dp-typed-hint { grid-row: auto; }
+  /* Wheels: "Exact minutes" under them, there is no room beside them here. */
+  .dp-time-col .dp-time { flex-direction: column; gap: 4px; }
+  .dp-time-col .dp-exact { position: static; transform: none; width: auto; }
+}
+
+/* The member sheet's actions: a column of buttons (beside the person on a wide screen). */
+.member-sheet-actions { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
+.member-sheet-actions .btn { width: 100%; }
+@media (min-width: 768px) {
+  .sheet-section-narrow .member-sheet-actions { margin-top: 0; }
+  .member-sheet-head { padding-top: 12px; }
+  /* Pairs of fields stack in the narrow column. */
+  .sheet-section-narrow .form-row { grid-template-columns: 1fr; }
 }

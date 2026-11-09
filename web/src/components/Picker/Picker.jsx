@@ -70,7 +70,7 @@ export default function Picker({
       )}
 
       {open && createPortal(
-        <Sheet title={title || placeholder} onClose={close} zIndex={300} className="picker-sheet">
+        <Sheet title={title || placeholder} onClose={close} className="picker-sheet">
           {options.length >= SEARCH_FROM && (
             <input
               className="picker-search"

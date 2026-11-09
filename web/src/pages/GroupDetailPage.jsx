@@ -16,7 +16,7 @@ import CategoryPicker from '../components/CategoryPicker/CategoryPicker.jsx'
 import TripList from '../components/TripForm/TripList.jsx'
 import TripFormSheet from '../components/TripForm/TripFormSheet.jsx'
 import { useMediaQuery } from '../utils/useMediaQuery.js'
-import Sheet, { SheetActions } from '../components/Sheet/Sheet.jsx'
+import Sheet, { SheetActions, SheetColumns, SheetSection } from '../components/Sheet/Sheet.jsx'
 import { useConfirm } from '../components/Confirm/ConfirmProvider.jsx'
 import Segmented from '../components/Segmented/Segmented.jsx'
 import { leaveTo } from '../utils/history.js'
@@ -741,6 +741,9 @@ export default function GroupDetailPage() {
         const close = () => setMemberSheet(null)
         return (
           <Sheet title={m.name} onClose={close}>
+            {/* Who and where they stand | what to do: side by side on a wide screen. */}
+            <SheetColumns>
+            <SheetSection>
             <div className="member-sheet-head">
               <Avatar name={m.name} size={56} colorIndex={m.avatarColor} emoji={m.avatarEmoji} />
               <div className="member-sheet-status">
@@ -750,10 +753,16 @@ export default function GroupDetailPage() {
               </div>
               {m.email && <div className="member-sheet-email">{m.email}</div>}
             </div>
+            </SheetSection>
+            <SheetSection narrow>
+              <div className="member-sheet-actions">
+                {!!m.balance && <button type="button" className="btn btn-primary" onClick={() => { close(); openSettlement(m) }}>Settle up</button>}
+                {!!m.balance && <button type="button" className="btn btn-ghost" onClick={() => { close(); openTransfer(m) }}>Move balance to another group</button>}
+                <button type="button" className="btn btn-danger" onClick={() => { close(); handleRemoveMember(m.id) }}>Remove from group</button>
+              </div>
+            </SheetSection>
+            </SheetColumns>
             <SheetActions>
-              {!!m.balance && <button type="button" className="btn btn-primary" onClick={() => { close(); openSettlement(m) }}>Settle up</button>}
-              {!!m.balance && <button type="button" className="btn btn-ghost" onClick={() => { close(); openTransfer(m) }}>Move balance to another group</button>}
-              <button type="button" className="btn btn-danger" onClick={() => { close(); handleRemoveMember(m.id) }}>Remove from group</button>
               <button type="button" className="btn btn-ghost" onClick={close}>Cancel</button>
             </SheetActions>
           </Sheet>

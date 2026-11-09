@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useLayoutEffect } from 'react'
 import { createPortal } from 'react-dom'
-import Sheet, { SheetActions } from '../Sheet/Sheet.jsx'
+import Sheet, { SheetActions, SheetColumns, SheetSection } from '../Sheet/Sheet.jsx'
+import { useMediaQuery } from '../../utils/useMediaQuery.js'
 
 // Dates and times in the app's own sheet instead of the browser's pickers.
 //
@@ -136,7 +137,7 @@ export default function DatePicker({
       <Trigger id={id} buttonRef={buttonRef} text={formatDate(value)} placeholder={placeholder} onClick={() => setOpen(true)} />
       {required && <Required value={value || ''} onInvalid={() => setOpen(true)} />}
       {open && createPortal(
-        <Sheet title={title} onClose={close} zIndex={300} className="dp-sheet">
+        <Sheet title={title} onClose={close} className="dp-sheet">
           <Calendar value={value} onPick={pick} min={min} max={max} range={range} />
           <Shortcuts shortcuts={shortcuts} min={min} max={max} onPick={pick} />
           {optional && value && (
@@ -249,6 +250,101 @@ function TimeWheels({ time, onChange }) {
   )
 }
 
+// ── Time with a mouse and keyboard ──
+// Wheels are a touch control; with a mouse (and a keyboard) the time is typed,
+// or clicked in a list of quarter hours, as in desktop calendars.
+
+// "1435", "14:35", "14.35", "9", "930", "14h35", "2.30pm", "2pm" -> 'HH:mm', or null.
+export function parseTime(text) {
+  const t = text.trim().toLowerCase().replace(/\s+/g, '')
+  const m = t.match(/^(\d{1,2})(?:[:.h]?(\d{2}))?(am|pm|a|p)?$/)
+  if (!m) return null
+  let h = Number(m[1])
+  const min = Number(m[2] ?? 0)
+  const ap = m[3]?.[0]
+  if (ap) {
+    if (h < 1 || h > 12) return null
+    h = (h % 12) + (ap === 'p' ? 12 : 0)
+  }
+  if (h > 23 || min > 59) return null
+  return `${pad(h)}:${pad(min)}`
+}
+
+const QUARTERS = Array.from({ length: 96 }, (_, i) => `${pad(Math.floor(i / 4))}:${pad((i % 4) * 15)}`)
+const addMinutes = (time, n) => {
+  const [h, m] = time.split(':').map(Number)
+  const t = (((h * 60 + m + n) % 1440) + 1440) % 1440
+  return `${pad(Math.floor(t / 60))}:${pad(t % 60)}`
+}
+
+function TimeTyped({ time, onChange, onDone, onValidity }) {
+  const [text, setText] = useState(time)
+  const [bad, setBad] = useState(false)
+  const listRef = useRef(null)
+  const inputRef = useRef(null)
+
+  // The quarters, plus the chosen time in its place when it is between two.
+  const rows = QUARTERS.includes(time) ? QUARTERS : [...QUARTERS, time].sort()
+  // Wrong already while typing: unreadable, and no more typing can fix it
+  // ("1299", "25:00", "abc"). "9", "93" or "14:" are still on their way.
+  const hopeless = t => {
+    const v = t.trim().toLowerCase()
+    if (!v || parseTime(v)) return false
+    if (/[^\d:.h\sapm]/.test(v)) return true // letters that are no part of a time
+    // Digits only: two can still grow ("25" -> "250" is 2:50); three or more can't.
+    if (/^\d+$/.test(v)) return v.length >= 3
+    // With a separator: complete minutes are final.
+    return /[:.h]\d{2}/.test(v) || v.replace(/\D/g, '').length >= 5
+  }
+  const invalid = bad || hopeless(text)
+  // Done waits for a readable time.
+  useEffect(() => { onValidity?.(!invalid) }, [invalid, onValidity])
+
+  // The list follows the time: its row in the middle.
+  useEffect(() => {
+    const row = listRef.current?.querySelector('.dp-typed-option.active')
+    if (row) listRef.current.scrollTop = row.offsetTop - listRef.current.clientHeight / 2 + row.offsetHeight / 2
+  }, [time])
+  useEffect(() => { inputRef.current?.select() }, [])
+
+  const commit = () => {
+    const t = parseTime(text)
+    if (t) { setText(t); setBad(false); if (t !== time) onChange(t); return t }
+    setBad(true)
+    return null
+  }
+  const set = t => { setText(t); setBad(false); onChange(t) }
+
+  return (
+    <div className="dp-typed">
+      <input
+        ref={inputRef}
+        className={`dp-typed-input${invalid ? ' bad' : ''}`}
+        value={text}
+        onChange={e => { setText(e.target.value); setBad(false); const t = parseTime(e.target.value); if (t) onChange(t) }}
+        onBlur={commit}
+        onKeyDown={e => {
+          if (e.key === 'ArrowUp' || e.key === 'ArrowDown') { e.preventDefault(); set(addMinutes(parseTime(text) || time, e.key === 'ArrowUp' ? 5 : -5)) }
+          if (e.key === 'Enter') { e.preventDefault(); const t = commit(); if (t) onDone(t) }
+        }}
+        aria-label="Time, as 14:35"
+        aria-invalid={invalid}
+        inputMode="numeric"
+        autoComplete="off"
+      />
+      <div className="dp-typed-list" ref={listRef} role="listbox" aria-label="Times">
+        {rows.map(q => (
+          <button key={q} type="button" role="option" aria-selected={!invalid && q === time} tabIndex={-1}
+            className={`dp-typed-option${q === time ? (invalid ? ' stale' : ' active') : ''}`} onClick={() => set(q)}>
+            {q}
+          </button>
+        ))}
+      </div>
+      {invalid && <p className="dp-typed-hint" role="alert">Type a time such as 14:35</p>}
+    </div>
+  )
+}
+
 // ── Date and time ──
 
 export function DateTimePicker({
@@ -258,11 +354,15 @@ export function DateTimePicker({
 }) {
   const [open, setOpen] = useState(false)
   const [draft, setDraft] = useState(null) // { date, time } while the sheet is open
+  const [timeOk, setTimeOk] = useState(true) // the typed time (mouse) can be read
   const buttonRef = useRef(null)
+  // A mouse and keyboard get the typed time; touch screens the wheels.
+  const mouse = useMediaQuery('(hover: hover) and (pointer: fine)')
 
-  const show = () => { setDraft({ date: date || '', time: time || (timeOptional ? '' : defaultTime) }); setOpen(true) }
+  const show = () => { setTimeOk(true); setDraft({ date: date || '', time: time || (timeOptional ? '' : defaultTime) }); setOpen(true) }
   const close = () => { setOpen(false); setDraft(null); buttonRef.current?.focus() }
-  const done = () => { onChange(withTime ? draft : { date: draft.date, time: '' }); close() }
+  // `patch`: a time just typed, not yet in `draft` (Enter in the time field).
+  const done = (patch = {}) => { onChange(withTime ? { ...draft, ...patch } : { date: draft.date, time: '' }); close() }
 
   const text = date
     ? `${formatDate(date)}${withTime && time ? ` · ${time}` : ''}`
@@ -281,10 +381,14 @@ export function DateTimePicker({
       <Trigger id={id} buttonRef={buttonRef} text={text} placeholder={placeholder} onClick={show} />
       {required && <Required value={date || ''} onInvalid={show} />}
       {open && createPortal(
-        <Sheet title={title} onClose={close} zIndex={300} className="dp-sheet">
-          <Calendar value={draft.date} onPick={d => setDraft(x => ({ ...x, date: d }))} min={min} max={max} range={range} />
-          <Shortcuts shortcuts={shortcuts} min={min} max={max} onPick={d => setDraft(x => ({ ...x, date: d }))} />
+        <Sheet title={title} onClose={close} className="dp-sheet dp-sheet-time">
+          <SheetColumns>
+          <SheetSection>
+            <Calendar value={draft.date} onPick={d => setDraft(x => ({ ...x, date: d }))} min={min} max={max} range={range} />
+            <Shortcuts shortcuts={shortcuts} min={min} max={max} onPick={d => setDraft(x => ({ ...x, date: d }))} />
+          </SheetSection>
 
+          <SheetSection narrow className="dp-time-col">
           <div className="dp-time-head">
             <span className="dp-time-label">Time</span>
             {timeOptional && (
@@ -296,10 +400,14 @@ export function DateTimePicker({
               </div>
             )}
           </div>
-          {draft.time && <TimeWheels time={draft.time} onChange={t => setDraft(x => ({ ...x, time: t }))} />}
+          {draft.time && (mouse
+            ? <TimeTyped time={draft.time} onChange={t => setDraft(x => ({ ...x, time: t }))} onDone={t => { if (!required || draft.date) done({ time: t }) }} onValidity={setTimeOk} />
+            : <TimeWheels time={draft.time} onChange={t => setDraft(x => ({ ...x, time: t }))} />)}
+          </SheetSection>
+          </SheetColumns>
 
           <SheetActions>
-            <button type="button" className="btn btn-primary" onClick={done} disabled={required && !draft.date}>Done</button>
+            <button type="button" className="btn btn-primary" onClick={() => done()} disabled={(required && !draft.date) || (!!draft.time && !timeOk)}>Done</button>
             {optional && (date || time) && (
               <button type="button" className="btn btn-ghost" onClick={() => { onChange({ date: '', time: '' }); close() }}>Clear</button>
             )}

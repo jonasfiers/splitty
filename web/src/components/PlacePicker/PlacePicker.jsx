@@ -91,7 +91,7 @@ function PlacePicker({ value, onChange, places = [], placeholder = 'Search a pla
       </button>
 
       {open && createPortal(
-        <Sheet title={title} onClose={close} zIndex={300} className="place-sheet">
+        <Sheet title={title} onClose={close} className="place-sheet">
           <div className="place-field">
             <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" /></svg>
             <input

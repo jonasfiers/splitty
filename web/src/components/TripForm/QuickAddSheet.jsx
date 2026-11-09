@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import client from '../../api/client'
 import PlacePicker from '../PlacePicker/PlacePicker.jsx'
 import { KINDS, TRANSPORT_MODES, dayOf, timeOf } from '../../utils/trip.js'
-import Sheet, { SheetActions } from '../Sheet/Sheet.jsx'
+import Sheet, { SheetActions, SheetColumns, SheetSection } from '../Sheet/Sheet.jsx'
 import Field from '../Field/Field.jsx'
 import { DateTimePicker } from '../DatePicker/DatePicker.jsx'
 
@@ -84,6 +84,9 @@ function QuickAddSheet({ tripId, kind, start, end, places, onClose, onSaved, onM
     // Above the full-screen timeline too, where this can also be started.
     <Sheet title={<>{KINDS[kind].icon} Add {kind === 'transport' ? 'travel' : KINDS[kind].label.toLowerCase()}</>} onClose={onClose} className="quick-add" zIndex={1100}>
       <form onSubmit={handleSubmit}>
+        {/* What and where | when: side by side on a wide screen. */}
+        <SheetColumns>
+        <SheetSection>
         {kind === 'transport' && onFindRoute && (
           <button type="button" className="btn btn-pill-outline quick-add-route" onClick={findRoute}>
             🔎 Find a train or bus connection
@@ -117,7 +120,9 @@ function QuickAddSheet({ tripId, kind, start, end, places, onClose, onSaved, onM
             <PlacePicker title="Where" value={form.place} onChange={place => set({ place })} places={places} />
           </Field>
         )}
+        </SheetSection>
 
+        <SheetSection narrow>
         <div className="form-row">
           <Field label={labels.start}>
             <DateTimePicker
@@ -145,6 +150,8 @@ function QuickAddSheet({ tripId, kind, start, end, places, onClose, onSaved, onM
             />
           </Field>
         </div>
+        </SheetSection>
+        </SheetColumns>
 
         {error && <p className="error">{error}</p>}
 
