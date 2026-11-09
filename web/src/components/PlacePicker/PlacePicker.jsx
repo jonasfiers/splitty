@@ -17,6 +17,16 @@ import Sheet from '../Sheet/Sheet.jsx'
 // title:     the sheet's title (the field's label)
 // suggested: the id of a trip place to offer first (where the last journey
 //            ended), with `suggestedNote` as its reason
+// The address without the place's own name in front of it: map search
+// answers often start with it ("Brussels-Midi, Galerie M, …"), and the name is
+// already the line above.
+const addressOnly = (name, address) => {
+  if (!address) return ''
+  const rest = name && address.toLowerCase().startsWith(name.toLowerCase())
+    ? address.slice(name.length).replace(/^[\s,–-]+/, '') : address
+  return rest || address
+}
+
 function PlacePicker({ value, onChange, places = [], placeholder = 'Search a place or address…', id, title = 'Place', suggested, suggestedNote }) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
@@ -83,7 +93,7 @@ function PlacePicker({ value, onChange, places = [], placeholder = 'Search a pla
           <span className="place-trigger-pin" aria-hidden="true">{shown.lat != null ? '📍' : '◌'}</span>
           <span className="place-trigger-text">
             <span className="place-trigger-name">{shown.name}</span>
-            <span className="place-trigger-address">{shown.address || (shown.lat == null ? 'Not on the map' : '')}</span>
+            <span className="place-trigger-address">{addressOnly(shown.name, shown.address) || (shown.lat == null ? 'Not on the map' : '')}</span>
           </span>
         </> : <>
           <svg className="place-trigger-search" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" /></svg>
@@ -117,7 +127,7 @@ function PlacePicker({ value, onChange, places = [], placeholder = 'Search a pla
                   <span className="place-row-icon" aria-hidden="true">{p.lat != null ? '📍' : '◌'}</span>
                   <span className="place-row-text">
                     <span className="place-row-name">{p.name}</span>
-                    <span className="place-row-meta">{p.id === suggested && suggestedNote ? suggestedNote : (p.address || 'Not on the map')}</span>
+                    <span className="place-row-meta">{p.id === suggested && suggestedNote ? suggestedNote : (addressOnly(p.name, p.address) || 'Not on the map')}</span>
                   </span>
                   {value?.id === p.id && <svg className="picker-check" viewBox="0 0 24 24" aria-hidden="true"><polyline points="5 12 10 17 19 7" /></svg>}
                 </button>
@@ -138,7 +148,7 @@ function PlacePicker({ value, onChange, places = [], placeholder = 'Search a pla
                       <span className="place-row-icon" aria-hidden="true">📍</span>
                       <span className="place-row-text">
                         <span className="place-row-name">{r.name}</span>
-                        <span className="place-row-meta">{r.address}</span>
+                        <span className="place-row-meta">{addressOnly(r.name, r.address)}</span>
                       </span>
                     </button>
                   ))}
