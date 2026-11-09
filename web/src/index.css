@@ -2870,3 +2870,8 @@ a.trip-chip:hover { border-color: var(--accent); }
   background: var(--surface); box-shadow: var(--shadow-sm);
   font-size: 13px; color: var(--text-2); white-space: nowrap; pointer-events: none;
 }
+
+/* A picker with a search keeps its height while typing (Picker.jsx) */
+.sheet.picker-sheet-tall { height: calc(100dvh - 48px); }
+@media (max-width: 767px) { .sheet.picker-sheet-tall { height: calc(100dvh - 24px); } }
+@media (min-width: 768px) { .sheet.picker-sheet-tall { height: min(640px, calc(100dvh - 48px)); } }

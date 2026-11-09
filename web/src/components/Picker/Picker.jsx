@@ -70,7 +70,10 @@ export default function Picker({
       )}
 
       {open && createPortal(
-        <Sheet title={title || placeholder} onClose={close} className="picker-sheet">
+        <Sheet title={title || placeholder} onClose={close}
+          // With a search: tall from the start, so it doesn't shrink as the list
+          // filters and slide its search under the keyboard.
+          className={`picker-sheet${options.length >= SEARCH_FROM ? ' picker-sheet-tall' : ''}`}>
           {options.length >= SEARCH_FROM && (
             <input
               className="picker-search"
