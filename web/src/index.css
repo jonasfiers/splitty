@@ -2911,6 +2911,12 @@ a.trip-chip:hover { border-color: var(--accent); }
     U+2600-27BF, U+2934-2935, U+2B05-2B07, U+2B1B-2B1C, U+2B50, U+2B55, U+3030, U+303D, U+3297, U+3299,
     U+FE0F, U+1F000-1FAFF, U+E0020-E007F;
 }
+/* Apple's browsers: the same emoji in Apple's own font format (utils/emojiStyle.js) */
+html[data-emoji="openmoji-apple"] {
+  --font-body: 'Splitty OpenMoji Apple', 'Plus Jakarta Sans', sans-serif;
+  --font-mono: 'Splitty OpenMoji Apple', 'JetBrains Mono', monospace;
+  --font-display: 'Splitty OpenMoji Apple', 'DM Serif Display', serif;
+}
 html[data-emoji="openmoji"] {
   --font-body: 'Splitty OpenMoji', 'Plus Jakarta Sans', sans-serif;
   --font-mono: 'Splitty OpenMoji', 'JetBrains Mono', monospace;
