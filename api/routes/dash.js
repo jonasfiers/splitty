@@ -55,13 +55,26 @@ router.get('/profile', async (req, res) => {
     }
 })
 
+// ?today=YYYY-MM-DD: the user's date; without it (or malformed), the server's.
+router.get('/recent-spend', async (req, res) => {
+    try {
+        const { today } = req.query
+        const day = typeof today === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(today) && !isNaN(Date.parse(today))
+            ? today : new Date().toISOString().slice(0, 10)
+        res.json(await dashService.getRecentSpend(req.user.id, day))
+    } catch (error) {
+        res.status(500).json({ error: error.message })
+    }
+})
+
 router.get('/insights', async (req, res) => {
     try {
         // All optional; anything malformed is ignored rather than rejected.
-        const { from, groupId, scope } = req.query
+        const { from, groupId, iso, scope } = req.query
         const result = await dashService.getInsights(req.user.id, {
             from: typeof from === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(from) ? from : null,
             groupId: typeof groupId === 'string' && groupId ? groupId : null,
+            iso: typeof iso === 'string' && /^[A-Z]{3}$/.test(iso) ? iso : null,
             mine: scope === 'mine',
         })
         res.json(result)

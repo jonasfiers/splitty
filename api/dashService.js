@@ -260,19 +260,70 @@ const dashService = {
     // Optional filters: from (YYYY-MM-DD, inclusive), groupId (one of the user's
     // groups), mine (count the user's own share of each expense instead of its
     // full amount). Without them this is all groups, all time, full amounts.
-    getInsights: async (userId, { from = null, groupId = null, mine = false } = {}) => {
+    // HOME'S SPENDING CARD — the last `days` days (today included) against the
+    // `days` before, per currency: groups in different currencies are never
+    // added up. `today` is the user's own date (the server's may differ).
+    // Future-dated expenses don't count yet.
+    getRecentSpend: async (userId, today, days = 30) => {
+        const shift = n => { const d = new Date(`${today}T00:00:00Z`); d.setUTCDate(d.getUTCDate() - n); return d.toISOString().slice(0, 10) }
+        const params = { userId, today, from: shift(days - 1), prevFrom: shift(2 * days - 1) }
+        try {
+            const { records } = await driver.executeQuery(
+                `MATCH (:User {id: $userId})-[:MEMBER_OF]->(g:Group)-[:EXPRESSED_IN]->(c:Currency)
+                MATCH (e:Expense)-[:BALANCE_IN]->(g)
+                WHERE NOT e:Settlement AND NOT e:Transfer
+                  AND e.date >= $prevFrom AND e.date <= $today
+                WITH c.iso AS iso, e, e.amount * coalesce(e.rateSnapshot, 1) AS amt, e.date >= $from AS recent
+                OPTIONAL MATCH (e)-[:IN_CATEGORY]->(cat:Category)
+                OPTIONAL MATCH path = (cat)-[:CHILD_OF*]->(root:Category)
+                WHERE NOT (root)-[:CHILD_OF]->(:Category)
+                WITH iso, amt, recent,
+                    CASE WHEN cat IS NULL THEN 'Uncategorized'
+                         WHEN path IS NULL THEN cat.name
+                         ELSE apoc.text.join([node IN reverse(nodes(path)) | node.name], ' - ')
+                    END AS categoryName
+                WITH iso, categoryName,
+                     sum(CASE WHEN recent THEN amt ELSE 0 END) AS cur,
+                     sum(CASE WHEN recent THEN 0 ELSE amt END) AS prev
+                WITH iso, sum(cur) AS total, sum(prev) AS previous, collect({name: categoryName, amount: cur}) AS cats
+                RETURN iso, total, previous, cats
+                ORDER BY total DESC`,
+                params
+            )
+            return {
+                success: true,
+                days,
+                currencies: records.map(r => ({
+                    iso: r.get('iso'),
+                    total: Number(r.get('total')),
+                    previous: Number(r.get('previous')),
+                    top: r.get('cats').map(c => ({ name: c.name, amount: Number(c.amount) }))
+                        .filter(c => c.amount > 0).sort((a, b) => b.amount - a.amount).slice(0, 3),
+                })),
+            }
+        } catch (err) {
+            throw new Error(`Failed to get recent spending: ${err.message}`)
+        }
+    },
+
+    // iso: only the groups kept in that currency. Amounts are summed in each
+    // group's own currency (rateSnapshot converts an expense into it), so
+    // groups in different currencies can't be added up: the page asks for one
+    // currency at a time.
+    getInsights: async (userId, { from = null, groupId = null, iso = null, mine = false } = {}) => {
         // Shared start of every query below. Only these two fixed fragments vary,
         // never anything taken from the request.
         const base = (dated) => `
             MATCH (me:User {id: $userId})-[:MEMBER_OF]->(g:Group)
-            WHERE $groupId IS NULL OR g.id = $groupId
+            WHERE ($groupId IS NULL OR g.id = $groupId)
+              AND ($iso IS NULL OR (g)-[:EXPRESSED_IN]->(:Currency {iso: $iso}))
             MATCH (e:Expense)-[:BALANCE_IN]->(g)
             WHERE NOT e:Settlement AND NOT e:Transfer
               AND ($from IS NULL OR e.date >= $from)
               ${dated ? 'AND e.date IS NOT NULL' : ''}
             ${mine ? MY_SHARE : 'WITH e, g, e.amount AS raw'}
             WITH e, g, raw * coalesce(e.rateSnapshot, 1) AS amt`
-        const params = { userId, from, groupId }
+        const params = { userId, from, groupId, iso }
         try {
             const [monthlyRes, categoryRes, memberRes, dowRes, biggestRes] = await Promise.all([
                 driver.executeQuery(

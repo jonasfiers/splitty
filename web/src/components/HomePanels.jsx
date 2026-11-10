@@ -12,11 +12,11 @@ import { swrOne } from '../utils/cache.js'
 const RECENT = 5
 const TOP_CATEGORIES = 3
 
-// Home's extra context: this month's spending, the next trip and the latest
+// Home's extra context: the last 30 days' spending, the next trip and the latest
 // activity. Each panel loads on its own and simply stays away if its data
 // fails to load, so the groups list never waits on or breaks because of them.
 export default function HomePanels() {
-  const [monthly, setMonthly] = useState(null)
+  const [spend, setSpend] = useState(null)
   const [trips, setTrips] = useState(null)
   const [activity, setActivity] = useState(null)
   const gate = useGate() // Home shows once these are in too (utils/pageGate.jsx)
@@ -24,7 +24,7 @@ export default function HomePanels() {
   useEffect(() => {
     // Each shows its last state at once (utils/cache.js); Home waits only for what wasn't kept.
     for (const [url, apply] of [
-      ['/dash/insights', r => setMonthly(r.data.monthly || [])],
+      [`/dash/recent-spend?today=${today()}`, r => setSpend(r.data.currencies || [])],
       ['/trips', r => setTrips(r.data.trips || [])],
       ['/dash/activity', r => setActivity(r.data.activities || [])],
     ]) {
@@ -37,46 +37,51 @@ export default function HomePanels() {
 
   return (
     <div className="home-panels">
-      <ThisMonth monthly={monthly} />
+      <RecentSpend currencies={spend} />
       <NextTrip trips={trips} />
       <RecentActivity activity={activity} />
     </div>
   )
 }
 
-function ThisMonth({ monthly }) {
-  if (!monthly) return null
-  const now = today().slice(0, 7)
-  const prevDate = new Date(`${now}-01T00:00:00Z`)
-  prevDate.setUTCMonth(prevDate.getUTCMonth() - 1)
-  const prev = prevDate.toISOString().slice(0, 7)
-  const current = monthly.find(m => m.month === now)
-  const last = monthly.find(m => m.month === prev)
-  const total = current?.total ?? 0
-  const change = last?.total ? Math.round(((total - last.total) / last.total) * 100) : null
-  const top = (current?.breakdown ?? []).slice(0, TOP_CATEGORIES)
+// The last 30 days against the 30 before (rolling, so it doesn't drop to
+// nothing on the 1st). Per currency: the one spent most in is shown, the
+// others as a line below (never added together).
+function RecentSpend({ currencies }) {
+  if (!currencies) return null
+  const [main, ...others] = currencies.filter(c => c.total > 0 || c.previous > 0)
+  const total = main?.total ?? 0
+  const iso = main?.iso
+  const change = main?.previous ? Math.round(((total - main.previous) / main.previous) * 100) : null
+  const top = main?.top ?? []
   const max = top[0]?.amount || 1
+  const alsoIn = others.filter(c => c.total > 0)
 
   return (
     <div className="card home-panel">
       <div className="home-panel-head">
-        <span className="section-label home-panel-label">This month</span>
+        <span className="section-label home-panel-label">Last 30 days</span>
         <Link to="/insights" className="home-panel-link">Insights</Link>
       </div>
-      <div className="home-month-total">{formatCurrency(total)}</div>
+      <div className="home-month-total">{formatCurrency(total, iso)}</div>
       <div className="home-panel-sub">
         spent across your groups
         {change !== null && (
-          <> · <span className={change > 0 ? 'home-up' : 'home-down'}>{change > 0 ? '↑' : change < 0 ? '↓' : ''}{Math.abs(change)}%</span> vs last month</>
+          <> · <span className={change > 0 ? 'home-up' : 'home-down'}>{change > 0 ? '↑' : change < 0 ? '↓' : ''}{Math.abs(change)}%</span> vs the 30 days before</>
         )}
       </div>
+      {alsoIn.length > 0 && (
+        <div className="home-panel-sub">
+          and {alsoIn.map(c => formatCurrency(c.total, c.iso)).join(', ')} in {alsoIn.length === 1 ? `${alsoIn[0].iso} groups` : 'groups in other currencies'}
+        </div>
+      )}
       {top.length > 0 && (
         <div className="home-cats">
           {top.map(c => (
             <div key={c.name} className="home-cat">
               <div className="home-cat-row">
                 <span className="home-cat-name">{c.name}</span>
-                <span className="home-cat-amt">{formatCurrency(c.amount)}</span>
+                <span className="home-cat-amt">{formatCurrency(c.amount, iso)}</span>
               </div>
               <div className="home-cat-track"><div className="home-cat-bar" style={{ width: `${(c.amount / max) * 100}%` }} /></div>
             </div>

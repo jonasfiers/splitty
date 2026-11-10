@@ -13,7 +13,7 @@ const DOW_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 const PERIODS = [
   { key: 'month', label: 'This month' },
   { key: '3m', label: '3 months' },
-  { key: 'year', label: 'This year' },
+  { key: '12m', label: '12 months' },
   { key: 'all', label: 'All time' },
 ]
 
@@ -26,8 +26,32 @@ function periodStart(period) {
     const d = new Date(now.getFullYear(), now.getMonth() - 2, 1)
     return first(d.getFullYear(), d.getMonth())
   }
-  if (period === 'year') return `${now.getFullYear()}-01-01`
+  if (period === '12m') {
+    // The current month and the 11 before it: what the monthly chart shows.
+    const d = new Date(now.getFullYear(), now.getMonth() - 11, 1)
+    return first(d.getFullYear(), d.getMonth())
+  }
   return null
+}
+
+// The period is remembered on this device; 12 months unless changed.
+const PERIOD_KEY = 'splitty.insightsPeriod'
+const savedPeriod = () => {
+  try { const p = localStorage.getItem(PERIOD_KEY); return PERIODS.some(x => x.key === p) ? p : '12m' } catch { return '12m' }
+}
+
+// What the group picker can say: a group's id, "iso:GBP" (all groups in
+// pounds) or '' (all groups; with groups in several currencies, all groups in
+// the main one). The API sums in each group's own currency, so groups in
+// different currencies are never added together.
+const ISO_PREFIX = 'iso:'
+// The currency most groups use; a tie goes to the group used most recently.
+function mainCurrency(groups) {
+  const count = new Map()
+  for (const g of groups) if (g.iso) count.set(g.iso, (count.get(g.iso) || 0) + 1)
+  const best = Math.max(0, ...count.values())
+  const tied = new Set([...count].filter(([, n]) => n === best).map(([iso]) => iso))
+  return [...groups].sort((a, b) => (b.lastActivity || 0) - (a.lastActivity || 0)).find(g => tied.has(g.iso))?.iso
 }
 
 const shortMonth = m => {
@@ -43,19 +67,32 @@ export default function InsightsPage() {
   const [hiddenMonthly, setHiddenMonthly] = useState([])
   const [hiddenPie, setHiddenPie] = useState([])
   const [activeCategory, setActiveCategory] = useState(null)
+  // The heatmap square shown below it: hovered (mouse) or picked (tap, keys).
   const [hoveredCell, setHoveredCell] = useState(null)
-  const [period, setPeriod] = useState('all')
+  const [pickedCell, setPickedCell] = useState(null)
+  const [period, setPeriodState] = useState(savedPeriod)
+  const setPeriod = p => { setPeriodState(p); try { localStorage.setItem(PERIOD_KEY, p) } catch { /* private mode */ } }
   // ?group=<id>: opened from a group's total.
   const [searchParams] = useSearchParams()
-  const [groupId, setGroupId] = useState(() => searchParams.get('group') || '')
+  const [sel, setSel] = useState(() => searchParams.get('group') || '')
   const [scope, setScope] = useState('group')
-  const [groups, setGroups] = useState([])
+  const [groups, setGroups] = useState(null) // null: not known yet
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState('')
 
+  // The groups first (usually kept from Home): which currencies there are
+  // decides what "all groups" may add up.
   useEffect(() => {
-    swrOne('/dash/groups', r => setGroups(r.data.groups || [])).fresh.catch(() => {})
+    swrOne('/dash/groups', r => setGroups(r.data.groups || [])).fresh.catch(() => setGroups(g => g || []))
   }, [])
+  const currencies = useMemo(() => [...new Set((groups || []).map(g => g.iso).filter(Boolean))], [groups])
+  const groupsKnown = groups !== null
+  const mixed = currencies.length > 1
+  const main = mixed ? mainCurrency(groups) : null
+  // The currency asked for (null: whatever all the groups share) and the group.
+  const isoFilter = sel.startsWith(ISO_PREFIX) ? sel.slice(ISO_PREFIX.length) : !sel ? main : null
+  const groupFilter = sel && !sel.startsWith(ISO_PREFIX) ? sel : null
+  const iso = isoFilter || (groupFilter && groups?.find(g => g.id === groupFilter)?.iso) || currencies[0] || 'EUR'
 
   // Refetch on every filter change; the previous figures stay up (dimmed) meanwhile.
   // The first load failing (nothing to show yet): the "couldn't load" state.
@@ -64,12 +101,13 @@ export default function InsightsPage() {
   const retry = useCallback(() => { setLoadError(null); setLoading(true); setAttempt(n => n + 1) }, [])
 
   useEffect(() => {
+    if (!groupsKnown) return
     let current = true
     const from = periodStart(period)
     // Each selection's last figures at once (utils/cache.js), then fresh.
-    const params = { ...(from && { from }), ...(groupId && { groupId }), ...(scope === 'mine' && { scope }) }
+    const params = { ...(from && { from }), ...(groupFilter && { groupId: groupFilter }), ...(isoFilter && { iso: isoFilter }), ...(scope === 'mine' && { scope }) }
     const { cached, fresh } = swr([['/dash/insights', { params }]], ([r]) => {
-      if (current) { setData(r.data); setError(''); setActiveCategory(null); setHiddenPie([]) }
+      if (current) { setData(r.data); setError(''); setActiveCategory(null); setHiddenPie([]); setPickedCell(null) }
     }, { fresh: attempt > 0 })
     if (cached) setLoading(false)
     else setRefreshing(true)
@@ -77,7 +115,7 @@ export default function InsightsPage() {
       .catch(err => { if (current && !cached) { setError('Insights could not be loaded. Please try again.'); setLoadError(err) } })
       .finally(() => { if (current) { setLoading(false); setRefreshing(false) } })
     return () => { current = false }
-  }, [period, groupId, scope, attempt])
+  }, [period, groupFilter, isoFilter, scope, attempt, groupsKnown])
 
   const { monthly, categories, chartData, stackKeys, members, dowMatrix, dowMax } = useMemo(() => {
     if (!data) return { monthly: [], categories: [], chartData: [], stackKeys: [], members: [], dowMatrix: [], dowMax: 1 }
@@ -190,24 +228,20 @@ export default function InsightsPage() {
     )
   }
 
+  // "Other" (and anything unknown) in the theme's neutral greys.
   const getCategoryColor = (rootName) => {
-    if (!rootName || rootName === 'Other') return '#F3F4F6'
-    const index = rootNames.indexOf(rootName)
-    if (index !== -1) return COLOURS[index % COLOURS.length]
-    return '#F3F4F6'
+    const index = rootName && rootName !== 'Other' ? rootNames.indexOf(rootName) : -1
+    return index !== -1 ? COLOURS[index % COLOURS.length] : 'var(--surface-2)'
   }
 
   const getCategoryStroke = (rootName) => {
-    if (!rootName || rootName === 'Other') return '#9CA3AF'
-    const index = rootNames.indexOf(rootName)
-    if (index !== -1) return STROKES[index % STROKES.length]
-    return '#9CA3AF'
+    const index = rootName && rootName !== 'Other' ? rootNames.indexOf(rootName) : -1
+    return index !== -1 ? STROKES[index % STROKES.length] : 'var(--text-3)'
   }
 
   if (loading) return <Loading />
   if (!data && loadError) return <LoadFailed error={loadError} what="the insights" onRetry={retry} />
 
-  const iso = 'EUR'
   const mine = scope === 'mine'
   const total = categories.reduce((sum, c) => sum + c.total, 0)
   // Average over the months the chart covers (at most the last 12).
@@ -229,14 +263,19 @@ export default function InsightsPage() {
         ))}
       </div>
       <div className="insights-controls-row">
-        {groups.length > 1 && (
+        {groups?.length > 1 && (
           <Picker
             variant="chip"
             title="Show insights for"
             aria-label="Group"
-            value={groupId}
-            onChange={setGroupId}
-            options={[{ value: '', label: 'All groups' }, ...groups.map(g => ({ value: g.id, label: g.title, icon: g.icon }))]}
+            value={sel}
+            onChange={setSel}
+            options={mixed
+              ? [
+                ...[main, ...currencies.filter(c => c !== main)].map(c => ({ value: c === main ? '' : ISO_PREFIX + c, label: `All groups in ${c}`, section: 'Together', meta: (n => `${n} group${n !== 1 ? 's' : ''}`)(groups.filter(g => g.iso === c).length) })),
+                ...groups.map(g => ({ value: g.id, label: g.title, icon: g.icon, meta: g.iso, section: 'One group' })),
+              ]
+              : [{ value: '', label: 'All groups' }, ...groups.map(g => ({ value: g.id, label: g.title, icon: g.icon }))]}
           />
         )}
         <div className="insights-scope" role="group" aria-label="Amounts">
@@ -305,13 +344,13 @@ export default function InsightsPage() {
                                  <span className="ins-dot ins-dot-sm" style={{ background: getCategoryStroke(key) }} />
                                  <span className="ins-tip-label">{key}</span>
                                </div>
-                               <span className="ins-tip-amt">{formatCurrency(d[key])}</span>
+                               <span className="ins-tip-amt">{formatCurrency(d[key], iso)}</span>
                             </div>
                           ))}
                         </div>
                         <div className="ins-tip-total">
                           <span>Total</span>
-                          <span className="ins-accent">{formatCurrency(d.total)}</span>
+                          <span className="ins-accent">{formatCurrency(d.total, iso)}</span>
                         </div>
                       </div>
                     )
@@ -326,14 +365,16 @@ export default function InsightsPage() {
                       {payload.map((entry) => {
                         const isHidden = hiddenMonthly.includes(entry.value)
                         return (
-                          <span
+                          <button
+                            type="button"
                             key={entry.value}
                             onClick={() => toggleMonthly(entry.value)}
+                            aria-pressed={!isHidden}
                             className={`ins-legend-item${isHidden ? ' hidden' : ''}`}
                           >
                             <span className="ins-dot" style={{ background: isHidden ? 'var(--border)' : entry.color }} />
                             {entry.value}
-                          </span>
+                          </button>
                         )
                       })}
                     </div>
@@ -363,12 +404,13 @@ export default function InsightsPage() {
             <div className="section-label">Spending by category</div>
             {activeCategory && (
               <div className="ins-crumbs">
-                <span
+                <button
+                  type="button"
                   onClick={() => { setActiveCategory(null); setHiddenPie([]) }}
                   className="ins-crumb-link"
                 >
                   All
-                </span>
+                </button>
                 {activeCategory.split(' - ').map((part, i, arr) => {
                   const path = arr.slice(0, i + 1).join(' - ')
                   const isLast = i === arr.length - 1
@@ -378,12 +420,13 @@ export default function InsightsPage() {
                       {isLast ? (
                         <span className="ins-crumb-current">{part}</span>
                       ) : (
-                        <span
+                        <button
+                          type="button"
                           onClick={() => { setActiveCategory(path); setHiddenPie([]) }}
                           className="ins-crumb-link"
                         >
                           {part}
-                        </span>
+                        </button>
                       )}
                     </span>
                   )
@@ -449,7 +492,7 @@ export default function InsightsPage() {
                     <div className="ins-tip">
                       <div className="ins-tip-title">{icon} {name}</div>
                       <div className="ins-tip-line">
-                        <span className="ins-tip-amt-lg">{formatCurrency(total)}</span>
+                        <span className="ins-tip-amt-lg">{formatCurrency(total, iso)}</span>
                         <span className="ins-tip-pct">{pct}%</span>
                       </div>
                     </div>
@@ -462,9 +505,11 @@ export default function InsightsPage() {
                 const isHidden = hiddenPie.includes(cat.id)
                 const pct = totalPieAmount > 0 ? ((cat.total / totalPieAmount) * 100).toFixed(0) : 0
                 return (
-                  <div
+                  <button
+                    type="button"
                     key={cat.id}
                     onClick={() => togglePie(cat.id)}
+                    aria-pressed={!isHidden}
                     className={`ins-cat${isHidden ? ' hidden' : ''}`}
                   >
                     <div className="ins-cat-name-row">
@@ -474,10 +519,10 @@ export default function InsightsPage() {
                       </span>
                     </div>
                     <div className="ins-cat-figures">
-                      <span className="ins-cat-amt">{formatCurrency(cat.total)}</span>
+                      <span className="ins-cat-amt">{formatCurrency(cat.total, iso)}</span>
                       <span className="ins-cat-pct">{pct}%</span>
                     </div>
-                  </div>
+                  </button>
                 )
               })}
             </div>
@@ -501,7 +546,7 @@ export default function InsightsPage() {
                     return (
                       <div className="ins-tip">
                         <div className="ins-tip-title">{name}</div>
-                        <span className="ins-tip-amt-sm">{formatCurrency(total)}</span>
+                        <span className="ins-tip-amt-sm">{formatCurrency(total, iso)}</span>
                       </div>
                     )
                   }}
@@ -528,30 +573,42 @@ export default function InsightsPage() {
                   <div className="ins-heat-week">Wk {w + 1}</div>
                   {row.map((cell, d) => {
                     const intensity = cell.total > 0 ? Math.sqrt(cell.total / dowMax) : 0
+                    const picked = pickedCell?.w === w && pickedCell?.d === d
                     return (
-                      <div
+                      <button
+                        type="button"
                         key={d}
+                        // Mouse: hover shows it. Touch and keys: a tap or focus
+                        // picks it, and it stays until another one is picked.
                         onMouseEnter={() => setHoveredCell({ w, d, ...cell })}
                         onMouseLeave={() => setHoveredCell(null)}
-                        className="ins-heat-cell"
-                        style={{ background: cell.total > 0 ? `rgba(232, 96, 58, ${(0.12 + intensity * 0.88).toFixed(2)})` : 'var(--surface-2)' }}
+                        onFocus={() => setPickedCell({ w, d, ...cell })}
+                        onClick={() => setPickedCell({ w, d, ...cell })}
+                        aria-label={`${DOW_LABELS[d]}, week ${w + 1}: ${cell.total > 0 ? `${formatCurrency(cell.total, iso)}, ${cell.count} expense${cell.count !== 1 ? 's' : ''}` : 'nothing'}`}
+                        className={`ins-heat-cell${picked ? ' picked' : ''}`}
+                        style={cell.total > 0 ? { background: `color-mix(in srgb, var(--accent) ${Math.round((0.12 + intensity * 0.88) * 100)}%, transparent)` } : undefined}
                       />
                     )
                   })}
                 </Fragment>
               ))}
             </div>
-            <div className="ins-heat-caption">
-              {hoveredCell?.total > 0
-                ? `${DOW_LABELS[hoveredCell.d]}, Week ${hoveredCell.w + 1} — ${formatCurrency(hoveredCell.total)} · ${hoveredCell.count} expense${hoveredCell.count !== 1 ? 's' : ''}`
-                : ' '}
+            <div className="ins-heat-caption" aria-live="polite">
+              {(() => {
+                const c = hoveredCell || pickedCell
+                if (!c) return 'Tap a square to see what was spent'
+                const when = `${DOW_LABELS[c.d]}, week ${c.w + 1}`
+                return c.total > 0
+                  ? <>{when} · <span className="ins-heat-amt">{formatCurrency(c.total, iso)}</span> · {c.count} expense{c.count !== 1 ? 's' : ''}</>
+                  : `${when} · nothing spent`
+              })()}
             </div>
           </div>
         </>
       )}
 
       {!error && total === 0 && (
-        period === 'all' && !groupId
+        !sel && (period === '12m' || period === 'all')
           ? <EmptyState title="No insights yet">Add some expenses and they'll show up here.</EmptyState>
           : <EmptyState compact art={false} title="No expenses in this selection" />
       )}
