@@ -2,6 +2,9 @@ import { Fragment, useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import { KINDS, itemIcon, describe, mapsLink, linkTarget, today } from '../utils/trip.js'
 import BigReference from './BigReference/BigReference.jsx'
+import { pad, clock, onMinute } from '../utils/tripClock.js'
+
+export { pad, clock }
 
 // Today's entries as live rows: against the phone's clock (trip times are
 // local wall-clock, like the phone on the spot) what is on now, a countdown to
@@ -20,8 +23,6 @@ const plusMinutes = (moment, mins) => {
   return `${x.getFullYear()}-${pad(x.getMonth() + 1)}-${pad(x.getDate())}T${pad(x.getHours())}:${pad(x.getMinutes())}`
 }
 
-export const pad = n => String(n).padStart(2, '0')
-export const clock = () => { const d = new Date(); return `${pad(d.getHours())}:${pad(d.getMinutes())}` }
 const minutes = hhmm => Number(hhmm.slice(0, 2)) * 60 + Number(hhmm.slice(3, 5))
 const countdown = mins => (mins < 60 ? `in ${mins} min` : `in ${Math.floor(mins / 60)} h${mins % 60 ? ` ${pad(mins % 60)}` : ''}`)
 
@@ -30,28 +31,6 @@ const countdown = mins => (mins < 60 ? `in ${mins} min` : `in ${Math.floor(mins 
 const placeOf = (item, phase) =>
   item.kind === 'transport' ? (phase === 'Arrival' ? item.toPlaceId : item.fromPlaceId) : item.placeId
 
-
-// Calls `fn` on the minute, and right away when the app comes back to the
-// screen: a phone freezes a page in the background, and its timers don't
-// catch up, so a page opened at noon would still say noon in the evening.
-function onMinute(fn) {
-  let t
-  const schedule = () => {
-    clearTimeout(t)
-    t = setTimeout(() => { fn(); schedule() }, 60000 - (Date.now() % 60000) + 50)
-  }
-  const resume = () => { if (document.visibilityState !== 'hidden') { fn(); schedule() } }
-  schedule()
-  document.addEventListener('visibilitychange', resume)
-  window.addEventListener('focus', resume)
-  window.addEventListener('pageshow', resume)
-  return () => {
-    clearTimeout(t)
-    document.removeEventListener('visibilitychange', resume)
-    window.removeEventListener('focus', resume)
-    window.removeEventListener('pageshow', resume)
-  }
-}
 
 // The clock, ticking every minute (and current again on coming back).
 export function useClock() {
@@ -67,8 +46,11 @@ export function useToday() {
   return day
 }
 
-export default function TodayEntries({ tripId, day, entries, places }) {
-  const time = useClock()
+// `time` is the trip's now (utils/tripClock.js, in the schedule's zone);
+// without it, the phone's clock.
+export default function TodayEntries({ tripId, day, entries, places, time: tripTime }) {
+  const phoneTime = useClock()
+  const time = tripTime ?? phoneTime
   const [bigRef, setBigRef] = useState(null)
   const [showPast, setShowPast] = useState(false)
   const closeBigRef = useCallback(() => setBigRef(null), [])

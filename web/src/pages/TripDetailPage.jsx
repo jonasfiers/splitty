@@ -15,7 +15,8 @@ import TripGantt from '../components/TripGantt/TripGantt.jsx'
 import Expandable from '../components/Expandable/Expandable.jsx'
 import { useMediaQuery } from '../utils/useMediaQuery.js'
 import Sheet, { SheetActions } from '../components/Sheet/Sheet.jsx'
-import TodayEntries, { useToday } from '../components/TodayEntries.jsx'
+import TodayEntries from '../components/TodayEntries.jsx'
+import { useTripNow } from '../utils/tripClock.js'
 import Segmented from '../components/Segmented/Segmented.jsx'
 import { leaveTo } from '../utils/history.js'
 import { useConfirm } from '../components/Confirm/ConfirmProvider.jsx'
@@ -42,13 +43,14 @@ function TripDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { state } = useLocation()
-  const now = useToday()
   // From here on the day list and the map fit side by side, so no tabs.
   const wide = useMediaQuery('(min-width: 1180px)')
 
   const [trip, setTrip] = useState(null)
   const [items, setItems] = useState([])
   const [places, setPlaces] = useState([])
+  // Today and its clock in the zone the schedule puts you in (utils/tripClock.js).
+  const { day: now, time: nowTime } = useTripNow(items, places)
   // Narrower than that: Plan (the day list, opening on today), Timeline or
   // Map. Kept in the URL, so coming back from an item lands on the same view.
   const [searchParams, setSearchParams] = useSearchParams()
@@ -286,7 +288,7 @@ function TripDetailPage() {
             <div className="trip-day-empty">Nothing planned</div>
           ) : day === now ? (
             // Today is live, the same rows as Home's Today card.
-            <TodayEntries tripId={id} day={day} entries={entries} places={places} />
+            <TodayEntries tripId={id} day={day} time={nowTime} entries={entries} places={places} />
           ) : (
             <div className="list list-tight">
               {entries.map(({ item, time, phase, assumed }) => (

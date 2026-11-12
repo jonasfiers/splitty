@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import { itemIcon, buildTimeline, daysBetween, today, addDays } from '../utils/trip.js'
-import TodayEntries, { useClock, useToday } from './TodayEntries.jsx'
+import TodayEntries from './TodayEntries.jsx'
+import { useTripNow } from '../utils/tripClock.js'
 import { useGate } from '../utils/pageGate.jsx'
 import { swrOne } from '../utils/cache.js'
 
@@ -51,8 +52,8 @@ export default function TodayTrip() {
 }
 
 function TodayCard({ trip, items, places }) {
-  const time = useClock()
-  const now = useToday()
+  // In the zone the schedule puts you in, not the phone's (Chrome can keep a stale one).
+  const { day: now, time } = useTripNow(items, places)
   const timeline = buildTimeline(trip, items)
   const day = timeline.find(d => d.day === now)
   const tomorrow = timeline.find(d => d.day === addDays(now, 1))
@@ -76,7 +77,7 @@ function TodayCard({ trip, items, places }) {
       {entries.length === 0 ? (
         <div className="trip-day-empty">Nothing planned today</div>
       ) : (
-        <TodayEntries tripId={trip.id} day={now} entries={entries} places={places} />
+        <TodayEntries tripId={trip.id} day={now} time={time} entries={entries} places={places} />
       )}
       {sleepingAt.length > 0 && (
         <div className="today-trip-night">🛏️ Tonight: {sleepingAt.map(s => s.title).join(', ')}</div>

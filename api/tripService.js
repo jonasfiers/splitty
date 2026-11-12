@@ -9,6 +9,7 @@
 // sum of the Expense nodes that point at it with PAYS_FOR.
 const neo4j = require('neo4j-driver');
 const driver = require('./neo4j');
+const { zoneAt } = require('./timeZone');
 
 const KIND_LABELS = { transport: 'Transport', stay: 'Stay', activity: 'Activity' };
 const TRANSPORT_MODES = ['flight', 'train', 'car', 'bus', 'ferry', 'other'];
@@ -36,6 +37,8 @@ const placeProps = p => ({
     address: p.address ?? '',
     lat: p.lat ?? null,
     lon: p.lon ?? null,
+    // Worked out on read, never stored: the app's "now" during the trip.
+    tz: zoneAt(p.lat ?? null, p.lon ?? null),
 });
 
 // A place slot on an item is either {id} (an existing place of this trip),

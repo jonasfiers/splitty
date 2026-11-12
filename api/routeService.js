@@ -10,7 +10,7 @@
 // timezone. A search time is read in the zone of the place it belongs to (the
 // origin for "depart after", the destination for "arrive by"), and every leg
 // comes back in the zones of its own stops.
-const tzlookup = require('@photostructure/tz-lookup');
+const { zoneAt: zoneOrNull } = require('./timeZone');
 const { version } = require('./package.json');
 
 const ENDPOINT = 'https://api.transitous.org/api/v5/plan';
@@ -54,13 +54,7 @@ class RouteError extends Error {
 
 // ── Time zones ──
 
-const zoneAt = (lat, lon) => {
-    try {
-        return tzlookup(lat, lon);
-    } catch {
-        return 'UTC';
-    }
-};
+const zoneAt = (lat, lon) => zoneOrNull(lat, lon) || 'UTC';
 
 const formatters = new Map();
 const formatterFor = zone => {
