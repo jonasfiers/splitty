@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import { formatCurrency } from '../../utils/currency.js'
-import { buildTimeline, describe, itemIcon, formatDay, formatDateRange, daysBetween, today } from '../../utils/trip.js'
+import { buildTimeline, describe, itemIcon, formatDay, formatDateRange, daysBetween, addDays } from '../../utils/trip.js'
+import { useTripNow } from '../../utils/tripClock.js'
+
+const NONE = []
 import { useGate } from '../../utils/pageGate.jsx'
 import { swrOne } from '../../utils/cache.js'
 
@@ -24,7 +27,8 @@ export default function NextTrip({ trip }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [trip.id])
 
-  const now = today()
+  // Today in the zone the schedule puts you in (utils/tripClock.js).
+  const { day: now } = useTripNow(detail?.items || NONE, detail?.places || NONE)
   const on = trip.startDate <= now
   const nights = daysBetween(trip.startDate, trip.endDate)
   const when = on
@@ -34,8 +38,16 @@ export default function NextTrip({ trip }) {
   // What comes next: during the trip from today, before it from the start;
   // a handful of entries, by day.
   const placeName = id => detail?.places.find(p => p.id === id)?.name
-  const days = detail ? buildTimeline(trip, detail.items).filter(d => d.day >= now && d.entries.length) : []
+  const timeline = detail ? buildTimeline(trip, detail.items) : []
+  const days = timeline.filter(d => d.day >= now && d.entries.length)
   const next = []
+  // During the trip the card starts with today, even when nothing is planned:
+  // where you sleep tonight (a stay only has entries on its first and last day).
+  const todayOnTrip = on && timeline.find(d => d.day === now)
+  if (todayOnTrip && !todayOnTrip.entries.length) {
+    const tonight = todayOnTrip.sleepingAt
+    next.push({ day: now, quiet: true, tonight })
+  }
   for (const d of days) {
     for (const e of d.entries) if (next.length < 3) next.push({ day: d.day, ...e })
     if (next.length >= 3) break
@@ -58,9 +70,25 @@ export default function NextTrip({ trip }) {
 
       {next.length > 0 && (
         <ul className="next-trip-items">
-          {next.map((e, i) => (
+          {next.map((e, i) => {
+            const dayLabel = i === 0 || next[i - 1].day !== e.day
+              ? (e.day === now ? 'Today' : e.day === addDays(now, 1) ? 'Tomorrow' : formatDay(e.day))
+              : ''
+            if (e.quiet) return (
+              <li key="today" className="next-trip-item next-trip-quiet">
+                <span className="next-trip-day">{dayLabel}</span>
+                <span className="next-trip-time" />
+                <span className="next-trip-icon" aria-hidden="true">{e.tonight.length ? '🛏️' : ''}</span>
+                <span className="next-trip-what">
+                  {e.tonight.length
+                    ? <>{e.tonight.map(s => s.title).join(', ')}<span className="next-trip-phase"> · Tonight</span><span className="next-trip-meta"> · nothing else planned</span></>
+                    : <span className="next-trip-phase">Nothing planned</span>}
+                </span>
+              </li>
+            )
+            return (
             <li key={`${e.item.id}-${e.phase}`} className="next-trip-item">
-              <span className="next-trip-day">{i === 0 || next[i - 1].day !== e.day ? (e.day === now ? 'Today' : formatDay(e.day)) : ''}</span>
+              <span className="next-trip-day">{dayLabel}</span>
               <span className="next-trip-time">{e.time || 'All day'}</span>
               <span className="next-trip-icon" aria-hidden="true">{itemIcon(e.item)}</span>
               <span className="next-trip-what">
@@ -71,7 +99,8 @@ export default function NextTrip({ trip }) {
                 {describe(e.item, placeName) && <span className="next-trip-meta"> · {describe(e.item, placeName)}</span>}
               </span>
             </li>
-          ))}
+            )
+          })}
         </ul>
       )}
 

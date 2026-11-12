@@ -48,6 +48,11 @@ export function useToday() {
 
 // `time` is the trip's now (utils/tripClock.js, in the schedule's zone);
 // without it, the phone's clock.
+// A day with nothing planned during a stay: the stay itself, as tonight's row
+// (a stay only has entries on its first and last day), so its booking code
+// and the way back stay a tap away.
+export const quietDayEntries = sleepingAt => sleepingAt.map(item => ({ item, time: '', label: 'Tonight', phase: 'Staying' }))
+
 export default function TodayEntries({ tripId, day, entries, places, time: tripTime }) {
   const phoneTime = useClock()
   const time = tripTime ?? phoneTime
@@ -90,7 +95,7 @@ export default function TodayEntries({ tripId, day, entries, places, time: tripT
               {(!past || showPast) && (
               <div className={`list-row list-row-link today-entry${past ? ' past' : ''}${on ? ' on' : ''}`}>
                 <div className="today-when">
-                  <div className={`trip-entry-time${at ? '' : ' allday'}${entry.assumed ? ' assumed' : ''}`} title={entry.assumed ? 'Usual hotel time; no time set on this stay' : undefined}>{at || 'All day'}</div>
+                  <div className={`trip-entry-time${at ? '' : ' allday'}${entry.assumed ? ' assumed' : ''}`} title={entry.assumed ? 'Usual hotel time; no time set on this stay' : undefined}>{at || entry.label || 'All day'}</div>
                   {on && <span className="today-badge">Now</span>}
                   {entry === next && <span className="today-badge next">{countdown(minutes(at) - minutes(time))}</span>}
                   <div className="today-icon">{itemIcon(item)}</div>

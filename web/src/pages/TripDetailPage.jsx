@@ -15,7 +15,7 @@ import TripGantt from '../components/TripGantt/TripGantt.jsx'
 import Expandable from '../components/Expandable/Expandable.jsx'
 import { useMediaQuery } from '../utils/useMediaQuery.js'
 import Sheet, { SheetActions } from '../components/Sheet/Sheet.jsx'
-import TodayEntries from '../components/TodayEntries.jsx'
+import TodayEntries, { quietDayEntries } from '../components/TodayEntries.jsx'
 import { useTripNow } from '../utils/tripClock.js'
 import Segmented from '../components/Segmented/Segmented.jsx'
 import { leaveTo } from '../utils/history.js'
@@ -284,7 +284,10 @@ function TripDetailPage() {
               {sleepingAt.length > 0 && ` · 🛏️ ${sleepingAt.map(s => s.title).join(', ')}`}
             </span>
           </div>
-          {entries.length === 0 ? (
+          {day === now && entries.length === 0 && sleepingAt.length > 0 ? (
+            // An empty today during a stay: the hotel, live like the rest of today.
+            <TodayEntries tripId={id} day={day} time={nowTime} entries={quietDayEntries(sleepingAt)} places={places} />
+          ) : entries.length === 0 ? (
             <div className="trip-day-empty">Nothing planned</div>
           ) : day === now ? (
             // Today is live, the same rows as Home's Today card.
