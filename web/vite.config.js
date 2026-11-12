@@ -117,7 +117,7 @@ export default defineConfig(({ mode }) => {
               purpose: 'any',
             },
             {
-              src: '/cat-icon-512.png',
+              src: '/cat-icon-maskable-512.png',
               sizes: '512x512',
               type: 'image/png',
               purpose: 'maskable',
