@@ -1,106 +1,56 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect } from 'react'
 import { Link } from 'react-router'
 import { ListRow } from '../components/List/List.jsx'
 import { useAuth } from '../context/AuthContext'
 import Loading from '../components/Loading.jsx'
-import { removeOffline, pruneOffline } from '../utils/offlineDocs.js'
-import { useOfflineDocs } from '../utils/useOfflineDocs.js'
-import { formatBytes } from '../utils/trip.js'
+import { useOfflineTrips } from '../utils/useOfflineDocs.js'
+import { asOf, syncOfflineTrips } from '../utils/offlineTrips.js'
+import { formatDateRange } from '../utils/trip.js'
 import '../components/TripDocuments/TripDocuments.css'
-import { useConfirm } from '../components/Confirm/ConfirmProvider.jsx'
 
-// The trip documents kept on this device (utils/offlineDocs.js), grouped by
-// trip. Works without a connection and without being signed in (an expired
-// session must not lock you out of your arrival card at the border), so it
-// sits outside the sign-in guard; signing out removes the documents anyway.
-// Each opens in the full-screen viewer from the device's copy.
+// The trips kept on this device (utils/offlineTrips.js): the way in when the
+// rest of the app can't load. Each opens as usual, from the device's copy:
+// the trip, its items with their files, its documents. The files are where
+// they are in the trip, not listed here.
 export default function OfflineDocumentsPage() {
-  const confirm = useConfirm()
   const { token } = useAuth()
-  const docs = useOfflineDocs()
-  const [busy, setBusy] = useState(null)
+  const trips = useOfflineTrips()
 
-  const trips = useMemo(() => {
-    const byTrip = new Map()
-    for (const d of docs ?? []) {
-      if (!byTrip.has(d.tripId)) byTrip.set(d.tripId, { id: d.tripId, title: d.tripTitle, docs: [] })
-      byTrip.get(d.tripId).docs.push(d)
-    }
-    for (const t of byTrip.values()) t.docs.sort((a, b) => a.filename.localeCompare(b.filename))
-    return [...byTrip.values()].sort((a, b) => (a.title || '').localeCompare(b.title || ''))
-  }, [docs])
-
-  // Online and signed in: drop copies of documents that were deleted or made
-  // private since they were kept.
-  useEffect(() => { pruneOffline() }, [])
-
-  // As on the trip page: with a PDF here, load the viewer and pdf.js while
-  // the phone is idle, so opening one does not wait for them.
-  const hasPdf = !!docs?.some(d => d.mimeType === 'application/pdf')
-  useEffect(() => {
-    if (!hasPdf) return
-    const idle = window.requestIdleCallback ?? (fn => setTimeout(fn, 1500))
-    const cancel = window.cancelIdleCallback ?? clearTimeout
-    const handle = idle(() => {
-      import('./FileViewerPage.jsx').catch(() => {})
-      import('../utils/pdf.js').then(m => m.warmUp()).catch(() => {})
-    })
-    return () => cancel(handle)
-  }, [hasPdf])
-
-  const remove = async doc => {
-    if (!(await confirm({ title: `Remove “${doc.filename}” from this device?`, message: 'It stays in the trip.', confirmLabel: 'Remove', danger: true }))) return
-    setBusy(doc.id)
-    try { await removeOffline([doc.id]) } finally { setBusy(null) }
-  }
+  // Online: bring the copy up to date.
+  useEffect(() => { syncOfflineTrips() }, [])
 
   return (
     <div className="privacy-page">
       <article className="privacy offline-docs">
         <Link to={token ? '/trips' : '/login'} className="privacy-back">‹ {token ? 'Trips' : 'Sign in'}</Link>
-        <h1>Offline documents</h1>
+        <h1>Offline</h1>
         <p className="privacy-updated">
-          On this device only. They open without a connection, also when you are signed out.
-          Signing out removes them.
+          Current and coming trips, with their files, on this device. They open without a connection, and stay
+          until a few days after the trip. Signing out removes them.
         </p>
 
-        {docs === null && <Loading />}
-        {docs?.length === 0 && (
-          <p>
-            Nothing kept on this device yet. Open a trip, and under Documents tap the arrow next to one
-            to keep it here.
-          </p>
-        )}
-
-        {trips.map(trip => (
-          <section key={trip.id} className="offline-docs-trip">
-            <div className="section-label">{trip.title || 'Trip'}</div>
+        {!token ? (
+          <p>Sign in to see the trips kept on this device.</p>
+        ) : trips === null ? (
+          <Loading />
+        ) : trips.length === 0 ? (
+          <p>No trips on this device yet. They come by themselves while you are online (Profile › Keep trips offline).</p>
+        ) : (
+          <section className="offline-docs-trip">
             <div className="list">
-              {trip.docs.map(doc => (
+              {trips.map(t => (
                 <ListRow
-                  key={doc.id}
-                  to={`/offline-documents/${doc.id}`}
-                  icon={doc.mimeType === 'application/pdf' ? '📄' : '🖼️'}
-                  title={doc.filename}
-                  meta={formatBytes(doc.size)}
-                  end={<button
-                    type="button"
-                    className="trip-docs-icon danger"
-                    disabled={busy === doc.id}
-                    aria-label={`Remove “${doc.filename}” from this device`}
-                    title="Remove from this device"
-                    onClick={() => remove(doc)}
-                  >
-                    <svg viewBox="0 0 24 24" aria-hidden="true">
-                      <line x1="6" y1="6" x2="18" y2="18" />
-                      <line x1="18" y1="6" x2="6" y2="18" />
-                    </svg>
-                  </button>}
+                  key={t.id}
+                  to={`/trips/${t.id}`}
+                  chevron
+                  icon={t.icon || '🧳'}
+                  title={t.title}
+                  meta={[formatDateRange(t.startDate, t.endDate), asOf(t.savedAt)].filter(Boolean).join(' · ')}
                 />
               ))}
             </div>
           </section>
-        ))}
+        )}
       </article>
     </div>
   )

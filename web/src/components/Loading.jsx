@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import { longestWaitMs } from '../utils/connection.js'
 import { sincePageOpened } from '../utils/pageStart.js'
-import { useOfflineDocs } from '../utils/useOfflineDocs.js'
+import { useOfflineTrips, keptLabel } from '../utils/useOfflineDocs.js'
 
 // "Loading…". When a request to the server has been waiting more than 3 s
 // (a weak or no connection: with a VPN, requests can wait for their whole
@@ -41,7 +41,7 @@ export default function Loading() {
   const [slow, setSlow] = useState(false)
   // The 0.4 s before it shows count from opening the page, not from this mount.
   const [delay] = useState(() => Math.max(0, 400 - sincePageOpened()))
-  const kept = useOfflineDocs()
+  const kept = keptLabel(useOfflineTrips())
 
   useEffect(() => {
     const timer = setInterval(() => setSlow(longestWaitMs() > SLOW_MS), 500)
@@ -56,8 +56,8 @@ export default function Loading() {
       <p className="loading-text">
         {slow ? 'Still trying to reach Splitty…' : 'Loading…'}
       </p>
-      {slow && kept?.length > 0 && (
-        <Link to="/offline-documents" className="load-failed-docs">Offline documents · {kept.length} ›</Link>
+      {slow && kept && (
+        <Link to="/offline-documents" className="load-failed-docs">On this device: {kept} ›</Link>
       )}
     </div>
   )

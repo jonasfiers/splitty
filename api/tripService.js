@@ -19,6 +19,8 @@ const kindOf = labels => Object.keys(KIND_LABELS).find(k => labels.includes(KIND
 
 // Every read and write goes through the group: a user reaches a trip only by
 // being a member of the group it is planned in.
+// At most this many trips in a phone's offline copy (getOfflineTrips).
+const OFFLINE_TRIPS_MAX = 20;
 const TRIP_ACCESS = '(:User {id: $userId})-[:MEMBER_OF]->(g:Group)<-[:PLANNED_IN]-(t:Trip {id: $tripId})';
 const ITEM_ACCESS = '(:User {id: $userId})-[:MEMBER_OF]->(g:Group)<-[:PLANNED_IN]-(t:Trip)<-[:PART_OF]-(i:TripItem {id: $itemId})';
 
@@ -311,6 +313,56 @@ const tripService = {
         } catch (err) {
             throw new Error(`Failed to get trip: ${err.message}`);
         }
+    },
+
+    // OFFLINE — the copy a phone keeps of the trips that matter on the way
+    // (web/src/utils/offlineTrips.js): those not over yet, those that ended
+    // in the last few days, and undated ones. Each as GET /trips/:id answers
+    // it, plus per item its linked expenses and its files, and the trip's
+    // documents this user sees (as GET /trips/:id/documents). The route adds
+    // the file links, so the phone can fetch the files to keep. Read-only on
+    // the phone.
+    getOfflineTrips: async (userId, since) => {
+        const { records } = await driver.executeQuery(
+            `MATCH (:User {id: $userId})-[:MEMBER_OF]->(:Group)<-[:PLANNED_IN]-(t:Trip)
+             WHERE coalesce(t.endDate, '') = '' OR t.endDate >= $since
+             RETURN t.id AS id
+             ORDER BY coalesce(t.startDate, '9999') LIMIT $limit`,
+            { userId, since, limit: neo4j.int(OFFLINE_TRIPS_MAX) }
+        );
+        const ids = records.map(r => r.get('id'));
+        const trips = await Promise.all(ids.map(async tripId => {
+            const base = await tripService.getTripById(tripId, userId);
+            if (!base.success) return null;
+            const { records: extra } = await driver.executeQuery(
+                `MATCH (i:TripItem)-[:PART_OF]->(:Trip {id: $tripId})
+                 RETURN i.id AS id,
+                        [(att:Attachment)-[:ATTACHED_TO]->(i) | att {.id, .filename, .mimeType, .size}] AS attachments,
+                        [(payer:User)-[:PAID]->(e:Expense)-[:PAYS_FOR]->(i) |
+                            {id: e.id, description: e.description, amount: e.amount, amountBase: e.amountBase, date: e.date,
+                             paidByName: payer.name, currencyIso: [(e)-[:EXPRESSED_IN]->(ec:Currency) | ec.iso][0]}] AS expenses`,
+                { tripId }
+            );
+            const byItem = new Map(extra.map(r => [r.get('id'), r]));
+            return {
+                trip: base.trip,
+                places: base.places,
+                documents: await tripService.listDocuments(tripId, userId),
+                items: base.items.map(item => {
+                    const r = byItem.get(item.id);
+                    return {
+                        ...item,
+                        attachments: (r?.get('attachments') ?? [])
+                            .map(a => ({ ...a, size: num(a.size) }))
+                            .sort((a, b) => String(a.filename).localeCompare(String(b.filename))),
+                        expenses: (r?.get('expenses') ?? [])
+                            .map(e => ({ ...e, amount: num(e.amount), amountBase: num(e.amountBase) }))
+                            .sort((a, b) => String(a.date).localeCompare(String(b.date))),
+                    };
+                }),
+            };
+        }));
+        return { success: true, trips: trips.filter(Boolean) };
     },
 
     // UPDATE

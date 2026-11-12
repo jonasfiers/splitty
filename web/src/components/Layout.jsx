@@ -4,7 +4,7 @@ import { markPageOpened } from '../utils/pageStart.js'
 import { useMediaQuery } from '../utils/useMediaQuery.js'
 import { useOffline } from '../utils/connection.js'
 import { useHistoryTracker } from '../utils/history.js'
-import { useOfflineDocs } from '../utils/useOfflineDocs.js'
+import { useOfflineTrips, keptLabel } from '../utils/useOfflineDocs.js'
 import { useAuth } from '../context/AuthContext'
 import { Avatar } from './Avatar.jsx'
 import CatAvatar from './CatAvatar/CatAvatar'
@@ -96,7 +96,7 @@ export default function Layout() {
   const lastPath = useRef(pathname)
   if (lastPath.current !== pathname) { lastPath.current = pathname; markPageOpened() }
   const offline = useOffline()
-  const kept = useOfflineDocs()
+  const kept = keptLabel(useOfflineTrips())
   const { currentUser, isAdmin } = useAuth()
   const [collapsed, toggleCollapsed] = useSidebarCollapsed()
 
@@ -149,7 +149,7 @@ export default function Layout() {
         {offline && (
           <div className="offline-bar" role="status">
             <span>You’re offline. Nothing new can load.</span>
-            {kept?.length > 0 && <Link to="/offline-documents">Offline documents ›</Link>}
+            {kept && <Link to="/offline-documents">Offline: {kept} ›</Link>}
           </div>
         )}
         <div className="page-wrap">

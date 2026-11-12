@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import { itemIcon, buildTimeline, daysBetween, today, addDays } from '../utils/trip.js'
-import TodayEntries, { useClock } from './TodayEntries.jsx'
+import TodayEntries, { useClock, useToday } from './TodayEntries.jsx'
 import { useGate } from '../utils/pageGate.jsx'
 import { swrOne } from '../utils/cache.js'
 
@@ -52,7 +52,7 @@ export default function TodayTrip() {
 
 function TodayCard({ trip, items, places }) {
   const time = useClock()
-  const now = today()
+  const now = useToday()
   const timeline = buildTimeline(trip, items)
   const day = timeline.find(d => d.day === now)
   const tomorrow = timeline.find(d => d.day === addDays(now, 1))

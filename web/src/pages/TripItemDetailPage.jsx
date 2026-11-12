@@ -19,6 +19,9 @@ import { ListRow } from '../components/List/List.jsx'
 import { leaveTo } from '../utils/history.js'
 import { KINDS, TRANSPORT_MODES, itemIcon, dayOf, timeOf, formatDay, formatDuration, daysBetween, mapsLink, linkTarget, formatBytes, DEFAULT_CHECK_IN, DEFAULT_CHECK_OUT } from '../utils/trip.js'
 import { swrOne } from '../utils/cache.js'
+import { getOfflineItem, asOf } from '../utils/offlineTrips.js'
+import { useOfflineDocs } from '../utils/useOfflineDocs.js'
+import { useOffline, isOffline, isNetworkError, onReconnect } from '../utils/connection.js'
 
 const START_LABEL = { transport: 'Departure', stay: 'Check-in', activity: 'Starts' }
 const END_LABEL = { transport: 'Arrival', stay: 'Check-out', activity: 'Ends' }
@@ -106,14 +109,41 @@ export default function TripItemDetailPage() {
   const wide = useMediaQuery('(min-width: 1180px)')
   const standalone = useMemo(isStandalone, [])
   const [error, setError] = useState('')
+  // From the trip's copy kept on this device (utils/offlineTrips.js): when it
+  // was saved. Offline nothing can be changed, whichever copy is on screen.
+  const [offlineAsOf, setOfflineAsOf] = useState(null)
+  const offline = useOffline()
+  const readOnly = offline || !!offlineAsOf
+  // This item's files kept on the device (utils/offlineDocs.js).
+  const keptFiles = useOfflineDocs()
+  const onDevice = useMemo(() => new Set((keptFiles ?? []).map(f => f.id)), [keptFiles])
 
   // Opening it: the last state at once if its file links still work (4 min,
   // utils/cache.js), then fresh; the refreshes below ask the server only.
+  // Without a connection and nothing on screen: the kept copy (at once when
+  // known to be offline).
   const load = useCallback(async ({ fresh = true } = {}) => {
-    const { cached, fresh: answer } = swrOne(`/trips/items/${itemId}`, ({ data }) => setItem(data.item), { fresh })
+    const { cached, fresh: answer } = swrOne(`/trips/items/${itemId}`, ({ data }) => { setItem(data.item); setOfflineAsOf(null) }, { fresh })
     if (cached) setLoading(false)
-    await answer.catch(err => { if (!cached) throw err })
-  }, [itemId])
+    const showKept = kept => { setItem(kept.item); setOfflineAsOf(kept.savedAt) }
+    let shown = cached
+    if (!shown && isOffline()) {
+      const kept = await getOfflineItem(tripId, itemId)
+      if (kept) { showKept(kept); setLoading(false); shown = true }
+    }
+    await answer.catch(async err => {
+      if (shown) return
+      const kept = isNetworkError(err) && await getOfflineItem(tripId, itemId)
+      if (!kept) throw err
+      showKept(kept)
+    })
+  }, [tripId, itemId])
+
+  // Back online: the server's version replaces the kept copy.
+  useEffect(() => {
+    if (!offlineAsOf) return
+    return onReconnect(() => { load().catch(() => {}) })
+  }, [offlineAsOf, load])
 
   // Loading failed (not "no such item": that is a 404): the "couldn't load" state.
   const [loadError, setLoadError] = useState(null)
@@ -259,11 +289,17 @@ export default function TripItemDetailPage() {
         compact
         crumbs={[{ to: '/trips', label: 'Trips' }, { to: `/trips/${tripId}`, label: item.tripTitle || 'Trip' }]}
         name={item.kind === 'transport' ? (mode?.label ?? 'Transport') : KINDS[item.kind].label}
-        actions={wide ? [] : [
+        actions={wide || readOnly ? [] : [
           { label: 'Edit', onClick: () => navigate(`/trips/${tripId}/items/${itemId}/edit`), primary: true },
           { label: 'Delete', onClick: handleDelete, danger: true },
         ]}
       />
+      {readOnly && (
+        <p className="offline-copy-note" role="status">
+          {offlineAsOf ? <>Offline · {asOf(offlineAsOf)}</> : 'Offline'}
+          <span> · changes need a connection</span>
+        </p>
+      )}
       {error && <p className="error">{error}</p>}
 
       <div className="item-layout">
@@ -324,7 +360,7 @@ export default function TripItemDetailPage() {
 
             {item.notes && <p className="trip-notes item-notes">{item.notes}</p>}
           </div>
-          {wide && mapData && (
+          {wide && mapData && !readOnly && (
             <Suspense fallback={<Loading />}>
               <TripMap places={mapData.places} items={mapData.items} onOpenItem={noop} />
             </Suspense>
@@ -332,7 +368,7 @@ export default function TripItemDetailPage() {
         </div>
 
         <aside className="item-aside">
-          {wide && (
+          {wide && !readOnly && (
             <div className="item-actions">
               <button className="btn btn-primary" onClick={() => navigate(`/trips/${tripId}/items/${itemId}/edit`)}>Edit item</button>
               <button className="btn btn-ghost" onClick={handleDelete}>Delete</button>
@@ -341,41 +377,56 @@ export default function TripItemDetailPage() {
           <div className="section-label">Tickets and documents</div>
           {item.attachments.length > 0 && (
             <div className="list">
-              {item.attachments.map(a => (
+              {item.attachments.map(a => readOnly && !onDevice.has(a.id) ? (
+                // Offline and not (yet) on this device.
+                <ListRow
+                  key={a.id}
+                  icon={a.mimeType === 'application/pdf' ? '📄' : '🖼️'}
+                  title={a.filename}
+                  meta={`${formatBytes(a.size)} · Not on this device`}
+                />
+              ) : (
                 // In a browser tab: a plain link, so the browser's own PDF and
                 // image viewers open it in a new tab. In the installed app that
                 // would fill the window with no way back: Splitty's viewer.
+                // Offline: Splitty's viewer, from the copy on this device.
                 <ListRow
                   key={a.id}
-                  href={standalone ? `/trips/${tripId}/items/${itemId}/files/${a.id}` : `/api${a.url}`}
-                  {...(standalone
+                  href={standalone || readOnly ? `/trips/${tripId}/items/${itemId}/files/${a.id}` : `/api${a.url}`}
+                  {...(standalone || readOnly
                     ? { onClick: event => { event.preventDefault(); navigate(`/trips/${tripId}/items/${itemId}/files/${a.id}`) } }
                     : { target: '_blank', rel: 'noopener noreferrer' })}
                   icon={a.mimeType === 'application/pdf' ? '📄' : '🖼️'}
                   title={a.filename}
-                  meta={formatBytes(a.size)}
-                  end={<RowAction label={`Delete ${a.filename}`} onClick={() => handleDeleteAttachment(a)} />}
+                  meta={onDevice.has(a.id) ? `${formatBytes(a.size)} · on this device` : formatBytes(a.size)}
+                  {...(!readOnly && { end: <RowAction label={`Delete ${a.filename}`} onClick={() => handleDeleteAttachment(a)} /> })}
                 />
               ))}
             </div>
           )}
-          <input ref={fileInput} type="file" accept="application/pdf,image/jpeg,image/png,image/webp" hidden onChange={handleUpload} />
-          <button className="btn btn-secondary btn-block" onClick={() => fileInput.current?.click()} disabled={uploading}>
-            {uploading ? 'Uploading…' : 'Add a file'}
-          </button>
-          <p className="field-note">PDF or image, 10 MB at most.</p>
+          {readOnly ? (
+            item.attachments.length === 0 && <p className="field-note">No files.</p>
+          ) : <>
+            <input ref={fileInput} type="file" accept="application/pdf,image/jpeg,image/png,image/webp" hidden onChange={handleUpload} />
+            <button className="btn btn-secondary btn-block" onClick={() => fileInput.current?.click()} disabled={uploading}>
+              {uploading ? 'Uploading…' : 'Add a file'}
+            </button>
+            <p className="field-note">PDF or image, 10 MB at most.</p>
+          </>}
           <div className="section-label">Paid for with</div>
           {item.expenses.length > 0 && (
             <div className="list">
               {item.expenses.map(e => (
                 <ListRow
                   key={e.id}
-                  to={`/groups/${item.groupId}/expenses/${e.id}`}
+                  {...(!readOnly && {
+                    to: `/groups/${item.groupId}/expenses/${e.id}`,
+                    end: <RowAction label={`Unlink ${e.description}`} onClick={() => handleUnlink(e)} />,
+                  })}
                   icon="✓"
                   title={e.description}
                   meta={<>Paid by {e.paidByName ?? '—'}{e.date ? ` · ${formatDate(e.date)}` : ''}</>}
                   aside={<span className="list-row-amt">{formatCurrency(e.amount, e.currencyIso)}</span>}
-                  end={<RowAction label={`Unlink ${e.description}`} onClick={() => handleUnlink(e)} />}
                 />
               ))}
             </div>
@@ -385,12 +436,13 @@ export default function TripItemDetailPage() {
               {formatCurrency(paid, item.groupIso)} paid in total
             </p>
           )}
-          <div className="trip-expense-actions">
+          {readOnly && item.expenses.length === 0 && <p className="field-note">No expenses linked.</p>}
+          {!readOnly && <div className="trip-expense-actions">
             <button className="btn btn-secondary" onClick={handleCreateExpense}>
               {item.expenses.length > 0 ? 'Add another expense' : 'Create expense'}
             </button>
             <button className="btn btn-secondary" onClick={() => setLinking(true)}>Link existing expense</button>
-          </div>
+          </div>}
           {linking && (
             <LinkExpenseSheet
               itemId={itemId}

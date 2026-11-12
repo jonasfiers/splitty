@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { Link } from 'react-router'
 import { isNetworkError, onReconnect, reportReachable } from '../utils/connection.js'
-import { useOfflineDocs } from '../utils/useOfflineDocs.js'
+import { useOfflineTrips, keptLabel } from '../utils/useOfflineDocs.js'
 
 // What a page shows when its data could not be loaded, instead of an empty
 // state ("No groups yet", "You're all settled up!", "Trip not found") that
@@ -14,7 +14,7 @@ import { useOfflineDocs } from '../utils/useOfflineDocs.js'
 //   docs     link to the offline documents (default; off where the page has its own)
 export default function LoadFailed({ error, what, onRetry, docs = true }) {
   const noConnection = isNetworkError(error)
-  const kept = useOfflineDocs()
+  const kept = keptLabel(useOfflineTrips())
 
   useEffect(() => (noConnection ? onReconnect(onRetry) : undefined), [noConnection, onRetry])
 
@@ -42,8 +42,8 @@ export default function LoadFailed({ error, what, onRetry, docs = true }) {
           : 'Something went wrong on Splitty’s side. Try again in a moment.'}
       </p>
       <button className="btn btn-primary" onClick={onRetry}>Try again</button>
-      {docs && noConnection && kept?.length > 0 && (
-        <Link to="/offline-documents" className="load-failed-docs">Offline documents · {kept.length} ›</Link>
+      {docs && noConnection && kept && (
+        <Link to="/offline-documents" className="load-failed-docs">On this device: {kept} ›</Link>
       )}
     </div>
   )

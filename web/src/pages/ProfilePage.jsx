@@ -4,6 +4,7 @@ import { startRegistration } from '@simplewebauthn/browser'
 import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
 import { EMOJI_STYLES, getEmojiStyle, setEmojiStyle } from '../utils/emojiStyle.js'
+import { keepTripsEnabled, setKeepTrips, offlineTripsSupported } from '../utils/offlineTrips.js'
 import Loading from '../components/Loading.jsx'
 import client from '../api/client'
 import { timeAgo } from '../utils/time.js'
@@ -22,6 +23,7 @@ export default function ProfilePage() {
   const { currentUser, isAdmin, logout, updateToken } = useAuth()
   const { theme, setTheme } = useTheme()
   const [emojiStyle, setEmojiStyleState] = useState(getEmojiStyle)
+  const [keepTrips, setKeepTripsState] = useState(keepTripsEnabled)
   const navigate = useNavigate()
 
   const [profile, setProfile] = useState(null)
@@ -304,6 +306,25 @@ export default function ProfilePage() {
               </div>
               }
             />
+            {offlineTripsSupported() && (
+              <SetRow
+                label="Keep trips offline"
+                sub="Current and coming trips and their files, readable without a connection on this device"
+                aside={
+                <div className="theme-segment">
+                  {[['on', 'On'], ['off', 'Off']].map(([value, label]) => (
+                    <button
+                      key={value}
+                      className={`theme-segment-btn${(keepTrips ? 'on' : 'off') === value ? ' active' : ''}`}
+                      onClick={() => { setKeepTripsState(value === 'on'); setKeepTrips(value === 'on') }}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                }
+              />
+            )}
           </SetGroup>
           {notifError && <p className="error">{notifError}</p>}
 

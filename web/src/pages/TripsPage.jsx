@@ -10,14 +10,14 @@ import { today, formatDateRange } from '../utils/trip.js'
 import { List, ListRow } from '../components/List/List.jsx'
 import TabHeader from '../components/PageHeader/TabHeader.jsx'
 
-import { useOfflineDocs } from '../utils/useOfflineDocs.js'
+import { useOfflineTrips, keptLabel } from '../utils/useOfflineDocs.js'
 import EmptyState from '../components/EmptyState/EmptyState.jsx'
 import NextTrip from '../components/TripForm/NextTrip.jsx'
 import { PageGate } from '../utils/pageGate.jsx'
 import { swr } from '../utils/cache.js'
 
 export default function TripsPage() {
-  const offline = useOfflineDocs()
+  const offline = keptLabel(useOfflineTrips())
   const navigate = useNavigate()
   const [trips, setTrips] = useState([])
   const [groups, setGroups] = useState([])
@@ -56,10 +56,10 @@ export default function TripsPage() {
           on the page (before the error on purpose: offline, this is what works). */}
       <TabHeader
         title="Trips"
-        aside={offline?.length > 0 && (
+        aside={offline && (
           <Link to="/offline-documents" className="offline-link">
             <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="7.5 10 10.5 13 16.5 7" /><path d="M4 15v3a2 2 0 002 2h12a2 2 0 002-2v-3" /></svg>
-            {offline.length} offline document{offline.length !== 1 ? 's' : ''}
+            {offline} offline
           </Link>
         )}
       />

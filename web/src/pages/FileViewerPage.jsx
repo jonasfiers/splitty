@@ -28,9 +28,8 @@ const PAGE_PIXELS = 16e6
 // Where the file comes from, each load returning the files with `src`, the
 // address to read it from (fresh signed links for the server's):
 //   /trips/:tripId/items/:itemId/files/:fileId   an item's attachment
-//   /trips/:tripId/documents/:fileId             a trip document; without a
-//                                                connection, the copy kept on
-//                                                this device if there is one
+//   /trips/:tripId/documents/:fileId             a trip document
+//     both without a connection: the copy kept on this device, if there is one
 //   /offline-documents/:fileId                   a document kept on this device
 //                                                (works offline and signed out)
 const fromServer = list => list.map(f => ({ ...f, src: `/api${f.url}` }))
@@ -38,7 +37,14 @@ const fromDevice = list => list.map(f => ({ ...f, src: offlineSrc(f.id) }))
 
 function sourceOf(tripId, itemId) {
   if (itemId) return {
-    load: async () => fromServer((await client.get(`/trips/items/${itemId}`)).data.item.attachments),
+    load: async () => {
+      try {
+        return fromServer((await client.get(`/trips/items/${itemId}`)).data.item.attachments)
+      } catch (err) {
+        if (err.response) throw err   // the server answered: no fallback
+        return fromDevice((await listOffline()).filter(f => f.itemId === itemId))
+      }
+    },
     page: `/trips/${tripId}/items/${itemId}`,
     gone: 'This file is no longer attached to the item.',
   }
@@ -48,7 +54,7 @@ function sourceOf(tripId, itemId) {
         return fromServer((await client.get(`/trips/${tripId}/documents`)).data.documents)
       } catch (err) {
         if (err.response) throw err   // the server answered: no fallback
-        return fromDevice(await listOffline())
+        return fromDevice((await listOffline()).filter(f => f.tripId === tripId && f.kind !== 'attachment'))
       }
     },
     page: `/trips/${tripId}/documents`,

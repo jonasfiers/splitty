@@ -3084,3 +3084,12 @@ button.ins-cat.hidden { background: transparent; border-color: transparent; }
 button.ins-heat-cell { display: block; width: 100%; height: 36px; border-radius: 6px; background: var(--surface-2); cursor: pointer; }
 button.ins-heat-cell.picked { outline: 2px solid var(--text); outline-offset: 1px; }
 .ins-heat-amt { font-family: var(--font-mono); color: var(--text); font-weight: 600; }
+
+/* A trip or item shown from the copy kept on this device (utils/offlineTrips.js) */
+.offline-copy-note {
+  margin: 0 0 12px; padding: 8px 12px; border-radius: 10px;
+  background: var(--surface-2); border: 1px solid var(--border);
+  font-size: var(--fs-sm); color: var(--text); font-weight: 600;
+}
+.offline-copy-note span { color: var(--text-3); font-weight: 400; }
+.offline-docs-head { font-size: var(--fs-lg); margin: 28px 0 4px; }

@@ -15,13 +15,16 @@ import TripGantt from '../components/TripGantt/TripGantt.jsx'
 import Expandable from '../components/Expandable/Expandable.jsx'
 import { useMediaQuery } from '../utils/useMediaQuery.js'
 import Sheet, { SheetActions } from '../components/Sheet/Sheet.jsx'
-import TodayEntries from '../components/TodayEntries.jsx'
+import TodayEntries, { useToday } from '../components/TodayEntries.jsx'
 import Segmented from '../components/Segmented/Segmented.jsx'
 import { leaveTo } from '../utils/history.js'
 import { useConfirm } from '../components/Confirm/ConfirmProvider.jsx'
 import EmptyState from '../components/EmptyState/EmptyState.jsx'
 import { waitAtMost } from '../utils/pageGate.jsx'
 import { swrOne } from '../utils/cache.js'
+import { getOfflineTrip, asOf } from '../utils/offlineTrips.js'
+import { useOffline, isOffline, isNetworkError, onReconnect } from '../utils/connection.js'
+import OfflinePlaces from '../components/OfflinePlaces.jsx'
 
 // Leaflet is only worth downloading once someone opens the map.
 const TripMap = lazy(() => import('../components/TripMap/TripMap.jsx'))
@@ -39,6 +42,7 @@ function TripDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { state } = useLocation()
+  const now = useToday()
   // From here on the day list and the map fit side by side, so no tabs.
   const wide = useMediaQuery('(min-width: 1180px)')
 
@@ -63,6 +67,12 @@ function TripDetailPage() {
   const [showCopy, setShowCopy] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  // Shown from the copy kept on this device (utils/offlineTrips.js): when it
+  // was saved. Without a connection nothing can be changed, whichever copy
+  // is on screen.
+  const [offlineAsOf, setOfflineAsOf] = useState(null)
+  const offline = useOffline()
+  const readOnly = offline || !!offlineAsOf
 
   // How many documents this user sees here, for the chip (the list itself
   // is on the Documents page). Quiet on failure: the chip just has no count.
@@ -87,11 +97,33 @@ function TripDetailPage() {
       setTrip(data.trip)
       setItems(data.items || [])
       setPlaces(data.places || [])
+      setOfflineAsOf(null)
     }, { fresh })
     if (cached) setLoading(false)
     const docs = loadDocs({ fresh })
-    // With the last state on screen a failed refresh changes nothing.
-    await Promise.all([answer.catch(err => { if (!cached) throw err }), waitAtMost(docs)])
+    const showKept = kept => {
+      setTrip(kept.trip)
+      setItems(kept.items)
+      setPlaces(kept.places)
+      setDocIds((kept.documents ?? []).map(d => d.id))
+      setOfflineAsOf(kept.savedAt)
+    }
+    // Known to be offline: the copy kept on this device at once, rather
+    // than after the request has failed (a server answer still replaces it).
+    let shown = cached
+    if (!shown && isOffline()) {
+      const kept = await getOfflineTrip(id)
+      if (kept) { showKept(kept); setLoading(false); shown = true }
+    }
+    // With something on screen a failed refresh changes nothing. No answer
+    // at all and nothing on screen: the copy kept on this device.
+    const fromDevice = async err => {
+      if (shown) return
+      const kept = isNetworkError(err) && await getOfflineTrip(id)
+      if (!kept) throw err
+      showKept(kept)
+    }
+    await Promise.all([answer.catch(fromDevice), waitAtMost(docs)])
   }, [id, loadDocs])
 
   // Loading failed (not "no such trip": that is a 404): the "couldn't load"
@@ -102,6 +134,12 @@ function TripDetailPage() {
   useEffect(() => {
     load({ fresh: attempt > 0 }).catch(err => { setTrip(null); if (err.response?.status !== 404) setLoadError(err) }).finally(() => setLoading(false))
   }, [load, attempt])
+
+  // Back online: the server's version replaces the kept copy.
+  useEffect(() => {
+    if (!offlineAsOf) return
+    return onReconnect(() => { load().catch(() => {}) })
+  }, [offlineAsOf, load])
 
   const openItem = useCallback(item => navigate(`/trips/${id}/items/${item.id}`), [navigate, id])
 
@@ -216,7 +254,6 @@ function TripDetailPage() {
   const placeById = new Map(places.map(p => [p.id, p]))
   const placeName = placeId => placeById.get(placeId)?.name
   const timeline = buildTimeline(trip, items)
-  const now = today()
 
   // What has been paid for the trip, counted by the server so an expense linked
   // to several items (both legs of a connecting flight) counts once.
@@ -285,17 +322,18 @@ function TripDetailPage() {
     <Expandable
       label={`${trip.title} · Timeline`}
       splitKey="trip-timeline"
-      extra={places.some(p => p.lat != null) && (
+      extra={!readOnly && places.some(p => p.lat != null) && (
         <Suspense fallback={<Loading />}>
           <TripMap places={places} items={items} onOpenItem={openItem} highlight={highlight} onHover={setHighlight} />
         </Suspense>
       )}
     >
-      <TripGantt trip={trip} items={items} placeName={placeName} onOpenItem={openItem} onCreate={createFromTimeline} onReschedule={reschedule} onDelete={removeItem} highlight={highlight} onHover={setHighlight} />
+      <TripGantt trip={trip} items={items} placeName={placeName} onOpenItem={openItem} {...(!readOnly && { onCreate: createFromTimeline, onReschedule: reschedule, onDelete: removeItem })} highlight={highlight} onHover={setHighlight} />
     </Expandable>
   )
 
-  const mapView = (
+  // Without a connection there are no map tiles: the places as a list.
+  const mapView = readOnly ? <OfflinePlaces places={places} items={items} onOpenItem={openItem} /> : (
     <Suspense fallback={<Loading />}>
       <Expandable label={`${trip.title} · Map`}>
         <TripMap places={places} items={items} onOpenItem={openItem} highlight={highlight} onHover={setHighlight} />
@@ -314,7 +352,7 @@ function TripDetailPage() {
         crumbs={[{ to: '/trips', label: 'Trips' }]}
         title={<>{trip.icon} {trip.title}</>}
         name={trip.title}
-        actions={[
+        actions={readOnly ? [] : [
           { label: 'Edit', onClick: () => setShowEdit(true), primary: true },
           { label: 'Copy trip', onClick: openCopy },
           { label: 'Delete trip', onClick: handleDelete, danger: true },
@@ -338,6 +376,12 @@ function TripDetailPage() {
         )}
       </div>
 
+      {readOnly && (
+        <p className="offline-copy-note" role="status">
+          {offlineAsOf ? <>Offline · {asOf(offlineAsOf)}</> : 'Offline'}
+          <span> · changes need a connection</span>
+        </p>
+      )}
       {state?.notice && <p className="notice">{state.notice}</p>}
       {error && <p className="error">{error}</p>}
 
@@ -376,7 +420,7 @@ function TripDetailPage() {
         </>
       )}
 
-      <FabButton onClick={() => setShowKinds(true)} label="Add to trip" />
+      {!readOnly && <FabButton onClick={() => setShowKinds(true)} label="Add to trip" />}
 
       {moved && !removed && (
         <div className="trip-toast" role="status">

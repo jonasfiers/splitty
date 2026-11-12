@@ -1,6 +1,6 @@
 import { Fragment, useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router'
-import { KINDS, itemIcon, describe, mapsLink, linkTarget } from '../utils/trip.js'
+import { KINDS, itemIcon, describe, mapsLink, linkTarget, today } from '../utils/trip.js'
 import BigReference from './BigReference/BigReference.jsx'
 
 // Today's entries as live rows: against the phone's clock (trip times are
@@ -31,14 +31,40 @@ const placeOf = (item, phase) =>
   item.kind === 'transport' ? (phase === 'Arrival' ? item.toPlaceId : item.fromPlaceId) : item.placeId
 
 
-// The clock, ticking every minute.
+// Calls `fn` on the minute, and right away when the app comes back to the
+// screen: a phone freezes a page in the background, and its timers don't
+// catch up, so a page opened at noon would still say noon in the evening.
+function onMinute(fn) {
+  let t
+  const schedule = () => {
+    clearTimeout(t)
+    t = setTimeout(() => { fn(); schedule() }, 60000 - (Date.now() % 60000) + 50)
+  }
+  const resume = () => { if (document.visibilityState !== 'hidden') { fn(); schedule() } }
+  schedule()
+  document.addEventListener('visibilitychange', resume)
+  window.addEventListener('focus', resume)
+  window.addEventListener('pageshow', resume)
+  return () => {
+    clearTimeout(t)
+    document.removeEventListener('visibilitychange', resume)
+    window.removeEventListener('focus', resume)
+    window.removeEventListener('pageshow', resume)
+  }
+}
+
+// The clock, ticking every minute (and current again on coming back).
 export function useClock() {
   const [time, setTime] = useState(clock)
-  useEffect(() => {
-    const t = setInterval(() => setTime(clock()), 60 * 1000)
-    return () => clearInterval(t)
-  }, [])
+  useEffect(() => onMinute(() => setTime(clock())), [])
   return time
+}
+
+// Today's date, changing at midnight (or on coming back the next day).
+export function useToday() {
+  const [day, setDay] = useState(today)
+  useEffect(() => onMinute(() => setDay(today())), [])
+  return day
 }
 
 export default function TodayEntries({ tripId, day, entries, places }) {

@@ -5,7 +5,9 @@ import client from '../../api/client'
 import { isStandalone } from '../../utils/standalone.js'
 import { formatBytes } from '../../utils/trip.js'
 import { keepOffline, removeOffline, syncTrip, offlineSupported } from '../../utils/offlineDocs.js'
-import { useOfflineDocs } from '../../utils/useOfflineDocs.js'
+import { useOfflineDocs, useOfflineTrips } from '../../utils/useOfflineDocs.js'
+import { keepTripsEnabled, getOfflineTrip, asOf } from '../../utils/offlineTrips.js'
+import { useOffline, isOffline, isNetworkError, onReconnect } from '../../utils/connection.js'
 import './TripDocuments.css'
 import { swrOne } from '../../utils/cache.js'
 import Loading from '../Loading.jsx'
@@ -21,8 +23,10 @@ import { useConfirm } from '../Confirm/ConfirmProvider.jsx'
 // like item files: Splitty's viewer in the installed app, a new tab in a
 // browser.
 //
-// Any of them can be kept on this device to open without a connection
-// (utils/offlineDocs.js, the Offline documents page).
+// With the trip kept offline (utils/offlineTrips.js), your own documents are
+// on this device by themselves and others' shared ones when you keep them
+// (utils/offlineDocs.js). Without a connection the list comes from that copy:
+// what is on the device opens, nothing can be changed.
 //
 // Links are signed for 5 minutes: refreshed while the page is open and on
 // coming back to it, as on the item page.
@@ -37,10 +41,17 @@ export default function TripDocuments({ tripId, tripTitle, heading = true }) {
   const [busy, setBusy] = useState(null)
   const fileInput = useRef(null)
   const loadedAt = useRef(0)
+  const [offlineAsOf, setOfflineAsOf] = useState(null)
+  const noConnection = useOffline()
+  const readOnly = noConnection || !!offlineAsOf
 
   const offline = useOfflineDocs()
   const kept = useMemo(() => new Set((offline ?? []).map(d => d.id)), [offline])
-  const canKeep = useMemo(offlineSupported, [])
+  // Files go with the trip's offline copy (utils/offlineDocs.js): your own
+  // documents come by themselves, others' shared ones you can keep here, and
+  // only while this trip is in the copy (they would go again at once).
+  const keptTrips = useOfflineTrips()
+  const tripKept = useMemo(() => offlineSupported() && keepTripsEnabled() && !!keptTrips?.some(t => t.id === tripId), [keptTrips, tripId])
 
   // The list as the trip page last loaded it at once (utils/cache.js: the
   // same request as its Documents count), then fresh. After a change here
@@ -48,14 +59,34 @@ export default function TripDocuments({ tripId, tripTitle, heading = true }) {
   const load = useCallback(async ({ fresh = true } = {}) => {
     const { cached, fresh: answer } = swrOne(`/trips/${tripId}/documents`, ({ data }) => {
       setDocuments(data.documents)
+      setOfflineAsOf(null)
       setLoadError(null)
       loadedAt.current = Date.now()
       // Kept copies of documents that are gone (deleted, made private) go too.
       syncTrip({ id: tripId, title: tripTitle }, data.documents.map(d => d.id)).catch(() => {})
     }, { fresh })
-    // With a list on screen a failed refresh changes nothing.
-    await answer.catch(err => { if (!cached) throw err })
+    // No answer and nothing on screen: the list kept on this device (at once
+    // when known to be offline). With a list on screen a failed refresh
+    // changes nothing.
+    const showKept = kept => { setDocuments(kept.documents ?? []); setOfflineAsOf(kept.savedAt); setLoadError(null) }
+    let shown = cached
+    if (!shown && isOffline()) {
+      const kept = await getOfflineTrip(tripId)
+      if (kept) { showKept(kept); shown = true }
+    }
+    await answer.catch(async err => {
+      if (shown) return
+      const kept = isNetworkError(err) && await getOfflineTrip(tripId)
+      if (!kept) throw err
+      showKept(kept)
+    })
   }, [tripId, tripTitle])
+
+  // Back online: the server's list replaces the kept one.
+  useEffect(() => {
+    if (!offlineAsOf) return
+    return onReconnect(() => { load().catch(() => {}) })
+  }, [offlineAsOf, load])
 
   const [attempt, setAttempt] = useState(0)
   const retry = useCallback(() => { setLoadError(null); setAttempt(n => n + 1) }, [])
@@ -165,25 +196,40 @@ export default function TripDocuments({ tripId, tripTitle, heading = true }) {
   return (
     <section className="trip-docs">
       {heading && <div className="section-label">Documents{documents?.length ? ` · ${documents.length}` : ''}</div>}
+      {readOnly && (
+        <p className="offline-copy-note" role="status">
+          {offlineAsOf ? <>Offline · {asOf(offlineAsOf)}</> : 'Offline'}
+          <span> · changes need a connection</span>
+        </p>
+      )}
       {error && <p className="error">{error}</p>}
       {documents.length === 0 && <EmptyState compact art={false} title="No documents yet" />}
       {documents?.length > 0 && (
         <div className="list">
           {documents.map(doc => {
             const viewer = `/trips/${tripId}/documents/${doc.id}`
+            // Offline: what is on this device opens in Splitty's viewer; the rest can't.
+            if (readOnly && !kept.has(doc.id)) return (
+              <ListRow
+                key={doc.id}
+                icon={doc.mimeType === 'application/pdf' ? '📄' : '🖼️'}
+                title={doc.filename}
+                meta={<>{who(doc)} · {formatBytes(doc.size)} · Not on this device</>}
+              />
+            )
             return (
               <ListRow
                 key={doc.id}
-                href={standalone ? viewer : `/api${doc.url}`}
-                {...(standalone
+                href={standalone || readOnly ? viewer : `/api${doc.url}`}
+                {...(standalone || readOnly
                   ? { onClick: event => { event.preventDefault(); navigate(viewer) } }
                   : { target: '_blank', rel: 'noopener noreferrer' })}
                 icon={doc.mimeType === 'application/pdf' ? '📄' : '🖼️'}
                 title={doc.filename}
                 meta={<>{who(doc)} · {formatBytes(doc.size)}</>}
-                end={
+                end={!readOnly && (
                   <div className="trip-docs-actions">
-                    {canKeep && (
+                    {tripKept && !doc.mine && (
                       <button
                         type="button"
                         className={`trip-docs-icon${kept.has(doc.id) ? ' on' : ''}`}
@@ -220,20 +266,22 @@ export default function TripDocuments({ tripId, tripTitle, heading = true }) {
                       </button>
                     </>)}
                   </div>
-                }
+                )}
               />
             )
           })}
         </div>
       )}
-      <input ref={fileInput} type="file" accept="application/pdf,image/jpeg,image/png,image/webp" hidden onChange={upload} />
-      <button className="btn btn-secondary trip-docs-add" onClick={() => fileInput.current?.click()} disabled={uploading}>
-        {uploading ? 'Uploading…' : 'Add a document'}
-      </button>
-      <p className="trip-docs-hint">
-        Arrival cards, visas, insurance, a copy of your passport. Only you see what you add, until you share it with the trip.
-        {canKeep && ' Keep one on this device to open it without a connection, under Trips › Offline documents.'}
-      </p>
+      {!readOnly && <>
+        <input ref={fileInput} type="file" accept="application/pdf,image/jpeg,image/png,image/webp" hidden onChange={upload} />
+        <button className="btn btn-secondary trip-docs-add" onClick={() => fileInput.current?.click()} disabled={uploading}>
+          {uploading ? 'Uploading…' : 'Add a document'}
+        </button>
+        <p className="trip-docs-hint">
+          Arrival cards, visas, insurance, a copy of your passport. Only you see what you add, until you share it with the trip.
+          {tripKept && ' Your own are kept on this device by themselves, to open without a connection; one shared by someone else you can keep with the arrow.'}
+        </p>
+      </>}
     </section>
   )
 }

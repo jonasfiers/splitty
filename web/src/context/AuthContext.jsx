@@ -3,6 +3,8 @@ import { startAuthentication } from '@simplewebauthn/browser'
 import client from '../api/client'
 import { clearOffline } from '../utils/offlineDocs.js'
 import { clearCache } from '../utils/cache.js'
+import { syncOfflineTrips, clearOfflineTrips } from '../utils/offlineTrips.js'
+import { onReconnect } from '../utils/connection.js'
 import { reactivatePushIfKnown } from '../utils/push.js'
 
 const AuthContext = createContext(null)
@@ -38,6 +40,18 @@ export function AuthProvider({ children }) {
     ask(1)
     return () => { live = false; clearTimeout(timer) }
   }, [token])
+  // The trips kept on this device for offline reading (utils/offlineTrips.js):
+  // refreshed on signing in, on coming back to the app and when the
+  // connection returns.
+  useEffect(() => {
+    if (!token) return
+    syncOfflineTrips({ force: true })
+    const onVisible = () => { if (document.visibilityState === 'visible') syncOfflineTrips() }
+    document.addEventListener('visibilitychange', onVisible)
+    const stopReconnect = onReconnect(() => syncOfflineTrips())
+    return () => { document.removeEventListener('visibilitychange', onVisible); stopReconnect() }
+  }, [token])
+
   const isAdmin = !token ? false : admin.known ? admin.isAdmin : null
   const forgetAdmin = () => setAdmin({ known: false, isAdmin: false })
 
@@ -73,10 +87,11 @@ export function AuthProvider({ children }) {
     setToken(newToken)
   }, [])
 
-  // Signing out (or deleting the account) also removes the documents kept on
-  // this device; an expired session does not (utils/offlineDocs.js).
+  // Signing out (or deleting the account) also removes the documents and
+  // trips kept on this device; an expired session does not (utils/offlineDocs.js).
   const logout = useCallback(() => {
     clearOffline()
+    clearOfflineTrips()
     clearCache()
     localStorage.removeItem('token')
     forgetAdmin()

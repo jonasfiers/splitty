@@ -489,6 +489,28 @@ router.get('/', async (req, res) => {
     }
 });
 
+// OFFLINE COPY — ?today=YYYY-MM-DD (the user's date): the trips a phone keeps
+// for reading without a connection (tripService.getOfflineTrips). Trips that
+// ended up to 3 days before today stay in it (the way home).
+router.get('/offline', async (req, res) => {
+    try {
+        const { today } = req.query;
+        const day = typeof today === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(today) && !isNaN(Date.parse(today))
+            ? new Date(`${today}T00:00:00Z`) : new Date();
+        day.setUTCDate(day.getUTCDate() - 3);
+        const result = await tripService.getOfflineTrips(req.user.id, day.toISOString().slice(0, 10));
+        // Links to fetch the files with (signed for FILE_LINK_TTL).
+        for (const t of result.trips) {
+            t.documents = withLinks(t.documents);
+            for (const item of t.items) item.attachments = item.attachments.map(a => ({ ...a, url: signFileLink(a.id) }));
+        }
+        res.json(result);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // READ ONE
 router.get('/:id', async (req, res) => {
     try {

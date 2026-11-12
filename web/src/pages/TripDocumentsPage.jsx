@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from 'react'
 import LoadFailed from '../components/LoadFailed.jsx'
 import { useParams } from 'react-router'
 import { swr } from '../utils/cache.js'
+import { getOfflineTrip } from '../utils/offlineTrips.js'
+import { isOffline, isNetworkError } from '../utils/connection.js'
 import Loading from '../components/Loading.jsx'
 import PageHeader from '../components/PageHeader/PageHeader.jsx'
 import TripDocuments from '../components/TripDocuments/TripDocuments.jsx'
@@ -19,10 +21,18 @@ export default function TripDocumentsPage() {
   // The trip (for its name) and its documents together, so the page shows once,
   // complete; usually both are in the cache already from the trip page
   // (utils/cache.js). The list below then finds the documents there at once.
+  // Without a connection: the trip as kept on this device (utils/offlineTrips.js).
   useEffect(() => {
+    let shown = false
     const { cached, fresh } = swr([[`/trips/${tripId}`], [`/trips/${tripId}/documents`]],
-      ([tripRes]) => setTrip(tripRes.data.trip), { fresh: attempt > 0 })
-    fresh.catch(err => { if (!cached) setError(err) })
+      ([tripRes]) => { shown = true; setTrip(tripRes.data.trip) }, { fresh: attempt > 0 })
+    shown = shown || cached
+    if (!shown && isOffline()) getOfflineTrip(tripId).then(kept => { if (kept && !shown) { shown = true; setTrip(kept.trip) } })
+    fresh.catch(async err => {
+      if (shown || cached) return
+      const kept = isNetworkError(err) && await getOfflineTrip(tripId)
+      if (kept) { shown = true; setTrip(kept.trip) } else setError(err)
+    })
   }, [tripId, attempt])
 
   const bare = <PageHeader compact crumbs={[{ to: '/trips', label: 'Trips' }]} name="Documents" />

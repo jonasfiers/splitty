@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext'
 // Public: linked from the sign-in and register pages and from Profile.
 // Keep it true: when Splitty starts storing something new, sending data to a
 // new service, or keeping something longer, update this page and its date.
-const UPDATED = '7 November 2026'
+const UPDATED = '10 November 2026'
 
 export default function PrivacyPage() {
   const { token } = useAuth()
@@ -41,8 +41,11 @@ export default function PrivacyPage() {
         <p>
           Splitty has no advertising, no analytics and no tracking cookies. Your browser keeps, for Splitty: your
           sign-in (so you stay signed in), your light/dark choice, a copy of Splitty’s own program files (so the
-          installed app opens without a connection), and the travel documents you choose to keep on that device.
-          Those documents stay on the device until you remove them or sign out.
+          installed app opens without a connection), and a copy of your current and coming trips so you can read
+          them offline: their plans, places and linked expenses, the files on their items, your own documents, and
+          documents others shared that you choose to keep. The copy is refreshed while you are online; a trip and
+          its files leave the device a few days after the trip ends, or when it is deleted or no longer shared with
+          you, and everything goes when you sign out or switch it off (Profile › Keep trips offline).
         </p>
 
         <h2>Why</h2>
