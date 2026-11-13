@@ -20,8 +20,12 @@ export function getEmojiStyle() {
   return EMOJI_STYLES.some(s => s.value === v) ? v : DEFAULT
 }
 
+// OpenMoji-color.woff2 is COLRv1 only: its SVG copy of every emoji was removed
+// (2026-11-13), because Firefox drew those and filled their outlines with the
+// text colour (white or orange lines); now Firefox draws the same black lines
+// as Chrome, and the file is 1 MB instead of 2.9.
 // Apple's browsers (Safari, and every browser on an iPhone or iPad: they are
-// all Safari underneath) don't draw this font's colour (COLRv1, SVG): they
+// all Safari underneath) don't draw this font's colour (COLRv1): they
 // get OpenMoji in Apple's own emoji format (sbix) instead, a separate file
 // fetched only by them (5 MB; not in the offline copy: past its 3 MB limit).
 const UA = navigator.userAgent
