@@ -2911,27 +2911,20 @@ a.trip-chip:hover { border-color: var(--accent); }
     U+2600-27BF, U+2934-2935, U+2B05-2B07, U+2B1B-2B1C, U+2B50, U+2B55, U+3030, U+303D, U+3297, U+3299,
     U+FE0F, U+1F000-1FAFF, U+E0020-E007F;
 }
-/* Apple's browsers: the same emoji in Apple's own font format (utils/emojiStyle.js) */
-html[data-emoji="openmoji-apple"] {
-  --font-body: 'Splitty OpenMoji Apple', 'Plus Jakarta Sans', sans-serif;
-  --font-mono: 'Splitty OpenMoji Apple', 'JetBrains Mono', monospace;
-  --font-display: 'Splitty OpenMoji Apple', 'DM Serif Display', serif;
-}
 html[data-emoji="openmoji"] {
   --font-body: 'Splitty OpenMoji', 'Plus Jakarta Sans', sans-serif;
   --font-mono: 'Splitty OpenMoji', 'JetBrains Mono', monospace;
   --font-display: 'Splitty OpenMoji', 'DM Serif Display', serif;
 }
-/* Dark theme: OpenMoji's outlines are its palette's only black (entry 0), and
-   black lines vanished on the dark tiles. A named palette swaps that one colour
-   for a light one; fills stay as drawn. Apple's sbix copy is pictures, not
-   palette colours, so it keeps black lines. (The emoji picker draws in its own
-   shadow DOM and is not affected.) */
-@font-palette-values --openmoji-dark {
-  font-family: 'Splitty OpenMoji';
-  override-colors: 0 #E8DCCD;
+/* Dark theme: OpenMoji draws with black outlines, which got lost on the dark
+   icon tiles. A soft light glow around each emoji keeps it apart from the tile
+   (and faces keep their black eyes, which recolouring the outlines lost).
+   Icon tiles and emoji-only spots only: on running text it would blur letters. */
+[data-theme="dark"] :is(.list-row-icon, .today-icon, .trip-card-icon, .act-icon, .detail-hero-icon,
+  .mode-tile-icon, .next-trip-icon, .picker-option-icon, .icon-card-icon, .admin-card-icon,
+  .route-leg-icon, .emoji-picker-btn, .invite-icon) {
+  text-shadow: 0 0 2px rgba(232, 220, 205, .85), 0 0 1px rgba(232, 220, 205, .9);
 }
-html[data-theme="dark"] { font-palette: --openmoji-dark; }
 
 /* Insights (InsightsPage): what used to be inline styles */
 .card.ins-chart-card { padding: 24px 16px 16px; }

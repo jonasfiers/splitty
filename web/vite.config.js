@@ -76,8 +76,7 @@ export default defineConfig(({ mode }) => {
         // (4 MB) are saved only once used.
         injectManifest: {
           globPatterns: ['**/*.{js,css,html,woff2,svg,png,ico,webmanifest}'],
-          // OpenMoji in Apple's format (5 MB) only for Apple's browsers: not for everyone offline.
-          globIgnores: ['pdfjs/**', 'cat-avatar-poc.html', 'assets/OpenMoji-color-sbix-*'],
+          globIgnores: ['pdfjs/**', 'cat-avatar-poc.html'],
           maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
         },
         manifest: {
