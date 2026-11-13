@@ -4,13 +4,14 @@ const neo4j = require('neo4j-driver');
 const driver = require('./neo4j');
 const pushService = require('./pushService');
 const rateService = require('./rateService');
+const { currencyOptions } = require('./money');
 
 const getDecimals = iso =>
     new Intl.NumberFormat('en', { style: 'currency', currency: iso }).resolvedOptions().maximumFractionDigits;
 
 const formatAmount = (amount, iso) => {
     const decimals = getDecimals(iso)
-    return new Intl.NumberFormat('en', { style: 'currency', currency: iso }).format(amount / 10 ** decimals)
+    return new Intl.NumberFormat('en', currencyOptions(iso)).format(amount / 10 ** decimals)
 }
 
 // Settlements (:Expense:Settlement) and balance transfers (:Expense:Transfer)

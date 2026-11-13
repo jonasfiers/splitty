@@ -170,10 +170,11 @@ self.addEventListener('push', event => {
     event.waitUntil(
         self.registration.showNotification(data.title, {
             body: data.icon ? `${data.icon} ${data.body}` : data.body,
-            // iOS always shows the app icon; Android needs both: `icon` is
-            // the large colour picture, `badge` the status-bar icon, of which
+            // No `icon` (the large picture): the installed app's own icon is
+            // already on every notification, so the cat showed twice on
+            // Android (2026-11-13). `badge` is the status-bar icon, of which
             // Android only uses the shape (a white silhouette on transparency).
-            icon: '/cat-icon-192.png',
+            // iOS always shows the app icon.
             badge: '/notification-badge.png',
             data: { url: data.url }
         })

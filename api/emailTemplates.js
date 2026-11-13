@@ -1,5 +1,7 @@
 'use strict';
 
+const { currencyOptions } = require('./money');
+
 const _CAT_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none"><circle cx="24" cy="24" r="24" fill="#F5EDE0"/><polygon points="10,18 14,8 20,18" fill="#F5A623"/><polygon points="28,18 34,8 38,18" fill="#F5A623"/><polygon points="12,17 14,10 18,17" fill="#F07167"/><polygon points="30,17 34,10 36,17" fill="#F07167"/><circle cx="24" cy="28" r="16" fill="#F5A623"/><ellipse cx="19" cy="27" rx="2.5" ry="3" fill="#2C1A0E"/><ellipse cx="29" cy="27" rx="2.5" ry="3" fill="#2C1A0E"/><circle cx="20" cy="26" r=".9" fill="white"/><circle cx="30" cy="26" r=".9" fill="white"/><ellipse cx="24" cy="32" rx="1.5" ry="1.1" fill="#F07167"/><line x1="8" y1="30" x2="19" y2="32" stroke="#2C1A0E" stroke-width=".7" opacity=".4"/><line x1="8" y1="33" x2="19" y2="33" stroke="#2C1A0E" stroke-width=".7" opacity=".4"/><line x1="29" y1="32" x2="40" y2="30" stroke="#2C1A0E" stroke-width=".7" opacity=".4"/><line x1="29" y1="33" x2="40" y2="33" stroke="#2C1A0E" stroke-width=".7" opacity=".4"/></svg>`;
 const _CAT_URI = `data:image/svg+xml;base64,${Buffer.from(_CAT_SVG).toString('base64')}`;
 
@@ -13,10 +15,7 @@ function e(str) {
 
 function formatAmount(amount, currency = 'USD') {
   try {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: currency.toUpperCase(),
-    }).format(amount);
+    return new Intl.NumberFormat('en-US', currencyOptions(currency.toUpperCase())).format(amount);
   } catch {
     return `${currency.toUpperCase()} ${Number(amount).toFixed(2)}`;
   }
