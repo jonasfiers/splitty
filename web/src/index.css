@@ -2922,6 +2922,16 @@ html[data-emoji="openmoji"] {
   --font-mono: 'Splitty OpenMoji', 'JetBrains Mono', monospace;
   --font-display: 'Splitty OpenMoji', 'DM Serif Display', serif;
 }
+/* Dark theme: OpenMoji's outlines are its palette's only black (entry 0), and
+   black lines vanished on the dark tiles. A named palette swaps that one colour
+   for a light one; fills stay as drawn. Apple's sbix copy is pictures, not
+   palette colours, so it keeps black lines. (The emoji picker draws in its own
+   shadow DOM and is not affected.) */
+@font-palette-values --openmoji-dark {
+  font-family: 'Splitty OpenMoji';
+  override-colors: 0 #E8DCCD;
+}
+html[data-theme="dark"] { font-palette: --openmoji-dark; }
 
 /* Insights (InsightsPage): what used to be inline styles */
 .card.ins-chart-card { padding: 24px 16px 16px; }
