@@ -1,3 +1,4 @@
+import { colorFor, getInitials } from './utils/avatar.js'
 // Splitty's service worker: push notifications, and Splitty working without
 // a connection (so offline documents can be opened at a border or a gate).
 //
@@ -164,21 +165,49 @@ async function cacheFirst(name, request) {
     return res
 }
 
+// The notification's picture: the avatar of who did it (`avatar` from the
+// API), drawn like the app's own avatars. Android already shows the app icon
+// on the other side, and an empty picture slot gets a grey letter from Chrome
+// (2026-11-13), so the slot says who instead. The cat when it can't be drawn.
+const ICON_SIZE = 192
+async function avatarIcon(avatar) {
+    if (!avatar?.name || typeof OffscreenCanvas === 'undefined') return '/cat-icon-192.png'
+    try {
+        const { bg, fg } = colorFor(avatar.color ?? avatar.name)
+        const canvas = new OffscreenCanvas(ICON_SIZE, ICON_SIZE)
+        const ctx = canvas.getContext('2d')
+        const mid = ICON_SIZE / 2
+        ctx.fillStyle = bg
+        ctx.beginPath()
+        ctx.arc(mid, mid, mid, 0, Math.PI * 2)
+        ctx.fill()
+        ctx.fillStyle = fg
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'middle'
+        ctx.font = avatar.emoji ? `${ICON_SIZE * 0.55}px sans-serif` : `700 ${ICON_SIZE * 0.38}px sans-serif`
+        ctx.fillText(avatar.emoji || getInitials(avatar.name), mid, mid + ICON_SIZE * 0.03)
+        const bytes = new Uint8Array(await (await canvas.convertToBlob({ type: 'image/png' })).arrayBuffer())
+        let binary = ''
+        for (const b of bytes) binary += String.fromCharCode(b)
+        return `data:image/png;base64,${btoa(binary)}`
+    } catch {
+        return '/cat-icon-192.png'
+    }
+}
+
 self.addEventListener('push', event => {
     const data = event.data?.json()
     if (!data) return
-    event.waitUntil(
-        self.registration.showNotification(data.title, {
+    event.waitUntil((async () => {
+        await self.registration.showNotification(data.title, {
             body: data.icon ? `${data.icon} ${data.body}` : data.body,
-            // No `icon` (the large picture): the installed app's own icon is
-            // already on every notification, so the cat showed twice on
-            // Android (2026-11-13). `badge` is the status-bar icon, of which
-            // Android only uses the shape (a white silhouette on transparency).
-            // iOS always shows the app icon.
+            icon: await avatarIcon(data.avatar),
+            // The status-bar icon, of which Android only uses the shape (a
+            // white silhouette on transparency). iOS always shows the app icon.
             badge: '/notification-badge.png',
             data: { url: data.url }
         })
-    )
+    })())
 })
 
 self.addEventListener('notificationclick', event => {

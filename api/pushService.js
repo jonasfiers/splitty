@@ -59,8 +59,23 @@ const pushService = {
             )
 
             console.log(`[push] ${records.length} subscription(s) found for group ${groupId}`)
+            if (records.length === 0) return
 
-            const body = JSON.stringify(payload)
+            // Who did it, drawn as their avatar in the notification's picture
+            // slot (sw.js): Chrome on Android fills an empty slot with a grey
+            // letter, and the app icon is already on the other side.
+            const { records: actor } = await driver.executeQuery(
+                `MATCH (u:User {id: $excludeUserId}) RETURN u.name AS name, u.avatarColor AS color, u.avatarEmoji AS emoji`,
+                { excludeUserId }
+            )
+            const a = actor[0]
+            const avatar = a?.get('name') ? {
+                name: a.get('name'),
+                color: a.get('color') == null ? null : Number(a.get('color')),
+                emoji: a.get('emoji') || null,
+            } : null
+
+            const body = JSON.stringify(avatar ? { ...payload, avatar } : payload)
             const results = await Promise.allSettled(
                 records.map(r => {
                     const sub = { endpoint: r.get('endpoint'), keys: JSON.parse(r.get('keys')) }
