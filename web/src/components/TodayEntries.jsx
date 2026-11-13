@@ -48,6 +48,15 @@ export function useToday() {
 
 // `time` is the trip's now (utils/tripClock.js, in the schedule's zone);
 // without it, the phone's clock.
+// An item with a start time but no end (a dinner, a train entered without
+// its arrival) counts as under way for an hour, not as past a minute in.
+const endOf = item => (item.end?.length > 10 ? item.end : item.start?.length > 10 ? plusMinutes(item.start, NO_END_MINUTES) : null)
+const isOnAt = (item, moment) => item.start?.length > 10 && item.start <= moment && moment < endOf(item)
+
+// Whether today still holds something timed: an entry to come or one under way.
+export const moreToday = (day, time, entries) =>
+  entries.some(e => (e.time && e.time > time) || isOnAt(e.item, `${day}T${time}`))
+
 // A day with nothing planned during a stay: the stay itself, as tonight's row
 // (a stay only has entries on its first and last day), so its booking code
 // and the way back stay a tap away.
@@ -65,10 +74,7 @@ export default function TodayEntries({ tripId, day, entries, places, time: tripT
   // Now: an item under way (started, not ended). Next: the first timed entry
   // still to come. Past: timed entries before now that are not under way.
   const moment = `${day}T${time}`
-  // An item with a start time but no end (a dinner, a train entered without
-  // its arrival) counts as under way for an hour, not as past a minute in.
-  const endOf = item => (item.end?.length > 10 ? item.end : item.start?.length > 10 ? plusMinutes(item.start, NO_END_MINUTES) : null)
-  const isOn = item => item.start?.length > 10 && item.start <= moment && moment < endOf(item)
+  const isOn = item => isOnAt(item, moment)
   const next = entries.find(e => e.time && e.time > time && !isOn(e.item))
   // Check-in is "from" its time: the row (and the hotel's booking code) stays
   // until the day is over, however late you arrive.

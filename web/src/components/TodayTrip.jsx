@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import { itemIcon, buildTimeline, daysBetween, today, addDays } from '../utils/trip.js'
-import TodayEntries, { quietDayEntries } from './TodayEntries.jsx'
+import TodayEntries, { quietDayEntries, moreToday } from './TodayEntries.jsx'
 import { useTripNow } from '../utils/tripClock.js'
 import { useGate } from '../utils/pageGate.jsx'
 import { swrOne } from '../utils/cache.js'
@@ -11,7 +11,8 @@ import { swrOne } from '../utils/cache.js'
 // per trip happening today. Stays away if nothing loads, like the other panels.
 //
 // The rows are TodayEntries (live: now, next, booking code, directions), the
-// same as the trip page's today. In the evening, tomorrow's first entry too.
+// same as the trip page's today. Tomorrow's first entry too, once nothing
+// timed is left today, or from the evening on.
 const EVENING = '18:00'
 
 export const isActive = (trip, day = today()) => trip.startDate <= day && day <= trip.endDate
@@ -61,7 +62,7 @@ function TodayCard({ trip, items, places }) {
   const total = daysBetween(trip.startDate, trip.endDate) + 1
   const entries = day?.entries || []
   const sleepingAt = day?.sleepingAt || []
-  const firstTomorrow = time >= EVENING && tomorrow?.entries.length
+  const firstTomorrow = (time >= EVENING || !moreToday(now, time, entries)) && tomorrow?.entries.length
     ? tomorrow.entries.find(e => e.time) || tomorrow.entries[0]
     : null
 
