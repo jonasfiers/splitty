@@ -2916,16 +2916,6 @@ html[data-emoji="openmoji"] {
   --font-mono: 'Splitty OpenMoji', 'JetBrains Mono', monospace;
   --font-display: 'Splitty OpenMoji', 'DM Serif Display', serif;
 }
-/* Dark theme: OpenMoji draws with black outlines, which got lost on the dark
-   icon tiles. A soft light glow around each emoji keeps it apart from the tile
-   (and faces keep their black eyes, which recolouring the outlines lost).
-   Icon tiles and emoji-only spots only: on running text it would blur letters. */
-[data-theme="dark"] :is(.list-row-icon, .today-icon, .trip-card-icon, .act-icon, .detail-hero-icon,
-  .mode-tile-icon, .next-trip-icon, .picker-option-icon, .icon-card-icon, .admin-card-icon,
-  .route-leg-icon, .emoji-picker-btn, .invite-icon) {
-  text-shadow: 0 0 2px rgba(232, 220, 205, .85), 0 0 1px rgba(232, 220, 205, .9);
-}
-
 /* Insights (InsightsPage): what used to be inline styles */
 .card.ins-chart-card { padding: 24px 16px 16px; }
 .card.ins-pie-card { padding: 24px 16px; }
