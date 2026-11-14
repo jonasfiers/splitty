@@ -193,26 +193,66 @@ const UI = {
 }
 
 const NODES = new Map(Object.entries(UI))
-export const ICON_SECTIONS = PICKABLE.map(([section, icons]) => ({
+const PICKABLE_SECTIONS = PICKABLE.map(([section, icons]) => ({
   section,
   icons: icons.map(([name, node, keywords]) => {
     NODES.set(name, node)
-    return { name, keywords }
+    return { name, label: name.replace(/-/g, ' '), keywords }
   }),
 }))
 
+// Countries, as their two-letter ISO code ("country:TW"), drawn as the letters
+// in place of a flag (Icon.jsx): line icons have no flags, and at icon size
+// the code reads better than most flags would. Names come from the browser
+// (Intl), in its language, and in English for the search.
+const COUNTRY_CODES = [
+  'AD AE AF AG AI AL AM AO AQ AR AS AT AU AW AX AZ BA BB BD BE BF BG BH BI BJ BL BM BN BO BQ BR BS',
+  'BT BV BW BY BZ CA CC CD CF CG CH CI CK CL CM CN CO CR CU CV CW CX CY CZ DE DJ DK DM DO DZ EC EE',
+  'EG EH ER ES ET EU FI FJ FK FM FO FR GA GB GD GE GF GG GH GI GL GM GN GP GQ GR GS GT GU GW GY HK',
+  'HM HN HR HT HU ID IE IL IM IN IO IQ IR IS IT JE JM JO JP KE KG KH KI KM KN KP KR KW KY KZ LA LB',
+  'LC LI LK LR LS LT LU LV LY MA MC MD ME MF MG MH MK ML MM MN MO MP MQ MR MS MT MU MV MW MX MY MZ',
+  'NA NC NE NF NG NI NL NO NP NR NU NZ OM PA PE PF PG PH PK PL PM PN PR PS PT PW PY QA RE RO RS RU',
+  'RW SA SB SC SD SE SG SH SI SJ SK SL SM SN SO SR SS ST SV SX SY SZ TC TD TF TG TH TJ TK TL TM TN',
+  'TO TR TT TV TW TZ UA UG UM US UY UZ VA VC VE VG VI VN VU WF WS XK YE YT ZA ZM ZW',
+].join(' ').split(' ')
+const COUNTRIES = new Set(COUNTRY_CODES)
+const regionNames = lang => { try { return new Intl.DisplayNames([lang, 'en'], { type: 'region' }) } catch { return null } }
+const localNames = regionNames(globalThis.navigator?.language || 'en')
+const englishNames = regionNames('en')
+export const countryName = code => localNames?.of(code) ?? englishNames?.of(code) ?? code
+
+// 'country:TW' -> 'TW', for a code we know; else null.
+export const countryOf = name => {
+  const code = typeof name === 'string' && name.startsWith('country:') ? name.slice(8) : null
+  return code && COUNTRIES.has(code) ? code : null
+}
+
+export const ICON_SECTIONS = [
+  ...PICKABLE_SECTIONS,
+  {
+    section: 'Countries',
+    icons: COUNTRY_CODES
+      .map(code => ({ name: `country:${code}`, label: countryName(code), keywords: `${code} ${englishNames?.of(code) ?? ''} country`.toLowerCase() }))
+      .sort((a, b) => a.label.localeCompare(b.label)),
+  },
+]
+
 export const iconNode = name => (name ? NODES.get(name) ?? null : null)
-export const isIcon = name => NODES.has(name)
+export const isIcon = name => NODES.has(name) || countryOf(name) != null
+export const iconLabel = name => (countryOf(name) ? countryName(countryOf(name)) : name.replace(/-/g, ' '))
 
 // An icon as an SVG string, for HTML built outside React (map pins).
 const attr = v => String(v).replace(/&/g, '&amp;').replace(/"/g, '&quot;')
 export function iconSvg(name, { size = 16, strokeWidth = 2 } = {}) {
+  const country = countryOf(name)
   const node = iconNode(name)
-  if (!node) return ''
-  const children = node.map(([tag, attrs]) =>
-    `<${tag} ${Object.entries(attrs).map(([k, v]) => `${k}="${attr(v)}"`).join(' ')}/>`).join('')
+  if (!node && !country) return ''
+  const children = country
+    ? `<text x="12" y="12.5" text-anchor="middle" dominant-baseline="central" font-size="11" font-weight="800" fill="currentColor" stroke="none">${country}</text>`
+    : node.map(([tag, attrs]) =>
+      `<${tag} ${Object.entries(attrs).map(([k, v]) => `${k}="${attr(v)}"`).join(' ')}/>`).join('')
   return `<svg class="icon" xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${children}</svg>`
 }
 
 // A stored icon (category, group, trip) if it is one of ours, else `fallback`.
-export const iconOr = (name, fallback = null) => (NODES.has(name) ? name : fallback)
+export const iconOr = (name, fallback = null) => (isIcon(name) ? name : fallback)

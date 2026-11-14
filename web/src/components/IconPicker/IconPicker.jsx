@@ -2,7 +2,7 @@ import { useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import Sheet from '../Sheet/Sheet.jsx'
 import Icon from '../Icon/Icon.jsx'
-import { ICON_SECTIONS } from '../../utils/icons.js'
+import { ICON_SECTIONS, iconLabel } from '../../utils/icons.js'
 
 // An icon for a category, group or trip: a square button showing the current
 // one, opening a sheet with a search and the icons in a grid by section.
@@ -27,7 +27,7 @@ export default function IconPicker({ value, onChange, id, clearable = false }) {
   // Every word typed must start a word of the icon's name, keywords or section.
   const words = query.trim().toLowerCase().split(/\s+/).filter(Boolean)
   const matches = (icon, section) => {
-    const hay = `${icon.name.replace(/-/g, ' ')} ${icon.keywords} ${section}`.toLowerCase().split(/[\s&-]+/)
+    const hay = `${icon.label} ${icon.keywords} ${section}`.toLowerCase().split(/[\s&,()-]+/)
     return words.every(w => hay.some(h => h.startsWith(w)))
   }
   const sections = ICON_SECTIONS
@@ -43,7 +43,7 @@ export default function IconPicker({ value, onChange, id, clearable = false }) {
         tabIndex={0} // in the Tab order like a field (Macs otherwise skip buttons)
         onClick={() => setOpen(true)}
         aria-haspopup="dialog"
-        aria-label={value ? `Icon: ${value.replace(/-/g, ' ')}` : 'Pick an icon'}
+        aria-label={value ? `Icon: ${iconLabel(value)}` : 'Pick an icon'}
         className={`icon-picker-btn${value ? '' : ' empty'}`}
       >
         {value ? <Icon name={value} fallback="circle-question-mark" /> : '+'}
@@ -53,7 +53,7 @@ export default function IconPicker({ value, onChange, id, clearable = false }) {
           <input
             className="picker-search"
             type="search"
-            placeholder="Search, e.g. food, train, hotel"
+            placeholder="Search, e.g. food, train, Japan"
             aria-label="Search icons"
             value={query}
             onChange={e => setQuery(e.target.value)}
@@ -75,9 +75,9 @@ export default function IconPicker({ value, onChange, id, clearable = false }) {
                       type="button"
                       className={`icon-picker-cell${i.name === value ? ' selected' : ''}`}
                       onClick={() => choose(i.name)}
-                      aria-label={i.name.replace(/-/g, ' ')}
+                      aria-label={i.label}
                       aria-pressed={i.name === value}
-                      title={i.name.replace(/-/g, ' ')}
+                      title={i.label}
                     >
                       <Icon name={i.name} size={22} />
                     </button>

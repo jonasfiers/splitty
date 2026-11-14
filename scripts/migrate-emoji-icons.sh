@@ -4,8 +4,9 @@ set -eo pipefail
 # One-off migration: categories, groups and trips store an icon's name
 # (web/src/utils/icons.js, Lucide: "train-front") instead of an emoji.
 #
-#   before: (:Category {icon: '🚂'})
+#   before: (:Category {icon: '🚂'})        (:Group {icon: '🇹🇼'})
 #   after:  (:Category {icon: 'train-front', iconEmoji: '🚂'})
+#           (:Group {icon: 'country:TW', iconEmoji: '🇹🇼'})
 #
 # The old emoji stays in iconEmoji, so rollback can put it back. An emoji with
 # no match in the table below gets icon '' (the app then draws its default:
@@ -75,9 +76,11 @@ cypher() {
     -a "${NEO4J_URI:-bolt://127.0.0.1:7687}" -u "${NEO4J_USER:-neo4j}" --format plain "$@"
 }
 
-# Emoji (without the U+FE0F variation selector) -> icon name. Flags (two
-# regional indicators) become 'flag' separately.
-PAIRS="[
+# Emoji (without the U+FE0F variation selector) -> icon name. A country's flag
+# becomes its code ('country:TW', drawn as the letters); any other pair of
+# regional indicators becomes 'flag'.
+FLAGS="['🇦🇩','country:AD'],['🇦🇪','country:AE'],['🇦🇫','country:AF'],['🇦🇬','country:AG'],['🇦🇮','country:AI'],['🇦🇱','country:AL'],['🇦🇲','country:AM'],['🇦🇴','country:AO'],['🇦🇶','country:AQ'],['🇦🇷','country:AR'],['🇦🇸','country:AS'],['🇦🇹','country:AT'],['🇦🇺','country:AU'],['🇦🇼','country:AW'],['🇦🇽','country:AX'],['🇦🇿','country:AZ'],['🇧🇦','country:BA'],['🇧🇧','country:BB'],['🇧🇩','country:BD'],['🇧🇪','country:BE'],['🇧🇫','country:BF'],['🇧🇬','country:BG'],['🇧🇭','country:BH'],['🇧🇮','country:BI'],['🇧🇯','country:BJ'],['🇧🇱','country:BL'],['🇧🇲','country:BM'],['🇧🇳','country:BN'],['🇧🇴','country:BO'],['🇧🇶','country:BQ'],['🇧🇷','country:BR'],['🇧🇸','country:BS'],['🇧🇹','country:BT'],['🇧🇻','country:BV'],['🇧🇼','country:BW'],['🇧🇾','country:BY'],['🇧🇿','country:BZ'],['🇨🇦','country:CA'],['🇨🇨','country:CC'],['🇨🇩','country:CD'],['🇨🇫','country:CF'],['🇨🇬','country:CG'],['🇨🇭','country:CH'],['🇨🇮','country:CI'],['🇨🇰','country:CK'],['🇨🇱','country:CL'],['🇨🇲','country:CM'],['🇨🇳','country:CN'],['🇨🇴','country:CO'],['🇨🇷','country:CR'],['🇨🇺','country:CU'],['🇨🇻','country:CV'],['🇨🇼','country:CW'],['🇨🇽','country:CX'],['🇨🇾','country:CY'],['🇨🇿','country:CZ'],['🇩🇪','country:DE'],['🇩🇯','country:DJ'],['🇩🇰','country:DK'],['🇩🇲','country:DM'],['🇩🇴','country:DO'],['🇩🇿','country:DZ'],['🇪🇨','country:EC'],['🇪🇪','country:EE'],['🇪🇬','country:EG'],['🇪🇭','country:EH'],['🇪🇷','country:ER'],['🇪🇸','country:ES'],['🇪🇹','country:ET'],['🇪🇺','country:EU'],['🇫🇮','country:FI'],['🇫🇯','country:FJ'],['🇫🇰','country:FK'],['🇫🇲','country:FM'],['🇫🇴','country:FO'],['🇫🇷','country:FR'],['🇬🇦','country:GA'],['🇬🇧','country:GB'],['🇬🇩','country:GD'],['🇬🇪','country:GE'],['🇬🇫','country:GF'],['🇬🇬','country:GG'],['🇬🇭','country:GH'],['🇬🇮','country:GI'],['🇬🇱','country:GL'],['🇬🇲','country:GM'],['🇬🇳','country:GN'],['🇬🇵','country:GP'],['🇬🇶','country:GQ'],['🇬🇷','country:GR'],['🇬🇸','country:GS'],['🇬🇹','country:GT'],['🇬🇺','country:GU'],['🇬🇼','country:GW'],['🇬🇾','country:GY'],['🇭🇰','country:HK'],['🇭🇲','country:HM'],['🇭🇳','country:HN'],['🇭🇷','country:HR'],['🇭🇹','country:HT'],['🇭🇺','country:HU'],['🇮🇩','country:ID'],['🇮🇪','country:IE'],['🇮🇱','country:IL'],['🇮🇲','country:IM'],['🇮🇳','country:IN'],['🇮🇴','country:IO'],['🇮🇶','country:IQ'],['🇮🇷','country:IR'],['🇮🇸','country:IS'],['🇮🇹','country:IT'],['🇯🇪','country:JE'],['🇯🇲','country:JM'],['🇯🇴','country:JO'],['🇯🇵','country:JP'],['🇰🇪','country:KE'],['🇰🇬','country:KG'],['🇰🇭','country:KH'],['🇰🇮','country:KI'],['🇰🇲','country:KM'],['🇰🇳','country:KN'],['🇰🇵','country:KP'],['🇰🇷','country:KR'],['🇰🇼','country:KW'],['🇰🇾','country:KY'],['🇰🇿','country:KZ'],['🇱🇦','country:LA'],['🇱🇧','country:LB'],['🇱🇨','country:LC'],['🇱🇮','country:LI'],['🇱🇰','country:LK'],['🇱🇷','country:LR'],['🇱🇸','country:LS'],['🇱🇹','country:LT'],['🇱🇺','country:LU'],['🇱🇻','country:LV'],['🇱🇾','country:LY'],['🇲🇦','country:MA'],['🇲🇨','country:MC'],['🇲🇩','country:MD'],['🇲🇪','country:ME'],['🇲🇫','country:MF'],['🇲🇬','country:MG'],['🇲🇭','country:MH'],['🇲🇰','country:MK'],['🇲🇱','country:ML'],['🇲🇲','country:MM'],['🇲🇳','country:MN'],['🇲🇴','country:MO'],['🇲🇵','country:MP'],['🇲🇶','country:MQ'],['🇲🇷','country:MR'],['🇲🇸','country:MS'],['🇲🇹','country:MT'],['🇲🇺','country:MU'],['🇲🇻','country:MV'],['🇲🇼','country:MW'],['🇲🇽','country:MX'],['🇲🇾','country:MY'],['🇲🇿','country:MZ'],['🇳🇦','country:NA'],['🇳🇨','country:NC'],['🇳🇪','country:NE'],['🇳🇫','country:NF'],['🇳🇬','country:NG'],['🇳🇮','country:NI'],['🇳🇱','country:NL'],['🇳🇴','country:NO'],['🇳🇵','country:NP'],['🇳🇷','country:NR'],['🇳🇺','country:NU'],['🇳🇿','country:NZ'],['🇴🇲','country:OM'],['🇵🇦','country:PA'],['🇵🇪','country:PE'],['🇵🇫','country:PF'],['🇵🇬','country:PG'],['🇵🇭','country:PH'],['🇵🇰','country:PK'],['🇵🇱','country:PL'],['🇵🇲','country:PM'],['🇵🇳','country:PN'],['🇵🇷','country:PR'],['🇵🇸','country:PS'],['🇵🇹','country:PT'],['🇵🇼','country:PW'],['🇵🇾','country:PY'],['🇶🇦','country:QA'],['🇷🇪','country:RE'],['🇷🇴','country:RO'],['🇷🇸','country:RS'],['🇷🇺','country:RU'],['🇷🇼','country:RW'],['🇸🇦','country:SA'],['🇸🇧','country:SB'],['🇸🇨','country:SC'],['🇸🇩','country:SD'],['🇸🇪','country:SE'],['🇸🇬','country:SG'],['🇸🇭','country:SH'],['🇸🇮','country:SI'],['🇸🇯','country:SJ'],['🇸🇰','country:SK'],['🇸🇱','country:SL'],['🇸🇲','country:SM'],['🇸🇳','country:SN'],['🇸🇴','country:SO'],['🇸🇷','country:SR'],['🇸🇸','country:SS'],['🇸🇹','country:ST'],['🇸🇻','country:SV'],['🇸🇽','country:SX'],['🇸🇾','country:SY'],['🇸🇿','country:SZ'],['🇹🇨','country:TC'],['🇹🇩','country:TD'],['🇹🇫','country:TF'],['🇹🇬','country:TG'],['🇹🇭','country:TH'],['🇹🇯','country:TJ'],['🇹🇰','country:TK'],['🇹🇱','country:TL'],['🇹🇲','country:TM'],['🇹🇳','country:TN'],['🇹🇴','country:TO'],['🇹🇷','country:TR'],['🇹🇹','country:TT'],['🇹🇻','country:TV'],['🇹🇼','country:TW'],['🇹🇿','country:TZ'],['🇺🇦','country:UA'],['🇺🇬','country:UG'],['🇺🇲','country:UM'],['🇺🇸','country:US'],['🇺🇾','country:UY'],['🇺🇿','country:UZ'],['🇻🇦','country:VA'],['🇻🇨','country:VC'],['🇻🇪','country:VE'],['🇻🇬','country:VG'],['🇻🇮','country:VI'],['🇻🇳','country:VN'],['🇻🇺','country:VU'],['🇼🇫','country:WF'],['🇼🇸','country:WS'],['🇽🇰','country:XK'],['🇾🇪','country:YE'],['🇾🇹','country:YT'],['🇿🇦','country:ZA'],['🇿🇲','country:ZM'],['🇿🇼','country:ZW']"
+PAIRS="[$FLAGS,
 ['✈','plane'],['🛫','plane-takeoff'],['🛬','plane-landing'],
 ['🍽','utensils'],['🍴','utensils'],['🍝','utensils'],['🥢','utensils'],['🍜','soup'],['🍲','soup'],['🍛','soup'],
 ['🍣','fish'],['🍤','fish'],['🐟','fish'],['🍔','sandwich'],['🍟','sandwich'],['🌭','sandwich'],['🥪','sandwich'],['🌮','sandwich'],
@@ -119,7 +122,7 @@ PAIRS="[
 
 # The rows still holding something other than an icon name, and what each becomes.
 MAPPED="
-MATCH (n) WHERE (n:Category OR n:Group OR n:Trip) AND n.icon IS NOT NULL AND n.icon <> '' AND NOT n.icon =~ '[a-z0-9-]+'
+MATCH (n) WHERE (n:Category OR n:Group OR n:Trip) AND n.icon IS NOT NULL AND n.icon <> '' AND NOT n.icon =~ '[a-z0-9-]+|country:[A-Z]{2}'
 WITH n, replace(n.icon, '\\uFE0F', '') AS e
 WITH n, coalesce([p IN $PAIRS WHERE p[0] = e | p[1]][0],
                  CASE WHEN e =~ '[\\\\x{1F1E6}-\\\\x{1F1FF}]{2}' THEN 'flag' END) AS name
@@ -146,6 +149,12 @@ EOF
 $MAPPED
 SET n.iconEmoji = n.icon, n.icon = coalesce(name, '')
 RETURN count(n) AS migrated, sum(CASE WHEN name IS NULL THEN 1 ELSE 0 END) AS withoutMatch;
+// Flags migrated before countries existed (QA, 2026-11-14) got 'flag'.
+MATCH (n) WHERE (n:Category OR n:Group OR n:Trip) AND n.icon = 'flag' AND n.iconEmoji IS NOT NULL
+WITH n, [p IN [$FLAGS] WHERE p[0] = replace(n.iconEmoji, '\\uFE0F', '') | p[1]][0] AS name
+WHERE name IS NOT NULL
+SET n.icon = name
+RETURN count(n) AS flagsToCountries;
 EOF
     ;;
   rollback)
