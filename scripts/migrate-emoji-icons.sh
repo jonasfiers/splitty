@@ -117,7 +117,7 @@ PAIRS="[$FLAGS,
 ['📅','calendar'],['📆','calendar'],['🗓','calendar'],['🕰','calendar'],['⏰','calendar'],['🧺','shopping-basket'],
 ['👥','users'],['👫','users'],['👬','users'],['👭','users'],['👪','users'],['😀','users'],['😃','users'],['😄','users'],['😁','users'],['😊','users'],['🙂','users'],['😎','users'],['🤝','users'],
 ['👤','user'],['❤','heart'],['💕','heart'],['💑','heart'],['💖','heart'],['👶','baby'],['🐶','dog'],['🐕','dog'],['🐱','cat'],['🐈','cat'],['🐾','paw-print'],
-['⭐','star'],['🌟','star'],['🚩','flag'],['🏁','flag'],['🏳','flag'],['🏷','tag'],['📁','folder'],['📂','folder'],['📦','box'],['🧪','star']
+['🌈','rainbow'],['⭐','star'],['🌟','star'],['🚩','flag'],['🏁','flag'],['🏳','flag'],['🏷','tag'],['📁','folder'],['📂','folder'],['📦','box'],['🧪','star']
 ]"
 
 # The rows still holding something other than an icon name, and what each becomes.

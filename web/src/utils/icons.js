@@ -13,7 +13,7 @@ import {
   Flower2, Dog, Cat, PawPrint, Baby, Dices, Puzzle,
   Zap, Droplet, Flame, Wifi, Phone, Receipt, FileText, CreditCard, Wallet, Banknote, Coins, PiggyBank,
   Percent, Shield, HeartPulse, Pill, Stethoscope, GraduationCap, Briefcase, Calendar, WashingMachine,
-  Users, User, Heart, Star, Flag, Globe, Tag, Folder, Box,
+  Users, User, Heart, Rainbow, Star, Flag, Globe, Tag, Folder, Box,
   ArrowLeftRight, Handshake, Check, Image as ImageIcon, Paperclip, Search, Lock, CircleQuestionMark, Pencil, X,
 } from 'lucide'
 
@@ -166,6 +166,7 @@ const PICKABLE = [
     ['users', Users, 'group friends people family'],
     ['user', User, 'person'],
     ['heart', Heart, 'love couple'],
+    ['rainbow', Rainbow, 'rainbow pride colourful'],
     ['baby', Baby, 'baby kids children'],
     ['dog', Dog, 'dog pet'],
     ['cat', Cat, 'cat pet'],
