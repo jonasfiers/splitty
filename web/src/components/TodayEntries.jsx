@@ -51,8 +51,11 @@ export function useToday() {
 // without it, the phone's clock.
 // An item with a start time but no end (a dinner, a train entered without
 // its arrival) counts as under way for an hour, not as past a minute in.
+// A stay is never under way: it spans days, and would sit as "Now" next to
+// whatever you are actually doing. Its check-in and check-out are moments
+// (a countdown before, then done), like any other timed entry.
 const endOf = item => (item.end?.length > 10 ? item.end : item.start?.length > 10 ? plusMinutes(item.start, NO_END_MINUTES) : null)
-const isOnAt = (item, moment) => item.start?.length > 10 && item.start <= moment && moment < endOf(item)
+const isOnAt = (item, moment) => item.kind !== 'stay' && item.start?.length > 10 && item.start <= moment && moment < endOf(item)
 
 // Whether today still holds something timed: an entry to come or one under way.
 export const moreToday = (day, time, entries) =>
