@@ -6,11 +6,14 @@ import { useTripNow } from '../utils/tripClock.js'
 import { useGate } from '../utils/pageGate.jsx'
 import { swrOne } from '../utils/cache.js'
 import Icon from './Icon/Icon.jsx'
+import { List, ListRow } from './List/List.jsx'
 import { iconOr } from '../utils/icons.js'
 
 // Home's top card while a trip is on: what today holds, from the trip's own
-// day list (same entries, same order), and where you sleep tonight. One card
-// per trip happening today. Stays away if nothing loads, like the other panels.
+// day list (same entries, same order), and where you sleep tonight. Home's
+// headline, so one card: the first trip with something planned today; any
+// other trips that are on too are a short "Also today" list under it.
+// Stays away if nothing loads, like the other panels.
 //
 // The rows are TodayEntries (live: now, next, booking code, directions), the
 // same as the trip page's today. Tomorrow's first entry too, once nothing
@@ -48,10 +51,31 @@ export default function TodayTrip() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  return active.filter(id => details[id]).map(id => {
-    const t = details[id]
-    return <TodayCard key={id} trip={t.trip} items={t.items || []} places={t.places || []} />
-  })
+  const loaded = active.filter(id => details[id]).map(id => details[id])
+  if (!loaded.length) return null
+  const now = today()
+  const plannedToday = t => buildTimeline(t.trip, t.items || []).find(d => d.day === now)?.entries.length > 0
+  const main = loaded.find(plannedToday) ?? loaded[0]
+  const others = loaded.filter(t => t !== main)
+  return (
+    <>
+      <TodayCard trip={main.trip} items={main.items || []} places={main.places || []} />
+      {others.length > 0 && (
+        <List label="Also today" className="today-also">
+          {others.map(({ trip }) => (
+            <ListRow
+              key={trip.id}
+              to={`/trips/${trip.id}`}
+              icon={<Icon name={trip.icon} fallback={iconOr(trip.groupIcon, 'luggage')} />}
+              title={trip.title}
+              meta={`Day ${daysBetween(trip.startDate, now) + 1} of ${daysBetween(trip.startDate, trip.endDate) + 1}`}
+              chevron
+            />
+          ))}
+        </List>
+      )}
+    </>
+  )
 }
 
 function TodayCard({ trip, items, places }) {

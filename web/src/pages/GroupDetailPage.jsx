@@ -4,7 +4,7 @@ import { useParams, Link, useNavigate, useLocation } from 'react-router'
 import client from '../api/client'
 import CurrencyInput from '../components/CurrencyInput/CurrencyInput.jsx'
 import FabButton from '../components/FabButton/FabButton.jsx'
-import { formatCurrency, formatDate } from '../utils/currency.js'
+import { formatCurrency } from '../utils/currency.js'
 import { useAuth } from '../context/AuthContext.jsx'
 import { Avatar, AvatarStack } from '../components/Avatar.jsx'
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
@@ -12,6 +12,7 @@ import Loading from '../components/Loading.jsx'
 import PageHeader from '../components/PageHeader/PageHeader.jsx'
 import ChartTooltip from '../components/ChartTooltip.jsx'
 import { chartColour } from '../utils/categoryColours.js'
+import { useTheme } from '../context/ThemeContext.jsx'
 import CategoryPicker from '../components/CategoryPicker/CategoryPicker.jsx'
 import TripList from '../components/TripForm/TripList.jsx'
 import TripFormSheet from '../components/TripForm/TripFormSheet.jsx'
@@ -33,7 +34,15 @@ import { iconOr } from '../utils/icons.js'
 // Keep in sync with the .group-layout breakpoint in index.css.
 const WIDE_QUERY = '(min-width: 1180px)'
 
+// A row's date under its month heading: the weekday and day ("Sat 25").
+const shortDay = raw => {
+  const d = new Date(raw)
+  if (isNaN(d)) return raw
+  return `${d.toLocaleDateString(undefined, { weekday: 'short', timeZone: 'UTC' })} ${d.getUTCDate()}`
+}
+
 export default function GroupDetailPage() {
+  useTheme() // the charts' colours follow the theme (utils/categoryColours.js)
   const confirm = useConfirm()
   const { id } = useParams()
   const navigate = useNavigate()
@@ -373,20 +382,19 @@ export default function GroupDetailPage() {
     : counterparts.length > 2 ? `${counterparts[0].name} and ${counterparts.length - 1} others`
     : null
 
+  // The group page's headline: where you stand, as a big amount (no card).
   const balanceCard = balance !== null && (
     <div className="balance-card">
       <div className="balance-card-text">
         {!balance.amount ? (
-          <div className="balance-card-main">All settled up</div>
-        ) : balance.amount > 0 ? (
-          <>
-            <div className="balance-card-main">You're owed <span className="owed">{formatCurrency(balance.amount, balance.iso)}</span></div>
-            {withWhom && <div className="balance-card-sub">from {withWhom}</div>}
-          </>
+          <div className="balance-card-label balance-card-settled">All settled up</div>
         ) : (
           <>
-            <div className="balance-card-main">You owe <span className="owe">{formatCurrency(Math.abs(balance.amount), balance.iso)}</span></div>
-            {withWhom && <div className="balance-card-sub">to {withWhom}</div>}
+            <div className="balance-card-label">{balance.amount > 0 ? "You're owed" : 'You owe'}</div>
+            <div className={`balance-card-amount ${balance.amount > 0 ? 'owed' : 'owe'}`}>
+              {formatCurrency(Math.abs(balance.amount), balance.iso)}
+            </div>
+            {withWhom && <div className="balance-card-sub">{balance.amount > 0 ? 'from' : 'to'} {withWhom}</div>}
           </>
         )}
       </div>
@@ -586,12 +594,11 @@ export default function GroupDetailPage() {
                       key={e.id}
                       to={`/groups/${id}/expenses/${e.id}`}
                       icon={expenseIcon(e)}
-                      tint={e.isTransfer || e.isSettlement ? null : e.categoryColour}
                       iconStyle={e.isTransfer ? { background: 'var(--accent-light)', color: 'var(--accent-text)' }
                         : e.isSettlement ? { background: 'var(--green-light)', color: 'var(--green-dark)' }
                         : undefined}
                       title={e.description}
-                      meta={<>{e.paidByName ? `Paid by ${e.paidByName}` : 'Paid by —'}{e.date ? ` · ${formatDate(e.date)}` : ''}</>}
+                      meta={<>{e.paidByName ? `Paid by ${e.paidByName}` : 'Paid by —'}{e.date ? ` · ${shortDay(e.date)}` : ''}</>}
                       aside={<>
                         <span className="list-row-amt">{formatCurrency(e.amount, e.currencyIso)}</span>
                         {sub && <span className="list-row-sub">{sub}</span>}

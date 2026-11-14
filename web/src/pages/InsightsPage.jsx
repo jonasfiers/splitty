@@ -5,6 +5,7 @@ import { Link, useSearchParams } from 'react-router'
 import { formatCurrency, formatCompactCurrency } from '../utils/currency.js'
 import Loading from '../components/Loading.jsx'
 import { chartColour } from '../utils/categoryColours.js'
+import { useTheme } from '../context/ThemeContext.jsx'
 import TabHeader from '../components/PageHeader/TabHeader.jsx'
 import Picker from '../components/Picker/Picker.jsx'
 import EmptyState from '../components/EmptyState/EmptyState.jsx'
@@ -63,6 +64,7 @@ const shortMonth = m => {
 
 
 export default function InsightsPage() {
+  useTheme() // the charts' colours follow the theme (utils/categoryColours.js)
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [hiddenMonthly, setHiddenMonthly] = useState([])
@@ -375,7 +377,7 @@ export default function InsightsPage() {
                             aria-pressed={!isHidden}
                             className={`ins-legend-item${isHidden ? ' hidden' : ''}`}
                           >
-                            <span className="ins-dot" style={{ background: isHidden ? 'var(--border)' : entry.color }} />
+                            <span className="ins-dot" style={{ background: isHidden ? 'var(--border)' : getCategoryStroke(entry.value) }} />
                             {entry.value}
                           </button>
                         )
@@ -589,7 +591,7 @@ export default function InsightsPage() {
                         onClick={() => setPickedCell({ w, d, ...cell })}
                         aria-label={`${DOW_LABELS[d]}, week ${w + 1}: ${cell.total > 0 ? `${formatCurrency(cell.total, iso)}, ${cell.count} expense${cell.count !== 1 ? 's' : ''}` : 'nothing'}`}
                         className={`ins-heat-cell${picked ? ' picked' : ''}`}
-                        style={cell.total > 0 ? { background: `color-mix(in srgb, var(--accent) ${Math.round((0.12 + intensity * 0.88) * 100)}%, transparent)` } : undefined}
+                        style={cell.total > 0 ? { background: `color-mix(in srgb, var(--tint-blue-fg) ${Math.round((0.12 + intensity * 0.88) * 100)}%, transparent)` } : undefined}
                       />
                     )
                   })}

@@ -2,7 +2,11 @@
 
 .ph-title {
   margin: 0;
-  font-weight: 700;
+  /* Page titles in the brand's display serif (as the logo): the one place it
+     shows besides the logo, so titles stand apart from row titles. */
+  font-family: var(--font-display);
+  font-weight: 400;
+  letter-spacing: -0.005em;
   color: var(--text);
   overflow-wrap: anywhere;
 }
@@ -21,7 +25,7 @@
   margin-bottom: 6px;
   min-width: 0;
 }
-.ph-crumbs a { color: var(--accent-text); font-weight: 600; }
+.ph-crumbs a { color: var(--text-2); font-weight: 600; }
 .ph-crumbs a:hover { opacity: .75; }
 .ph-crumb-sep { color: var(--text-3); }
 .ph-crumb-current {
@@ -35,7 +39,7 @@
   align-items: center;
   gap: 16px;
 }
-.ph-wide .ph-title { flex: 1; min-width: 0; font-size: var(--fs-2xl); line-height: 1.2; }
+.ph-wide .ph-title { flex: 1; min-width: 0; font-size: var(--fs-3xl); line-height: 1.15; }
 .ph-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 .ph-btn { padding: 7px 16px; font-size: var(--fs-md); }
 
@@ -62,7 +66,7 @@
   justify-self: start;
   font-size: var(--fs-base);
   font-weight: 600;
-  color: var(--accent-text);
+  color: var(--text-2);
   min-height: 44px;
   padding: 0 8px 0 0;
 }
@@ -99,10 +103,10 @@
   justify-content: center;
   font-size: var(--fs-base);
   font-weight: 600;
-  color: var(--accent-text);
+  color: var(--text);
   padding: 0 8px;
 }
-.ph-narrow .ph-title { font-size: var(--fs-2xl); line-height: 1.15; }
+.ph-narrow .ph-title { font-size: var(--fs-3xl); line-height: 1.1; }
 
 /* ── ⋯ menu ── */
 .ph-more { position: relative; }
@@ -157,12 +161,13 @@
 }
 .th-title {
   margin: 0;
-  font-weight: 700;
+  font-family: var(--font-display);
+  font-weight: 400;
   color: var(--text);
   min-width: 0;
 }
-.th-narrow .th-title { font-size: var(--fs-2xl); line-height: 1.15; }
-.th-wide .th-title { font-size: var(--fs-2xl); line-height: 1.2; }
+.th-narrow .th-title { font-size: var(--fs-3xl); line-height: 1.1; }
+.th-wide .th-title { font-size: var(--fs-3xl); line-height: 1.15; }
 .th-narrow { min-height: 40px; margin-top: 4px; }
 .th-logo { font-size: var(--fs-2xl); }
 .th-aside { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }

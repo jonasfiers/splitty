@@ -62,7 +62,8 @@
   --fs-base: 15px; /* body, list titles, buttons, fields */
   --fs-lg:   17px; /* sheet titles, emphasis */
   --fs-xl:   22px; /* big numbers, sub-headings */
-  --fs-2xl:  28px; /* page titles, the big amount */
+  --fs-2xl:  28px; /* the big amount */
+  --fs-3xl:  34px; /* page titles (display serif) */
   --font-body:    'Plus Jakarta Sans', sans-serif;
   --font-mono:    'JetBrains Mono', monospace;
 
@@ -817,7 +818,7 @@ body {
 
 .home-section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
 .home-section-head .section-label { margin: 0; padding: 0; }
-.home-section-link { font-size: var(--fs-md); font-weight: 600; color: var(--accent-text); background: none; border: none; cursor: pointer; padding: 10px 0; }
+.home-section-link { font-size: var(--fs-md); font-weight: 600; color: var(--text-2); background: none; border: none; cursor: pointer; padding: 10px 0; }
 
 /* Home panels (this month, next trip, recent activity): below the groups on
    phones, in a column beside them from 1180px. */
@@ -834,7 +835,7 @@ body {
   align-items: center;
   margin-bottom: 10px;
 }
-.home-panel-link { font-size: var(--fs-sm); font-weight: 600; color: var(--accent-text); }
+.home-panel-link { font-size: var(--fs-sm); font-weight: 600; color: var(--text-2); }
 .home-panel-sub { font-size: var(--fs-sm); color: var(--text-3); margin-top: 2px; }
 /* Spending more or less is not owing: no balance colours, an arrow instead. */
 .home-up, .home-down { color: var(--text-2); font-weight: 600; }
@@ -854,9 +855,11 @@ body {
    One surface: rows sit straight on the card, no list-in-card. */
 .card.today-trip { padding: 0; overflow: hidden; margin-bottom: 16px; }
 .today-trip-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; min-height: 48px; padding: 12px 16px; color: inherit; }
-.today-trip-title { display: flex; gap: 8px; align-items: center; font-size: var(--fs-base); font-weight: 700; color: var(--text); min-width: 0; }
+.today-trip-title { display: flex; gap: 8px; align-items: center; font-family: var(--font-display); font-size: var(--fs-xl); font-weight: 400; color: var(--text); min-width: 0; }
+.today-trip-title svg.icon { font-size: 18px; }
+.today-also { margin-bottom: 16px; }
 .today-trip-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.today-trip-day { font-size: var(--fs-sm); font-weight: 600; color: var(--accent-text); white-space: nowrap; }
+.today-trip-day { font-size: var(--fs-sm); font-weight: 600; color: var(--text-2); white-space: nowrap; }
 .today-trip .list { border: none; border-top: 1px solid var(--border); border-radius: 0; background: none; }
 .today-trip .trip-day-empty { border: none; border-top: 1px solid var(--border); border-radius: 0; padding: 12px 16px; }
 /* Footer lines: full-width 44px taps, hairline above, one line each. */
@@ -907,7 +910,7 @@ body {
   text-align: left;
   font-size: var(--fs-md);
   font-weight: 600;
-  color: var(--accent-text);
+  color: var(--text-2);
 }
 /* Third line: booking reference and directions. Neutral, so the only
    colour in a row is its Now/next badge; 30px chips, 44px tap height. */
@@ -930,10 +933,10 @@ body {
 .today-ref::after, .today-nav::after { content: ''; position: absolute; inset: -7px 0; }
 .today-ref { font-family: var(--font-mono); letter-spacing: .02em; max-width: 160px; }
 .today-ref span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.today-nav svg { width: 14px; height: 14px; fill: none; stroke: var(--accent); stroke-width: 2.2; stroke-linejoin: round; }
+.today-nav svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linejoin: round; }
 .home-trip { display: block; color: inherit; }
 .home-trip:hover { border-color: var(--border-strong); }
-.home-trip-when { font-size: var(--fs-sm); font-weight: 600; color: var(--accent-text); }
+.home-trip-when { font-size: var(--fs-sm); font-weight: 600; color: var(--text-2); }
 .home-trip-title { display: flex; gap: 8px; align-items: center; font-size: var(--fs-base); font-weight: 700; color: var(--text); }
 /* A panel whose list runs to the card's edges (Recent activity) */
 .card.home-panel-flush { padding: 0; overflow: hidden; }
@@ -965,53 +968,58 @@ body {
   color: var(--text-2);
 }
 
-/* Balance card: your position in the group, neutral; only the amount is coloured */
+/* Balance: your position in the group, the page's headline. No card: a big
+   amount (coloured by direction) with Settle up beside it. */
 .balance-card {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   gap: 12px;
-  padding: 14px 16px;
-  margin-bottom: 12px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--r-lg);
+  padding: 4px 0 18px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--border);
 }
 .balance-card-text { flex: 1; min-width: 0; }
-.balance-card-main { font-size: var(--fs-base); font-weight: 600; color: var(--text); }
-.balance-card-main .owe { color: var(--red-dark); }
-.balance-card-main .owed { color: var(--green-dark); }
-.balance-card-sub { font-size: var(--fs-sm); color: var(--text-3); margin-top: 2px; }
-.balance-card .btn { flex-shrink: 0; min-height: 36px; padding: 8px 16px; font-size: var(--fs-md); border-radius: var(--r-pill); }
+.balance-card-label { font-size: var(--fs-md); font-weight: 600; color: var(--text-2); }
+.balance-card-settled { font-size: var(--fs-lg); color: var(--text); }
+.balance-card-amount {
+  font-family: var(--font-mono); font-size: var(--fs-3xl); font-weight: 700;
+  line-height: 1.15; letter-spacing: -0.02em; font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.balance-card-amount.owe { color: var(--red-dark); }
+.balance-card-amount.owed { color: var(--green-dark); }
+.balance-card-sub { font-size: var(--fs-md); color: var(--text-2); margin-top: 2px; }
+.balance-card .btn { flex-shrink: 0; min-height: 40px; padding: 8px 18px; font-size: var(--fs-md); border-radius: var(--r-pill); margin-bottom: 4px; }
 
-/* Segmented control (tabs) */
+/* Segmented control (tabs): an underlined row, not a box, so it reads as
+   "which view" and doesn't compete with the cards below it. */
 .segmented {
   display: flex;
-  padding: 3px;
-  margin: 4px 0 12px;
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  border-radius: var(--r-md);
+  margin: 4px 0 14px;
+  border-bottom: 1px solid var(--border);
 }
 .segmented button {
   flex: 1;
-  min-height: 36px;
-  padding: 6px 8px;
+  min-height: 44px;
+  padding: 8px 8px 10px;
   border: none;
-  border-radius: calc(var(--r-md) - 3px);
   background: none;
   color: var(--text-2);
   font: inherit;
-  font-size: var(--fs-md);
+  font-size: var(--fs-base);
   font-weight: 500;
   cursor: pointer;
   white-space: nowrap;
+  box-shadow: inset 0 -2px 0 transparent;
+  margin-bottom: -1px;
+  transition: color .15s, box-shadow .15s;
 }
 .segmented button.active {
-  background: var(--surface);
   color: var(--text);
-  font-weight: 600;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, .08);
+  font-weight: 700;
+  box-shadow: inset 0 -2px 0 var(--accent);
 }
+.segmented button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--r-sm); }
 
 /* Search field with a filter button next to it */
 .search-row { display: flex; gap: 8px; margin-bottom: 12px; }
@@ -1107,23 +1115,25 @@ body {
 .list-row-icon {
   width: 40px; height: 40px;
   border-radius: var(--r-md);
-  background: var(--accent-light);
+  background: var(--surface-2);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: var(--fs-lg);
   flex-shrink: 0;
-  color: var(--accent-text);
+  color: var(--text);
   font-weight: 700;
 }
 /* Icons (components/Icon): inline with text they sit on its baseline. */
 svg.icon { flex-shrink: 0; vertical-align: -0.2em; }
-/* Where an emoji stood on its own (a box, a tile, an option), the icon is in
-   the accent colour, as the list rows' icons are. */
+/* A country's code keeps the body face inside a serif title. */
+svg.icon-country text { font-family: var(--font-body); }
+/* Icons standing on their own (a box, a tile, an option) are in the text
+   colour: orange is kept for the main action and for what is on now. */
 :is(.picker-option-icon, .picker-icon, .today-icon, .trip-card-icon, .act-icon, .gantt-bar-icon, .mode-tile-icon,
     .invite-icon, .admin-card-icon, .icon-card-icon, .next-trip-icon, .route-leg-icon, .trip-kind, .place-row-icon,
     .place-trigger-pin, .icon-card-icon) > svg.icon,
-.act-icon > span > svg.icon, .trip-kind > span > svg.icon { color: var(--accent-text); }
+.act-icon > span > svg.icon, .trip-kind > span > svg.icon { color: var(--text); }
 
 /* Category colours: an icon square in its category's colour (tintClass). */
 .tint-amber { --tint-bg: var(--tint-amber-bg); --tint-fg: var(--tint-amber-fg); }
@@ -1383,8 +1393,8 @@ svg.icon { flex-shrink: 0; vertical-align: -0.2em; }
 .add-member-btn {
   padding: 5px 12px;
   border-radius: var(--r-pill);
-  background: var(--accent-light);
-  color: var(--accent-text);
+  background: var(--surface-2);
+  color: var(--text);
   font-size: var(--fs-sm);
   font-weight: 600;
   flex-shrink: 0;
@@ -1760,8 +1770,8 @@ a.act-row { color: inherit; text-decoration: none; }
 }
 .group-chip {
   display: inline-block;
-  background: var(--accent-light);
-  color: var(--accent-text);
+  background: var(--surface-2);
+  color: var(--text-2);
   padding: 2px 8px;
   border-radius: var(--r-pill);
   font-size: var(--fs-xs);
@@ -1803,7 +1813,7 @@ a.act-row { color: inherit; text-decoration: none; }
   gap: 4px;
   font-size: var(--fs-base);
   font-weight: 600;
-  color: var(--accent-text);
+  color: var(--text-2);
   margin-bottom: 16px;
 }
 .back-link:hover { opacity: .75; }
@@ -1923,9 +1933,9 @@ a.act-row { color: inherit; text-decoration: none; }
   font: inherit;
   font-size: var(--fs-md);
   font-weight: 600;
-  color: var(--accent-text);
+  color: var(--text-2);
   background: none;
-  border: 1px dashed var(--border-strong);
+  border: none;
   border-radius: var(--r-md);
   padding: 0 12px;
   cursor: pointer;
@@ -1955,11 +1965,10 @@ a.act-row { color: inherit; text-decoration: none; }
   color: var(--text-3);
 }
 .trip-day-empty {
+  /* A quiet line under the day's heading, not a box of its own. */
   font-size: var(--fs-md);
   color: var(--text-3);
-  border: 1px dashed var(--border-strong);
-  border-radius: var(--r-lg);
-  padding: 10px 16px;
+  padding: 0 0 4px;
 }
 /* A usual hotel time standing in for one not entered on the stay. */
 .trip-entry-time.assumed { color: var(--text-3); font-style: italic; }
@@ -2636,10 +2645,10 @@ html .leaflet-container { font-family: var(--font-body); } /* "html": Leaflet's 
 .trip-chip {
   display: inline-flex; align-items: center; gap: 6px;
   padding: 6px 12px; border-radius: 999px;
-  border: 1px solid var(--accent-subtle); background: var(--accent-light);
-  font-size: var(--fs-md); font-weight: 600; color: var(--accent-text); text-decoration: none;
+  border: 1px solid var(--border); background: var(--surface);
+  font-size: var(--fs-md); font-weight: 600; color: var(--text); text-decoration: none;
 }
-a.trip-chip:hover { border-color: var(--accent); }
+a.trip-chip:hover { border-color: var(--border-strong); }
 .trip-chip-chevron { font-size: var(--fs-base); line-height: 1; }
 .trip-paid { font-family: var(--font-mono); font-size: var(--fs-md); color: var(--text-3); }
 
@@ -2691,7 +2700,7 @@ a.trip-chip:hover { border-color: var(--accent); }
 }
 /* Chips under a field label: room inside the scroller for the taller tap area */
 .filter-chips-field { padding: 8px 0; margin: -8px 0; }
-.list-row-link-text { font-size: var(--fs-md); font-weight: 600; color: var(--accent-text); }
+.list-row-link-text { font-size: var(--fs-md); font-weight: 600; color: var(--text-2); }
 
 .chip-sep { color: var(--text-3); padding: 0 2px; flex-shrink: 0; }
 
@@ -2859,7 +2868,7 @@ a.trip-chip:hover { border-color: var(--accent); }
 .mode-tile.active { border-color: var(--accent); background: var(--accent-subtle); color: var(--accent-text); font-weight: 600; }
 .mode-tile-icon { font-size: var(--fs-xl); line-height: 1; }
 /* "+ Link and notes": opens the rarely used fields */
-.form-more { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; margin: -4px 0 8px; font: inherit; font-size: var(--fs-base); font-weight: 600; color: var(--accent-text); }
+.form-more { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; margin: -4px 0 8px; font: inherit; font-size: var(--fs-base); font-weight: 600; color: var(--text-2); }
 
 /* Page forms in columns (components/Field/FormColumns.jsx) */
 .form-more-fields.folded { display: none; } /* shown again in the wide layout below */
@@ -2898,7 +2907,7 @@ a.trip-chip:hover { border-color: var(--accent); }
 /* Trips page: offline documents as a plain link by the title */
 .offline-link {
   display: inline-flex; align-items: center; gap: 6px; min-height: 44px;
-  font-size: var(--fs-base); font-weight: 600; color: var(--accent-text); text-decoration: none; white-space: nowrap;
+  font-size: var(--fs-base); font-weight: 600; color: var(--text-2); text-decoration: none; white-space: nowrap;
 }
 .offline-link svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
@@ -2923,7 +2932,7 @@ a.trip-chip:hover { border-color: var(--accent); }
 .next-trip-what { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
 .next-trip-meta, .next-trip-phase { font-weight: 400; color: var(--text-3); }
 .next-trip-foot { display: flex; justify-content: space-between; gap: 12px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border); font-size: var(--fs-md); color: var(--text-2); }
-.next-trip-open { font-weight: 600; color: var(--accent-text); white-space: nowrap; }
+.next-trip-open { font-weight: 600; color: var(--text-2); white-space: nowrap; }
 /* Phones: two entries, the day above them rather than in a column */
 @media (max-width: 600px) {
   .next-trip { padding: 16px; }
@@ -3048,12 +3057,14 @@ a.trip-chip:hover { border-color: var(--accent); }
 .card.cat-edit-card { padding: 16px; }
 /* Expense form */
 .expense-form-for { font-size: var(--fs-md); color: var(--text-3); margin: -8px 0 12px; }
-.share-row { align-items: center; margin-bottom: .4rem; }
+.share-row { align-items: center; margin-bottom: .4rem; grid-template-columns: minmax(0, 1fr) minmax(7.5rem, 10rem); }
 /* .form-group label would make it a block (no gap, no centring) */
-.form-group label.share-who { flex: 2; margin-bottom: 0; display: flex; align-items: center; gap: .5rem; cursor: pointer; }
+.form-group label.share-who { min-width: 0; margin-bottom: 0; display: flex; align-items: center; gap: .5rem; cursor: pointer; }
+/* A long name stays on one line (cut short) next to the amount field. */
+.share-who > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .form-group .share-who input[type="checkbox"] { margin: 0; }
 .share-left-out { color: var(--text-3); }
-.form-group.share-amount { flex: 1; margin-bottom: 0; }
+.form-group.share-amount { min-width: 0; margin-bottom: 0; }
 .share-check { font-size: var(--fs-sm); margin-top: 8px; text-align: right; color: var(--text-3); font-weight: 500; }
 .share-check.off { color: var(--red-dark); font-weight: 600; }
 .panel-actions.form-actions { margin-top: .5rem; }
@@ -3076,7 +3087,7 @@ a.trip-chip:hover { border-color: var(--accent); }
 .field-note { font-size: var(--fs-sm); color: var(--text-3); margin-top: 8px; }
 .field-note.item-paid-note { margin: -8px 0 12px; text-align: right; }
 .list.list-tight { margin-bottom: 0; }
-.accent-link { color: var(--accent-text); }
+.accent-link { color: var(--text-2); text-decoration: underline; text-decoration-color: var(--border-strong); text-underline-offset: 3px; }
 /* Messages on the sign-up, reset and email-confirmation pages */
 .auth-message { font-size: var(--fs-base); color: var(--text-3); }
 .auth-message.auth-message-gap { margin-bottom: 24px; }
@@ -3112,7 +3123,7 @@ a.trip-chip:hover { border-color: var(--accent); }
 button.ins-legend-item, button.ins-crumb-link, button.ins-cat, button.ins-heat-cell {
   font: inherit; color: inherit; background: none; border: 0; padding: 0; margin: 0; text-align: left;
 }
-button.ins-legend-item { color: var(--text-2); }
+button.ins-legend-item { color: var(--text-2); font-size: var(--fs-sm); }
 button.ins-legend-item.hidden { color: var(--text-3); }
 button.ins-crumb-link { color: var(--accent-text); font-weight: 500; cursor: pointer; }
 button.ins-cat { padding: 6px 10px; background: var(--surface-2); border: 1px solid var(--border); min-width: 0; }

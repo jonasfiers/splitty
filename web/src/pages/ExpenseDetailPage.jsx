@@ -134,7 +134,6 @@ export default function ExpenseDetailPage() {
           <div className="card">
             <DetailHero
               icon={icon}
-              tint={expense.isTransfer || expense.isSettlement ? null : expense.categoryColour}
               iconStyle={expense.isTransfer ? { background: 'var(--accent-light)', color: 'var(--accent-text)' }
                 : expense.isSettlement ? { background: 'var(--green-light)', color: 'var(--green-dark)' }
                 : undefined}

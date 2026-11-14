@@ -6,7 +6,6 @@ import { formatCurrency } from '../utils/currency'
 import Loading from '../components/Loading.jsx'
 import { useMediaQuery } from '../utils/useMediaQuery.js'
 import TabHeader from '../components/PageHeader/TabHeader.jsx'
-import { tintClass } from '../utils/categoryColours.js'
 import { activityLink, activityVerb, activityMatches, activityIcon, activityTone, isTripActivity, isDeletedActivity, actionOf } from '../utils/activity.js'
 import { summarizeChanges } from '../utils/expenseChanges.js'
 import EmptyState from '../components/EmptyState/EmptyState.jsx'
@@ -214,14 +213,14 @@ export default function ActivityPage() {
                   className={`act-row${isDeletedActivity(a) ? ' act-row-deleted' : ''}`}
                   {...(to && { to })}
                 >
-                  <div className={`act-icon ${a.kind === 'expense' && !a.isSettlement && !a.isTransfer ? tintClass(a.categoryColour) : ''}`.trim()}>
+                  <div className="act-icon">
                     <span aria-hidden="true"><Icon name={activityIcon(a)} /></span>
                     <ActionBadge action={activityTone(a)} />
                   </div>
                   <div className="act-text">
                     <div className="act-desc">{a.description}</div>
                     <div className="act-meta">
-                      {g && <>{g.title} · </>}
+                      {g && groups.size > 1 && <>{g.title} · </>}
                       {a.userName} {activityVerb(a, { settled: 'recorded a settlement' })}
                     </div>
                     {a.changes?.length > 0 && <div className="act-changes">{summarizeChanges(a.changes)}</div>}
