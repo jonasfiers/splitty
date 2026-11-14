@@ -2,7 +2,18 @@
    TOKENS
 ══════════════════════════════════════════ */
 :root {
-  /* Category colours (utils/categoryColours.js): icon square background, icon */
+
+  /* Category colours as solid tiles with a white icon (both themes): each
+     passes 3:1 against white, the WCAG minimum for icons. */
+  --cat-amber: #C96A06;
+  --cat-green: #059669;
+  --cat-teal: #0D9488;
+  --cat-sky: #0284C7;
+  --cat-blue: #2563EB;
+  --cat-violet: #7C3AED;
+  --cat-pink: #DB2777;
+  --cat-slate: #64748B;
+  /* Category colours as tints (charts' day-of-week heatmap): background, line */
   --tint-amber-bg: #FDEFD9;  --tint-amber-fg: #B45309;
   --tint-green-bg: #DCF3E6;  --tint-green-fg: #047857;
   --tint-teal-bg:  #D3F3EE;  --tint-teal-fg:  #0F766E;
@@ -1140,19 +1151,20 @@ svg.icon-country text { font-family: var(--font-body); }
     .place-trigger-pin, .icon-card-icon) > svg.icon,
 .act-icon > span > svg.icon, .trip-kind > span > svg.icon { color: var(--text); }
 
-/* Category colours: an icon square in its category's colour (tintClass). */
-.tint-amber { --tint-bg: var(--tint-amber-bg); --tint-fg: var(--tint-amber-fg); }
-.tint-green { --tint-bg: var(--tint-green-bg); --tint-fg: var(--tint-green-fg); }
-.tint-teal { --tint-bg: var(--tint-teal-bg); --tint-fg: var(--tint-teal-fg); }
-.tint-sky { --tint-bg: var(--tint-sky-bg); --tint-fg: var(--tint-sky-fg); }
-.tint-blue { --tint-bg: var(--tint-blue-bg); --tint-fg: var(--tint-blue-fg); }
-.tint-violet { --tint-bg: var(--tint-violet-bg); --tint-fg: var(--tint-violet-fg); }
-.tint-pink { --tint-bg: var(--tint-pink-bg); --tint-fg: var(--tint-pink-fg); }
-.tint-slate { --tint-bg: var(--tint-slate-bg); --tint-fg: var(--tint-slate-fg); }
-:is(.list-row-icon, .act-icon, .icon-card-icon, .picker-icon, .picker-option-icon, .colour-swatch).tinted {
-  background: var(--tint-bg); color: var(--tint-fg);
+/* Category colours: an icon square filled with its category's colour, the
+   icon in white (tintClass). Works the same on dark and light. */
+.tint-amber { --tint-bg: var(--cat-amber); }
+.tint-green { --tint-bg: var(--cat-green); }
+.tint-teal { --tint-bg: var(--cat-teal); }
+.tint-sky { --tint-bg: var(--cat-sky); }
+.tint-blue { --tint-bg: var(--cat-blue); }
+.tint-violet { --tint-bg: var(--cat-violet); }
+.tint-pink { --tint-bg: var(--cat-pink); }
+.tint-slate { --tint-bg: var(--cat-slate); }
+:is(.list-row-icon, .act-icon, .icon-card-icon, .picker-icon, .picker-option-icon, .colour-swatch, .detail-hero-icon).tinted {
+  background: var(--tint-bg); color: #fff;
 }
-.tinted svg.icon, .tinted > span > svg.icon { color: var(--tint-fg); }
+.tinted svg.icon, .tinted > span > svg.icon { color: #fff; }
 .picker-option-icon.tinted, .picker-icon.tinted {
   width: 28px; height: 28px; border-radius: var(--r-sm);
   display: inline-flex; align-items: center; justify-content: center;
@@ -1168,7 +1180,7 @@ svg.icon-country text { font-family: var(--font-body); }
   border: 2px solid transparent; cursor: pointer; padding: 0;
   display: inline-flex; align-items: center; justify-content: center;
 }
-.colour-swatch[aria-checked="true"] { border-color: var(--tint-fg); }
+.colour-swatch[aria-checked="true"] { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--text); }
 .colour-swatch:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .list-row-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .list-row-title {

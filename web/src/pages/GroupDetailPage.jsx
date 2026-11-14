@@ -594,6 +594,7 @@ export default function GroupDetailPage() {
                       key={e.id}
                       to={`/groups/${id}/expenses/${e.id}`}
                       icon={expenseIcon(e)}
+                      tint={e.isTransfer || e.isSettlement ? null : e.categoryColour}
                       iconStyle={e.isTransfer ? { background: 'var(--accent-light)', color: 'var(--accent-text)' }
                         : e.isSettlement ? { background: 'var(--green-light)', color: 'var(--green-dark)' }
                         : undefined}
