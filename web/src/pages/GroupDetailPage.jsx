@@ -11,7 +11,7 @@ import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
 import Loading from '../components/Loading.jsx'
 import PageHeader from '../components/PageHeader/PageHeader.jsx'
 import ChartTooltip from '../components/ChartTooltip.jsx'
-import { chartColour } from '../utils/categoryColours.js'
+import { chartColour, MONEY_TILE } from '../utils/categoryColours.js'
 import { useTheme } from '../context/ThemeContext.jsx'
 import CategoryPicker from '../components/CategoryPicker/CategoryPicker.jsx'
 import TripList from '../components/TripForm/TripList.jsx'
@@ -595,9 +595,7 @@ export default function GroupDetailPage() {
                       to={`/groups/${id}/expenses/${e.id}`}
                       icon={expenseIcon(e)}
                       tint={e.isTransfer || e.isSettlement ? null : e.categoryColour}
-                      iconStyle={e.isTransfer ? { background: 'var(--accent-light)', color: 'var(--accent-text)' }
-                        : e.isSettlement ? { background: 'var(--green-light)', color: 'var(--green-dark)' }
-                        : undefined}
+                      iconStyle={e.isTransfer || e.isSettlement ? MONEY_TILE : undefined}
                       title={e.description}
                       meta={<>{e.paidByName ? `Paid by ${e.paidByName}` : 'Paid by —'}{e.date ? ` · ${shortDay(e.date)}` : ''}</>}
                       aside={<>

@@ -1150,6 +1150,7 @@ svg.icon-country text { font-family: var(--font-body); }
     .invite-icon, .admin-card-icon, .icon-card-icon, .next-trip-icon, .route-leg-icon, .trip-kind, .place-row-icon,
     .place-trigger-pin, .icon-card-icon) > svg.icon,
 .act-icon > span > svg.icon, .trip-kind > span > svg.icon { color: var(--text); }
+.act-icon.money > span > svg.icon { color: var(--surface); }
 
 /* Category colours: an icon square filled with its category's colour, the
    icon in white (tintClass). Works the same on dark and light. */

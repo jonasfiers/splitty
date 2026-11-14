@@ -41,3 +41,8 @@ export const chartColour = (key, shade = 0) => {
   }
   return { fill: shade ? mix(c.fill, c.stroke, Math.min(shade * 0.22, 0.66)) : c.fill, stroke: c.stroke }
 }
+
+// Settlements and balance transfers aren't a category: a solid tile in the
+// text colour (dark on light, light on dark), next to the categories' colours
+// without looking like one of them. The icon (handshake, arrows) tells them apart.
+export const MONEY_TILE = { background: 'var(--text)', color: 'var(--surface)' }
