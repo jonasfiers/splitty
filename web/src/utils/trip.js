@@ -4,24 +4,25 @@
 // done in UTC purely as a calendar.
 
 export const KINDS = {
-  transport: { label: 'Transport', icon: '🧭' },
-  stay:      { label: 'Stay',      icon: '🛏️' },
-  activity:  { label: 'Activity',  icon: '🎟️' },
+  transport: { label: 'Transport', icon: 'compass' },
+  stay:      { label: 'Stay',      icon: 'bed-double' },
+  activity:  { label: 'Activity',  icon: 'ticket' },
 }
 
 export const TRANSPORT_MODES = [
-  { value: 'flight', label: 'Flight', icon: '✈️' },
-  { value: 'train',  label: 'Train',  icon: '🚆' },
-  { value: 'car',    label: 'Car',    icon: '🚗' },
-  { value: 'bus',    label: 'Bus',    icon: '🚌' },
-  { value: 'ferry',  label: 'Ferry',  icon: '⛴️' },
-  { value: 'other',  label: 'Other',  icon: '🧭' },
+  { value: 'flight', label: 'Flight', icon: 'plane' },
+  { value: 'train',  label: 'Train',  icon: 'train-front' },
+  { value: 'car',    label: 'Car',    icon: 'car' },
+  { value: 'bus',    label: 'Bus',    icon: 'bus' },
+  { value: 'ferry',  label: 'Ferry',  icon: 'ship' },
+  { value: 'other',  label: 'Other',  icon: 'compass' },
 ]
 
+// The icon (utils/icons.js) of a trip entry: its transport mode, or its kind.
 export const itemIcon = item =>
   item.kind === 'transport'
     ? (TRANSPORT_MODES.find(m => m.value === item.mode)?.icon ?? KINDS.transport.icon)
-    : KINDS[item.kind]?.icon ?? '•'
+    : KINDS[item.kind]?.icon ?? 'map-pin'
 
 export const dayOf = moment => (moment ? moment.slice(0, 10) : '')
 export const timeOf = moment => (moment && moment.length > 10 ? moment.slice(11, 16) : '')

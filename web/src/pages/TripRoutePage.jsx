@@ -14,13 +14,14 @@ import { useMediaQuery } from '../utils/useMediaQuery.js'
 import Field from '../components/Field/Field.jsx'
 import { DateTimePicker } from '../components/DatePicker/DatePicker.jsx'
 import EmptyState from '../components/EmptyState/EmptyState.jsx'
+import Icon from '../components/Icon/Icon.jsx'
 
 const RouteMap = lazy(() => import('../components/TripRoute/RouteMap.jsx'))
 
 const MODES = [
   { value: 'all',  label: 'All' },
-  { value: 'rail', label: '🚆 Rail' },
-  { value: 'bus',  label: '🚌 Bus' },
+  { value: 'rail', label: <><Icon name="train-front" /> Rail</> },
+  { value: 'bus',  label: <><Icon name="bus" /> Bus</> },
 ]
 
 // Beyond this many days ahead an empty answer more likely means "timetable not published yet" (Taiwan: ~8 weeks).

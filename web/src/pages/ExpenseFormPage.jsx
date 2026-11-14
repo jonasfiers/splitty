@@ -313,7 +313,7 @@ export default function ExpenseFormPage() {
                     title="Paid by"
                     value={form.paidByUserId}
                     onChange={v => setForm(f => ({ ...f, paidByUserId: v }))}
-                    options={users.map(u => ({ value: u.id, label: u.id === currentUser?.id ? 'Me' : u.name, icon: <Avatar name={u.name} size={28} colorIndex={u.avatarColor} emoji={u.avatarEmoji} /> }))}
+                    options={users.map(u => ({ value: u.id, label: u.id === currentUser?.id ? 'Me' : u.name, icon: <Avatar name={u.name} size={28} colorIndex={u.avatarColor} /> }))}
                     required
                   />
                 </Field>

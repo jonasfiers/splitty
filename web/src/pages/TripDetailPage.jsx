@@ -26,6 +26,8 @@ import { swrOne } from '../utils/cache.js'
 import { getOfflineTrip, asOf } from '../utils/offlineTrips.js'
 import { useOffline, isOffline, isNetworkError, onReconnect } from '../utils/connection.js'
 import OfflinePlaces from '../components/OfflinePlaces.jsx'
+import Icon from '../components/Icon/Icon.jsx'
+import { iconOr } from '../utils/icons.js'
 
 // Leaflet is only worth downloading once someone opens the map.
 const TripMap = lazy(() => import('../components/TripMap/TripMap.jsx'))
@@ -281,7 +283,7 @@ function TripDetailPage() {
             <span className="trip-day-name">{formatDay(day)}</span>
             <span className="trip-day-meta">
               {outsideTrip ? 'Outside the trip dates' : `Day ${daysBetween(trip.startDate, day) + 1}`}
-              {sleepingAt.length > 0 && ` · 🛏️ ${sleepingAt.map(s => s.title).join(', ')}`}
+              {sleepingAt.length > 0 && <> · <Icon name="bed-double" /> {sleepingAt.map(s => s.title).join(', ')}</>}
             </span>
           </div>
           {day === now && entries.length === 0 && sleepingAt.length > 0 ? (
@@ -297,7 +299,7 @@ function TripDetailPage() {
               {entries.map(({ item, time, phase, assumed }) => (
                 <button key={`${item.id}-${phase}`} type="button" className="list-row list-row-link" onClick={() => openItem(item)}>
                   <span className={`trip-entry-time${assumed ? ' assumed' : ''}`} title={assumed ? 'Usual hotel time; no time set on this stay' : undefined}>{time || 'All day'}</span>
-                  <span className="list-row-icon" aria-hidden="true">{itemIcon(item)}</span>
+                  <span className="list-row-icon" aria-hidden="true"><Icon name={itemIcon(item)} /></span>
                   <span className="list-row-text">
                     <span className="list-row-title">{item.title}</span>
                     <span className="list-row-meta">
@@ -307,7 +309,7 @@ function TripDetailPage() {
                   <span className="list-row-aside">
                     <span className="list-row-sub">
                       {item.expenseCount > 0 ? '✓ paid' : ''}
-                      {item.attachmentCount > 0 && ` 📎${item.attachmentCount}`}
+                      {item.attachmentCount > 0 && <> <Icon name="paperclip" />{item.attachmentCount}</>}
                     </span>
                   </span>
                 </button>
@@ -355,7 +357,7 @@ function TripDetailPage() {
     <>
       <PageHeader
         crumbs={[{ to: '/trips', label: 'Trips' }]}
-        title={<>{trip.icon} {trip.title}</>}
+        title={<>{iconOr(trip.icon) && <><Icon name={trip.icon} /> </>}{trip.title}</>}
         name={trip.title}
         actions={readOnly ? [] : [
           { label: 'Edit', onClick: () => setShowEdit(true), primary: true },
@@ -366,13 +368,13 @@ function TripDetailPage() {
         {formatDateRange(trip.startDate, trip.endDate)}
         {nights > 0 && ` · ${nights} night${nights !== 1 ? 's' : ''}`}
         {' · '}
-        <Link to={`/groups/${trip.groupId}`} className="accent-link">{trip.groupIcon} {trip.groupTitle}</Link>
+        <Link to={`/groups/${trip.groupId}`} className="accent-link">{trip.groupTitle}</Link>
       </PageHeader>
 
       {/* Documents and money: a row of chips, so the page opens on the plan. */}
       <div className="trip-chips">
         <Link to={`/trips/${id}/documents`} className="trip-chip">
-          <span aria-hidden="true">📄</span> Documents{docCount ? ` · ${docCount}` : ''} <span className="trip-chip-chevron" aria-hidden="true">›</span>
+          <Icon name="file-text" /> Documents{docCount ? ` · ${docCount}` : ''} <span className="trip-chip-chevron" aria-hidden="true">›</span>
         </Link>
         {paid > 0 && (
           <span className="trip-paid" title="Paid so far, in the group's currency">
@@ -461,21 +463,21 @@ function TripDetailPage() {
         <Sheet title="Add to trip" onClose={() => setShowKinds(false)}>
           <div className="trip-kind-grid">
             <button className="trip-kind trip-kind-wide" onClick={() => findRoute()}>
-              <span>🔎</span>Find a public-transport route
+              <span><Icon name="search" /></span>Find a public-transport route
             </button>
             {TRANSPORT_MODES.filter(m => m.value !== 'other').map(m => (
               <button key={m.value} className="trip-kind" onClick={() => navigate(`/trips/${id}/items/new?kind=transport&mode=${m.value}`)}>
-                <span>{m.icon}</span>{m.label}
+                <span><Icon name={m.icon} /></span>{m.label}
               </button>
             ))}
             <button className="trip-kind" onClick={() => navigate(`/trips/${id}/items/new?kind=transport&mode=other`)}>
-              <span>{KINDS.transport.icon}</span>Other transport
+              <span><Icon name={KINDS.transport.icon} /></span>Other transport
             </button>
             <button className="trip-kind" onClick={() => navigate(`/trips/${id}/items/new?kind=stay`)}>
-              <span>{KINDS.stay.icon}</span>Stay
+              <span><Icon name={KINDS.stay.icon} /></span>Stay
             </button>
             <button className="trip-kind" onClick={() => navigate(`/trips/${id}/items/new?kind=activity`)}>
-              <span>{KINDS.activity.icon}</span>Activity
+              <span><Icon name={KINDS.activity.icon} /></span>Activity
             </button>
           </div>
           <SheetActions><button className="btn btn-ghost" onClick={() => setShowKinds(false)}>Cancel</button></SheetActions>

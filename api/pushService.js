@@ -65,14 +65,13 @@ const pushService = {
             // slot (sw.js): Chrome on Android fills an empty slot with a grey
             // letter, and the app icon is already on the other side.
             const { records: actor } = await driver.executeQuery(
-                `MATCH (u:User {id: $excludeUserId}) RETURN u.name AS name, u.avatarColor AS color, u.avatarEmoji AS emoji`,
+                `MATCH (u:User {id: $excludeUserId}) RETURN u.name AS name, u.avatarColor AS color`,
                 { excludeUserId }
             )
             const a = actor[0]
             const avatar = a?.get('name') ? {
                 name: a.get('name'),
                 color: a.get('color') == null ? null : Number(a.get('color')),
-                emoji: a.get('emoji') || null,
             } : null
 
             const body = JSON.stringify(avatar ? { ...payload, avatar } : payload)

@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router'
 import client from '../api/client'
 import { useAuth } from '../context/AuthContext'
 import EmptyState from '../components/EmptyState/EmptyState.jsx'
+import Icon from '../components/Icon/Icon.jsx'
 
 export default function InvitePage() {
   const { token } = useParams()
@@ -44,7 +45,7 @@ export default function InvitePage() {
       <div className="card invite-card">
         {group ? (
           <>
-            <div className="invite-icon">{group.icon || '👥'}</div>
+            <div className="invite-icon"><Icon name={group.icon} fallback="users" /></div>
             <p className="invite-title">{group.title}</p>
             <p className="invite-sub">You've been invited to join this group</p>
             {error && <p className="error">{error}</p>}

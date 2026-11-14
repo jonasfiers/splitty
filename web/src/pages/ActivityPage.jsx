@@ -11,6 +11,7 @@ import { summarizeChanges } from '../utils/expenseChanges.js'
 import EmptyState from '../components/EmptyState/EmptyState.jsx'
 import { waitAtMost } from '../utils/pageGate.jsx'
 import { swrOne } from '../utils/cache.js'
+import Icon from '../components/Icon/Icon.jsx'
 
 const PAGE = 50
 // Nothing chosen means everything: tapping the active chip again clears it.
@@ -139,7 +140,7 @@ export default function ActivityPage() {
   const scopeLabel = (() => {
     const [kind, id] = scope ? scope.split(':') : []
     const thing = kind === 'g' ? groups.get(id) : kind === 't' ? trips.find(t => t.id === id) : null
-    return thing ? `${thing.icon ? `${thing.icon} ` : ''}${thing.title}` : 'All groups'
+    return thing ? thing.title : 'All groups'
   })()
   const showPicker = groups.size > 1 || trips.length > 0
   const tripScope = scope.startsWith('t:')
@@ -157,8 +158,8 @@ export default function ActivityPage() {
             options={[
               { value: '', label: 'All groups and trips', short: 'All groups' },
               ...[...groups.values()].flatMap(g => [
-                { value: `g:${g.id}`, label: g.title, icon: g.icon || '·' },
-                ...tripsOf(g.id).map(t => ({ value: `t:${t.id}`, label: t.title, icon: t.icon || '🧳', indent: true })),
+                { value: `g:${g.id}`, label: g.title, icon: <Icon name={g.icon} fallback="users" /> },
+                ...tripsOf(g.id).map(t => ({ value: `t:${t.id}`, label: t.title, icon: <Icon name={t.icon} fallback="luggage" />, indent: true })),
               ]),
             ]}
           />
@@ -213,13 +214,13 @@ export default function ActivityPage() {
                   {...(to && { to })}
                 >
                   <div className="act-icon">
-                    <span aria-hidden="true">{activityIcon(a)}</span>
+                    <span aria-hidden="true"><Icon name={activityIcon(a)} /></span>
                     <ActionBadge action={activityTone(a)} />
                   </div>
                   <div className="act-text">
                     <div className="act-desc">{a.description}</div>
                     <div className="act-meta">
-                      {g && <>{g.icon ? `${g.icon} ` : ''}{g.title} · </>}
+                      {g && <>{g.title} · </>}
                       {a.userName} {activityVerb(a, { settled: 'recorded a settlement' })}
                     </div>
                     {a.changes?.length > 0 && <div className="act-changes">{summarizeChanges(a.changes)}</div>}

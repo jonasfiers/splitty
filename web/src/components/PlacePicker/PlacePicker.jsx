@@ -2,6 +2,7 @@ import { useState, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import client from '../../api/client'
 import Sheet from '../Sheet/Sheet.jsx'
+import Icon from '../Icon/Icon.jsx'
 
 // A place slot on a trip item. The value is null, {id} for a place the trip
 // already has, or {name, address, lat, lon} for a new one — which is only
@@ -90,7 +91,7 @@ function PlacePicker({ value, onChange, places = [], placeholder = 'Search a pla
         aria-labelledby={id ? `${id}-label ${id}` : undefined}
       >
         {shown ? <>
-          <span className="place-trigger-pin" aria-hidden="true">{shown.lat != null ? '📍' : '◌'}</span>
+          <span className="place-trigger-pin" aria-hidden="true">{shown.lat != null ? <Icon name="map-pin" /> : '◌'}</span>
           <span className="place-trigger-text">
             <span className="place-trigger-name">{shown.name}</span>
             <span className="place-trigger-address">{addressOnly(shown.name, shown.address) || (shown.lat == null ? 'Not on the map' : '')}</span>
@@ -124,7 +125,7 @@ function PlacePicker({ value, onChange, places = [], placeholder = 'Search a pla
               <div className="place-list-label">In this trip</div>
               {matches.map(p => (
                 <button type="button" key={p.id} className="place-row" onClick={() => choose({ id: p.id })} aria-current={value?.id === p.id || undefined}>
-                  <span className="place-row-icon" aria-hidden="true">{p.lat != null ? '📍' : '◌'}</span>
+                  <span className="place-row-icon" aria-hidden="true">{p.lat != null ? <Icon name="map-pin" /> : '◌'}</span>
                   <span className="place-row-text">
                     <span className="place-row-name">{p.name}</span>
                     <span className="place-row-meta">{p.id === suggested && suggestedNote ? suggestedNote : (addressOnly(p.name, p.address) || 'Not on the map')}</span>
@@ -145,7 +146,7 @@ function PlacePicker({ value, onChange, places = [], placeholder = 'Search a pla
                   <div className="place-list-label">On the map</div>
                   {results.map((r, i) => (
                     <button type="button" key={i} className="place-row" onClick={() => choose(r)}>
-                      <span className="place-row-icon" aria-hidden="true">📍</span>
+                      <span className="place-row-icon" aria-hidden="true"><Icon name="map-pin" /></span>
                       <span className="place-row-text">
                         <span className="place-row-name">{r.name}</span>
                         <span className="place-row-meta">{addressOnly(r.name, r.address)}</span>
@@ -156,7 +157,7 @@ function PlacePicker({ value, onChange, places = [], placeholder = 'Search a pla
                 </>
               ) : (
                 <button type="button" className="place-row place-row-action" onClick={search} disabled={searching || q.length < 3}>
-                  <span className="place-row-icon" aria-hidden="true">🔍</span>
+                  <span className="place-row-icon" aria-hidden="true"><Icon name="search" /></span>
                   <span className="place-row-text">
                     <span className="place-row-name">{searching ? 'Searching the map…' : `Search the map for “${q}”`}</span>
                     {q.length < 3 && <span className="place-row-meta">Type at least 3 letters</span>}
@@ -165,7 +166,7 @@ function PlacePicker({ value, onChange, places = [], placeholder = 'Search a pla
               )}
               {error && <p className="place-list-hint error-text">{error}</p>}
               <button type="button" className="place-row" onClick={() => choose({ name: q, address: '', lat: null, lon: null })}>
-                <span className="place-row-icon" aria-hidden="true">✎</span>
+                <span className="place-row-icon" aria-hidden="true"><Icon name="pencil" /></span>
                 <span className="place-row-text">
                   <span className="place-row-name">Use “{q}” as typed</span>
                   <span className="place-row-meta">Without a position on the map</span>
@@ -175,7 +176,7 @@ function PlacePicker({ value, onChange, places = [], placeholder = 'Search a pla
 
             {value && (
               <button type="button" className="place-row place-row-muted" onClick={() => choose(null)}>
-                <span className="place-row-icon" aria-hidden="true">✕</span>
+                <span className="place-row-icon" aria-hidden="true"><Icon name="x" /></span>
                 <span className="place-row-text"><span className="place-row-name">No place</span></span>
               </button>
             )}

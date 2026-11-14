@@ -7,6 +7,7 @@ import { useOfflineTrips } from '../utils/useOfflineDocs.js'
 import { asOf, syncOfflineTrips } from '../utils/offlineTrips.js'
 import { formatDateRange } from '../utils/trip.js'
 import '../components/TripDocuments/TripDocuments.css'
+import { iconOr } from '../utils/icons.js'
 
 // The trips kept on this device (utils/offlineTrips.js): the way in when the
 // rest of the app can't load. Each opens as usual, from the device's copy:
@@ -43,7 +44,7 @@ export default function OfflineDocumentsPage() {
                   key={t.id}
                   to={`/trips/${t.id}`}
                   chevron
-                  icon={t.icon || '🧳'}
+                  icon={iconOr(t.icon, 'luggage')}
                   title={t.title}
                   meta={[formatDateRange(t.startDate, t.endDate), asOf(t.savedAt)].filter(Boolean).join(' · ')}
                 />

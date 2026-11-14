@@ -184,8 +184,8 @@ async function avatarIcon(avatar) {
         ctx.fillStyle = fg
         ctx.textAlign = 'center'
         ctx.textBaseline = 'middle'
-        ctx.font = avatar.emoji ? `${ICON_SIZE * 0.55}px sans-serif` : `700 ${ICON_SIZE * 0.38}px sans-serif`
-        ctx.fillText(avatar.emoji || getInitials(avatar.name), mid, mid + ICON_SIZE * 0.03)
+        ctx.font = `700 ${ICON_SIZE * 0.38}px sans-serif`
+        ctx.fillText(getInitials(avatar.name), mid, mid + ICON_SIZE * 0.03)
         const bytes = new Uint8Array(await (await canvas.convertToBlob({ type: 'image/png' })).arrayBuffer())
         let binary = ''
         for (const b of bytes) binary += String.fromCharCode(b)
@@ -200,7 +200,7 @@ self.addEventListener('push', event => {
     if (!data) return
     event.waitUntil((async () => {
         await self.registration.showNotification(data.title, {
-            body: data.icon ? `${data.icon} ${data.body}` : data.body,
+            body: data.body,
             icon: await avatarIcon(data.avatar),
             // The status-bar icon, of which Android only uses the shape (a
             // white silhouette on transparency). iOS always shows the app icon.

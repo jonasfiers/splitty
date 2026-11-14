@@ -5,6 +5,8 @@ import TodayEntries, { quietDayEntries, moreToday } from './TodayEntries.jsx'
 import { useTripNow } from '../utils/tripClock.js'
 import { useGate } from '../utils/pageGate.jsx'
 import { swrOne } from '../utils/cache.js'
+import Icon from './Icon/Icon.jsx'
+import { iconOr } from '../utils/icons.js'
 
 // Home's top card while a trip is on: what today holds, from the trip's own
 // day list (same entries, same order), and where you sleep tonight. One card
@@ -70,7 +72,7 @@ function TodayCard({ trip, items, places }) {
     <div className="card today-trip">
       <Link to={`/trips/${trip.id}`} className="today-trip-head">
         <span className="today-trip-title">
-          <span>{trip.icon || trip.groupIcon || '🧳'}</span>
+          <span><Icon name={trip.icon} fallback={iconOr(trip.groupIcon, 'luggage')} /></span>
           <span className="today-trip-name">Today in {trip.title}</span>
         </span>
         <span className="today-trip-day">Day {dayNo} of {total} ›</span>
@@ -83,11 +85,11 @@ function TodayCard({ trip, items, places }) {
         <TodayEntries tripId={trip.id} day={now} time={time} entries={entries} places={places} />
       )}
       {sleepingAt.length > 0 && entries.length > 0 && (
-        <div className="today-trip-night">🛏️ Tonight: {sleepingAt.map(s => s.title).join(', ')}</div>
+        <div className="today-trip-night"><Icon name="bed-double" /> Tonight: {sleepingAt.map(s => s.title).join(', ')}</div>
       )}
       {firstTomorrow && (
         <Link to={`/trips/${trip.id}/items/${firstTomorrow.item.id}`} className="today-trip-tomorrow">
-          Tomorrow {firstTomorrow.time || ''} · {itemIcon(firstTomorrow.item)} {[firstTomorrow.phase, firstTomorrow.item.title].filter(Boolean).join(' ')} ›
+          Tomorrow {firstTomorrow.time || ''} · <Icon name={itemIcon(firstTomorrow.item)} /> {[firstTomorrow.phase, firstTomorrow.item.title].filter(Boolean).join(' ')} ›
         </Link>
       )}
     </div>

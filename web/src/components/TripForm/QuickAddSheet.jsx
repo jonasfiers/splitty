@@ -5,6 +5,7 @@ import { KINDS, TRANSPORT_MODES, dayOf, timeOf } from '../../utils/trip.js'
 import Sheet, { SheetActions, SheetColumns, SheetSection } from '../Sheet/Sheet.jsx'
 import Field from '../Field/Field.jsx'
 import { DateTimePicker } from '../DatePicker/DatePicker.jsx'
+import Icon from '../Icon/Icon.jsx'
 
 const LABELS = {
   transport: { start: 'Departure', end: 'Arrival', title: 'Title', titleHint: 'Leave empty to use the route' },
@@ -82,21 +83,21 @@ function QuickAddSheet({ tripId, kind, start, end, places, onClose, onSaved, onM
 
   return (
     // Above the full-screen timeline too, where this can also be started.
-    <Sheet title={<>{KINDS[kind].icon} Add {kind === 'transport' ? 'travel' : KINDS[kind].label.toLowerCase()}</>} onClose={onClose} className="quick-add" zIndex={1100}>
+    <Sheet title={<><Icon name={KINDS[kind].icon} /> Add {kind === 'transport' ? 'travel' : KINDS[kind].label.toLowerCase()}</>} onClose={onClose} className="quick-add" zIndex={1100}>
       <form onSubmit={handleSubmit}>
         {/* What and where | when: side by side on a wide screen. */}
         <SheetColumns>
         <SheetSection>
         {kind === 'transport' && onFindRoute && (
           <button type="button" className="btn btn-secondary quick-add-route" onClick={findRoute}>
-            🔎 Find a train or bus connection
+            <Icon name="search" /> Find a train or bus connection
           </button>
         )}
         {kind === 'transport' && (
           <div className="filter-chips chips-flush-top chips-wrap">
             {TRANSPORT_MODES.map(m => (
               <button key={m.value} type="button" className={`chip${form.mode === m.value ? ' active' : ''}`} onClick={() => set({ mode: m.value })}>
-                {m.icon} {m.label}
+                <Icon name={m.icon} /> {m.label}
               </button>
             ))}
           </div>

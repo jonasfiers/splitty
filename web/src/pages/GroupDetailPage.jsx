@@ -27,6 +27,8 @@ import Picker from '../components/Picker/Picker.jsx'
 import DatePicker from '../components/DatePicker/DatePicker.jsx'
 import EmptyState from '../components/EmptyState/EmptyState.jsx'
 import { swr } from '../utils/cache.js'
+import Icon from '../components/Icon/Icon.jsx'
+import { iconOr } from '../utils/icons.js'
 
 // Keep in sync with the .group-layout breakpoint in index.css.
 const WIDE_QUERY = '(min-width: 1180px)'
@@ -314,8 +316,8 @@ export default function GroupDetailPage() {
   if (loadError) return <>{bare}<LoadFailed error={loadError} what="this group" onRetry={retry} /></>
   if (!group) return <>{bare}<EmptyState art={false} title="Group not found" /></>
 
-  // Expense icon: use emoji field if present, otherwise first letter of description
-  const expenseIcon = e => e.isTransfer ? '⇄' : e.isSettlement ? '✓' : (e.categoryIcon || (e.description?.[0]?.toUpperCase() ?? '?'))
+  // Expense icon: its category's, otherwise the first letter of the description
+  const expenseIcon = e => e.isTransfer ? 'arrow-left-right' : e.isSettlement ? 'handshake' : (iconOr(e.categoryIcon) || (e.description?.[0]?.toUpperCase() ?? '?'))
 
   const totalAmount = categoryTotals.reduce((s, c) => s + Number(c.total || 0), 0)
   const DONUT_MAX = 6
@@ -423,7 +425,7 @@ export default function GroupDetailPage() {
           return (
             <span key={cat.name} onClick={() => setFilters(f => ({ ...f, categoryId: f.categoryId === cat.categoryId ? null : cat.categoryId }))} className={`group-donut-key${isSelected ? '' : ' off'}`}>
               <span className="ins-dot" style={{ background: STROKES[i % STROKES.length] }} />
-              {cat.icon} {cat.name}
+              <Icon name={cat.icon} /> {cat.name}
             </span>
           )
         })}
@@ -437,7 +439,7 @@ export default function GroupDetailPage() {
       <div className="section-label group-card-label">Members</div>
       {members.map(m => (
         <div key={m.id} className="group-aside-member">
-          <Avatar name={m.name} size={28} colorIndex={m.avatarColor} emoji={m.avatarEmoji} />
+          <Avatar name={m.name} size={28} colorIndex={m.avatarColor} />
           <span className="member-name group-aside-name">{m.name}</span>
           <span className={`member-bal${m.balance > 0 ? ' positive' : m.balance < 0 ? ' negative' : ''}`}>
             {m.balance ? formatCurrency(Math.abs(m.balance), balance?.iso) : '—'}
@@ -549,7 +551,7 @@ export default function GroupDetailPage() {
                     title="Paid by"
                     value={filters.paidByUserId}
                     onChange={v => setFilters(f => ({ ...f, paidByUserId: v }))}
-                    options={[{ value: '', label: 'Anyone' }, ...members.map(m => ({ value: m.id, label: m.id === currentUser?.id ? 'You' : m.name, icon: <Avatar name={m.name} size={28} colorIndex={m.avatarColor} emoji={m.avatarEmoji} /> }))]}
+                    options={[{ value: '', label: 'Anyone' }, ...members.map(m => ({ value: m.id, label: m.id === currentUser?.id ? 'You' : m.name, icon: <Avatar name={m.name} size={28} colorIndex={m.avatarColor} /> }))]}
                   />
                 </Field>
                 {panelFilterCount > 0 && (
@@ -608,7 +610,7 @@ export default function GroupDetailPage() {
                   <ListRow
                     key={m.id}
                     onClick={self ? undefined : () => setMemberSheet(m)}
-                    icon={<Avatar name={m.name} size={36} colorIndex={m.avatarColor} emoji={m.avatarEmoji} />}
+                    icon={<Avatar name={m.name} size={36} colorIndex={m.avatarColor} />}
                     className="list-row-person"
                     title={self ? `${m.name} (you)` : m.name}
                     meta={m.email}
@@ -725,7 +727,7 @@ export default function GroupDetailPage() {
               <ListRow
                 key={m.id}
                 onClick={() => { setShowSettlePick(false); openSettlement(m) }}
-                icon={<Avatar name={m.name} size={36} colorIndex={m.avatarColor} emoji={m.avatarEmoji} />}
+                icon={<Avatar name={m.name} size={36} colorIndex={m.avatarColor} />}
                 className="list-row-person"
                 title={m.name}
                 aside={<>
@@ -749,7 +751,7 @@ export default function GroupDetailPage() {
             <SheetColumns>
             <SheetSection>
             <div className="member-sheet-head">
-              <Avatar name={m.name} size={56} colorIndex={m.avatarColor} emoji={m.avatarEmoji} />
+              <Avatar name={m.name} size={56} colorIndex={m.avatarColor} />
               <div className="member-sheet-status">
                 {!m.balance ? 'Settled up in this group'
                   : m.balance < 0 ? <>Owes <span className="owe">{formatCurrency(Math.abs(m.balance), group.iso)}</span> in this group</>
@@ -783,7 +785,7 @@ export default function GroupDetailPage() {
                 placeholder="Select someone…"
                 value={settlementForm.paidByUserId}
                 onChange={v => setSettlementForm(f => ({ ...f, paidByUserId: v }))}
-                options={members.map(m => ({ value: m.id, label: m.id === currentUser?.id ? 'You' : m.name, icon: <Avatar name={m.name} size={28} colorIndex={m.avatarColor} emoji={m.avatarEmoji} /> }))}
+                options={members.map(m => ({ value: m.id, label: m.id === currentUser?.id ? 'You' : m.name, icon: <Avatar name={m.name} size={28} colorIndex={m.avatarColor} /> }))}
                 required
               />
             </Field>
@@ -793,7 +795,7 @@ export default function GroupDetailPage() {
                 placeholder="Select someone…"
                 value={settlementForm.receivedByUserId}
                 onChange={v => setSettlementForm(f => ({ ...f, receivedByUserId: v }))}
-                options={members.map(m => ({ value: m.id, label: m.id === currentUser?.id ? 'You' : m.name, icon: <Avatar name={m.name} size={28} colorIndex={m.avatarColor} emoji={m.avatarEmoji} /> }))}
+                options={members.map(m => ({ value: m.id, label: m.id === currentUser?.id ? 'You' : m.name, icon: <Avatar name={m.name} size={28} colorIndex={m.avatarColor} /> }))}
                 required
               />
             </Field>

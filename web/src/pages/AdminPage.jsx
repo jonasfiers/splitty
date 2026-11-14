@@ -1,9 +1,10 @@
 import { Link } from 'react-router'
 import PageHeader from '../components/PageHeader/PageHeader.jsx'
+import Icon from '../components/Icon/Icon.jsx'
 
 const SECTIONS = [
-  { to: '/admin/categories', icon: '🏷️', title: 'Categories', sub: 'The expense categories everyone picks from' },
-  { to: '/admin/currencies', icon: '💱', title: 'Currencies', sub: 'The currencies groups and expenses can use' },
+  { to: '/admin/categories', icon: 'tag', title: 'Categories', sub: 'The expense categories everyone picks from' },
+  { to: '/admin/currencies', icon: 'coins', title: 'Currencies', sub: 'The currencies groups and expenses can use' },
 ]
 
 export default function AdminPage() {
@@ -14,7 +15,7 @@ export default function AdminPage() {
       <div className="admin-list">
         {SECTIONS.map(s => (
           <Link key={s.to} to={s.to} className="admin-card">
-            <span className="admin-card-icon" aria-hidden="true">{s.icon}</span>
+            <span className="admin-card-icon" aria-hidden="true"><Icon name={s.icon} /></span>
             <span className="admin-card-text">
               <span className="admin-card-title">{s.title}</span>
               <span className="admin-card-sub">{s.sub}</span>

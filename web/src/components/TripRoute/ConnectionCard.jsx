@@ -1,5 +1,6 @@
 import { Fragment } from 'react'
 import { TRANSPORT_MODES, dayOf, timeOf, daysBetween, formatDay, formatDuration } from '../../utils/trip.js'
+import Icon from '../Icon/Icon.jsx'
 
 // A change with less time than this to spare is easy to miss with luggage or
 // a late train. The wait between two vehicles includes any walk between their
@@ -9,10 +10,10 @@ export const spareMinutes = change => Math.max(0, change.waitMinutes - change.wa
 export const isTight = change => spareMinutes(change) < TIGHT_MINUTES
 export const tightLabel = change => (change.walkMinutes ? `Tight · ${spareMinutes(change)} min spare` : 'Tight')
 
-const TRANSIT_ICONS = { HIGHSPEED_RAIL: '🚄', SUBWAY: '🚇', METRO: '🚇', TRAM: '🚊', COACH: '🚌' }
+const TRANSIT_ICONS = { SUBWAY: 'train-front-tunnel', METRO: 'train-front-tunnel', TRAM: 'tram-front', COACH: 'bus-front' }
 
 export const legIcon = leg =>
-  TRANSIT_ICONS[leg.transitMode] ?? TRANSPORT_MODES.find(m => m.value === leg.mode)?.icon ?? '🧭'
+  TRANSIT_ICONS[leg.transitMode] ?? TRANSPORT_MODES.find(m => m.value === leg.mode)?.icon ?? 'compass'
 
 // What a leg is called on the platform: the line, plus the number when the
 // line name does not already include it ("EST 9316" vs "9316").
@@ -60,7 +61,7 @@ function ConnectionCard({ itinerary: it, searchDay, onChoose, active = false, on
         {it.legs.map((leg, i) => (
           <Fragment key={i}>
             {i > 0 && <span className="route-chain-sep" aria-hidden="true">›</span>}
-            <span className="route-chain-leg">{legIcon(leg)} {legLabel(leg)}</span>
+            <span className="route-chain-leg"><Icon name={legIcon(leg)} /> {legLabel(leg)}</span>
           </Fragment>
         ))}
       </div>
@@ -73,7 +74,7 @@ function ConnectionCard({ itinerary: it, searchDay, onChoose, active = false, on
                 <span>{timeOf(leg.start)}</span>
                 <span>{timeOf(leg.end)}</span>
               </div>
-              <div className="route-leg-icon" aria-hidden="true">{legIcon(leg)}</div>
+              <div className="route-leg-icon" aria-hidden="true"><Icon name={legIcon(leg)} /></div>
               <div className="route-leg-info">
                 <div className="route-leg-stops">{leg.from.name} → {leg.to.name}</div>
                 <div className="route-leg-meta">

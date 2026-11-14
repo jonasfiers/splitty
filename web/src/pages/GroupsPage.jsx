@@ -3,7 +3,7 @@ import LoadFailed from '../components/LoadFailed.jsx'
 import { useNavigate } from 'react-router'
 import client from '../api/client'
 import FabButton from '../components/FabButton/FabButton.jsx'
-import EmojiPicker from '../components/EmojiPicker/EmojiPicker.jsx'
+import IconPicker from '../components/IconPicker/IconPicker.jsx'
 import { formatCurrency } from '../utils/currency.js'
 import { useAuth } from '../context/AuthContext.jsx'
 import { timeAgo } from '../utils/time.js'
@@ -18,6 +18,7 @@ import Picker from '../components/Picker/Picker.jsx'
 import EmptyState from '../components/EmptyState/EmptyState.jsx'
 import { PageGate } from '../utils/pageGate.jsx'
 import { swr } from '../utils/cache.js'
+import { iconOr } from '../utils/icons.js'
 
 export default function GroupsPage() {
   const navigate = useNavigate()
@@ -141,7 +142,7 @@ export default function GroupsPage() {
                   <ListRow
                     key={g.id}
                     to={`/groups/${g.id}`}
-                    icon={g.icon || '👥'}
+                    icon={iconOr(g.icon, 'users')}
                     title={g.title}
                     meta={`${people} ${people === 1 ? 'person' : 'people'}${when ? ` · ${when}` : ''}`}
                     chevron
@@ -176,7 +177,7 @@ export default function GroupsPage() {
               <ListRow
                 key={g.id}
                 onClick={() => { setShowExpensePicker(false); navigate(`/groups/${g.id}/expenses/new`) }}
-                icon={g.icon}
+                icon={iconOr(g.icon, 'users')}
                 title={g.title}
                 chevron
               />
@@ -192,7 +193,7 @@ export default function GroupsPage() {
           <form onSubmit={handleCreate}>
             <div className="form-row form-row-compact">
               <Field label="Icon">
-                <EmojiPicker value={form.icon} onChange={icon => setForm(f => ({ ...f, icon }))}/>
+                <IconPicker value={form.icon} onChange={icon => setForm(f => ({ ...f, icon }))}/>
               </Field>
               <Field label="Group name">
                 <input

@@ -22,6 +22,7 @@ import { swrOne } from '../utils/cache.js'
 import { getOfflineItem, asOf } from '../utils/offlineTrips.js'
 import { useOfflineDocs } from '../utils/useOfflineDocs.js'
 import { useOffline, isOffline, isNetworkError, onReconnect } from '../utils/connection.js'
+import Icon from '../components/Icon/Icon.jsx'
 
 const START_LABEL = { transport: 'Departure', stay: 'Check-in', activity: 'Starts' }
 const END_LABEL = { transport: 'Arrival', stay: 'Check-out', activity: 'Ends' }
@@ -306,7 +307,7 @@ export default function TripItemDetailPage() {
         <div className="item-main">
           <div className="card">
             <DetailHero
-              icon={itemIcon(item)}
+              icon={<Icon name={itemIcon(item)} />}
               title={item.title}
               subtitle={<Link to={`/trips/${tripId}`}>{item.tripTitle}</Link>}
             />
@@ -381,7 +382,7 @@ export default function TripItemDetailPage() {
                 // Offline and not (yet) on this device.
                 <ListRow
                   key={a.id}
-                  icon={a.mimeType === 'application/pdf' ? '📄' : '🖼️'}
+                  icon={<Icon name={a.mimeType === 'application/pdf' ? 'file-text' : 'image'} />}
                   title={a.filename}
                   meta={`${formatBytes(a.size)} · Not on this device`}
                 />
@@ -396,7 +397,7 @@ export default function TripItemDetailPage() {
                   {...(standalone || readOnly
                     ? { onClick: event => { event.preventDefault(); navigate(`/trips/${tripId}/items/${itemId}/files/${a.id}`) } }
                     : { target: '_blank', rel: 'noopener noreferrer' })}
-                  icon={a.mimeType === 'application/pdf' ? '📄' : '🖼️'}
+                  icon={<Icon name={a.mimeType === 'application/pdf' ? 'file-text' : 'image'} />}
                   title={a.filename}
                   meta={onDevice.has(a.id) ? `${formatBytes(a.size)} · on this device` : formatBytes(a.size)}
                   {...(!readOnly && { end: <RowAction label={`Delete ${a.filename}`} onClick={() => handleDeleteAttachment(a)} /> })}
@@ -423,7 +424,7 @@ export default function TripItemDetailPage() {
                     to: `/groups/${item.groupId}/expenses/${e.id}`,
                     end: <RowAction label={`Unlink ${e.description}`} onClick={() => handleUnlink(e)} />,
                   })}
-                  icon="✓"
+                  icon={<Icon name="check" />}
                   title={e.description}
                   meta={<>Paid by {e.paidByName ?? '—'}{e.date ? ` · ${formatDate(e.date)}` : ''}</>}
                   aside={<span className="list-row-amt">{formatCurrency(e.amount, e.currencyIso)}</span>}

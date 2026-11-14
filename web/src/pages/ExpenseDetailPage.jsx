@@ -12,6 +12,7 @@ import { useConfirm } from '../components/Confirm/ConfirmProvider.jsx'
 import { leaveTo } from '../utils/history.js'
 import { useAuth } from '../context/AuthContext.jsx'
 import { swr } from '../utils/cache.js'
+import { iconOr } from '../utils/icons.js'
 
 export default function ExpenseDetailPage() {
   const confirm = useConfirm()
@@ -72,7 +73,7 @@ export default function ExpenseDetailPage() {
     </>
   )
 
-  const icon = expense.isTransfer ? '⇄' : expense.isSettlement ? '✓' : (expense.categoryIcon || expense.description?.[0]?.toUpperCase() || '?')
+  const icon = expense.isTransfer ? 'arrow-left-right' : expense.isSettlement ? 'handshake' : (iconOr(expense.categoryIcon) || expense.description?.[0]?.toUpperCase() || '?')
   const memberMap = new Map(members.map(m => [m.id, m]))
 
   // What this expense means for the person looking at it, in one line.
@@ -172,7 +173,7 @@ export default function ExpenseDetailPage() {
                     const isPayer = sh.userId === expense.paidByUserId
                     return (
                       <div key={sh.userId} className="member-row">
-                        <Avatar name={member?.name} size={34} colorIndex={member?.avatarColor} emoji={member?.avatarEmoji} />
+                        <Avatar name={member?.name} size={34} colorIndex={member?.avatarColor} />
                         <div className="grow-text">
                           <div className="member-name">{member?.name ?? sh.userId}{sh.userId === currentUser?.id && ' (you)'}</div>
                           {isPayer && <div className="member-sub">paid {formatCurrency(expense.amount, expense.currencyIso)}</div>}

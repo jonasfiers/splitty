@@ -4,6 +4,7 @@ import 'leaflet/dist/leaflet.css'
 import { ExpandedContext } from '../Expandable/Expandable.jsx'
 import { addBasemap, arcBetween, arrowIcon, arrowsAlong, keepFramed, mapOptions } from '../TripMap/mapParts.js'
 import { legIcon } from './ConnectionCard.jsx'
+import { iconSvg } from '../../utils/icons.js'
 
 // A stop is where a vehicle is boarded or left; the same platform in several
 // connections is one pin.
@@ -85,7 +86,7 @@ function RouteMap({ itineraries, highlight = null, skip = null, onHover = () => 
             const marker = L.marker([stop.lat, stop.lon], {
               icon: L.divIcon({
                 className: '',
-                html: `<div class="trip-pin route-stop">${icon}<span class="trip-pin-n"></span></div>`,
+                html: `<div class="trip-pin route-stop">${iconSvg(icon)}<span class="trip-pin-n"></span></div>`,
                 iconSize: [30, 30],
                 iconAnchor: [15, 15],
               }),

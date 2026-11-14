@@ -1,6 +1,8 @@
 import { useNavigate } from 'react-router'
 import { List, ListRow } from '../List/List.jsx'
 import { formatDateRange, daysBetween, today } from '../../utils/trip.js'
+import Icon from '../Icon/Icon.jsx'
+import { iconOr } from '../../utils/icons.js'
 
 const countdown = trip => {
   const now = today()
@@ -17,7 +19,7 @@ function TripList({ trips, showGroup = false }) {
         <ListRow
           key={t.id}
           to={`/trips/${t.id}`}
-          icon={t.icon || '🧳'}
+          icon={iconOr(t.icon, 'luggage')}
           title={t.title}
           meta={<>{formatDateRange(t.startDate, t.endDate)}{showGroup && t.groupTitle ? ` · ${t.groupTitle}` : ''}</>}
           aside={<>
@@ -41,7 +43,7 @@ export function TripCards({ trips, past = false }) {
         return (
           <button key={t.id} type="button" className={`trip-card${past ? ' past' : ''}`} onClick={() => navigate(`/trips/${t.id}`)}>
             <div className="trip-card-top">
-              <span className="trip-card-icon">{t.icon || '🧳'}</span>
+              <span className="trip-card-icon"><Icon name={t.icon} fallback="luggage" /></span>
               <span className={`trip-card-when${when === 'Now' ? ' now' : ''}`}>{when}</span>
             </div>
             <div className="trip-card-title">{t.title}</div>
@@ -49,7 +51,7 @@ export function TripCards({ trips, past = false }) {
               {formatDateRange(t.startDate, t.endDate)}{nights > 0 && ` · ${nights} night${nights !== 1 ? 's' : ''}`}
             </div>
             <div className="trip-card-foot">
-              <span>{t.groupIcon ? `${t.groupIcon} ` : ''}{t.groupTitle}</span>
+              <span>{t.groupTitle}</span>
               <span>{t.itemCount} item{t.itemCount !== 1 ? 's' : ''}</span>
             </div>
           </button>

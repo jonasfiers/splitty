@@ -35,7 +35,7 @@ const isValidMoment = value => DATE_OR_DATETIME.test(value) && !isNaN(new Date(v
 function parseTrip(body) {
     const trip = {
         title: text(body.title, 120),
-        icon: text(body.icon, 16),
+        icon: text(body.icon, 40), // an icon's name (web/src/utils/icons.js)
         startDate: text(body.startDate, 10),
         endDate: text(body.endDate, 10),
         notes: text(body.notes, 4000),

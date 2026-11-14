@@ -13,9 +13,6 @@ import '@fontsource/jetbrains-mono/700.css'
 import '@fontsource/dm-serif-display/400.css'
 import './index.css'
 import App from './App.jsx'
-import { applyEmojiStyle } from './utils/emojiStyle.js'
-
-applyEmojiStyle() // before the first draw, so emoji don't switch after it
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

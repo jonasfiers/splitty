@@ -4,6 +4,7 @@ import { ExpandedContext } from '../Expandable/Expandable.jsx'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { itemIcon, linkTarget, mapsLink } from '../../utils/trip.js'
+import { iconSvg } from '../../utils/icons.js'
 import { addBasemap, arcBetween, arrowIcon, arrowsAlong, keepFramed, mapOptions } from './mapParts.js'
 
 // Places numbered in the order the trip reaches them: walk the items by start
@@ -68,7 +69,7 @@ function TripMap({ places, items, onOpenItem, highlight = null, onHover = () => 
       const marker = L.marker([place.lat, place.lon], {
         icon: L.divIcon({
           className: '',
-          html: `<div class="trip-pin">${stay ? itemIcon(stay) : icons.size === 1 ? [...icons][0] : here.length > 1 ? here.length : '📍'}${numbered && order.has(place.id) ? `<span class="trip-pin-n">${order.get(place.id)}</span>` : ''}</div>`,
+          html: `<div class="trip-pin">${stay ? iconSvg(itemIcon(stay)) : icons.size === 1 ? iconSvg([...icons][0]) : here.length > 1 ? here.length : iconSvg('map-pin')}${numbered && order.has(place.id) ? `<span class="trip-pin-n">${order.get(place.id)}</span>` : ''}</div>`,
           iconSize: [34, 34],
           iconAnchor: [17, 17],
         }),
@@ -87,12 +88,14 @@ function TripMap({ places, items, onOpenItem, highlight = null, onHover = () => 
       nav.href = maps.url
       if (linkTarget(maps.url)) nav.target = linkTarget(maps.url)
       nav.rel = 'noopener noreferrer'
-      nav.textContent = `🧭 ${maps.label}`
+      nav.innerHTML = iconSvg('navigation', { size: 14 })
+      nav.append(` ${maps.label}`)
       popup.append(nav)
       for (const item of here) {
         const link = document.createElement('button')
         link.type = 'button'
-        link.textContent = `${itemIcon(item)} ${item.title}`
+        link.innerHTML = iconSvg(itemIcon(item), { size: 14 })
+        link.append(` ${item.title}`)
         link.onclick = () => onOpenItem(item)
         popup.append(link)
       }
@@ -112,7 +115,7 @@ function TripMap({ places, items, onOpenItem, highlight = null, onHover = () => 
       const line = L.polyline(curve, { color: '#E8603A', weight: 2.5, opacity: .8, dashArray: '6 7' }).addTo(map)
 
       const arrows = L.layerGroup().addTo(map)
-      const title = `${legs.length > 1 ? `${n + 1}. ` : ''}${itemIcon(item)} ${item.title}: ${from.name} → ${to.name}`
+      const title = `${legs.length > 1 ? `${n + 1}. ` : ''}${item.title}: ${from.name} → ${to.name}`
       lines.current.set(item.id, { item, curve, line, arrows, title })
     })
 

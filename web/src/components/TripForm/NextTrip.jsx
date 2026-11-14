@@ -7,6 +7,7 @@ import { useTripNow } from '../../utils/tripClock.js'
 const NONE = []
 import { useGate } from '../../utils/pageGate.jsx'
 import { swrOne } from '../../utils/cache.js'
+import Icon from '../Icon/Icon.jsx'
 
 // The trip that is on, or the next one: what comes first, at a glance.
 // It loads the trip's items itself; until then (or if that fails) it shows
@@ -56,13 +57,13 @@ export default function NextTrip({ trip }) {
   return (
     <Link to={`/trips/${trip.id}`} className="next-trip">
       <div className="next-trip-head">
-        <span className="trip-card-icon" aria-hidden="true">{trip.icon || '🧳'}</span>
+        <span className="trip-card-icon" aria-hidden="true"><Icon name={trip.icon} fallback="luggage" /></span>
         <div className="next-trip-title">
           <span className="next-trip-label">{on ? 'Now' : 'Next up'}</span>
           <span className="next-trip-name">{trip.title}</span>
           <span className="next-trip-dates">
             {formatDateRange(trip.startDate, trip.endDate)}{nights > 0 && ` · ${nights} night${nights !== 1 ? 's' : ''}`}
-            {trip.groupTitle && <span className="next-trip-group"><span className="next-trip-sep"> · </span>{trip.groupIcon ? `${trip.groupIcon} ` : ''}{trip.groupTitle}</span>}
+            {trip.groupTitle && <span className="next-trip-group"><span className="next-trip-sep"> · </span>{trip.groupTitle}</span>}
           </span>
         </div>
         <span className={`trip-card-when${on ? ' now' : ''}`}>{when}</span>
@@ -78,7 +79,7 @@ export default function NextTrip({ trip }) {
               <li key="today" className="next-trip-item next-trip-quiet">
                 <span className="next-trip-day">{dayLabel}</span>
                 <span className="next-trip-time" />
-                <span className="next-trip-icon" aria-hidden="true">{e.tonight.length ? '🛏️' : ''}</span>
+                <span className="next-trip-icon" aria-hidden="true">{e.tonight.length ? <Icon name="bed-double" /> : ''}</span>
                 <span className="next-trip-what">
                   {e.tonight.length
                     ? <>{e.tonight.map(s => s.title).join(', ')}<span className="next-trip-phase"> · Tonight</span><span className="next-trip-meta"> · nothing else planned</span></>
@@ -90,7 +91,7 @@ export default function NextTrip({ trip }) {
             <li key={`${e.item.id}-${e.phase}`} className="next-trip-item">
               <span className="next-trip-day">{dayLabel}</span>
               <span className="next-trip-time">{e.time || 'All day'}</span>
-              <span className="next-trip-icon" aria-hidden="true">{itemIcon(e.item)}</span>
+              <span className="next-trip-icon" aria-hidden="true"><Icon name={itemIcon(e.item)} /></span>
               <span className="next-trip-what">
                 {e.item.title}
                 {/* The phase changes what the line means (check-out, not in);

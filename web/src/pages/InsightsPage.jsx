@@ -9,6 +9,7 @@ import TabHeader from '../components/PageHeader/TabHeader.jsx'
 import Picker from '../components/Picker/Picker.jsx'
 import EmptyState from '../components/EmptyState/EmptyState.jsx'
 import { swr, swrOne } from '../utils/cache.js'
+import Icon from '../components/Icon/Icon.jsx'
 const DOW_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 const PERIODS = [
   { key: 'month', label: 'This month' },
@@ -307,7 +308,7 @@ export default function InsightsPage() {
           {topRoot && (
             <div className="card insights-kpi">
               <div className="insights-kpi-label">Top category</div>
-              <div className="insights-kpi-value insights-kpi-text">{topIcon} {topRoot[0]}</div>
+              <div className="insights-kpi-value insights-kpi-text"><Icon name={topIcon} /> {topRoot[0]}</div>
               <div className="insights-kpi-sub">{formatCurrency(topRoot[1], iso)} · {Math.round((topRoot[1] / total) * 100)}%</div>
             </div>
           )}
@@ -515,7 +516,7 @@ export default function InsightsPage() {
                     <div className="ins-cat-name-row">
                       <span className="ins-dot" style={{ background: getCategoryStroke(cat.rootName) }} />
                       <span className="ins-cat-name">
-                        {cat.icon} {cat.name}
+                        <Icon name={cat.icon} /> {cat.name}
                       </span>
                     </div>
                     <div className="ins-cat-figures">

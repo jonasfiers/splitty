@@ -795,18 +795,16 @@ const expenseService = {
                 FOREACH (_ IN CASE WHEN r IS NOT NULL THEN [1] ELSE [] END |
                   CREATE (e)-[:USED_RATE]->(r)
                 )
-                RETURN e.id AS id, c.icon AS categoryIcon, cu.name AS creatorName, g.title AS groupName`,
+                RETURN e.id AS id, cu.name AS creatorName, g.title AS groupName`,
                 {description, amount, amountBase, rate, date, categoryId, currencyIso, groupIso, paidByUserId, groupId, currUserId, shares: checked.shares},
             )
             if (records.length === 0) throw new Error('Expense could not be created');
             const expenseId = records[0].get('id')
-            const categoryIcon = records[0].get('categoryIcon')
             const creatorName = records[0].get('creatorName')
             const groupName = records[0].get('groupName')
             pushService.notifyGroupMembers(groupId, currUserId, {
                 title: `${creatorName} added "${description}"`,
                 body: `${formatAmount(amount, currencyIso)} · ${groupName}`,
-                icon: categoryIcon || null,
                 url: `/groups/${groupId}/expenses/${expenseId}`
             })
             return {success: true, id: expenseId};
@@ -1276,7 +1274,6 @@ const expenseService = {
                 pushService.notifyGroupMembers(groupId, currUserId, {
                     title: `${result.record.get('creatorName')} updated "${description}"`,
                     body: `${formatAmount(amount, currencyIso)} · ${result.record.get('groupName')}`,
-                    icon: result.record.get('categoryIcon') || null,
                     url: `/groups/${groupId}/expenses/${id}`
                 })
             }
@@ -1348,7 +1345,6 @@ const expenseService = {
                     pushService.notifyGroupMembers(info.get('groupId'), currUserId, {
                         title: `${info.get('deleterName')} deleted "${info.get('description')}"`,
                         body: `${formattedDelete}${info.get('groupName')}`,
-                        icon: info.get('categoryIcon') || null,
                         url: `/groups/${info.get('groupId')}`
                     })
                 }

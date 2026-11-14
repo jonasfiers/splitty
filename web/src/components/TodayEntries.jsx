@@ -3,6 +3,7 @@ import { Link } from 'react-router'
 import { KINDS, itemIcon, describe, mapsLink, linkTarget, today } from '../utils/trip.js'
 import BigReference from './BigReference/BigReference.jsx'
 import { pad, clock, onMinute } from '../utils/tripClock.js'
+import Icon from './Icon/Icon.jsx'
 
 export { pad, clock }
 
@@ -104,7 +105,7 @@ export default function TodayEntries({ tripId, day, entries, places, time: tripT
                   <div className={`trip-entry-time${at ? '' : ' allday'}${entry.assumed ? ' assumed' : ''}`} title={entry.assumed ? 'Usual hotel time; no time set on this stay' : undefined}>{at || entry.label || 'All day'}</div>
                   {on && <span className="today-badge">Now</span>}
                   {entry === next && <span className="today-badge next">{countdown(minutes(at) - minutes(time))}</span>}
-                  <div className="today-icon">{itemIcon(item)}</div>
+                  <div className="today-icon"><Icon name={itemIcon(item)} /></div>
                 </div>
                 <div className="list-row-text">
                   <Link to={`/trips/${tripId}/items/${item.id}`} className="list-row-title list-row-stretch">{item.title}</Link>

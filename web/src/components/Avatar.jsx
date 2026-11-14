@@ -2,14 +2,14 @@ import { colorFor, getInitials } from '../utils/avatar.js'
 
 export { PALETTE, colorFor, getInitials } from '../utils/avatar.js'
 
-export function Avatar({ name, size = 34, style, colorIndex, emoji }) {
+export function Avatar({ name, size = 34, style, colorIndex }) {
   const { bg, fg } = colorIndex !== undefined && colorIndex !== null ? colorFor(colorIndex) : colorFor(name)
   return (
     <div
       className="member-av"
-      style={{ width: size, height: size, fontSize: emoji ? size * 0.55 : size * 0.35, flexShrink: 0, background: bg, color: fg, ...style }}
+      style={{ width: size, height: size, fontSize: size * 0.35, flexShrink: 0, background: bg, color: fg, ...style }}
     >
-      {emoji || getInitials(name)}
+      {getInitials(name)}
     </div>
   )
 }
@@ -29,10 +29,9 @@ export function AvatarStack({ members = [], max = 4 }) {
         const { bg, fg } = m.avatarColor !== undefined && m.avatarColor !== null
           ? colorFor(m.avatarColor)
           : colorFor(m.name)
-        const display = m.avatarEmoji || getInitials(m.name)
         return (
           <div key={m.id ?? i} className="av" style={{ background: bg, color: fg, zIndex: slots - i }}>
-            {display}
+            {getInitials(m.name)}
           </div>
         )
       })}

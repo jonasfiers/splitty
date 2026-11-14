@@ -43,7 +43,7 @@ export default function TabHeader({ title, logo = false, aside = null, avatar = 
         {aside}
         {avatar && (
           <Link to="/profile" className="app-avatar" aria-label="Profile">
-            <Avatar name={currentUser?.name} size={28} colorIndex={currentUser?.avatarColor} emoji={currentUser?.avatarEmoji} />
+            <Avatar name={currentUser?.name} size={28} colorIndex={currentUser?.avatarColor} />
           </Link>
         )}
       </div>

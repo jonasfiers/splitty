@@ -133,7 +133,7 @@ export default function Layout() {
 
         <div className="sidebar-footer">
           <Link to="/profile" className="sidebar-user" title={collapsed ? currentUser?.name : undefined} aria-label={collapsed ? `Profile, ${currentUser?.name ?? ''}` : undefined}>
-            <Avatar name={currentUser?.name} size={28} colorIndex={currentUser?.avatarColor} emoji={currentUser?.avatarEmoji} />
+            <Avatar name={currentUser?.name} size={28} colorIndex={currentUser?.avatarColor} />
             <span className="sidebar-user-name sidebar-label">{currentUser?.name ?? ''}</span>
           </Link>
           <button type="button" className="sidebar-collapse" onClick={toggleCollapsed}

@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { addDays, daysBetween, dayOf, timeOf, formatDay, itemIcon, today } from '../../utils/trip.js'
 import Sheet, { SheetActions } from '../Sheet/Sheet.jsx'
 import './TripGantt.css'
+import Icon from '../Icon/Icon.jsx'
 
 // The how-to line under the timeline shows until "Got it", once per browser;
 // after that the ⓘ button by the zoom controls opens the same help as a sheet.
@@ -540,7 +541,7 @@ export default function TripGantt({ trip, items: allItems, placeName, onOpenItem
                   onContextMenu={barMenu(item)}
                 >
                   {onReschedule && !captioned && <span className="gantt-handle start" data-handle="start" />}
-                  <span className="gantt-bar-icon">{itemIcon(item)}</span>
+                  <span className="gantt-bar-icon"><Icon name={itemIcon(item)} /></span>
                   {captioned
                     ? <span className="gantt-caption">{item.title}</span>
                     : <span className="gantt-bar-text">{label(item)}</span>}

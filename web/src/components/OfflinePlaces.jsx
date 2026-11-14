@@ -1,5 +1,6 @@
 import { List, ListRow } from './List/List.jsx'
 import { itemIcon } from '../utils/trip.js'
+import Icon from './Icon/Icon.jsx'
 
 // The map without a connection (no map tiles): the trip's places as a list,
 // in the order they are first visited, each opening the first item there.
@@ -28,7 +29,7 @@ export default function OfflinePlaces({ places, items, onOpenItem }) {
             return (
               <ListRow
                 key={p.id}
-                icon={item ? itemIcon(item) : '📍'}
+                icon={<Icon name={item ? itemIcon(item) : 'map-pin'} />}
                 title={p.name}
                 meta={p.address || undefined}
                 {...(item && { onClick: () => onOpenItem(item), chevron: true })}

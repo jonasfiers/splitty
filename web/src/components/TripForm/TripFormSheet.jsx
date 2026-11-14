@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import client from '../../api/client'
-import EmojiPicker from '../EmojiPicker/EmojiPicker.jsx'
+import IconPicker from '../IconPicker/IconPicker.jsx'
 import { today } from '../../utils/trip.js'
 import Sheet, { SheetActions } from '../Sheet/Sheet.jsx'
 import Field from '../Field/Field.jsx'
@@ -45,7 +45,7 @@ function TripFormSheet({ trip, groupId, groups = [], onClose, onSaved }) {
       <form onSubmit={handleSubmit}>
         <Field label="Name" id="trip-form-title">
           <div className="name-with-icon">
-            <EmojiPicker value={form.icon} onChange={icon => setForm(f => ({ ...f, icon }))} />
+            <IconPicker clearable value={form.icon} onChange={icon => setForm(f => ({ ...f, icon }))} />
             <input
               id="trip-form-title"
               value={form.title}

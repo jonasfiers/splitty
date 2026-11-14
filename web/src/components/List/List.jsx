@@ -1,4 +1,5 @@
 import { Link } from 'react-router'
+import { asIcon } from '../Icon/Icon.jsx'
 
 // One list style for the whole app: a card of rows.
 //
@@ -23,7 +24,7 @@ export function List({ label, hint, className = '', children }) {
   )
 }
 
-// icon:    shown in the rounded square on the left (emoji, letter, node)
+// icon:    shown in the rounded square on the left (an icon's name, letter, node)
 // title:   the main line;  meta: the grey line under it
 // value:   plain grey text on the right (settings: "Name  Jonas")
 // aside:   any node on the right (amounts)
@@ -39,7 +40,7 @@ export function ListRow({
 }) {
   const body = (
     <>
-      {icon != null && <span className="list-row-icon" style={iconStyle} aria-hidden="true">{icon}</span>}
+      {icon != null && <span className="list-row-icon" style={iconStyle} aria-hidden="true">{asIcon(icon)}</span>}
       <span className="list-row-text">
         <span className="list-row-title">{title}</span>
         {meta && <span className="list-row-meta">{meta}</span>}

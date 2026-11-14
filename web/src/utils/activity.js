@@ -1,4 +1,5 @@
 import { itemIcon } from './trip.js'
+import { iconOr } from './icons.js'
 
 // Shared by the Activity page and Home's "Recent activity" panel. A row is an
 // expense event (kind 'expense') or a trip event ('trip', 'tripItem', 'file').
@@ -37,15 +38,15 @@ export const activityMatches = (a, context, action) =>
   (context === 'all' || (context === 'trips') === isTripActivity(a)) &&
   (action === 'all' || actionOf(a) === action)
 
-// The icon box shows what the row is about (the expense's category, the
+// The icon (utils/icons.js) in the box shows what the row is about (the expense's category, the
 // trip item's kind...) in the same way for every kind of row; a small badge
 // in its corner shows what happened to it (see activityBadge).
 export const activityIcon = a => {
-  if (a.kind === 'trip') return '🧳'
-  if (a.kind === 'file') return '📎'
+  if (a.kind === 'trip') return 'luggage'
+  if (a.kind === 'file') return 'paperclip'
   if (a.kind === 'tripItem') return itemIcon({ kind: a.itemKind, mode: a.itemMode })
-  if (a.isSettlement) return '🤝'
-  if (a.isTransfer) return '↔️'
-  return a.categoryIcon || '🧾'
+  if (a.isSettlement) return 'handshake'
+  if (a.isTransfer) return 'arrow-left-right'
+  return iconOr(a.categoryIcon, 'receipt')
 }
 export const activityTone = a => actionOf(a)

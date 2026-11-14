@@ -14,6 +14,7 @@ import Loading from '../Loading.jsx'
 import LoadFailed from '../LoadFailed.jsx'
 import EmptyState from '../EmptyState/EmptyState.jsx'
 import { useConfirm } from '../Confirm/ConfirmProvider.jsx'
+import Icon from '../Icon/Icon.jsx'
 
 // A trip's travel documents: arrival cards, visas, insurance, passport copies
 // (on their own page, pages/TripDocumentsPage, from the trip's Documents chip).
@@ -175,7 +176,7 @@ export default function TripDocuments({ tripId, tripTitle, heading = true }) {
   }
 
   const who = doc => {
-    const base = !doc.shared ? '🔒 Only you' : doc.mine ? 'Shared with the trip' : `Shared by ${doc.ownerName}`
+    const base = !doc.shared ? 'Only you' : doc.mine ? 'Shared with the trip' : `Shared by ${doc.ownerName}`
     return kept.has(doc.id) ? `${base} · on this device` : base
   }
 
@@ -212,7 +213,7 @@ export default function TripDocuments({ tripId, tripTitle, heading = true }) {
             if (readOnly && !kept.has(doc.id)) return (
               <ListRow
                 key={doc.id}
-                icon={doc.mimeType === 'application/pdf' ? '📄' : '🖼️'}
+                icon={<Icon name={doc.mimeType === 'application/pdf' ? 'file-text' : 'image'} />}
                 title={doc.filename}
                 meta={<>{who(doc)} · {formatBytes(doc.size)} · Not on this device</>}
               />
@@ -224,7 +225,7 @@ export default function TripDocuments({ tripId, tripTitle, heading = true }) {
                 {...(standalone || readOnly
                   ? { onClick: event => { event.preventDefault(); navigate(viewer) } }
                   : { target: '_blank', rel: 'noopener noreferrer' })}
-                icon={doc.mimeType === 'application/pdf' ? '📄' : '🖼️'}
+                icon={<Icon name={doc.mimeType === 'application/pdf' ? 'file-text' : 'image'} />}
                 title={doc.filename}
                 meta={<>{who(doc)} · {formatBytes(doc.size)}</>}
                 end={!readOnly && (

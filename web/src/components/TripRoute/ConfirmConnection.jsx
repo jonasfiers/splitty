@@ -4,6 +4,7 @@ import { TRANSPORT_MODES, dayOf, timeOf, formatDay, formatDuration } from '../..
 import { legIcon, legLabel, crossesZones, isTight, tightLabel, spareMinutes } from './ConnectionCard.jsx'
 import Expandable from '../Expandable/Expandable.jsx'
 import Loading from '../Loading.jsx'
+import Icon from '../Icon/Icon.jsx'
 
 const RouteMap = lazy(() => import('./RouteMap.jsx'))
 
@@ -162,7 +163,7 @@ function ConfirmConnection({ tripId, itinerary, onBack, onSaved }) {
               <div className="card route-places">
                 {newPlaces.map(p => (
                   <div key={p.key} className="form-group">
-                    <label htmlFor={`place-${p.key}`}>📍 {p.originalName}</label>
+                    <label htmlFor={`place-${p.key}`}><Icon name="map-pin" /> {p.originalName}</label>
                     <input
                       id={`place-${p.key}`}
                       value={names[p.key] ?? p.name}
@@ -188,7 +189,7 @@ function ConfirmConnection({ tripId, itinerary, onBack, onSaved }) {
               <div key={i} className={`card route-confirm-leg${leg.include ? '' : ' excluded'}`}>
                 <label className="route-confirm-toggle">
                   <input type="checkbox" checked={leg.include} onChange={e => setLeg(i, { include: e.target.checked })} />
-                  <span className="route-leg-icon" aria-hidden="true">{legIcon(found)}</span>
+                  <span className="route-leg-icon" aria-hidden="true"><Icon name={legIcon(found)} /></span>
                   <span className="route-confirm-when">
                     {timeOf(found.start)} → {timeOf(found.end)}
                     {dayOf(found.end) !== dayOf(found.start) && ` (${formatDay(dayOf(found.end))})`}
@@ -215,7 +216,7 @@ function ConfirmConnection({ tripId, itinerary, onBack, onSaved }) {
                     <div className="filter-chips route-confirm-modes">
                       {TRANSPORT_MODES.filter(m => m.value !== 'car').map(m => (
                         <button key={m.value} type="button" className={`chip${leg.mode === m.value ? ' active' : ''}`} onClick={() => setLeg(i, { mode: m.value })}>
-                          {m.icon} {m.label}
+                          <Icon name={m.icon} /> {m.label}
                         </button>
                       ))}
                     </div>

@@ -14,6 +14,7 @@ import Segmented from '../components/Segmented/Segmented.jsx'
 import { DateTimePicker } from '../components/DatePicker/DatePicker.jsx'
 import EmptyState from '../components/EmptyState/EmptyState.jsx'
 import { getOnce } from '../utils/cache.js'
+import Icon from '../components/Icon/Icon.jsx'
 
 const LABELS = {
   transport: { start: 'Departure', end: 'Arrival', title: 'Title', titleHint: 'Leave empty to use the route' },
@@ -206,9 +207,9 @@ export default function TripItemFormPage() {
             value={kind}
             onChange={switchKind}
             options={[
-              { value: 'transport', label: `${KINDS.transport.icon} Travel` },
-              { value: 'stay', label: `${KINDS.stay.icon} Stay` },
-              { value: 'activity', label: `${KINDS.activity.icon} Activity` },
+              { value: 'transport', label: <><Icon name={KINDS.transport.icon} /> Travel</> },
+              { value: 'stay', label: <><Icon name={KINDS.stay.icon} /> Stay</> },
+              { value: 'activity', label: <><Icon name={KINDS.activity.icon} /> Activity</> },
             ]}
           />
           {kind === 'transport' && (
@@ -217,7 +218,7 @@ export default function TripItemFormPage() {
                 {TRANSPORT_MODES.map(m => (
                   <button type="button" key={m.value} className={`mode-tile${form.mode === m.value ? ' active' : ''}`}
                     aria-pressed={form.mode === m.value} onClick={() => set({ mode: m.value })}>
-                    <span className="mode-tile-icon" aria-hidden="true">{m.icon}</span>
+                    <span className="mode-tile-icon" aria-hidden="true"><Icon name={m.icon} /></span>
                     {m.label}
                   </button>
                 ))}

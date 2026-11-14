@@ -9,6 +9,7 @@ import Sheet, { SheetActions } from '../components/Sheet/Sheet.jsx'
 import { formatCurrency } from '../utils/currency.js'
 import EmptyState from '../components/EmptyState/EmptyState.jsx'
 import { swrOne } from '../utils/cache.js'
+import { iconOr } from '../utils/icons.js'
 
 // What is open with someone, per currency: groups in the same currency add
 // up, different currencies are listed side by side rather than converted.
@@ -64,7 +65,7 @@ export default function FriendsPage() {
     <ListRow
       key={f.id}
       onClick={() => setOpen(f)}
-      icon={<Avatar name={f.name} size={36} colorIndex={f.avatarColor} emoji={f.avatarEmoji} />}
+      icon={<Avatar name={f.name} size={36} colorIndex={f.avatarColor} />}
       className="list-row-person"
       title={f.name}
       meta={f.groups.map(g => g.title).join(', ')}
@@ -89,7 +90,7 @@ export default function FriendsPage() {
       {open && (
         <Sheet title={open.name} onClose={() => setOpen(null)}>
           <div className="member-sheet-head">
-            <Avatar name={open.name} size={56} colorIndex={open.avatarColor} emoji={open.avatarEmoji} />
+            <Avatar name={open.name} size={56} colorIndex={open.avatarColor} />
             <div className="member-sheet-status">
               {open.totals.length === 0 ? 'All settled up'
                 : open.totals.map(t => (
@@ -104,7 +105,7 @@ export default function FriendsPage() {
             {open.groups.map(g => (
               <ListRow
                 key={g.id}
-                icon={g.icon}
+                icon={iconOr(g.icon, 'users')}
                 title={g.title}
                 meta={!g.net ? 'Settled' : g.net > 0 ? `Owes you ${formatCurrency(g.net, g.iso)}` : `You owe ${formatCurrency(-g.net, g.iso)}`}
                 {...(g.net

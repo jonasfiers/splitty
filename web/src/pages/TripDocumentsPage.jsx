@@ -7,6 +7,8 @@ import { isOffline, isNetworkError } from '../utils/connection.js'
 import Loading from '../components/Loading.jsx'
 import PageHeader from '../components/PageHeader/PageHeader.jsx'
 import TripDocuments from '../components/TripDocuments/TripDocuments.jsx'
+import Icon from '../components/Icon/Icon.jsx'
+import { iconOr } from '../utils/icons.js'
 
 // A trip's travel documents on their own page, reached from the "Documents"
 // chip under the trip's title (TripDetailPage), so the trip page opens on
@@ -47,7 +49,7 @@ export default function TripDocumentsPage() {
         title="Documents"
         name="Documents"
       >
-        {trip.icon} {trip.title}
+        {iconOr(trip.icon) && <><Icon name={trip.icon} /> </>}{trip.title}
       </PageHeader>
       <TripDocuments tripId={tripId} tripTitle={trip.title} heading={false} />
     </>

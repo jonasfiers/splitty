@@ -359,7 +359,7 @@ const dashService = {
                         CASE WHEN c IS NULL THEN 'Uncategorized' 
                              ELSE apoc.text.join([node IN reverse(nodes(p)) | node.name], ' - ')
                         END AS name,
-                        coalesce(nearestIcon.icon, '❓') AS icon,
+                        coalesce(nearestIcon.icon, '') AS icon,
                         total
                     ORDER BY total DESC`,
                     params

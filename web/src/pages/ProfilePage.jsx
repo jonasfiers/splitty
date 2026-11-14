@@ -3,14 +3,12 @@ import { useNavigate } from 'react-router'
 import { startRegistration } from '@simplewebauthn/browser'
 import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
-import { EMOJI_STYLES, getEmojiStyle, setEmojiStyle } from '../utils/emojiStyle.js'
 import { keepTripsEnabled, setKeepTrips, offlineTripsSupported } from '../utils/offlineTrips.js'
 import Loading from '../components/Loading.jsx'
 import client from '../api/client'
 import { timeAgo } from '../utils/time.js'
 import { formatCurrency } from '../utils/currency.js'
 import { Avatar, PALETTE } from '../components/Avatar.jsx'
-import EmojiPicker from '../components/EmojiPicker/EmojiPicker.jsx'
 import { subscribeToPush, unsubscribeFromPush, isPushSubscribed, disablePushForLogout, forgetPushLocally } from '../utils/push.js'
 import TabHeader from '../components/PageHeader/TabHeader.jsx'
 import Sheet, { SheetActions } from '../components/Sheet/Sheet.jsx'
@@ -22,7 +20,6 @@ export default function ProfilePage() {
   const confirm = useConfirm()
   const { currentUser, isAdmin, logout, updateToken } = useAuth()
   const { theme, setTheme } = useTheme()
-  const [emojiStyle, setEmojiStyleState] = useState(getEmojiStyle)
   const [keepTrips, setKeepTripsState] = useState(keepTripsEnabled)
   const navigate = useNavigate()
 
@@ -34,11 +31,11 @@ export default function ProfilePage() {
   const [notifications, setNotifications] = useState(false)
   const [notifError, setNotifError] = useState('')
 
-  // One "Edit profile" sheet for name, email, colour and emoji.
+  // One "Edit profile" sheet for name, email and colour.
   const [showEdit, setShowEdit] = useState(false)
   const [showDelete, setShowDelete] = useState(false)
   const [exporting, setExporting] = useState(false)
-  const [editForm, setEditForm] = useState({ name: '', email: '', avatarColor: null, avatarEmoji: null })
+  const [editForm, setEditForm] = useState({ name: '', email: '', avatarColor: null })
   const [editError, setEditError] = useState('')
   const [editMessage, setEditMessage] = useState('')
   const [editSaving, setEditSaving] = useState(false)
@@ -54,7 +51,7 @@ export default function ProfilePage() {
       const prof = r.data.profile || null
       setProfile(prof)
       if (prof) {
-        setEditForm({ name: prof.name, email: prof.email, avatarColor: prof.avatarColor ?? null, avatarEmoji: prof.avatarEmoji ?? null })
+        setEditForm({ name: prof.name, email: prof.email, avatarColor: prof.avatarColor ?? null })
       }
       return prof
     })
@@ -74,7 +71,7 @@ export default function ProfilePage() {
   }, [currentUser])
 
   const openEdit = () => {
-    setEditForm({ name: profile.name, email: profile.email, avatarColor: profile.avatarColor ?? null, avatarEmoji: profile.avatarEmoji ?? null })
+    setEditForm({ name: profile.name, email: profile.email, avatarColor: profile.avatarColor ?? null })
     setEditError('')
     setEditMessage('')
     setShowEdit(true)
@@ -90,7 +87,7 @@ export default function ProfilePage() {
         name: editForm.name,
         email: editForm.email,
         avatarColor: editForm.avatarColor ?? undefined,
-        avatarEmoji: editForm.avatarEmoji ?? null,
+        avatarEmoji: null, // avatars are initials only now; clears an old emoji
       })
       updateToken(data.token)
       await loadProfile()
@@ -196,7 +193,7 @@ export default function ProfilePage() {
   if (loading) return <Loading />
 
   const editAvatar = (
-    <Avatar name={editForm.name || profile.name} size={56} colorIndex={editForm.avatarColor} emoji={editForm.avatarEmoji} />
+    <Avatar name={editForm.name || profile.name} size={56} colorIndex={editForm.avatarColor} />
   )
 
   return (
@@ -205,7 +202,7 @@ export default function ProfilePage() {
 
       {/* Who you are */}
       <section className="set-card profile-id">
-        <Avatar name={profile.name} size={60} colorIndex={profile.avatarColor} emoji={profile.avatarEmoji} />
+        <Avatar name={profile.name} size={60} colorIndex={profile.avatarColor} />
         <div className="profile-id-text">
           <div className="profile-name">{profile.name}</div>
           <div className="profile-email">{profile.email}</div>
@@ -290,22 +287,6 @@ export default function ProfilePage() {
               </div>
               }
             />
-            <SetRow
-              label="Emoji"
-              aside={
-              <div className="theme-segment">
-                {EMOJI_STYLES.map(opt => (
-                  <button
-                    key={opt.value}
-                    className={`theme-segment-btn${emojiStyle === opt.value ? ' active' : ''}`}
-                    onClick={() => { setEmojiStyle(opt.value); setEmojiStyleState(opt.value) }}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-              }
-            />
             {offlineTripsSupported() && (
               <SetRow
                 label="Keep trips offline"
@@ -368,12 +349,6 @@ export default function ProfilePage() {
                       aria-pressed={editForm.avatarColor === i}
                     />
                   ))}
-                </div>
-                <div className="edit-avatar-emoji">
-                  <EmojiPicker value={editForm.avatarEmoji} onChange={emoji => setEditForm(f => ({ ...f, avatarEmoji: emoji }))} />
-                  {editForm.avatarEmoji && (
-                    <button type="button" className="btn btn-ghost btn-sm" onClick={() => setEditForm(f => ({ ...f, avatarEmoji: null }))}>No emoji</button>
-                  )}
                 </div>
               </div>
             </div>

@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react'
 import client from '../api/client'
-import EmojiPicker from '../components/EmojiPicker/EmojiPicker.jsx'
+import IconPicker from '../components/IconPicker/IconPicker.jsx'
 import IconCard from '../components/IconCard/IconCard.jsx'
 import Loading from '../components/Loading.jsx'
 import PageHeader from '../components/PageHeader/PageHeader.jsx'
 import { useConfirm } from '../components/Confirm/ConfirmProvider.jsx'
 import Field from '../components/Field/Field.jsx'
 import Picker from '../components/Picker/Picker.jsx'
+import { iconOr } from '../utils/icons.js'
 
 export default function CategoriesPage() {
   const confirm = useConfirm()
@@ -90,7 +91,7 @@ export default function CategoriesPage() {
           <form onSubmit={handleCreate}>
             <div className="form-row form-row-compact cat-form-row">
               <Field label="Icon">
-                <EmojiPicker value={form.icon} onChange={icon => setForm(f => ({ ...f, icon }))} />
+                <IconPicker clearable value={form.icon} onChange={icon => setForm(f => ({ ...f, icon }))} />
               </Field>
               <Field label="Name">
                 <input
@@ -128,7 +129,7 @@ export default function CategoriesPage() {
                 <form onSubmit={handleUpdate}>
                   <div className="form-row form-row-compact cat-form-row">
                     <Field label="Icon">
-                      <EmojiPicker value={editForm.icon} onChange={icon => setEditForm(f => ({ ...f, icon }))} />
+                      <IconPicker clearable value={editForm.icon} onChange={icon => setEditForm(f => ({ ...f, icon }))} />
                     </Field>
                     <Field label="Name">
                       <input
@@ -156,7 +157,7 @@ export default function CategoriesPage() {
             ) : (
               <IconCard
                 key={c.id}
-                icon={c.icon || '🏷️'}
+                icon={iconOr(c.icon, 'tag')}
                 title={c.full_name}
                 actions={<>
                   <button className="btn btn-ghost btn-sm" onClick={() => startEdit(c)} title="Edit">

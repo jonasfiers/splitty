@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import client from '../../api/client'
-import EmojiPicker from '../EmojiPicker/EmojiPicker.jsx'
+import IconPicker from '../IconPicker/IconPicker.jsx'
 import Sheet, { SheetActions } from '../Sheet/Sheet.jsx'
 import Field from '../Field/Field.jsx'
 import Picker from '../Picker/Picker.jsx'
@@ -38,7 +38,7 @@ export default function GroupEditSheet({ group, canChangeCurrency, onClose, onSa
         {error && <p className="error">{error}</p>}
         <div className="form-row form-row-compact">
           <Field label="Icon">
-            <EmojiPicker value={form.icon} onChange={icon => setForm(f => ({ ...f, icon }))} />
+            <IconPicker value={form.icon} onChange={icon => setForm(f => ({ ...f, icon }))} />
           </Field>
           <div className="form-group">
             <label htmlFor="group-edit-title">Group name</label>
