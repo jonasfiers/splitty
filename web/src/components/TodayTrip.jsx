@@ -89,7 +89,7 @@ function TodayCard({ trip, items, places }) {
       )}
       {firstTomorrow && (
         <Link to={`/trips/${trip.id}/items/${firstTomorrow.item.id}`} className="today-trip-tomorrow">
-          Tomorrow {firstTomorrow.time || ''} · <Icon name={itemIcon(firstTomorrow.item)} /> {[firstTomorrow.phase, firstTomorrow.item.title].filter(Boolean).join(' ')} ›
+          Tomorrow {firstTomorrow.time || ''} · <Icon name={itemIcon(firstTomorrow.item, firstTomorrow.phase)} /> {[firstTomorrow.phase, firstTomorrow.item.title].filter(Boolean).join(' ')} ›
         </Link>
       )}
     </div>

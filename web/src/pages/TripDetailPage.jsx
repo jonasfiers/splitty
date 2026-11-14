@@ -299,7 +299,7 @@ function TripDetailPage() {
               {entries.map(({ item, time, phase, assumed }) => (
                 <button key={`${item.id}-${phase}`} type="button" className="list-row list-row-link" onClick={() => openItem(item)}>
                   <span className={`trip-entry-time${assumed ? ' assumed' : ''}`} title={assumed ? 'Usual hotel time; no time set on this stay' : undefined}>{time || 'All day'}</span>
-                  <span className="list-row-icon" aria-hidden="true"><Icon name={itemIcon(item)} /></span>
+                  <span className="list-row-icon" aria-hidden="true"><Icon name={itemIcon(item, phase)} /></span>
                   <span className="list-row-text">
                     <span className="list-row-title">{item.title}</span>
                     <span className="list-row-meta">

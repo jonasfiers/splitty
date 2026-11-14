@@ -14,7 +14,7 @@ import {
   Zap, Droplet, Flame, Wifi, Phone, Receipt, FileText, CreditCard, Wallet, Banknote, Coins, PiggyBank,
   Percent, Shield, HeartPulse, Pill, Stethoscope, GraduationCap, Briefcase, Calendar, WashingMachine,
   Users, User, Heart, Rainbow, Star, Flag, Globe, Tag, Folder, Box,
-  ArrowLeftRight, Handshake, Check, Image as ImageIcon, Paperclip, Search, Lock, CircleQuestionMark, Pencil, X,
+  ArrowLeftRight, Handshake, Check, Image as ImageIcon, Paperclip, Search, Lock, CircleQuestionMark, Pencil, X, DoorOpen,
 } from 'lucide'
 
 // The icons people pick for categories, groups and trips (IconPicker), by
@@ -191,6 +191,7 @@ const UI = {
   'circle-question-mark': CircleQuestionMark,
   pencil: Pencil,
   x: X,
+  'door-open': DoorOpen,
 }
 
 const NODES = new Map(Object.entries(UI))

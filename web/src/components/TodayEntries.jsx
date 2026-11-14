@@ -108,7 +108,7 @@ export default function TodayEntries({ tripId, day, entries, places, time: tripT
                   <div className={`trip-entry-time${at ? '' : ' allday'}${entry.assumed ? ' assumed' : ''}`} title={entry.assumed ? 'Usual hotel time; no time set on this stay' : undefined}>{at || entry.label || 'All day'}</div>
                   {on && <span className="today-badge">Now</span>}
                   {entry === next && <span className="today-badge next">{countdown(minutes(at) - minutes(time))}</span>}
-                  <div className="today-icon"><Icon name={itemIcon(item)} /></div>
+                  <div className="today-icon"><Icon name={itemIcon(item, phase)} /></div>
                 </div>
                 <div className="list-row-text">
                   <Link to={`/trips/${tripId}/items/${item.id}`} className="list-row-title list-row-stretch">{item.title}</Link>

@@ -91,7 +91,7 @@ export default function NextTrip({ trip }) {
             <li key={`${e.item.id}-${e.phase}`} className="next-trip-item">
               <span className="next-trip-day">{dayLabel}</span>
               <span className="next-trip-time">{e.time || 'All day'}</span>
-              <span className="next-trip-icon" aria-hidden="true"><Icon name={itemIcon(e.item)} /></span>
+              <span className="next-trip-icon" aria-hidden="true"><Icon name={itemIcon(e.item, e.phase)} /></span>
               <span className="next-trip-what">
                 {e.item.title}
                 {/* The phase changes what the line means (check-out, not in);

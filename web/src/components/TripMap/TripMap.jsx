@@ -65,7 +65,7 @@ function TripMap({ places, items, onOpenItem, highlight = null, onHover = () => 
       // A hotel pin reads as a hotel. Otherwise the pin shows the items' icon,
       // or how many items there are when their icons differ.
       const stay = here.find(i => i.kind === 'stay')
-      const icons = new Set(here.map(itemIcon))
+      const icons = new Set(here.map(i => itemIcon(i)))
       const marker = L.marker([place.lat, place.lon], {
         icon: L.divIcon({
           className: '',

@@ -19,10 +19,13 @@ export const TRANSPORT_MODES = [
 ]
 
 // The icon (utils/icons.js) of a trip entry: its transport mode, or its kind.
-export const itemIcon = item =>
+// A stay's check-in and check-out (`phase`, from buildTimeline) get their own:
+// the key you get, the door you leave by. The stay itself is the bed.
+const PHASE_ICONS = { 'Check-in': 'key-round', 'Check-out': 'door-open' }
+export const itemIcon = (item, phase) =>
   item.kind === 'transport'
     ? (TRANSPORT_MODES.find(m => m.value === item.mode)?.icon ?? KINDS.transport.icon)
-    : KINDS[item.kind]?.icon ?? 'map-pin'
+    : (item.kind === 'stay' && PHASE_ICONS[phase]) || (KINDS[item.kind]?.icon ?? 'map-pin')
 
 export const dayOf = moment => (moment ? moment.slice(0, 10) : '')
 export const timeOf = moment => (moment && moment.length > 10 ? moment.slice(11, 16) : '')
