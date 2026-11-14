@@ -25,7 +25,7 @@
   margin-bottom: 6px;
   min-width: 0;
 }
-.ph-crumbs a { color: var(--text-2); font-weight: 600; }
+.ph-crumbs a { color: var(--accent-text); font-weight: 600; }
 .ph-crumbs a:hover { opacity: .75; }
 .ph-crumb-sep { color: var(--text-3); }
 .ph-crumb-current {
@@ -66,7 +66,7 @@
   justify-self: start;
   font-size: var(--fs-base);
   font-weight: 600;
-  color: var(--text-2);
+  color: var(--accent-text);
   min-height: 44px;
   padding: 0 8px 0 0;
 }
@@ -103,7 +103,7 @@
   justify-content: center;
   font-size: var(--fs-base);
   font-weight: 600;
-  color: var(--text);
+  color: var(--accent-text);
   padding: 0 8px;
 }
 .ph-narrow .ph-title { font-size: var(--fs-3xl); line-height: 1.1; }

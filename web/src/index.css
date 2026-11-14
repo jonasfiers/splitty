@@ -818,7 +818,7 @@ body {
 
 .home-section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
 .home-section-head .section-label { margin: 0; padding: 0; }
-.home-section-link { font-size: var(--fs-md); font-weight: 600; color: var(--text-2); background: none; border: none; cursor: pointer; padding: 10px 0; }
+.home-section-link { font-size: var(--fs-md); font-weight: 600; color: var(--accent-text); background: none; border: none; cursor: pointer; padding: 10px 0; }
 
 /* Home panels (this month, next trip, recent activity): below the groups on
    phones, in a column beside them from 1180px. */
@@ -835,7 +835,7 @@ body {
   align-items: center;
   margin-bottom: 10px;
 }
-.home-panel-link { font-size: var(--fs-sm); font-weight: 600; color: var(--text-2); }
+.home-panel-link { font-size: var(--fs-sm); font-weight: 600; color: var(--accent-text); }
 .home-panel-sub { font-size: var(--fs-sm); color: var(--text-3); margin-top: 2px; }
 /* Spending more or less is not owing: no balance colours, an arrow instead. */
 .home-up, .home-down { color: var(--text-2); font-weight: 600; }
@@ -859,7 +859,7 @@ body {
 .today-trip-title svg.icon { font-size: 18px; }
 .today-also { margin-bottom: 16px; }
 .today-trip-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.today-trip-day { font-size: var(--fs-sm); font-weight: 600; color: var(--text-2); white-space: nowrap; }
+.today-trip-day { font-size: var(--fs-sm); font-weight: 600; color: var(--accent-text); white-space: nowrap; }
 .today-trip .list { border: none; border-top: 1px solid var(--border); border-radius: 0; background: none; }
 .today-trip .trip-day-empty { border: none; border-top: 1px solid var(--border); border-radius: 0; padding: 12px 16px; }
 /* Footer lines: full-width 44px taps, hairline above, one line each. */
@@ -882,6 +882,10 @@ body {
 .today-entry { align-items: flex-start; padding: 12px 16px; border-bottom: none; }
 .today-entry.past { opacity: .55; }
 .today-entry.on { box-shadow: inset 3px 0 0 var(--accent); }
+/* What is on now, or next: its icon in orange too. */
+.today-entry:is(.on, :has(.today-badge.next)) .today-icon svg.icon { color: var(--accent-text); }
+/* The Today card's trip icon: Home's headline carries the brand colour. */
+.today-trip-title svg.icon { color: var(--accent-text); }
 .today-entry .list-row-title { font-size: var(--fs-base); line-height: 21px; }
 .today-meta { color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* Left column: time, then what is on or next, then the icon. */
@@ -910,7 +914,7 @@ body {
   text-align: left;
   font-size: var(--fs-md);
   font-weight: 600;
-  color: var(--text-2);
+  color: var(--accent-text);
 }
 /* Third line: booking reference and directions. Neutral, so the only
    colour in a row is its Now/next badge; 30px chips, 44px tap height. */
@@ -933,7 +937,7 @@ body {
 .today-ref::after, .today-nav::after { content: ''; position: absolute; inset: -7px 0; }
 .today-ref { font-family: var(--font-mono); letter-spacing: .02em; max-width: 160px; }
 .today-ref span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.today-nav svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linejoin: round; }
+.today-nav svg { width: 14px; height: 14px; fill: none; stroke: var(--accent); stroke-width: 2.2; stroke-linejoin: round; }
 .home-trip { display: block; color: inherit; }
 .home-trip:hover { border-color: var(--border-strong); }
 .home-trip-when { font-size: var(--fs-sm); font-weight: 600; color: var(--text-2); }
@@ -1128,8 +1132,9 @@ body {
 svg.icon { flex-shrink: 0; vertical-align: -0.2em; }
 /* A country's code keeps the body face inside a serif title. */
 svg.icon-country text { font-family: var(--font-body); }
-/* Icons standing on their own (a box, a tile, an option) are in the text
-   colour: orange is kept for the main action and for what is on now. */
+/* Orange means "you can tap this" (links, back, header actions, Show earlier)
+   and "on now". Icons standing on their own (a box, a tile, an option), labels
+   and data are in the text colours, so the taps stand out. */
 :is(.picker-option-icon, .picker-icon, .today-icon, .trip-card-icon, .act-icon, .gantt-bar-icon, .mode-tile-icon,
     .invite-icon, .admin-card-icon, .icon-card-icon, .next-trip-icon, .route-leg-icon, .trip-kind, .place-row-icon,
     .place-trigger-pin, .icon-card-icon) > svg.icon,
@@ -1393,8 +1398,8 @@ svg.icon-country text { font-family: var(--font-body); }
 .add-member-btn {
   padding: 5px 12px;
   border-radius: var(--r-pill);
-  background: var(--surface-2);
-  color: var(--text);
+  background: var(--accent-light);
+  color: var(--accent-text);
   font-size: var(--fs-sm);
   font-weight: 600;
   flex-shrink: 0;
@@ -1813,7 +1818,7 @@ a.act-row { color: inherit; text-decoration: none; }
   gap: 4px;
   font-size: var(--fs-base);
   font-weight: 600;
-  color: var(--text-2);
+  color: var(--accent-text);
   margin-bottom: 16px;
 }
 .back-link:hover { opacity: .75; }
@@ -1933,7 +1938,7 @@ a.act-row { color: inherit; text-decoration: none; }
   font: inherit;
   font-size: var(--fs-md);
   font-weight: 600;
-  color: var(--text-2);
+  color: var(--accent-text);
   background: none;
   border: none;
   border-radius: var(--r-md);
@@ -2646,7 +2651,7 @@ html .leaflet-container { font-family: var(--font-body); } /* "html": Leaflet's 
   display: inline-flex; align-items: center; gap: 6px;
   padding: 6px 12px; border-radius: 999px;
   border: 1px solid var(--border); background: var(--surface);
-  font-size: var(--fs-md); font-weight: 600; color: var(--text); text-decoration: none;
+  font-size: var(--fs-md); font-weight: 600; color: var(--accent-text); text-decoration: none;
 }
 a.trip-chip:hover { border-color: var(--border-strong); }
 .trip-chip-chevron { font-size: var(--fs-base); line-height: 1; }
@@ -2700,7 +2705,7 @@ a.trip-chip:hover { border-color: var(--border-strong); }
 }
 /* Chips under a field label: room inside the scroller for the taller tap area */
 .filter-chips-field { padding: 8px 0; margin: -8px 0; }
-.list-row-link-text { font-size: var(--fs-md); font-weight: 600; color: var(--text-2); }
+.list-row-link-text { font-size: var(--fs-md); font-weight: 600; color: var(--accent-text); }
 
 .chip-sep { color: var(--text-3); padding: 0 2px; flex-shrink: 0; }
 
@@ -2868,7 +2873,7 @@ a.trip-chip:hover { border-color: var(--border-strong); }
 .mode-tile.active { border-color: var(--accent); background: var(--accent-subtle); color: var(--accent-text); font-weight: 600; }
 .mode-tile-icon { font-size: var(--fs-xl); line-height: 1; }
 /* "+ Link and notes": opens the rarely used fields */
-.form-more { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; margin: -4px 0 8px; font: inherit; font-size: var(--fs-base); font-weight: 600; color: var(--text-2); }
+.form-more { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; margin: -4px 0 8px; font: inherit; font-size: var(--fs-base); font-weight: 600; color: var(--accent-text); }
 
 /* Page forms in columns (components/Field/FormColumns.jsx) */
 .form-more-fields.folded { display: none; } /* shown again in the wide layout below */
@@ -2907,7 +2912,7 @@ a.trip-chip:hover { border-color: var(--border-strong); }
 /* Trips page: offline documents as a plain link by the title */
 .offline-link {
   display: inline-flex; align-items: center; gap: 6px; min-height: 44px;
-  font-size: var(--fs-base); font-weight: 600; color: var(--text-2); text-decoration: none; white-space: nowrap;
+  font-size: var(--fs-base); font-weight: 600; color: var(--accent-text); text-decoration: none; white-space: nowrap;
 }
 .offline-link svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
@@ -2932,7 +2937,7 @@ a.trip-chip:hover { border-color: var(--border-strong); }
 .next-trip-what { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
 .next-trip-meta, .next-trip-phase { font-weight: 400; color: var(--text-3); }
 .next-trip-foot { display: flex; justify-content: space-between; gap: 12px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border); font-size: var(--fs-md); color: var(--text-2); }
-.next-trip-open { font-weight: 600; color: var(--text-2); white-space: nowrap; }
+.next-trip-open { font-weight: 600; color: var(--accent-text); white-space: nowrap; }
 /* Phones: two entries, the day above them rather than in a column */
 @media (max-width: 600px) {
   .next-trip { padding: 16px; }
@@ -3087,7 +3092,7 @@ a.trip-chip:hover { border-color: var(--border-strong); }
 .field-note { font-size: var(--fs-sm); color: var(--text-3); margin-top: 8px; }
 .field-note.item-paid-note { margin: -8px 0 12px; text-align: right; }
 .list.list-tight { margin-bottom: 0; }
-.accent-link { color: var(--text-2); text-decoration: underline; text-decoration-color: var(--border-strong); text-underline-offset: 3px; }
+.accent-link { color: var(--accent-text); }
 /* Messages on the sign-up, reset and email-confirmation pages */
 .auth-message { font-size: var(--fs-base); color: var(--text-3); }
 .auth-message.auth-message-gap { margin-bottom: 24px; }
