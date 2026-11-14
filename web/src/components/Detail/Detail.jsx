@@ -1,3 +1,5 @@
+import { asIcon } from '../Icon/Icon.jsx'
+
 // The building blocks of a detail page (an expense, a trip item), so both
 // look alike: the head of the page, then label/value rows.
 
@@ -6,7 +8,7 @@
 export function DetailHero({ icon, iconStyle, title, subtitle, aside }) {
   return (
     <div className="detail-hero">
-      <div className="list-row-icon detail-hero-icon" style={iconStyle}>{icon}</div>
+      <div className="list-row-icon detail-hero-icon" style={iconStyle}>{asIcon(icon)}</div>
       <div className="detail-hero-text">
         <div className="detail-hero-title">{title}</div>
         {subtitle && <div className="detail-hero-sub">{subtitle}</div>}

@@ -415,7 +415,7 @@ export default function GroupDetailPage() {
           <Tooltip content={({ active, payload }) => {
             if (!active || !payload?.length) return null
             const { name, icon, total } = payload[0].payload
-            return <ChartTooltip title={<>{icon} {name}</>} value={formatCurrency(total, balance?.iso)} />
+            return <ChartTooltip title={<><Icon name={icon} /> {name}</>} value={formatCurrency(total, balance?.iso)} />
           }} />
         </PieChart>
       </ResponsiveContainer>

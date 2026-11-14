@@ -491,7 +491,7 @@ export default function InsightsPage() {
                 const pct = totalPieAmount > 0 ? ((total / totalPieAmount) * 100).toFixed(1) : '0.0'
                   return (
                     <div className="ins-tip">
-                      <div className="ins-tip-title">{icon} {name}</div>
+                      <div className="ins-tip-title"><Icon name={icon} /> {name}</div>
                       <div className="ins-tip-line">
                         <span className="ins-tip-amt-lg">{formatCurrency(total, iso)}</span>
                         <span className="ins-tip-pct">{pct}%</span>
