@@ -4,7 +4,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pi
 import { Link, useSearchParams } from 'react-router'
 import { formatCurrency, formatCompactCurrency } from '../utils/currency.js'
 import Loading from '../components/Loading.jsx'
-import { COLOURS, STROKES } from '../utils/chartColors.js'
+import { chartColour } from '../utils/categoryColours.js'
 import TabHeader from '../components/PageHeader/TabHeader.jsx'
 import Picker from '../components/Picker/Picker.jsx'
 import EmptyState from '../components/EmptyState/EmptyState.jsx'
@@ -229,16 +229,18 @@ export default function InsightsPage() {
     )
   }
 
-  // "Other" (and anything unknown) in the theme's neutral greys.
-  const getCategoryColor = (rootName) => {
-    const index = rootName && rootName !== 'Other' ? rootNames.indexOf(rootName) : -1
-    return index !== -1 ? COLOURS[index % COLOURS.length] : 'var(--surface-2)'
-  }
-
-  const getCategoryStroke = (rootName) => {
-    const index = rootName && rootName !== 'Other' ? rootNames.indexOf(rootName) : -1
-    return index !== -1 ? STROKES[index % STROKES.length] : 'var(--text-3)'
-  }
+  // Each category in its top-level category's colour; "Other", "Uncategorized"
+  // and anything unknown in the theme's neutral greys.
+  const rootColours = Object.fromEntries((categories || []).map(c => [c.name.split(' - ')[0], c.colour]))
+  const getCategoryColor = rootName => chartColour(rootColours[rootName]).fill
+  const getCategoryStroke = rootName => chartColour(rootColours[rootName]).stroke
+  // In the donut, the 2nd, 3rd… slice of one colour (subcategories) gets a deeper fill.
+  const seenColour = {}
+  const pieColours = displayCategories.map(c => {
+    const key = c.id === '__other__' ? null : rootColours[c.rootName]
+    const shade = key ? (seenColour[key] = (seenColour[key] ?? -1) + 1) : 0
+    return chartColour(key, shade)
+  })
 
   if (loading) return <Loading />
   if (!data && loadError) return <LoadFailed error={loadError} what="the insights" onRetry={retry} />
@@ -462,8 +464,8 @@ export default function InsightsPage() {
                   {displayCategories.map((cat, i) => (
                     <Cell
                       key={cat.id}
-                      fill={getCategoryColor(cat.rootName)}
-                      stroke={getCategoryStroke(cat.rootName)}
+                      fill={pieColours[i].fill}
+                      stroke={pieColours[i].stroke}
                       opacity={hiddenPie.includes(cat.id) ? 0.2 : 1}
                     />
                   ))}
@@ -502,7 +504,7 @@ export default function InsightsPage() {
               </PieChart>
             </ResponsiveContainer>
             <div className="ins-cat-grid">
-              {displayCategories.map((cat) => {
+              {displayCategories.map((cat, i) => {
                 const isHidden = hiddenPie.includes(cat.id)
                 const pct = totalPieAmount > 0 ? ((cat.total / totalPieAmount) * 100).toFixed(0) : 0
                 return (
@@ -514,7 +516,7 @@ export default function InsightsPage() {
                     className={`ins-cat${isHidden ? ' hidden' : ''}`}
                   >
                     <div className="ins-cat-name-row">
-                      <span className="ins-dot" style={{ background: getCategoryStroke(cat.rootName) }} />
+                      <span className="ins-dot" style={{ background: pieColours[i].fill, boxShadow: `inset 0 0 0 2px ${pieColours[i].stroke}` }} />
                       <span className="ins-cat-name">
                         <Icon name={cat.icon} /> {cat.name}
                       </span>
@@ -552,7 +554,7 @@ export default function InsightsPage() {
                     )
                   }}
                 />
-                <Bar dataKey="total" fill={COLOURS[2]} stroke={STROKES[2]} strokeWidth={1} radius={[0, 4, 4, 0]} barSize={28} />
+                <Bar dataKey="total" fill={chartColour('blue').fill} stroke={chartColour('blue').stroke} strokeWidth={1} radius={[0, 4, 4, 0]} barSize={28} />
               </BarChart>
             </ResponsiveContainer>
           </div>

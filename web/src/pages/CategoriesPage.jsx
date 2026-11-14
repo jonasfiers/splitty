@@ -8,16 +8,43 @@ import { useConfirm } from '../components/Confirm/ConfirmProvider.jsx'
 import Field from '../components/Field/Field.jsx'
 import Picker from '../components/Picker/Picker.jsx'
 import { iconOr } from '../utils/icons.js'
+import { CATEGORY_COLOURS, tintClass } from '../utils/categoryColours.js'
+
+// The colour of a top-level category (its subcategories share it).
+function ColourSwatches({ value, onChange }) {
+  return (
+    <div className="colour-swatches" role="radiogroup" aria-label="Colour">
+      {CATEGORY_COLOURS.map(c => (
+        <button
+          key={c.key}
+          type="button"
+          role="radio"
+          aria-checked={value === c.key}
+          aria-label={c.label}
+          title={c.label}
+          className={`colour-swatch ${tintClass(c.key)}`}
+          onClick={() => onChange(c.key)}
+        />
+      ))}
+    </div>
+  )
+}
 
 export default function CategoriesPage() {
   const confirm = useConfirm()
   const [categories, setCategories] = useState([])
-  const [form, setForm] = useState({ name: '', parentId: '', icon: '' })
+  const [form, setForm] = useState({ name: '', parentId: '', icon: '', colour: '' })
   const [editId, setEditId] = useState(null)
   const [editForm, setEditForm] = useState({})
   const [showForm, setShowForm] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+
+  // A new top-level category starts with the first colour not yet taken.
+  const freeColour = () => {
+    const used = new Set(categories.filter(c => !c.parentId).map(c => c.colour))
+    return (CATEGORY_COLOURS.find(c => !used.has(c.key)) ?? CATEGORY_COLOURS[0]).key
+  }
 
   const load = () =>
     client.get('/categories').then(r => setCategories(r.data.categories || []))
@@ -30,9 +57,9 @@ export default function CategoriesPage() {
     e.preventDefault()
     setError('')
     try {
-      await client.post('/categories', form)
+      await client.post('/categories', { ...form, colour: form.parentId ? null : (form.colour || freeColour()) })
       await load()
-      setForm({ name: '', parentId: '', icon: '' })
+      setForm({ name: '', parentId: '', icon: '', colour: '' })
       setShowForm(false)
     } catch {
       setError('Failed to create category.')
@@ -41,14 +68,14 @@ export default function CategoriesPage() {
 
   const startEdit = c => {
     setEditId(c.id)
-    setEditForm({ name: c.name, parentId: c.parentId || '', icon: c.icon || '' })
+    setEditForm({ name: c.name, parentId: c.parentId || '', icon: c.icon || '', colour: c.colour || '' })
   }
 
   const handleUpdate = async e => {
     e.preventDefault()
     setError('')
     try {
-      await client.put(`/categories/${editId}`, editForm)
+      await client.put(`/categories/${editId}`, { ...editForm, colour: editForm.parentId ? null : (editForm.colour || freeColour()) })
       await load()
       setEditId(null)
     } catch {
@@ -107,9 +134,14 @@ export default function CategoriesPage() {
                 title="Parent category"
                 value={form.parentId}
                 onChange={v => setForm(f => ({ ...f, parentId: v }))}
-                options={[{ value: '', label: 'None (top-level)' }, ...categories.map(c => ({ value: c.id, label: c.full_name, icon: c.icon }))]}
+                options={[{ value: '', label: 'None (top-level)' }, ...categories.map(c => ({ value: c.id, label: c.full_name, icon: c.icon, tint: c.colour }))]}
               />
             </Field>
+            {!form.parentId && (
+              <Field label="Colour" hint="Its subcategories share it.">
+                <ColourSwatches value={form.colour || freeColour()} onChange={colour => setForm(f => ({ ...f, colour }))} />
+              </Field>
+            )}
             {error && <p className="error">{error}</p>}
             <div className="panel-actions">
               <button type="button" className="btn btn-ghost" onClick={() => setShowForm(false)}>Cancel</button>
@@ -144,9 +176,14 @@ export default function CategoriesPage() {
                       title="Parent category"
                       value={editForm.parentId}
                       onChange={v => setEditForm(f => ({ ...f, parentId: v }))}
-                      options={[{ value: '', label: 'None (top-level)' }, ...categories.filter(cat => cat.id !== editId).map(cat => ({ value: cat.id, label: cat.full_name, icon: cat.icon }))]}
+                      options={[{ value: '', label: 'None (top-level)' }, ...categories.filter(cat => cat.id !== editId).map(cat => ({ value: cat.id, label: cat.full_name, icon: cat.icon, tint: cat.colour }))]}
                     />
                   </Field>
+                  {!editForm.parentId && (
+                    <Field label="Colour" hint="Its subcategories share it.">
+                      <ColourSwatches value={editForm.colour || freeColour()} onChange={colour => setEditForm(f => ({ ...f, colour }))} />
+                    </Field>
+                  )}
                   {error && <p className="error">{error}</p>}
                   <div className="panel-actions">
                     <button type="button" className="btn btn-ghost btn-sm" onClick={() => setEditId(null)}>Cancel</button>
@@ -158,6 +195,7 @@ export default function CategoriesPage() {
               <IconCard
                 key={c.id}
                 icon={iconOr(c.icon, 'tag')}
+                tint={c.colour}
                 title={c.full_name}
                 actions={<>
                   <button className="btn btn-ghost btn-sm" onClick={() => startEdit(c)} title="Edit">

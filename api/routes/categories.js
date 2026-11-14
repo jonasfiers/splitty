@@ -7,9 +7,8 @@ const { categoryServiceNeo4j } = require('../crudService');
 // CREATE
 router.post('/', requireAdmin, async (req, res) => {
     try {
-        const { name, parentId, icon } = req.body;
-        // Call the service
-        const result = await categoryServiceNeo4j.createCategory(name, parentId, icon);
+        const { name, parentId, icon, colour } = req.body;
+        const result = await categoryServiceNeo4j.createCategory(name, parentId, icon, colour);
         res.status(201).json(result);
     } catch (error) {
         console.error(error);
@@ -58,8 +57,8 @@ router.get('/:id/children', async (req, res) => {
 router.put('/:id', requireAdmin, async (req, res) => {
     try {
         const { id } = req.params;
-        const { name, parentId, icon } = req.body;
-        const result = await categoryServiceNeo4j.updateCategory(id, name, parentId, icon);
+        const { name, parentId, icon, colour } = req.body;
+        const result = await categoryServiceNeo4j.updateCategory(id, name, parentId, icon, colour);
         if (!result.success) return res.status(404).json(result);
         res.json(result);
     }

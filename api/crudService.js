@@ -6,6 +6,13 @@ const pushService = require('./pushService');
 const rateService = require('./rateService');
 const { currencyOptions } = require('./money');
 
+// A category's colour is its top-level category's (subcategories share it).
+// Cypher for the colour of category variable `v` (null-safe).
+const rootColour = v => `head([(${v})-[:CHILD_OF*0..]->(cr:Category) WHERE NOT (cr)-[:CHILD_OF]->(:Category) | cr.colour])`
+// The palette keys the web app knows (web/src/utils/categoryColours.js).
+const CATEGORY_COLOURS = ['amber', 'green', 'teal', 'sky', 'blue', 'violet', 'pink', 'slate']
+const colourOrNull = c => (CATEGORY_COLOURS.includes(c) ? c : null)
+
 const getDecimals = iso =>
     new Intl.NumberFormat('en', { style: 'currency', currency: iso }).resolvedOptions().maximumFractionDigits;
 
@@ -362,7 +369,7 @@ const currencyServiceNeo4j = {
 
 const categoryServiceNeo4j = {
     // CREATE
-    createCategory: async (name, parentId, icon = '') => {
+    createCategory: async (name, parentId, icon = '', colour = null) => {
         try {
             if (parentId !== '') {
                 const {records} = await driver.executeQuery(
@@ -378,10 +385,14 @@ const categoryServiceNeo4j = {
                 return {success: true, id: records[0].get('id')}
             }
             else {
+                // A new top-level category gets the first colour no other one has.
                 const {records} = await driver.executeQuery(
-                    'CREATE (c:Category {id: randomUUID(), name: $name, icon: $icon}) ' +
-                    'RETURN c.id AS id',
-                    {name,icon})
+                    `OPTIONAL MATCH (o:Category) WHERE NOT (o)-[:CHILD_OF]->(:Category)
+                    WITH collect(o.colour) AS used
+                    CREATE (c:Category {id: randomUUID(), name: $name, icon: $icon,
+                        colour: coalesce($colour, head([k IN $keys WHERE NOT k IN used]), $keys[0])})
+                    RETURN c.id AS id`,
+                    {name, icon, colour: colourOrNull(colour), keys: CATEGORY_COLOURS})
                 return {success: true, id: records[0].get('id')}
             }
         }
@@ -412,6 +423,7 @@ const categoryServiceNeo4j = {
             RETURN c,
                 apoc.text.join(nameList, " - ") AS fullName,
                 coalesce(nearestAncestor.icon, "") AS icon,
+                ${rootColour('c')} AS colour,
                 directParent.id AS parentId,
                 usageCount
             ORDER BY usageCount DESC, fullName`,
@@ -421,6 +433,7 @@ const categoryServiceNeo4j = {
                     ...record.get('c').properties,
                     full_name: record.get('fullName'),
                     icon: record.get('icon'),
+                    colour: record.get('colour') ?? null,
                     parentId: record.get('parentId'),
                     // How often this group used it (0 without a groupId): the picker's "used most".
                     usageCount: neo4j.integer.toNumber(record.get('usageCount') ?? 0),
@@ -463,7 +476,8 @@ const categoryServiceNeo4j = {
             ELSE [node IN reverse(nodes(path)) | node.name] END AS nameList
             RETURN c,
                 apoc.text.join(nameList, " - ") AS fullName,
-                coalesce(nearestAncestor.icon, "") AS icon
+                coalesce(nearestAncestor.icon, "") AS icon,
+                ${rootColour('c')} AS colour
             ORDER BY fullName`, {id}
             )
             if (records.length === 0) {
@@ -473,6 +487,7 @@ const categoryServiceNeo4j = {
                     ...record.get('c').properties,
                     full_name: record.get('fullName'),
                     icon: record.get('icon'),
+                    colour: record.get('colour') ?? null,
                 }))};
         }
         catch (err) {
@@ -481,7 +496,7 @@ const categoryServiceNeo4j = {
     },
 
     // UPDATE
-    updateCategory: async (id, name, parentId, icon) => {
+    updateCategory: async (id, name, parentId, icon, colour) => {
         try {
             const {summary} = await driver.executeQuery(
                 `MATCH (c:Category) WHERE c.id = $id
@@ -489,14 +504,15 @@ const categoryServiceNeo4j = {
             DELETE r
             WITH c
             SET c.name = $name,
-                c.icon = $icon
+                c.icon = $icon,
+                c.colour = coalesce($colour, c.colour)
             WITH c
             OPTIONAL MATCH (p:Category {id: $parentId})
             WHERE $parentId <> ""
             FOREACH (_ IN CASE WHEN p IS NOT NULL THEN [1] ELSE [] END |
             CREATE (c)-[:CHILD_OF]->(p)
         )`,
-                {id, name, parentId, icon}
+                {id, name, parentId, icon, colour: colourOrNull(colour)}
             )
             if (summary.counters.containsUpdates()) {
                 return { success: true, message: 'Category updated successfully' };
@@ -1031,6 +1047,7 @@ const expenseService = {
                     uPayer.id AS paidByUserId,
                     uPayer.name AS paidByName,
                     coalesce(nearestIcon.icon, '') AS categoryIcon,
+                    ${rootColour('c')} AS categoryColour,
                     c.id AS categoryId,
                     cur.iso AS currencyIso,
                     o.amount AS shareAmount,
@@ -1053,6 +1070,7 @@ const expenseService = {
                 paidByUserId: record.get('paidByUserId'),
                 paidByName:   record.get('paidByName'),
                 categoryIcon: record.get('categoryIcon'),
+                categoryColour: record.get('categoryColour') ?? null,
                 categoryId:   record.get('categoryId'),
                 currencyIso:  record.get('currencyIso'),
                 shareAmount:  record.get('shareAmount'),
@@ -1086,7 +1104,7 @@ const expenseService = {
                          WHEN path IS NULL THEN c.name
                          ELSE apoc.text.join([node IN reverse(nodes(path)) | node.name], ' - ')
                     END AS categoryName
-                RETURN c.id AS categoryId, categoryName, coalesce(nearestIcon.icon, '') AS icon, total
+                RETURN c.id AS categoryId, categoryName, coalesce(nearestIcon.icon, '') AS icon, ${rootColour('c')} AS colour, total
                 ORDER BY total DESC`,
                 { groupId, userId }
             )
@@ -1096,6 +1114,7 @@ const expenseService = {
                     categoryId: r.get('categoryId'),
                     name: r.get('categoryName'),
                     icon: r.get('icon'),
+                    colour: r.get('colour') ?? null,
                     total: r.get('total'),
                 }))
             }
@@ -1126,7 +1145,7 @@ const expenseService = {
                 ORDER BY iconDist
                 WITH e, g, u, c, cur, gc, categoryName, collect(iconAncestor)[0] AS nearestIcon
                 RETURN e, u.id AS paidByUserId, u.name AS paidByName, c.id AS categoryId,
-                       coalesce(nearestIcon.icon, '') AS categoryIcon, categoryName, cur.iso AS currencyIso,
+                       coalesce(nearestIcon.icon, '') AS categoryIcon, ${rootColour('c')} AS categoryColour, categoryName, cur.iso AS currencyIso,
                        gc.iso AS groupCurrencyIso, g.title AS groupTitle, e:Settlement AS isSettlement, e:Transfer AS isTransfer`,
                 {id, userId}
             )
@@ -1140,6 +1159,7 @@ const expenseService = {
                     paidByName:      record.get('paidByName'),
                     categoryId:      record.get('categoryId'),
                     categoryIcon:    record.get('categoryIcon'),
+                    categoryColour:  record.get('categoryColour') ?? null,
                     categoryName:    record.get('categoryName'),
                     currencyIso:     record.get('currencyIso'),
                     groupCurrencyIso: record.get('groupCurrencyIso'),
@@ -1326,9 +1346,10 @@ const expenseService = {
                  OPTIONAL MATCH (x)-[:EXPRESSED_IN]->(cur:Currency)
                  WITH u, x, g, cur,
                       reduce(best = null, y IN [(x)-[:IN_CATEGORY]->(:Category)-[r:CHILD_OF*0..]->(a:Category) WHERE a.icon <> '' | {icon: a.icon, d: size(r)}]
-                             | CASE WHEN best IS NULL OR y.d < best.d THEN y ELSE best END).icon AS categoryIcon
+                             | CASE WHEN best IS NULL OR y.d < best.d THEN y ELSE best END).icon AS categoryIcon,
+                      head([(x)-[:IN_CATEGORY]->(:Category)-[:CHILD_OF*0..]->(cr:Category) WHERE NOT (cr)-[:CHILD_OF]->(:Category) | cr.colour]) AS categoryColour
                  CREATE (d:Deletion {
-                     id: randomUUID(), on: datetime(), title: x.description, amount: x.amount, currencyIso: cur.iso, categoryIcon: categoryIcon,
+                     id: randomUUID(), on: datetime(), title: x.description, amount: x.amount, currencyIso: cur.iso, categoryIcon: categoryIcon, categoryColour: categoryColour,
                      kind: CASE WHEN x:Settlement THEN 'settlement' WHEN x:Transfer THEN 'transfer' ELSE 'expense' END
                  })-[:IN_GROUP]->(g)
                  CREATE (d)-[:DELETED_BY]->(u)

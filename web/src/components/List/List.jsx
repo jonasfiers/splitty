@@ -1,5 +1,6 @@
 import { Link } from 'react-router'
 import { asIcon } from '../Icon/Icon.jsx'
+import { tintClass } from '../../utils/categoryColours.js'
 
 // One list style for the whole app: a card of rows.
 //
@@ -25,6 +26,7 @@ export function List({ label, hint, className = '', children }) {
 }
 
 // icon:    shown in the rounded square on the left (an icon's name, letter, node)
+// tint:    a category colour's key (utils/categoryColours.js) for the square
 // title:   the main line;  meta: the grey line under it
 // value:   plain grey text on the right (settings: "Name  Jonas")
 // aside:   any node on the right (amounts)
@@ -35,12 +37,12 @@ export function List({ label, hint, className = '', children }) {
 // href:    a plain <a> instead of a router link (files, external pages)
 // children: extra lines under the meta
 export function ListRow({
-  to, href, onClick, end, state, icon, iconStyle, title, meta, value, aside, chevron = false, action = false,
+  to, href, onClick, end, state, icon, iconStyle, tint, title, meta, value, aside, chevron = false, action = false,
   className = '', children, ...rest
 }) {
   const body = (
     <>
-      {icon != null && <span className="list-row-icon" style={iconStyle} aria-hidden="true">{asIcon(icon)}</span>}
+      {icon != null && <span className={`list-row-icon ${tintClass(tint)}`.trim()} style={iconStyle} aria-hidden="true">{asIcon(icon)}</span>}
       <span className="list-row-text">
         <span className="list-row-title">{title}</span>
         {meta && <span className="list-row-meta">{meta}</span>}

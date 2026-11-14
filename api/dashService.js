@@ -143,20 +143,21 @@ const dashService = {
                        e.id AS expenseId, e.description AS description, e.amount AS amount, c.iso AS currencyIso,
                        e:Settlement AS isSettlement, e:Transfer AS isTransfer,
                        reduce(best = null, x IN [(e)-[:IN_CATEGORY]->(:Category)-[r2:CHILD_OF*0..]->(a:Category) WHERE a.icon <> '' | {icon: a.icon, d: size(r2)}] | CASE WHEN best IS NULL OR x.d < best.d THEN x ELSE best END).icon AS categoryIcon,
+                       head([(e)-[:IN_CATEGORY]->(:Category)-[:CHILD_OF*0..]->(cr:Category) WHERE NOT (cr)-[:CHILD_OF]->(:Category) | cr.colour]) AS categoryColour,
                        null AS tripId, null AS tripTitle, null AS itemId, null AS itemKind, null AS itemMode, null AS itemTitle,
                        r.changes AS changes
                 UNION ALL
                 MATCH (u:User)<-[r:UPDATED_BY|CREATED_BY]-(t:Trip)-[:PLANNED_IN]->(g:Group)<-[:MEMBER_OF]-(:User {id: $userId})
                 RETURN 'trip' AS kind, u.name AS userName, g.id AS groupId, type(r) AS action, r.on AS timestamp,
                        null AS expenseId, t.title AS description, null AS amount, null AS currencyIso,
-                       false AS isSettlement, false AS isTransfer, null AS categoryIcon,
+                       false AS isSettlement, false AS isTransfer, null AS categoryIcon, null AS categoryColour,
                        t.id AS tripId, t.title AS tripTitle, null AS itemId, null AS itemKind, null AS itemMode, null AS itemTitle,
                        null AS changes
                 UNION ALL
                 MATCH (u:User)<-[r:UPDATED_BY|CREATED_BY]-(i:TripItem)-[:PART_OF]->(t:Trip)-[:PLANNED_IN]->(g:Group)<-[:MEMBER_OF]-(:User {id: $userId})
                 RETURN 'tripItem' AS kind, u.name AS userName, g.id AS groupId, type(r) AS action, r.on AS timestamp,
                        null AS expenseId, i.title AS description, null AS amount, null AS currencyIso,
-                       false AS isSettlement, false AS isTransfer, null AS categoryIcon,
+                       false AS isSettlement, false AS isTransfer, null AS categoryIcon, null AS categoryColour,
                        t.id AS tripId, t.title AS tripTitle, i.id AS itemId,
                        [l IN labels(i) WHERE l <> 'TripItem'][0] AS itemKind, i.mode AS itemMode, i.title AS itemTitle,
                        null AS changes
@@ -164,7 +165,7 @@ const dashService = {
                 MATCH (u:User)<-[r:UPLOADED_BY]-(a:Attachment)-[:ATTACHED_TO]->(i:TripItem)-[:PART_OF]->(t:Trip)-[:PLANNED_IN]->(g:Group)<-[:MEMBER_OF]-(:User {id: $userId})
                 RETURN 'file' AS kind, u.name AS userName, g.id AS groupId, 'UPLOADED_BY' AS action, r.on AS timestamp,
                        null AS expenseId, a.filename AS description, null AS amount, null AS currencyIso,
-                       false AS isSettlement, false AS isTransfer, null AS categoryIcon,
+                       false AS isSettlement, false AS isTransfer, null AS categoryIcon, null AS categoryColour,
                        t.id AS tripId, t.title AS tripTitle, i.id AS itemId,
                        [l IN labels(i) WHERE l <> 'TripItem'][0] AS itemKind, i.mode AS itemMode, i.title AS itemTitle,
                        null AS changes
@@ -173,7 +174,7 @@ const dashService = {
                 RETURN CASE WHEN d.kind IN ['expense', 'settlement', 'transfer'] THEN 'expense' ELSE d.kind END AS kind,
                        u.name AS userName, g.id AS groupId, 'DELETED_BY' AS action, d.on AS timestamp,
                        null AS expenseId, d.title AS description, d.amount AS amount, d.currencyIso AS currencyIso,
-                       d.kind = 'settlement' AS isSettlement, d.kind = 'transfer' AS isTransfer, d.categoryIcon AS categoryIcon,
+                       d.kind = 'settlement' AS isSettlement, d.kind = 'transfer' AS isTransfer, d.categoryIcon AS categoryIcon, d.categoryColour AS categoryColour,
                        d.tripId AS tripId, d.tripTitle AS tripTitle, d.itemId AS itemId, d.itemKind AS itemKind,
                        d.itemMode AS itemMode, d.itemTitle AS itemTitle, null AS changes`,
                 {userId}
@@ -196,6 +197,7 @@ const dashService = {
                     isSettlement: record.get('isSettlement') || false,
                     isTransfer: record.get('isTransfer') || false,
                     categoryIcon: record.get('categoryIcon') || null,
+                    categoryColour: record.get('categoryColour') || null,
                     changesRaw: record.get('changes') ?? null,
                 }
                 return {
@@ -360,6 +362,7 @@ const dashService = {
                              ELSE apoc.text.join([node IN reverse(nodes(p)) | node.name], ' - ')
                         END AS name,
                         coalesce(nearestIcon.icon, '') AS icon,
+                        root.colour AS colour,
                         total
                     ORDER BY total DESC`,
                     params
@@ -401,6 +404,7 @@ const dashService = {
                 categories: categoryRes.records.map(r => ({
                     name: r.get('name'),
                     icon: r.get('icon'),
+                    colour: r.get('colour') ?? null,
                     total: Number(r.get('total'))
                 })),
                 members: memberRes.records.map(r => ({

@@ -1,2 +1,0 @@
-export const COLOURS = ['#FDECD1','#D1FAE5','#DBEAFE','#EDE9FE','#FCE7F3','#FFE4E6','#CCFBF1','#FEF3C7']
-export const STROKES  = ['#B45309','#065F46','#1E40AF','#5B21B6','#9D174D','#9F1239','#0F766E','#92400E']

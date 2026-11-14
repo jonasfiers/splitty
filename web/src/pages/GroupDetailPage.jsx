@@ -11,7 +11,7 @@ import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
 import Loading from '../components/Loading.jsx'
 import PageHeader from '../components/PageHeader/PageHeader.jsx'
 import ChartTooltip from '../components/ChartTooltip.jsx'
-import { COLOURS, STROKES } from '../utils/chartColors.js'
+import { chartColour } from '../utils/categoryColours.js'
 import CategoryPicker from '../components/CategoryPicker/CategoryPicker.jsx'
 import TripList from '../components/TripForm/TripList.jsx'
 import TripFormSheet from '../components/TripForm/TripFormSheet.jsx'
@@ -329,6 +329,13 @@ export default function GroupDetailPage() {
         total: categoryTotals.slice(DONUT_MAX).reduce((s, c) => s + c.total, 0),
       }]
     : categoryTotals
+  // Each slice in its category's colour; subcategories of one category share
+  // it, so the 2nd, 3rd… slice of a colour gets a deeper fill.
+  const seen = {}
+  const sliceColours = donutData.map(c => {
+    const shade = c.colour ? (seen[c.colour] = (seen[c.colour] ?? -1) + 1) : 0
+    return chartColour(c.colour, shade)
+  })
 
   const activeFilterCount = [debouncedKeyword, filters.categoryId, filters.paidByUserId, filters.startDate, filters.endDate].filter(Boolean).length
 
@@ -409,7 +416,7 @@ export default function GroupDetailPage() {
           >
             {donutData.map((cat, i) => {
               const isSelected = !filters.categoryId || filters.categoryId === cat.categoryId
-              return <Cell key={cat.name} fill={COLOURS[i % COLOURS.length]} stroke={STROKES[i % STROKES.length]} strokeWidth={isSelected ? 1.5 : 0.5} opacity={isSelected ? 1 : 0.3} />
+              return <Cell key={cat.name} fill={sliceColours[i].fill} stroke={sliceColours[i].stroke} strokeWidth={isSelected ? 1.5 : 0.5} opacity={isSelected ? 1 : 0.3} />
             })}
           </Pie>
           <Tooltip content={({ active, payload }) => {
@@ -424,7 +431,7 @@ export default function GroupDetailPage() {
           const isSelected = !filters.categoryId || filters.categoryId === cat.categoryId
           return (
             <span key={cat.name} onClick={() => setFilters(f => ({ ...f, categoryId: f.categoryId === cat.categoryId ? null : cat.categoryId }))} className={`group-donut-key${isSelected ? '' : ' off'}`}>
-              <span className="ins-dot" style={{ background: STROKES[i % STROKES.length] }} />
+              <span className="ins-dot" style={{ background: sliceColours[i].fill, boxShadow: `inset 0 0 0 2px ${sliceColours[i].stroke}` }} />
               <Icon name={cat.icon} /> {cat.name}
             </span>
           )
@@ -579,6 +586,7 @@ export default function GroupDetailPage() {
                       key={e.id}
                       to={`/groups/${id}/expenses/${e.id}`}
                       icon={expenseIcon(e)}
+                      tint={e.isTransfer || e.isSettlement ? null : e.categoryColour}
                       iconStyle={e.isTransfer ? { background: 'var(--accent-light)', color: 'var(--accent-text)' }
                         : e.isSettlement ? { background: 'var(--green-light)', color: 'var(--green-dark)' }
                         : undefined}

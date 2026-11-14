@@ -1,14 +1,16 @@
 import { asIcon } from '../Icon/Icon.jsx'
+import { tintClass } from '../../utils/categoryColours.js'
 
 // The building blocks of a detail page (an expense, a trip item), so both
 // look alike: the head of the page, then label/value rows.
 
 // Icon tile, title and a quiet line under it; `aside` sits on the right
-// (an expense's amount). `iconStyle` tints the tile (settlements, transfers).
-export function DetailHero({ icon, iconStyle, title, subtitle, aside }) {
+// (an expense's amount). `iconStyle` tints the tile (settlements, transfers);
+// `tint` gives it a category's colour.
+export function DetailHero({ icon, iconStyle, tint, title, subtitle, aside }) {
   return (
     <div className="detail-hero">
-      <div className="list-row-icon detail-hero-icon" style={iconStyle}>{asIcon(icon)}</div>
+      <div className={`list-row-icon detail-hero-icon ${tintClass(tint)}`.trim()} style={iconStyle}>{asIcon(icon)}</div>
       <div className="detail-hero-text">
         <div className="detail-hero-title">{title}</div>
         {subtitle && <div className="detail-hero-sub">{subtitle}</div>}

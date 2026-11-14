@@ -24,7 +24,7 @@ export default function CategoryPicker({ value, onChange, categories, nullable =
   const options = [
     ...(nullable ? [{ value: '', label: 'None', icon: '—' }] : []),
     ...frequent.map(c => ({
-      key: `most-${c.id}`, value: c.id, label: c.full_name, icon: c.icon,
+      key: `most-${c.id}`, value: c.id, label: c.full_name, icon: c.icon, tint: c.colour,
       section: 'Used most in this group', hideWhenSearching: true,
     })),
     ...sorted.map(c => ({
@@ -32,6 +32,7 @@ export default function CategoryPicker({ value, onChange, categories, nullable =
       label: c.parentId ? (c.name ?? c.full_name) : c.full_name,
       short: c.full_name,
       icon: c.icon,
+      tint: c.colour,
       section: section(c) || 'Other',
       keywords: c.full_name,
     })),

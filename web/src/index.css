@@ -2,6 +2,15 @@
    TOKENS
 ══════════════════════════════════════════ */
 :root {
+  /* Category colours (utils/categoryColours.js): icon square background, icon */
+  --tint-amber-bg: #FDEFD9;  --tint-amber-fg: #B45309;
+  --tint-green-bg: #DCF3E6;  --tint-green-fg: #047857;
+  --tint-teal-bg:  #D3F3EE;  --tint-teal-fg:  #0F766E;
+  --tint-sky-bg:   #DDF1FB;  --tint-sky-fg:   #0369A1;
+  --tint-blue-bg:  #E0EBFD;  --tint-blue-fg:  #1D4ED8;
+  --tint-violet-bg:#ECE6FD;  --tint-violet-fg:#6D28D9;
+  --tint-pink-bg:  #FCE3EF;  --tint-pink-fg:  #BE185D;
+  --tint-slate-bg: #E7EAEF;  --tint-slate-fg: #475569;
   --accent:        #E8603A;
   /* Orange for small text and links: the brand orange is too light on white
      (3.3:1); this one passes WCAG AA (5.1:1, 4.7:1 on --accent-light, 4.6:1 on --bg).
@@ -76,6 +85,14 @@
    DARK MODE
 ══════════════════════════════════════════ */
 [data-theme="dark"] {
+  --tint-amber-bg: #3A2814;  --tint-amber-fg: #FCC57E;
+  --tint-green-bg: #14302A;  --tint-green-fg: #6EE7B7;
+  --tint-teal-bg:  #11302C;  --tint-teal-fg:  #5EEAD4;
+  --tint-sky-bg:   #132C38;  --tint-sky-fg:   #7DD3FC;
+  --tint-blue-bg:  #16243A;  --tint-blue-fg:  #93C5FD;
+  --tint-violet-bg:#271F3E;  --tint-violet-fg:#C4B5FD;
+  --tint-pink-bg:  #3A1A2A;  --tint-pink-fg:  #F9A8D4;
+  --tint-slate-bg: #262A31;  --tint-slate-fg: #CBD5E1;
   --accent:        #F07452;
   --accent-text:   #F07452;
   --accent-light:  #2E1E17;
@@ -1107,6 +1124,37 @@ svg.icon { flex-shrink: 0; vertical-align: -0.2em; }
     .invite-icon, .admin-card-icon, .icon-card-icon, .next-trip-icon, .route-leg-icon, .trip-kind, .place-row-icon,
     .place-trigger-pin, .icon-card-icon) > svg.icon,
 .act-icon > span > svg.icon, .trip-kind > span > svg.icon { color: var(--accent-text); }
+
+/* Category colours: an icon square in its category's colour (tintClass). */
+.tint-amber { --tint-bg: var(--tint-amber-bg); --tint-fg: var(--tint-amber-fg); }
+.tint-green { --tint-bg: var(--tint-green-bg); --tint-fg: var(--tint-green-fg); }
+.tint-teal { --tint-bg: var(--tint-teal-bg); --tint-fg: var(--tint-teal-fg); }
+.tint-sky { --tint-bg: var(--tint-sky-bg); --tint-fg: var(--tint-sky-fg); }
+.tint-blue { --tint-bg: var(--tint-blue-bg); --tint-fg: var(--tint-blue-fg); }
+.tint-violet { --tint-bg: var(--tint-violet-bg); --tint-fg: var(--tint-violet-fg); }
+.tint-pink { --tint-bg: var(--tint-pink-bg); --tint-fg: var(--tint-pink-fg); }
+.tint-slate { --tint-bg: var(--tint-slate-bg); --tint-fg: var(--tint-slate-fg); }
+:is(.list-row-icon, .act-icon, .icon-card-icon, .picker-icon, .picker-option-icon, .colour-swatch).tinted {
+  background: var(--tint-bg); color: var(--tint-fg);
+}
+.tinted svg.icon, .tinted > span > svg.icon { color: var(--tint-fg); }
+.picker-option-icon.tinted, .picker-icon.tinted {
+  width: 28px; height: 28px; border-radius: var(--r-sm);
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.picker-option-icon.tinted svg.icon, .picker-icon.tinted svg.icon { width: 18px; height: 18px; }
+.icon-card-icon.tinted {
+  width: 40px; height: 40px; border-radius: var(--r-md); font-size: 20px;
+  display: flex; align-items: center; justify-content: center;
+}
+.colour-swatches { display: flex; flex-wrap: wrap; gap: 8px; }
+.colour-swatch {
+  width: 36px; height: 36px; border-radius: var(--r-md);
+  border: 2px solid transparent; cursor: pointer; padding: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.colour-swatch[aria-checked="true"] { border-color: var(--tint-fg); }
+.colour-swatch:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .list-row-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .list-row-title {
   font-size: var(--fs-base);

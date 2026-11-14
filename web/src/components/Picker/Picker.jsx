@@ -2,6 +2,7 @@ import { useState, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import Sheet from '../Sheet/Sheet.jsx'
 import { asIcon } from '../Icon/Icon.jsx'
+import { tintClass } from '../../utils/categoryColours.js'
 
 // A choice from a list, in the app's own sheet instead of the browser's
 // <select> (which looks different, and dated, on every phone).
@@ -63,7 +64,7 @@ export default function Picker({
         aria-label={ariaLabel}
         aria-labelledby={!ariaLabel && id ? `${id}-label ${id}` : undefined}
       >
-        {selected?.icon != null && <span className="picker-icon" aria-hidden="true">{asIcon(selected.icon)}</span>}
+        {selected?.icon != null && <span className={`picker-icon ${tintClass(selected.tint)}`.trim()} aria-hidden="true">{asIcon(selected.icon)}</span>}
         <span className={`picker-text${selected ? '' : ' picker-placeholder'}`}>{selected ? (selected.short ?? selected.label) : placeholder}</span>
         {chevron}
       </button>
@@ -103,7 +104,7 @@ export default function Picker({
                 onClick={() => choose(o.value)}
                 disabled={o.disabled}
               >
-                {o.icon != null && <span className="picker-option-icon" aria-hidden="true">{asIcon(o.icon)}</span>}
+                {o.icon != null && <span className={`picker-option-icon ${tintClass(o.tint)}`.trim()} aria-hidden="true">{asIcon(o.icon)}</span>}
                 <span className="list-row-text">
                   <span className="list-row-title">{o.label}</span>
                   {o.meta && <span className="list-row-meta">{o.meta}</span>}
