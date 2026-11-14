@@ -7,7 +7,7 @@ import Loading from '../components/Loading.jsx'
 import PageHeader from '../components/PageHeader/PageHeader.jsx'
 import { useMediaQuery } from '../utils/useMediaQuery.js'
 import ExpenseHistory from '../components/ExpenseHistory.jsx'
-import { MONEY_TILE } from '../utils/categoryColours.js'
+import { moneyTile } from '../utils/categoryColours.js'
 import { DetailHero, DetailRows, DetailRow } from '../components/Detail/Detail.jsx'
 import { useConfirm } from '../components/Confirm/ConfirmProvider.jsx'
 import { leaveTo } from '../utils/history.js'
@@ -136,7 +136,7 @@ export default function ExpenseDetailPage() {
             <DetailHero
               icon={icon}
               tint={expense.isTransfer || expense.isSettlement ? null : expense.categoryColour}
-              iconStyle={expense.isTransfer || expense.isSettlement ? MONEY_TILE : undefined}
+              iconStyle={moneyTile(expense)}
               title={expense.description}
               subtitle={[
                 !expense.isSettlement && !expense.isTransfer && `Paid by ${expense.paidByName ?? '—'}`,
