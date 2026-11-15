@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import { itemIcon, buildTimeline, daysBetween, today, addDays } from '../utils/trip.js'
 import TodayEntries, { quietDayEntries, moreToday } from './TodayEntries.jsx'
-import { useTripNow } from '../utils/tripClock.js'
+import { useTripNow, tripNow } from '../utils/tripClock.js'
 import { useGate } from '../utils/pageGate.jsx'
 import { swrOne } from '../utils/cache.js'
 import Icon from './Icon/Icon.jsx'
@@ -11,7 +11,8 @@ import { tripIcon } from '../utils/icons.js'
 
 // Home's top card while a trip is on: what today holds, from the trip's own
 // day list (same entries, same order), and where you sleep tonight. Home's
-// headline, so one card: the first trip with something planned today; any
+// headline, so one card: the first trip with something still to come today
+// (or else anything planned today); any
 // other trips that are on too are a short "Also today" list under it.
 // Stays away if nothing loads, like the other panels.
 //
@@ -54,8 +55,16 @@ export default function TodayTrip() {
   const loaded = active.filter(id => details[id]).map(id => details[id])
   if (!loaded.length) return null
   const now = today()
-  const plannedToday = t => buildTimeline(t.trip, t.items || []).find(d => d.day === now)?.entries.length > 0
-  const main = loaded.find(plannedToday) ?? loaded[0]
+  // Today's entries, in the trip's own time zone.
+  const todayOf = t => {
+    const { day, time } = tripNow(t.items || [], t.places || [])
+    return { day, time, entries: buildTimeline(t.trip, t.items || []).find(d => d.day === day)?.entries || [] }
+  }
+  const stillToCome = t => { const { day, time, entries } = todayOf(t); return moreToday(day, time, entries) }
+  const plannedToday = t => todayOf(t).entries.length > 0
+  // The headline: a trip with something on or still to come today, else
+  // one with anything planned today, else the first.
+  const main = loaded.find(stillToCome) ?? loaded.find(plannedToday) ?? loaded[0]
   const others = loaded.filter(t => t !== main)
   return (
     <>
