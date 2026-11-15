@@ -1,4 +1,4 @@
-import { iconNode, countryOf, countryName, isIcon, isEmoji, codeOfFlag, iconLabel, flagOf, SHOW_FLAGS } from '../../utils/icons.js'
+import { iconNode, countryOf, countryName, isIcon, isEmoji, codeOfFlag, iconLabel, flagOf, showFlags } from '../../utils/icons.js'
 
 // One of the app's icons (utils/icons.js) by name, drawn in the text colour.
 // Sized in em by default, so it takes the size of the text or box around it.
@@ -15,7 +15,7 @@ export default function Icon({ name, fallback, size = '1.2em', strokeWidth = 1.7
   const emoji = !node && isEmoji(shown) ? shown : null
   const country = countryOf(shown) ?? (emoji ? codeOfFlag(emoji) : null)
   if (!node && !country && !emoji) return null
-  if ((emoji || country) && !(country && !SHOW_FLAGS)) {
+  if ((emoji || country) && !(country && !showFlags())) {
     return (
       <span className={`icon icon-emoji ${className}`.trim()} style={{ fontSize: size, ...style }} title={iconLabel(shown)}
         {...(label ? { role: 'img', 'aria-label': label } : { 'aria-hidden': 'true' })}>

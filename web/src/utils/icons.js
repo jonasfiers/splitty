@@ -205,9 +205,9 @@ const PICKABLE_SECTIONS = PICKABLE.map(([section, icons]) => ({
 }))
 
 // Countries, as their two-letter ISO code ("country:TW"): a trip's icon,
-// drawn as the country's flag emoji (Icon.jsx). Windows has no flag emoji
-// (it shows two letters in boxes), so there the code is drawn as bold
-// letters instead. Names come from the browser (Intl), in its language, and
+// drawn as the country's flag emoji (Icon.jsx). Windows' own emoji have no flags
+// (it shows two letters in boxes), so with those the code is drawn as bold
+// letters instead; OpenMoji has them (showFlags). Names come from the browser (Intl), in its language, and
 // in English for the search.
 const COUNTRY_CODES = [
   'AD AE AF AG AI AL AM AO AQ AR AS AT AU AW AX AZ BA BB BD BE BF BG BH BI BJ BL BM BN BO BQ BR BS',
@@ -239,7 +239,10 @@ export const codeOfFlag = emoji => {
     ? String.fromCharCode(...cps.map(c => c - 0x1F1E6 + 65))
     : null
 }
-export const SHOW_FLAGS = !/Windows/i.test(globalThis.navigator?.userAgent ?? '')
+// Flags show as emoji unless they can't: Windows' own emoji have none, but
+// OpenMoji (utils/emojiStyle.js) has.
+export const showFlags = () =>
+  globalThis.document?.documentElement.dataset.emoji === 'openmoji' || !/Windows/i.test(globalThis.navigator?.userAgent ?? '')
 
 // A group's icon is an emoji, stored as itself ("🌈"), drawn in the device's
 // own emoji font. Any emoji will do (older groups keep theirs); these are the
@@ -318,8 +321,8 @@ export function iconSvg(name, { size = 16, strokeWidth = 2 } = {}) {
   const country = countryOf(name) ?? (emoji ? codeOfFlag(emoji) : null)
   const node = iconNode(name)
   if (!node && !country && !emoji) return ''
-  if (emoji && (SHOW_FLAGS || !country)) return `<span class="icon icon-emoji" style="font-size:${size}px" aria-hidden="true">${esc(emoji)}</span>`
-  if (country && SHOW_FLAGS) return `<span class="icon icon-emoji" style="font-size:${size}px" aria-hidden="true">${flagOf(country)}</span>`
+  if (emoji && (showFlags() || !country)) return `<span class="icon icon-emoji" style="font-size:${size}px" aria-hidden="true">${esc(emoji)}</span>`
+  if (country && showFlags()) return `<span class="icon icon-emoji" style="font-size:${size}px" aria-hidden="true">${flagOf(country)}</span>`
   const children = country
     ? `<text x="12" y="12.5" text-anchor="middle" dominant-baseline="central" font-size="11" font-weight="800" fill="currentColor" stroke="none">${country}</text>`
     : node.map(([tag, attrs]) =>
