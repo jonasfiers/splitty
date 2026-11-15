@@ -45,7 +45,7 @@ function TripFormSheet({ trip, groupId, groups = [], onClose, onSaved }) {
       <form onSubmit={handleSubmit}>
         <Field label="Name" id="trip-form-title">
           <div className="name-with-icon">
-            <IconPicker clearable value={form.icon} onChange={icon => setForm(f => ({ ...f, icon }))} />
+            <IconPicker kind="trip" clearable value={form.icon} onChange={icon => setForm(f => ({ ...f, icon }))} />
             <input
               id="trip-form-title"
               value={form.title}

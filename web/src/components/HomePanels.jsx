@@ -8,7 +8,7 @@ import { isActive } from './TodayTrip.jsx'
 import { activityLink, activityVerb, isTripActivity } from '../utils/activity.js'
 import { useGate } from '../utils/pageGate.jsx'
 import { swrOne } from '../utils/cache.js'
-import { iconOr } from '../utils/icons.js'
+import { tripIcon } from '../utils/icons.js'
 import Icon from './Icon/Icon.jsx'
 
 const RECENT = 5
@@ -110,7 +110,7 @@ function NextTrip({ trips }) {
         <span className="home-trip-when">{when}</span>
       </div>
       <div className="home-trip-title">
-        <span><Icon name={next.icon} fallback={iconOr(next.groupIcon, 'luggage')} /></span>
+        <span><Icon name={tripIcon(next)} /></span>
         <span>{next.title}</span>
       </div>
       <div className="home-panel-sub">

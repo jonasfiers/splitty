@@ -8,6 +8,7 @@ const NONE = []
 import { useGate } from '../../utils/pageGate.jsx'
 import { swrOne } from '../../utils/cache.js'
 import Icon from '../Icon/Icon.jsx'
+import { tripIcon } from '../../utils/icons.js'
 
 // The trip that is on, or the next one: what comes first, at a glance.
 // It loads the trip's items itself; until then (or if that fails) it shows
@@ -57,7 +58,7 @@ export default function NextTrip({ trip }) {
   return (
     <Link to={`/trips/${trip.id}`} className="next-trip">
       <div className="next-trip-head">
-        <span className="trip-card-icon" aria-hidden="true"><Icon name={trip.icon} fallback="luggage" /></span>
+        <span className="trip-card-icon" aria-hidden="true"><Icon name={tripIcon(trip)} /></span>
         <div className="next-trip-title">
           <span className="next-trip-label">{on ? 'Now' : 'Next up'}</span>
           <span className="next-trip-name">{trip.title}</span>

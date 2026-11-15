@@ -59,7 +59,7 @@ export default function GroupsPage() {
     e.preventDefault()
     setError('')
     if (!form.icon) {
-      setError('Pick an icon for the group — tap the + next to the name.')
+      setError('Pick an emoji for the group — tap the + next to the name.')
       return
     }
     try {
@@ -192,8 +192,8 @@ export default function GroupsPage() {
         <Sheet title="New group" onClose={() => setShowNewGroup(false)}>
           <form onSubmit={handleCreate}>
             <div className="form-row form-row-compact">
-              <Field label="Icon">
-                <IconPicker value={form.icon} onChange={icon => setForm(f => ({ ...f, icon }))}/>
+              <Field label="Emoji">
+                <IconPicker kind="group" value={form.icon} onChange={icon => setForm(f => ({ ...f, icon }))}/>
               </Field>
               <Field label="Group name">
                 <input

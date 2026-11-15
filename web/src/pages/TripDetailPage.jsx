@@ -27,7 +27,7 @@ import { getOfflineTrip, asOf } from '../utils/offlineTrips.js'
 import { useOffline, isOffline, isNetworkError, onReconnect } from '../utils/connection.js'
 import OfflinePlaces from '../components/OfflinePlaces.jsx'
 import Icon from '../components/Icon/Icon.jsx'
-import { iconOr } from '../utils/icons.js'
+import { tripIcon } from '../utils/icons.js'
 
 // Leaflet is only worth downloading once someone opens the map.
 const TripMap = lazy(() => import('../components/TripMap/TripMap.jsx'))
@@ -357,7 +357,7 @@ function TripDetailPage() {
     <>
       <PageHeader
         crumbs={[{ to: '/trips', label: 'Trips' }]}
-        title={<>{iconOr(trip.icon) && <><Icon name={trip.icon} /> </>}{trip.title}</>}
+        title={<><Icon name={tripIcon(trip)} /> {trip.title}</>}
         name={trip.title}
         actions={readOnly ? [] : [
           { label: 'Edit', onClick: () => setShowEdit(true), primary: true },

@@ -13,6 +13,7 @@ import EmptyState from '../components/EmptyState/EmptyState.jsx'
 import { waitAtMost } from '../utils/pageGate.jsx'
 import { swrOne } from '../utils/cache.js'
 import Icon from '../components/Icon/Icon.jsx'
+import { tripIcon } from '../utils/icons.js'
 
 const PAGE = 50
 // Nothing chosen means everything: tapping the active chip again clears it.
@@ -160,7 +161,7 @@ export default function ActivityPage() {
               { value: '', label: 'All groups and trips', short: 'All groups' },
               ...[...groups.values()].flatMap(g => [
                 { value: `g:${g.id}`, label: g.title, icon: <Icon name={g.icon} fallback="users" /> },
-                ...tripsOf(g.id).map(t => ({ value: `t:${t.id}`, label: t.title, icon: <Icon name={t.icon} fallback="luggage" />, indent: true })),
+                ...tripsOf(g.id).map(t => ({ value: `t:${t.id}`, label: t.title, icon: <Icon name={tripIcon(t, g.icon)} />, indent: true })),
               ]),
             ]}
           />

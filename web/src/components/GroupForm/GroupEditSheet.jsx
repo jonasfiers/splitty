@@ -37,8 +37,8 @@ export default function GroupEditSheet({ group, canChangeCurrency, onClose, onSa
       <form onSubmit={save}>
         {error && <p className="error">{error}</p>}
         <div className="form-row form-row-compact">
-          <Field label="Icon">
-            <IconPicker value={form.icon} onChange={icon => setForm(f => ({ ...f, icon }))} />
+          <Field label="Emoji">
+            <IconPicker kind="group" value={form.icon} onChange={icon => setForm(f => ({ ...f, icon }))} />
           </Field>
           <div className="form-group">
             <label htmlFor="group-edit-title">Group name</label>

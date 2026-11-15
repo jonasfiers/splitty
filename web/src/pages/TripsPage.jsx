@@ -15,7 +15,7 @@ import EmptyState from '../components/EmptyState/EmptyState.jsx'
 import NextTrip from '../components/TripForm/NextTrip.jsx'
 import { PageGate } from '../utils/pageGate.jsx'
 import { swr } from '../utils/cache.js'
-import { iconOr } from '../utils/icons.js'
+import { tripIcon } from '../utils/icons.js'
 
 export default function TripsPage() {
   const offline = keptLabel(useOfflineTrips())
@@ -93,7 +93,7 @@ export default function TripsPage() {
           <ListRow
             key={t.id}
             to={`/trips/${t.id}`}
-            icon={iconOr(t.icon, 'luggage')}
+            icon={tripIcon(t)}
             title={t.title}
             meta={<>{formatDateRange(t.startDate, t.endDate)}{t.groupTitle ? ` · ${t.groupTitle}` : ''}</>}
             value={`${t.itemCount} item${t.itemCount !== 1 ? 's' : ''}`}

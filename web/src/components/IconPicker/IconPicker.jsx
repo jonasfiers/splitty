@@ -2,14 +2,23 @@ import { useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import Sheet from '../Sheet/Sheet.jsx'
 import Icon from '../Icon/Icon.jsx'
-import { ICON_SECTIONS, iconLabel } from '../../utils/icons.js'
+import { ICON_SETS, iconLabel } from '../../utils/icons.js'
 
 // An icon for a category, group or trip: a square button showing the current
 // one, opening a sheet with a search and the icons in a grid by section.
-// The value is the icon's name ("train-front"), or '' for none.
+// The value is what is stored: a line icon's name ("train-front") for a
+// category, a country ("country:TW") for a trip, an emoji ("🌈") for a group;
+// or '' for none.
 //
-// clearable: the sheet offers "No icon" (onChange(''))
-export default function IconPicker({ value, onChange, id, clearable = false }) {
+// kind:      'category' | 'trip' | 'group' (utils/icons.js ICON_SETS)
+// clearable: the sheet offers a "none" button (onChange(''))
+const TEXT = {
+  category: { title: 'Icon', search: 'Search, e.g. food, train, shop', none: 'No icon' },
+  trip: { title: 'Country', search: 'Search a country, e.g. Japan', none: 'No flag (the group’s emoji)' },
+  group: { title: 'Emoji', search: 'Search, e.g. beach, pizza, Japan', none: 'No emoji' },
+}
+export default function IconPicker({ value, onChange, id, kind = 'category', clearable = false }) {
+  const text = TEXT[kind]
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const buttonRef = useRef(null)
@@ -30,7 +39,7 @@ export default function IconPicker({ value, onChange, id, clearable = false }) {
     const hay = `${icon.label} ${icon.keywords} ${section}`.toLowerCase().split(/[\s&,()-]+/)
     return words.every(w => hay.some(h => h.startsWith(w)))
   }
-  const sections = ICON_SECTIONS
+  const sections = ICON_SETS[kind]
     .map(s => ({ ...s, icons: words.length ? s.icons.filter(i => matches(i, s.section)) : s.icons }))
     .filter(s => s.icons.length)
 
@@ -43,17 +52,17 @@ export default function IconPicker({ value, onChange, id, clearable = false }) {
         tabIndex={0} // in the Tab order like a field (Macs otherwise skip buttons)
         onClick={() => setOpen(true)}
         aria-haspopup="dialog"
-        aria-label={value ? `Icon: ${iconLabel(value)}` : 'Pick an icon'}
+        aria-label={value ? `${text.title}: ${iconLabel(value)}` : `Pick ${kind === 'category' ? 'an icon' : kind === 'trip' ? 'a country' : 'an emoji'}`}
         className={`icon-picker-btn${value ? '' : ' empty'}`}
       >
         {value ? <Icon name={value} fallback="circle-question-mark" /> : '+'}
       </button>
       {open && createPortal(
-        <Sheet title="Icon" onClose={close} className="picker-sheet picker-sheet-tall icon-picker-sheet">
+        <Sheet title={text.title} onClose={close} className="picker-sheet picker-sheet-tall icon-picker-sheet">
           <input
             className="picker-search"
             type="search"
-            placeholder="Search, e.g. food, train, Japan"
+            placeholder={text.search}
             aria-label="Search icons"
             value={query}
             onChange={e => setQuery(e.target.value)}
@@ -62,7 +71,7 @@ export default function IconPicker({ value, onChange, id, clearable = false }) {
           <div className="icon-picker-body">
             {clearable && !words.length && (
               <button type="button" className={`icon-picker-none${value ? '' : ' selected'}`} onClick={() => choose('')}>
-                No icon
+                {text.none}
               </button>
             )}
             {sections.map(s => (

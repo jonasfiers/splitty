@@ -17,7 +17,7 @@ import {
   ArrowLeftRight, Handshake, Check, Image as ImageIcon, Paperclip, Search, Lock, CircleQuestionMark, Pencil, X, LogIn, LogOut,
 } from 'lucide'
 
-// The icons people pick for categories, groups and trips (IconPicker), by
+// The icons people pick for categories (IconPicker), by
 // section, with the words a search should find them by. Lucide (lucide.dev,
 // ISC licence): line icons drawn on a 24-unit grid, the style the app's own
 // navigation and settings icons already have. Stored by name ("train-front"),
@@ -204,10 +204,11 @@ const PICKABLE_SECTIONS = PICKABLE.map(([section, icons]) => ({
   }),
 }))
 
-// Countries, as their two-letter ISO code ("country:TW"), drawn as the letters
-// in place of a flag (Icon.jsx): line icons have no flags, and at icon size
-// the code reads better than most flags would. Names come from the browser
-// (Intl), in its language, and in English for the search.
+// Countries, as their two-letter ISO code ("country:TW"): a trip's icon,
+// drawn as the country's flag emoji (Icon.jsx). Windows has no flag emoji
+// (it shows two letters in boxes), so there the code is drawn as bold
+// letters instead. Names come from the browser (Intl), in its language, and
+// in English for the search.
 const COUNTRY_CODES = [
   'AD AE AF AG AI AL AM AO AQ AR AS AT AU AW AX AZ BA BB BD BE BF BG BH BI BJ BL BM BN BO BQ BR BS',
   'BT BV BW BY BZ CA CC CD CF CG CH CI CK CL CM CN CO CR CU CV CW CX CY CZ DE DJ DK DM DO DZ EC EE',
@@ -230,26 +231,95 @@ export const countryOf = name => {
   return code && COUNTRIES.has(code) ? code : null
 }
 
-export const ICON_SECTIONS = [
-  ...PICKABLE_SECTIONS,
-  {
-    section: 'Countries',
-    icons: COUNTRY_CODES
-      .map(code => ({ name: `country:${code}`, label: countryName(code), keywords: `${code} ${englishNames?.of(code) ?? ''} country`.toLowerCase() }))
-      .sort((a, b) => a.label.localeCompare(b.label)),
-  },
+// 'TW' -> '🇹🇼' (the two regional indicator letters), and back.
+export const flagOf = code => String.fromCodePoint(...[...code].map(c => 0x1F1E6 + c.charCodeAt(0) - 65))
+export const codeOfFlag = emoji => {
+  const cps = [...emoji].map(c => c.codePointAt(0))
+  return cps.length === 2 && cps.every(c => c >= 0x1F1E6 && c <= 0x1F1FF)
+    ? String.fromCharCode(...cps.map(c => c - 0x1F1E6 + 65))
+    : null
+}
+export const SHOW_FLAGS = !/Windows/i.test(globalThis.navigator?.userAgent ?? '')
+
+// A group's icon is an emoji, stored as itself ("🌈"), drawn in the device's
+// own emoji font. Any emoji will do (older groups keep theirs); these are the
+// ones the picker offers, with the words a search should find them by. The
+// countries' flags come after them.
+const EMOJI = [
+  ['Fun & people', [
+    ['😀', 'smile happy face'], ['😎', 'cool sunglasses'], ['🥳', 'party celebrate'], ['🤝', 'deal friends'],
+    ['👥', 'people group'], ['👬', 'friends brothers'], ['👭', 'friends sisters'], ['👫', 'couple friends'],
+    ['💑', 'couple love'], ['👪', 'family'], ['❤️', 'love heart'], ['🎉', 'party celebrate'],
+    ['🌈', 'rainbow'], ['⭐', 'star'], ['✨', 'sparkles'], ['🔥', 'fire'], ['🧪', 'test lab'], ['🍀', 'luck clover'],
+  ]],
+  ['Travel', [
+    ['✈️', 'plane flight travel'], ['🧳', 'luggage travel suitcase'], ['🗺️', 'map travel'], ['🌍', 'world europe africa globe'],
+    ['🌏', 'world asia globe'], ['🌎', 'world america globe'], ['🏖️', 'beach holiday'], ['🏝️', 'island tropical holiday'],
+    ['🏔️', 'mountain snow'], ['⛷️', 'ski skiing'], ['🏕️', 'camping'], ['🚗', 'car road trip'],
+    ['🚐', 'van camper'], ['🚂', 'train'], ['🚢', 'cruise ship boat'], ['⛵', 'sailing boat'],
+    ['🗼', 'tokyo tower'], ['🗽', 'new york'], ['🏯', 'castle japan'], ['🕌', 'mosque'], ['🌋', 'volcano'], ['🌆', 'city'],
+  ]],
+  ['Home & life', [
+    ['🏠', 'home house'], ['🏡', 'home garden'], ['🏢', 'office work'], ['🛋️', 'flat sofa housemates'],
+    ['🔑', 'keys flat'], ['💼', 'work business'], ['🎓', 'school study'], ['👶', 'baby kids'],
+    ['💒', 'wedding'], ['🎂', 'birthday'], ['🎁', 'gift present'], ['🎄', 'christmas'],
+    ['💰', 'money'], ['🧾', 'bills receipt'], ['🛒', 'groceries shopping'], ['🧹', 'cleaning chores'],
+  ]],
+  ['Food & drink', [
+    ['🍕', 'pizza'], ['🍔', 'burger'], ['🍣', 'sushi'], ['🍜', 'noodles ramen'], ['🥘', 'paella dinner'],
+    ['🍝', 'pasta'], ['🌮', 'taco'], ['🥐', 'croissant breakfast'], ['☕', 'coffee'], ['🍺', 'beer'],
+    ['🍻', 'beers cheers'], ['🍷', 'wine'], ['🥂', 'cheers champagne'], ['🍸', 'cocktail'], ['🧋', 'bubble tea'], ['🍦', 'ice cream'],
+  ]],
+  ['Sport & hobbies', [
+    ['⚽', 'football soccer'], ['🏀', 'basketball'], ['🎾', 'tennis padel'], ['🏐', 'volleyball'],
+    ['🚴', 'cycling bike'], ['🏃', 'running'], ['🥾', 'hiking'], ['🧗', 'climbing'],
+    ['🏄', 'surf'], ['🎿', 'ski'], ['🎮', 'games gaming'], ['🎲', 'board games'],
+    ['🎸', 'music band'], ['🎤', 'karaoke'], ['🎬', 'film cinema'], ['🎟️', 'tickets festival concert'], ['📚', 'books reading'], ['📷', 'photo camera'],
+  ]],
+  ['Nature & animals', [
+    ['🌲', 'forest tree'], ['🌴', 'palm tropical'], ['🌸', 'blossom spring'], ['🌻', 'sunflower summer'],
+    ['🍁', 'autumn fall'], ['❄️', 'snow winter'], ['☀️', 'sun summer'], ['🌊', 'sea wave'],
+    ['🐶', 'dog'], ['🐱', 'cat'], ['🐼', 'panda'], ['🦊', 'fox'], ['🐻', 'bear'], ['🐧', 'penguin'], ['🦄', 'unicorn'], ['🐙', 'octopus'],
+  ]],
 ]
+const EMOJI_LABELS = new Map(EMOJI.flatMap(([, list]) => list.map(([e, k]) => [e, k.split(' ')[0]])))
+const EMOJI_RE = /\p{Extended_Pictographic}|\p{Regional_Indicator}/u
+export const isEmoji = s => typeof s === 'string' && s.length > 0 && s.length <= 16 && EMOJI_RE.test(s)
+
+const COUNTRY_ICONS = COUNTRY_CODES
+  .map(code => ({ code, label: countryName(code), keywords: `${code} ${englishNames?.of(code) ?? ''} country flag`.toLowerCase() }))
+  .sort((a, b) => a.label.localeCompare(b.label))
+
+// What the picker offers, per kind of thing: categories pick line icons,
+// trips a country (its flag), groups an emoji (or a country's flag).
+export const ICON_SETS = {
+  category: PICKABLE_SECTIONS,
+  trip: [{ section: 'Countries', icons: COUNTRY_ICONS.map(c => ({ name: `country:${c.code}`, label: c.label, keywords: c.keywords })) }],
+  group: [
+    ...EMOJI.map(([section, list]) => ({ section, icons: list.map(([e, k]) => ({ name: e, label: k.split(' ')[0], keywords: k })) })),
+    { section: 'Flags', icons: COUNTRY_ICONS.map(c => ({ name: flagOf(c.code), label: c.label, keywords: c.keywords })) },
+  ],
+}
 
 export const iconNode = name => (name ? NODES.get(name) ?? null : null)
-export const isIcon = name => NODES.has(name) || countryOf(name) != null
-export const iconLabel = name => (countryOf(name) ? countryName(countryOf(name)) : name.replace(/-/g, ' '))
+export const isIcon = name => NODES.has(name) || countryOf(name) != null || isEmoji(name)
+export const iconLabel = name => {
+  const code = countryOf(name) ?? (isEmoji(name) ? codeOfFlag(name) : null)
+  if (code) return countryName(code)
+  if (isEmoji(name)) return EMOJI_LABELS.get(name) ?? name
+  return name.replace(/-/g, ' ')
+}
 
 // An icon as an SVG string, for HTML built outside React (map pins).
 const attr = v => String(v).replace(/&/g, '&amp;').replace(/"/g, '&quot;')
+const esc = v => String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;')
 export function iconSvg(name, { size = 16, strokeWidth = 2 } = {}) {
-  const country = countryOf(name)
+  const emoji = isEmoji(name) && !NODES.has(name) ? name : null
+  const country = countryOf(name) ?? (emoji ? codeOfFlag(emoji) : null)
   const node = iconNode(name)
-  if (!node && !country) return ''
+  if (!node && !country && !emoji) return ''
+  if (emoji && (SHOW_FLAGS || !country)) return `<span class="icon icon-emoji" style="font-size:${size}px" aria-hidden="true">${esc(emoji)}</span>`
+  if (country && SHOW_FLAGS) return `<span class="icon icon-emoji" style="font-size:${size}px" aria-hidden="true">${flagOf(country)}</span>`
   const children = country
     ? `<text x="12" y="12.5" text-anchor="middle" dominant-baseline="central" font-size="11" font-weight="800" fill="currentColor" stroke="none">${country}</text>`
     : node.map(([tag, attrs]) =>
@@ -259,3 +329,7 @@ export function iconSvg(name, { size = 16, strokeWidth = 2 } = {}) {
 
 // A stored icon (category, group, trip) if it is one of ours, else `fallback`.
 export const iconOr = (name, fallback = null) => (isIcon(name) ? name : fallback)
+
+// A trip shows its country's flag; without one, its group's emoji.
+export const tripIcon = (trip, groupIcon = trip?.groupIcon) =>
+  countryOf(trip?.icon) ? trip.icon : iconOr(groupIcon, 'luggage')

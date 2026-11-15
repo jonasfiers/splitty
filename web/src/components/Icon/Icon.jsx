@@ -1,18 +1,28 @@
-import { iconNode, countryOf, countryName, isIcon } from '../../utils/icons.js'
+import { iconNode, countryOf, countryName, isIcon, isEmoji, codeOfFlag, iconLabel, flagOf, SHOW_FLAGS } from '../../utils/icons.js'
 
 // One of the app's icons (utils/icons.js) by name, drawn in the text colour.
 // Sized in em by default, so it takes the size of the text or box around it.
 //
 // name:     the icon, e.g. a category's stored icon ("utensils")
 // fallback: drawn when `name` is empty or unknown (an old emoji value)
-// A country ("country:TW") is drawn as its code, in the same box as an icon.
+// A country ("country:TW") is drawn as its flag (its code on Windows); an
+// emoji (a group's, "🌈") as itself, in the device's emoji font.
 // label:    for an icon that means something on its own; otherwise it is
 //           hidden from screen readers, as the text next to it says it
 export default function Icon({ name, fallback, size = '1.2em', strokeWidth = 1.75, label, className = '', style }) {
   const shown = isIcon(name) ? name : fallback
-  const country = countryOf(shown)
   const node = iconNode(shown)
-  if (!node && !country) return null
+  const emoji = !node && isEmoji(shown) ? shown : null
+  const country = countryOf(shown) ?? (emoji ? codeOfFlag(emoji) : null)
+  if (!node && !country && !emoji) return null
+  if ((emoji || country) && !(country && !SHOW_FLAGS)) {
+    return (
+      <span className={`icon icon-emoji ${className}`.trim()} style={{ fontSize: size, ...style }} title={iconLabel(shown)}
+        {...(label ? { role: 'img', 'aria-label': label } : { 'aria-hidden': 'true' })}>
+        {emoji ?? flagOf(country)}
+      </span>
+    )
+  }
   if (country) {
     return (
       <svg className={`icon icon-country ${className}`.trim()} width={size} height={size} viewBox="0 0 24 24" style={style}

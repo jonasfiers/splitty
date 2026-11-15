@@ -136,7 +136,7 @@ export async function listOfflineTrips() {
     const db = await openDb()
     const all = await asPromise(db.transaction('trips').objectStore('trips').getAll())
     return all
-      .map(({ id, savedAt, trip }) => ({ id, savedAt, title: trip.title, icon: trip.icon, startDate: trip.startDate, endDate: trip.endDate }))
+      .map(({ id, savedAt, trip }) => ({ id, savedAt, title: trip.title, icon: trip.icon, groupIcon: trip.groupIcon, startDate: trip.startDate, endDate: trip.endDate }))
       .sort((a, b) => (a.startDate || '9999').localeCompare(b.startDate || '9999'))
   } catch { return [] }
 }

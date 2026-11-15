@@ -7,7 +7,7 @@ import { useGate } from '../utils/pageGate.jsx'
 import { swrOne } from '../utils/cache.js'
 import Icon from './Icon/Icon.jsx'
 import { List, ListRow } from './List/List.jsx'
-import { iconOr } from '../utils/icons.js'
+import { tripIcon } from '../utils/icons.js'
 
 // Home's top card while a trip is on: what today holds, from the trip's own
 // day list (same entries, same order), and where you sleep tonight. Home's
@@ -66,7 +66,7 @@ export default function TodayTrip() {
             <ListRow
               key={trip.id}
               to={`/trips/${trip.id}`}
-              icon={<Icon name={trip.icon} fallback={iconOr(trip.groupIcon, 'luggage')} />}
+              icon={<Icon name={tripIcon(trip)} />}
               title={trip.title}
               meta={`Day ${daysBetween(trip.startDate, now) + 1} of ${daysBetween(trip.startDate, trip.endDate) + 1}`}
               chevron
@@ -96,7 +96,7 @@ function TodayCard({ trip, items, places }) {
     <div className="card today-trip">
       <Link to={`/trips/${trip.id}`} className="today-trip-head">
         <span className="today-trip-title">
-          <span><Icon name={trip.icon} fallback={iconOr(trip.groupIcon, 'luggage')} /></span>
+          <span><Icon name={tripIcon(trip)} /></span>
           <span className="today-trip-name">Today in {trip.title}</span>
         </span>
         <span className="today-trip-day">Day {dayNo} of {total} ›</span>

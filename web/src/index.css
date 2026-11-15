@@ -1141,7 +1141,13 @@ body {
 }
 /* Icons (components/Icon): inline with text they sit on its baseline. */
 svg.icon { flex-shrink: 0; vertical-align: -0.2em; }
-/* A country's code keeps the body face inside a serif title. */
+/* An emoji (a group's, a country's flag), the size of the icon it stands in for. */
+.icon-emoji {
+  display: inline-block; flex-shrink: 0; line-height: 1; vertical-align: -0.15em;
+  font-family: 'Apple Color Emoji', 'Noto Color Emoji', 'Segoe UI Emoji', sans-serif;
+  font-style: normal; font-weight: 400;
+}
+/* A country's code (Windows) keeps the body face inside a serif title. */
 svg.icon-country text { font-family: var(--font-body); }
 /* Orange means "you can tap this" (links, back, header actions, Show earlier)
    and "on now". Icons standing on their own (a box, a tile, an option), labels
