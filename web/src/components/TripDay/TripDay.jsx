@@ -97,13 +97,20 @@ export function EntryNode({ item, state, allDay = false }) {
   )
 }
 
-// A booking reference (opens full screen) and directions, as two chips.
-function Actions({ item, place, onBigRef }) {
-  const link = mapsLink(place)
-  if (!item.confirmationRef && !link) return null
+// The chips under an entry's title, everything about it you can tap: its
+// booking reference (opens full screen) and directions, on the live day; its
+// files, on any day still to come (`itemTo`, the item's page: one file opens
+// straight away in Splitty's viewer, more open the item, which lists them).
+function Actions({ item, place, onBigRef, itemTo }) {
+  const link = place !== undefined ? mapsLink(place) : null
+  const ref = onBigRef && item.confirmationRef
+  const files = itemTo && item.attachmentCount > 0
+    ? (item.attachmentCount === 1 && item.attachmentIds?.[0] ? `${itemTo}/files/${item.attachmentIds[0]}` : itemTo)
+    : null
+  if (!ref && !link && !files) return null
   return (
     <span className="today-actions">
-      {item.confirmationRef && (
+      {ref && (
         <button type="button" className="today-ref" onClick={() => onBigRef(item)} title="Show big" aria-label={`Show booking reference ${item.confirmationRef} full screen`}>
           <span>{item.confirmationRef}</span>
         </button>
@@ -114,17 +121,19 @@ function Actions({ item, place, onBigRef }) {
           Go
         </a>
       )}
+      {files && (
+        <Link to={files} className="today-nav today-file" aria-label={item.attachmentCount === 1 ? `Open the file of ${item.title}` : `${item.attachmentCount} files of ${item.title}`}>
+          <Icon name="paperclip" />
+          {item.attachmentCount === 1 ? 'File' : `${item.attachmentCount} files`}
+        </Link>
+      )}
     </span>
   )
 }
 
 // One entry. `to` makes it open the item (the whole row); without it, it is
 // plain (inside a card that is a link itself). `actions` is the third line.
-// On the right, on the title's line: a paperclip for its files (counted from
-// two). A lone file opens from it straight away, in Splitty's viewer; with
-// more, the row opens the item, which lists them. What was paid is on the
-// item and the trip, not here.
-export function EntryRow({ entry, state, badge, to, placeName, actions, showAside = true }) {
+export function EntryRow({ entry, state, badge, to, placeName, actions }) {
   const { item, time, phase, assumed, label } = entry
   const title = to
     ? <Link to={to} className="list-row-title list-row-stretch">{item.title}</Link>
@@ -146,19 +155,6 @@ export function EntryRow({ entry, state, badge, to, placeName, actions, showAsid
         </div>
         {actions}
       </div>
-      {showAside && item.attachmentCount > 0 && (
-        <span className="list-row-aside entry-aside">
-          {item.attachmentCount === 1 && to && item.attachmentIds?.[0] ? (
-            <Link to={`${to}/files/${item.attachmentIds[0]}`} className="entry-files entry-file-open" aria-label={`Open the file of ${item.title}`} title="Open the file">
-              <Icon name="paperclip" />
-            </Link>
-          ) : item.attachmentCount > 0 && (
-            <span className="entry-files" title={`${item.attachmentCount} file${item.attachmentCount !== 1 ? 's' : ''}`}>
-              <Icon name="paperclip" label={`${item.attachmentCount} file${item.attachmentCount !== 1 ? 's' : ''}`} />{item.attachmentCount > 1 && item.attachmentCount}
-            </span>
-          )}
-        </span>
-      )}
     </div>
   )
 }
@@ -200,9 +196,13 @@ export function DayEntries({ tripId, day, entries, places, time, past = false })
                   badge={badge}
                   to={`/trips/${tripId}/items/${item.id}`}
                   placeName={placeName}
-                  // What is over is history: no code or directions (the row
-                  // still opens the item; tonight's hotel is on Tonight).
-                  actions={live && state !== 'past' && <Actions item={item} place={placeById.get(placeOf(item, phase))} onBigRef={setBigRef} />}
+                  // What is over is history: no chips (the row still opens the
+                  // item; tonight's hotel is on Tonight). Code and directions
+                  // on the live day, files on any day to come.
+                  actions={state !== 'past' && (
+                    <Actions item={item} itemTo={`/trips/${tripId}/items/${item.id}`}
+                      {...(live && { place: placeById.get(placeOf(item, phase)) ?? null, onBigRef: setBigRef })} />
+                  )}
                 />
               )}
             </Fragment>

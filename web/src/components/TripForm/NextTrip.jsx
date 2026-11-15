@@ -78,7 +78,7 @@ export default function NextTrip({ trip }) {
               <div className="next-trip-day">{dayLabel(g.day)}</div>
               <div className="list list-tight entry-list">
                 {g.entries.map(e => (
-                  <EntryRow key={`${e.item.id}-${e.phase}`} entry={e} state={g.live?.state(e)} placeName={placeName} showAside={false} />
+                  <EntryRow key={`${e.item.id}-${e.phase}`} entry={e} state={g.live?.state(e)} placeName={placeName} />
                 ))}
               </div>
             </div>
