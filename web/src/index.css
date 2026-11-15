@@ -3203,7 +3203,6 @@ html[data-emoji="openmoji"] {
   box-shadow: 0 0 0 3px var(--surface);
 }
 .entry-node.past .entry-dot { background: color-mix(in srgb, var(--kind) 35%, var(--surface)); border-color: transparent; }
-.entry-node.done .entry-dot { background: var(--kind); }
 .entry-node.now .entry-dot { left: -2px; width: 16px; height: 16px; margin-top: -8px; background: var(--kind); border: none; }
 .entry-icon { width: 22px; flex-shrink: 0; display: flex; justify-content: center; font-size: 20px; color: var(--text-2); }
 .today-entry > :is(.today-when, .entry-icon) { align-self: flex-start; }

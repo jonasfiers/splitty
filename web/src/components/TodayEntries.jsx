@@ -69,8 +69,8 @@ export const quietDayEntries = sleepingAt => sleepingAt.map(item => ({ item, tim
 // A day's entries hang on one line (the spine), each at a dot in its kind's
 // colour (utils/trip.js itemColour: the matching category's): a ring for what
 // is still to come, filled for what is on now (and a bit bigger), a washed-out
-// fill for what is over. A check-in that has happened is filled ('done'):
-// it stays in the list for the rest of the day.
+// fill for what is over (a check-in that has happened too, though its row
+// stays in the list for the rest of the day).
 // An all-day entry (no time) has its dot off the line: it is not a moment
 // in the day's order.
 export function EntryNode({ item, state, allDay = false }) {
@@ -110,7 +110,7 @@ export default function TodayEntries({ tripId, day, entries, places, time: tripT
             const on = isOn(item)
             const past = isPast(entry)
             // A check-in whose time has come stays in the list for the rest of
-            // the day (isPast); its dot fills: you are in.
+            // the day (isPast), but its dot is over, like the others.
             const checkedIn = phase === 'Check-in' && at && at <= time
             const link = mapsLink(placeById.get(placeOf(item, phase)))
             return (
@@ -127,7 +127,7 @@ export default function TodayEntries({ tripId, day, entries, places, time: tripT
                   {on && <span className="today-badge">Now</span>}
                   {entry === next && <span className="today-badge next">{countdown(minutes(at) - minutes(time))}</span>}
                 </div>
-                <EntryNode item={item} state={on ? 'now' : past ? 'past' : checkedIn ? 'done' : null} allDay={!at} />
+                <EntryNode item={item} state={on ? 'now' : past || checkedIn ? 'past' : null} allDay={!at} />
                 <div className="entry-icon"><Icon name={itemIcon(item, phase)} /></div>
                 <div className="list-row-text">
                   <Link to={`/trips/${tripId}/items/${item.id}`} className="list-row-title list-row-stretch">{item.title}</Link>
