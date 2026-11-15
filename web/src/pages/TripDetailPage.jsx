@@ -300,7 +300,7 @@ function TripDetailPage() {
           ) : (
             <div className="list list-tight entry-list">
               {entries.map(({ item, time, phase, assumed }) => (
-                <button key={`${item.id}-${phase}`} type="button" className="list-row list-row-link" onClick={() => openItem(item)}>
+                <button key={`${item.id}-${phase}`} type="button" className={`list-row list-row-link${day < now ? ' past' : ''}`} onClick={() => openItem(item)}>
                   <span className={`trip-entry-time${time ? '' : ' allday'}${assumed ? ' assumed' : ''}`} title={assumed ? 'Usual hotel time; no time set on this stay' : undefined}>{time || 'All day'}</span>
                   <EntryNode item={item} state={day < now ? 'past' : null} allDay={!time} />
                   <span className="entry-icon" aria-hidden="true"><Icon name={itemIcon(item, phase)} /></span>
