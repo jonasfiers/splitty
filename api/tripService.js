@@ -265,6 +265,7 @@ const tripService = {
                  RETURN i, labels(i) AS labels, c.iso AS currencyIso,
                         p.id AS placeId, f.id AS fromPlaceId, a.id AS toPlaceId,
                         COUNT { (:Attachment)-[:ATTACHED_TO]->(i) } AS attachmentCount,
+                        [(at:Attachment)-[:ATTACHED_TO]->(i) | at.id] AS attachmentIds,
                         [(e:Expense)-[:PAYS_FOR]->(i) | e.amountBase] AS paidAmounts
                  ORDER BY i.start, i.title`,
                 { tripId }
@@ -306,6 +307,8 @@ const tripService = {
                         fromPlaceId: r.get('fromPlaceId'),
                         toPlaceId: r.get('toPlaceId'),
                         attachmentCount: num(r.get('attachmentCount')),
+                        // Which files, so a trip day can open a lone ticket straight away.
+                        attachmentIds: r.get('attachmentIds'),
                         expenseCount: paidAmounts.length,
                         // In the group's currency, like every balance in the app.
                         paidBase: paidAmounts.reduce((sum, a) => sum + Number(num(a) ?? 0), 0),

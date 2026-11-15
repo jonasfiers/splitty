@@ -901,6 +901,13 @@ body {
 /* Files, on the title's line at the right. */
 .list-row-aside.entry-aside { flex-direction: row; align-items: center; gap: 10px; white-space: nowrap; }
 .entry-files { display: inline-flex; align-items: center; gap: 2px; font-size: var(--fs-sm); color: var(--text-3); }
+/* A lone file opens from its paperclip: a 30px chip like the booking code's,
+   above the row's own link, with a 44px tap area. */
+.entry-file-open {
+  position: relative; z-index: 1; justify-content: center; width: 30px; height: 30px; margin: -5px -6px -4px 0;
+  border: 1px solid var(--border); border-radius: 999px; background: var(--surface-2); color: var(--accent-text);
+}
+.entry-file-open::after { content: ''; position: absolute; inset: -7px; }
 .today-badge { white-space: nowrap; }
 .today-badge {
   padding: 0 7px;

@@ -121,7 +121,9 @@ function Actions({ item, place, onBigRef }) {
 // One entry. `to` makes it open the item (the whole row); without it, it is
 // plain (inside a card that is a link itself). `actions` is the third line.
 // On the right, on the title's line: a paperclip for its files (counted from
-// two). What was paid is on the item and the trip, not here.
+// two). A lone file opens from it straight away, in Splitty's viewer; with
+// more, the row opens the item, which lists them. What was paid is on the
+// item and the trip, not here.
 export function EntryRow({ entry, state, badge, to, placeName, actions, showAside = true }) {
   const { item, time, phase, assumed, label } = entry
   const title = to
@@ -146,7 +148,11 @@ export function EntryRow({ entry, state, badge, to, placeName, actions, showAsid
       </div>
       {showAside && item.attachmentCount > 0 && (
         <span className="list-row-aside entry-aside">
-          {item.attachmentCount > 0 && (
+          {item.attachmentCount === 1 && to && item.attachmentIds?.[0] ? (
+            <Link to={`${to}/files/${item.attachmentIds[0]}`} className="entry-files entry-file-open" aria-label={`Open the file of ${item.title}`} title="Open the file">
+              <Icon name="paperclip" />
+            </Link>
+          ) : item.attachmentCount > 0 && (
             <span className="entry-files" title={`${item.attachmentCount} file${item.attachmentCount !== 1 ? 's' : ''}`}>
               <Icon name="paperclip" label={`${item.attachmentCount} file${item.attachmentCount !== 1 ? 's' : ''}`} />{item.attachmentCount > 1 && item.attachmentCount}
             </span>
