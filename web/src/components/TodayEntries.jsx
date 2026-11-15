@@ -1,7 +1,6 @@
 import { Fragment, useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import { KINDS, itemIcon, itemColour, describe, mapsLink, linkTarget, today } from '../utils/trip.js'
-import { tintClass } from '../utils/categoryColours.js'
 import BigReference from './BigReference/BigReference.jsx'
 import { pad, clock, onMinute } from '../utils/tripClock.js'
 import Icon from './Icon/Icon.jsx'
@@ -67,6 +66,17 @@ export const moreToday = (day, time, entries) =>
 // and the way back stay a tap away.
 export const quietDayEntries = sleepingAt => sleepingAt.map(item => ({ item, time: '', label: 'Tonight', phase: 'Staying' }))
 
+// A day's entries hang on one line (the spine), each at a dot in its kind's
+// colour (utils/trip.js itemColour: the matching category's). What is on now
+// is an orange ring instead; what is over, a grey dot.
+export function EntryNode({ item, state }) {
+  return (
+    <span className={`entry-node${state ? ` ${state}` : ''}`} aria-hidden="true">
+      <span className="entry-dot" style={state ? undefined : { background: `var(--cat-${itemColour(item) ?? 'slate'})` }} />
+    </span>
+  )
+}
+
 export default function TodayEntries({ tripId, day, entries, places, time: tripTime }) {
   const phoneTime = useClock()
   const time = tripTime ?? phoneTime
@@ -109,8 +119,9 @@ export default function TodayEntries({ tripId, day, entries, places, time: tripT
                   <div className={`trip-entry-time${at ? '' : ' allday'}${entry.assumed ? ' assumed' : ''}`} title={entry.assumed ? 'Usual hotel time; no time set on this stay' : undefined}>{at || entry.label || 'All day'}</div>
                   {on && <span className="today-badge">Now</span>}
                   {entry === next && <span className="today-badge next">{countdown(minutes(at) - minutes(time))}</span>}
-                  <div className={`today-icon ${tintClass(itemColour(item))}`.trim()}><Icon name={itemIcon(item, phase)} /></div>
                 </div>
+                <EntryNode item={item} state={on ? 'now' : past ? 'past' : null} />
+                <div className="entry-icon"><Icon name={itemIcon(item, phase)} /></div>
                 <div className="list-row-text">
                   <Link to={`/trips/${tripId}/items/${item.id}`} className="list-row-title list-row-stretch">{item.title}</Link>
                   <div className="list-row-meta today-meta">
