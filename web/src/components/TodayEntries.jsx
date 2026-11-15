@@ -135,7 +135,9 @@ export default function TodayEntries({ tripId, day, entries, places, time: tripT
                   <div className="list-row-meta today-meta">
                     {[phase, describe(item, placeName)].filter(Boolean).join(' · ') || KINDS[item.kind].label}
                   </div>
-                  {(item.confirmationRef || link) && (
+                  {/* Over: history, so no code or directions (the row still opens
+                      the item; tonight's hotel has them on the Tonight line). */}
+                  {!past && (item.confirmationRef || link) && (
                     <div className="today-actions">
                       {item.confirmationRef && (
                         <button type="button" className="today-ref" onClick={() => setBigRef(item)} title="Show big" aria-label={`Show booking reference ${item.confirmationRef} full screen`}>
