@@ -98,9 +98,9 @@ export function EntryNode({ item, state, allDay = false }) {
 }
 
 // The chips under an entry's title, everything about it you can tap: its
-// booking reference (opens full screen) and directions, on the live day; its
-// files, on any day still to come (`itemTo`, the item's page: one file opens
-// straight away in Splitty's viewer, more open the item, which lists them).
+// booking reference (opens full screen), directions and files (`itemTo`, the
+// item's page: one file opens straight away in Splitty's viewer, more open
+// the item, which lists them). Only on the live day.
 function Actions({ item, place, onBigRef, itemTo }) {
   const link = place !== undefined ? mapsLink(place) : null
   const ref = onBigRef && item.confirmationRef
@@ -196,12 +196,11 @@ export function DayEntries({ tripId, day, entries, places, time, past = false })
                   badge={badge}
                   to={`/trips/${tripId}/items/${item.id}`}
                   placeName={placeName}
-                  // What is over is history: no chips (the row still opens the
-                  // item; tonight's hotel is on Tonight). Code and directions
-                  // on the live day, files on any day to come.
-                  actions={state !== 'past' && (
-                    <Actions item={item} itemTo={`/trips/${tripId}/items/${item.id}`}
-                      {...(live && { place: placeById.get(placeOf(item, phase)) ?? null, onBigRef: setBigRef })} />
+                  // Chips only on the live day, and not on what is over: that is
+                  // history (the row still opens the item; tonight's hotel is on
+                  // Tonight).
+                  actions={live && state !== 'past' && (
+                    <Actions item={item} itemTo={`/trips/${tripId}/items/${item.id}`} place={placeById.get(placeOf(item, phase)) ?? null} onBigRef={setBigRef} />
                   )}
                 />
               )}
