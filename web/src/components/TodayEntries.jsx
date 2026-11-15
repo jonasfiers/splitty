@@ -97,7 +97,12 @@ export default function TodayEntries({ tripId, day, entries, places, time: tripT
   // A check-in is over at its time like the rest; the hotel's booking code and
   // directions stay on the Tonight line (Tonight, below) all evening.
   const isPast = e => !isOn(e.item) && e.time && e.time <= time
-  const pastCount = entries.filter(isPast).length
+  // Once everything timed is over, the last of it stays in view (faded), so
+  // the day doesn't fold away to nothing; only what came before it folds.
+  const pastEntries = entries.filter(isPast)
+  const dayOver = entries.every(e => !e.time || isPast(e))
+  const keepLast = dayOver ? pastEntries[pastEntries.length - 1] : null
+  const pastCount = pastEntries.length - (keepLast ? 1 : 0)
   // Earlier entries fold into one line where the timed part of the day starts.
   const firstTimed = entries.find(e => e.time)
 
@@ -116,7 +121,7 @@ export default function TodayEntries({ tripId, day, entries, places, time: tripT
                   {showPast ? 'Hide earlier' : `Show ${pastCount} earlier`}
                 </button>
               )}
-              {(!past || showPast) && (
+              {(!past || showPast || entry === keepLast) && (
               <div className={`list-row list-row-link today-entry${past ? ' past' : ''}${on ? ' on' : ''}`}>
                 <div className="today-when">
                   <div className={`trip-entry-time${at ? '' : ' allday'}${entry.assumed ? ' assumed' : ''}`} title={entry.assumed ? 'Usual hotel time; no time set on this stay' : undefined}>{at || entry.label || 'All day'}</div>
