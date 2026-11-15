@@ -3,7 +3,7 @@ import { Link } from 'react-router'
 import { List, ListRow } from './List/List.jsx'
 import { formatCurrency } from '../utils/currency.js'
 import { timeAgo } from '../utils/time.js'
-import { today, daysBetween, formatDateRange } from '../utils/trip.js'
+import { today, formatDateRange, tripWhen } from '../utils/trip.js'
 import { isActive } from './TodayTrip.jsx'
 import { activityLink, activityVerb, isTripActivity } from '../utils/activity.js'
 import { useGate } from '../utils/pageGate.jsx'
@@ -100,8 +100,7 @@ function NextTrip({ trips }) {
   // A trip happening now has its own card at the top of Home.
   const next = trips.filter(t => t.endDate >= now && !isActive(t, now)).sort((a, b) => a.startDate.localeCompare(b.startDate))[0]
   if (!next) return null
-  const days = daysBetween(now, next.startDate)
-  const when = days <= 0 ? 'Happening now' : days === 1 ? 'Tomorrow' : `In ${days} days`
+  const when = tripWhen(next, now).label
 
   return (
     <Link to={`/trips/${next.id}`} className="card home-panel home-trip">

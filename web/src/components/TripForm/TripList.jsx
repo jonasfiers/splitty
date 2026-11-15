@@ -1,16 +1,8 @@
 import { useNavigate } from 'react-router'
 import { List, ListRow } from '../List/List.jsx'
-import { formatDateRange, daysBetween, today } from '../../utils/trip.js'
+import { formatDateRange, daysBetween, tripWhen } from '../../utils/trip.js'
 import Icon from '../Icon/Icon.jsx'
 import { tripIcon } from '../../utils/icons.js'
-
-const countdown = trip => {
-  const now = today()
-  if (trip.endDate < now) return 'Past'
-  if (trip.startDate <= now) return 'Now'
-  const days = daysBetween(now, trip.startDate)
-  return days === 1 ? 'Tomorrow' : `In ${days} days`
-}
 
 function TripList({ trips, showGroup = false }) {
   return (
@@ -23,7 +15,7 @@ function TripList({ trips, showGroup = false }) {
           title={t.title}
           meta={<>{formatDateRange(t.startDate, t.endDate)}{showGroup && t.groupTitle ? ` · ${t.groupTitle}` : ''}</>}
           aside={<>
-            <span className="list-row-amt list-row-when">{countdown(t)}</span>
+            <span className="list-row-amt list-row-when">{tripWhen(t).label}</span>
             <span className="list-row-sub">{t.itemCount} item{t.itemCount !== 1 ? 's' : ''}</span>
           </>}
         />
@@ -39,12 +31,12 @@ export function TripCards({ trips, past = false }) {
     <div className="trip-cards">
       {trips.map(t => {
         const nights = daysBetween(t.startDate, t.endDate)
-        const when = countdown(t)
+        const when = tripWhen(t)
         return (
           <button key={t.id} type="button" className={`trip-card${past ? ' past' : ''}`} onClick={() => navigate(`/trips/${t.id}`)}>
             <div className="trip-card-top">
               <span className="trip-card-icon"><Icon name={tripIcon(t)} /></span>
-              <span className={`trip-card-when${when === 'Now' ? ' now' : ''}`}>{when}</span>
+              <span className={`trip-card-when${when.on ? ' now' : ''}`}>{when.label}</span>
             </div>
             <div className="trip-card-title">{t.title}</div>
             <div className="trip-card-dates">

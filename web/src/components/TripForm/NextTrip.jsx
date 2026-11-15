@@ -1,14 +1,16 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import { formatCurrency } from '../../utils/currency.js'
-import { buildTimeline, describe, itemIcon, formatDay, formatDateRange, daysBetween, addDays } from '../../utils/trip.js'
+import { buildTimeline, formatDay, formatDateRange, daysBetween, addDays, tripWhen } from '../../utils/trip.js'
 import { useTripNow } from '../../utils/tripClock.js'
-
-const NONE = []
 import { useGate } from '../../utils/pageGate.jsx'
 import { swrOne } from '../../utils/cache.js'
 import Icon from '../Icon/Icon.jsx'
 import { tripIcon } from '../../utils/icons.js'
+import { EntryRow, dayStates, quietDayEntries } from '../TripDay/TripDay.jsx'
+
+const NONE = []
+const SHOWN = 3
 
 // The trip that is on, or the next one: what comes first, at a glance.
 // It loads the trip's items itself; until then (or if that fails) it shows
@@ -30,80 +32,58 @@ export default function NextTrip({ trip }) {
   }, [trip.id])
 
   // Today in the zone the schedule puts you in (utils/tripClock.js).
-  const { day: now } = useTripNow(detail?.items || NONE, detail?.places || NONE)
-  const on = trip.startDate <= now
+  const { day: now, time } = useTripNow(detail?.items || NONE, detail?.places || NONE)
   const nights = daysBetween(trip.startDate, trip.endDate)
-  const when = on
-    ? `Day ${daysBetween(trip.startDate, now) + 1} of ${nights + 1}`
-    : (d => (d === 1 ? 'Tomorrow' : `In ${d} days`))(daysBetween(now, trip.startDate))
+  const when = tripWhen(trip, now)
 
-  // What comes next: during the trip from today, before it from the start;
-  // a handful of entries, by day.
+  // What comes next, the same rows as the trip's days (TripDay/TripDay.jsx):
+  // during the trip from now on (what is over today left out), before it
+  // from the start; a handful, by day.
   const placeName = id => detail?.places.find(p => p.id === id)?.name
   const timeline = detail ? buildTimeline(trip, detail.items) : []
-  const days = timeline.filter(d => d.day >= now && d.entries.length)
-  const next = []
-  // During the trip the card starts with today, even when nothing is planned:
-  // where you sleep tonight (a stay only has entries on its first and last day).
-  const todayOnTrip = on && timeline.find(d => d.day === now)
-  if (todayOnTrip && !todayOnTrip.entries.length) {
-    const tonight = todayOnTrip.sleepingAt
-    next.push({ day: now, quiet: true, tonight })
+  const groups = []
+  let count = 0
+  for (const d of timeline.filter(d => d.day >= now)) {
+    if (count >= SHOWN) break
+    const live = d.day === now ? dayStates(now, time, d.entries) : null
+    // A quiet today during a stay: where you sleep tonight.
+    const entries = d.day === now && !d.entries.length ? quietDayEntries(d.sleepingAt)
+      : d.entries.filter(e => !live || live.state(e) !== 'past')
+    if (!entries.length) continue
+    const shown = entries.slice(0, SHOWN - count)
+    count += shown.length
+    groups.push({ day: d.day, live, entries: shown })
   }
-  for (const d of days) {
-    for (const e of d.entries) if (next.length < 3) next.push({ day: d.day, ...e })
-    if (next.length >= 3) break
-  }
+  const dayLabel = day => (day === now ? 'Today' : day === addDays(now, 1) ? 'Tomorrow' : formatDay(day))
 
   return (
     <Link to={`/trips/${trip.id}`} className="next-trip">
       <div className="next-trip-head">
         <span className="trip-card-icon" aria-hidden="true"><Icon name={tripIcon(trip)} /></span>
         <div className="next-trip-title">
-          <span className="next-trip-label">{on ? 'Now' : 'Next up'}</span>
+          <span className="next-trip-label">{when.on ? 'Now' : 'Next up'}</span>
           <span className="next-trip-name">{trip.title}</span>
           <span className="next-trip-dates">
             {formatDateRange(trip.startDate, trip.endDate)}{nights > 0 && ` · ${nights} night${nights !== 1 ? 's' : ''}`}
             {trip.groupTitle && <span className="next-trip-group"><span className="next-trip-sep"> · </span>{trip.groupTitle}</span>}
           </span>
         </div>
-        <span className={`trip-card-when${on ? ' now' : ''}`}>{when}</span>
+        <span className={`trip-card-when${when.on ? ' now' : ''}`}>{when.label}</span>
       </div>
 
-      {next.length > 0 && (
-        <ul className="next-trip-items">
-          {next.map((e, i) => {
-            const dayLabel = i === 0 || next[i - 1].day !== e.day
-              ? (e.day === now ? 'Today' : e.day === addDays(now, 1) ? 'Tomorrow' : formatDay(e.day))
-              : ''
-            if (e.quiet) return (
-              <li key="today" className="next-trip-item next-trip-quiet">
-                <span className="next-trip-day">{dayLabel}</span>
-                <span className="next-trip-time" />
-                <span className="next-trip-icon" aria-hidden="true">{e.tonight.length ? <Icon name="bed-double" /> : ''}</span>
-                <span className="next-trip-what">
-                  {e.tonight.length
-                    ? <>{e.tonight.map(s => s.title).join(', ')}<span className="next-trip-phase"> · Tonight</span><span className="next-trip-meta"> · nothing else planned</span></>
-                    : <span className="next-trip-phase">Nothing planned</span>}
-                </span>
-              </li>
-            )
-            return (
-            <li key={`${e.item.id}-${e.phase}`} className="next-trip-item">
-              <span className="next-trip-day">{dayLabel}</span>
-              <span className="next-trip-time">{e.time || 'All day'}</span>
-              <span className="next-trip-icon" aria-hidden="true"><Icon name={itemIcon(e.item, e.phase)} /></span>
-              <span className="next-trip-what">
-                {e.item.title}
-                {/* The phase changes what the line means (check-out, not in);
-                    the place is extra, left out on a phone. */}
-                {e.phase && <span className="next-trip-phase"> · {e.phase}</span>}
-                {describe(e.item, placeName) && <span className="next-trip-meta"> · {describe(e.item, placeName)}</span>}
-              </span>
-            </li>
-            )
-          })}
-        </ul>
+      {groups.length > 0 && (
+        <div className="next-trip-days">
+          {groups.map(g => (
+            <div key={g.day} className="next-trip-day-group">
+              <div className="next-trip-day">{dayLabel(g.day)}</div>
+              <div className="list list-tight entry-list">
+                {g.entries.map(e => (
+                  <EntryRow key={`${e.item.id}-${e.phase}`} entry={e} state={g.live?.state(e)} placeName={placeName} showAside={false} />
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
       )}
 
       <div className="next-trip-foot">

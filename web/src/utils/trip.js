@@ -51,6 +51,15 @@ export const today = () => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
+// Where a trip stands, one label everywhere (lists, cards, Home): 'Day 6 of
+// 16' while it is on, 'Tomorrow' or 'In 3 days' before, 'Past' after.
+export const tripWhen = (trip, now = today()) => {
+  if (trip.endDate < now) return { label: 'Past', on: false }
+  if (trip.startDate <= now) return { label: `Day ${daysBetween(trip.startDate, now) + 1} of ${daysBetween(trip.startDate, trip.endDate) + 1}`, on: true }
+  const days = daysBetween(now, trip.startDate)
+  return { label: days === 1 ? 'Tomorrow' : `In ${days} days`, on: false }
+}
+
 export const formatDay = (day, options = { weekday: 'short', day: 'numeric', month: 'short' }) =>
   day ? new Intl.DateTimeFormat(navigator.language, { ...options, timeZone: 'UTC' }).format(asUtc(day)) : ''
 

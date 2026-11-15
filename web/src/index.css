@@ -875,7 +875,7 @@ body {
 .today-trip .trip-day-empty { border: none; border-top: 1px solid var(--border); border-radius: 0; padding: 12px 16px; }
 /* Footer lines: full-width 44px taps, hairline above, one line each. */
 .tonight { border-top: 1px solid var(--border); }
-.today-trip-night, .today-trip-tomorrow {
+.today-trip-tomorrow {
   display: block;
   padding: 0 16px;
   line-height: 44px;
@@ -886,25 +886,19 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-/* Rows: inset hairlines (iOS-style, aligned with the text column). */
-.today-entry, .today-earlier { position: relative; }
-/* Only the inset hairline between rows, not the rows' own full-width border too. */
-.today-list > .list-row { border-bottom: none; }
-.today-list > * + *::before { content: ''; position: absolute; top: 0; left: 0; right: 0; border-top: 1px solid var(--border); }
-.today-entry { align-items: flex-start; padding: 12px 16px; border-bottom: none; }
-.today-entry.past, .entry-list > .list-row.past { opacity: .55; } /* over: today's earlier entries, and days gone by */
-/* What is on now, or next: its icon in orange too. */
-/* The Today card's trip icon: Home's headline carries the brand colour. */
-.today-trip-title svg.icon { color: var(--accent-text); }
-.today-entry .list-row-title { font-size: var(--fs-base); line-height: 21px; }
-.today-meta { color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-/* Left column: time, then what is on or next, then the icon. */
-.today-when { width: 60px; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 6px; }
-.today-entry .trip-entry-time { width: auto; font-size: var(--fs-md); font-weight: 600; line-height: 21px; color: var(--text); white-space: nowrap; }
-.today-entry .trip-entry-time.assumed { color: var(--text-3); font-weight: 500; font-style: italic; }
-.today-entry .trip-entry-time.allday { font-family: var(--font-body); font-size: var(--fs-sm); font-weight: 600; color: var(--text-3); }
-.today-icon { font-size: var(--fs-xl); line-height: 1; }
-.today-when .today-badge { white-space: nowrap; }
+/* A trip day's entries (TripDay/TripDay.jsx EntryRow), the same everywhere:
+   the time (and Now/next badge), the dot on the day's line, the icon, then
+   what and where. Everything sits on the title's line. */
+.entry-row, .today-earlier { position: relative; }
+.list-row.entry-row { align-items: flex-start; padding: 12px 16px; }
+.entry-row.past { opacity: .55; } /* over: today's earlier entries, and days gone by */
+.entry-row .list-row-title { font-size: var(--fs-base); line-height: 21px; }
+.entry-meta { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.entry-when { width: 52px; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 6px; }
+.entry-when .trip-entry-time { width: auto; font-size: var(--fs-md); line-height: 21px; }
+.entry-when .today-badge { white-space: nowrap; }
+.entry-row .list-row-aside { align-self: flex-start; line-height: 21px; }
+.today-badge { white-space: nowrap; }
 .today-badge {
   padding: 0 7px;
   border-radius: 999px;
@@ -918,9 +912,10 @@ body {
 /* Earlier entries fold into one line, like the trip page's earlier days. */
 .today-earlier {
   display: block;
+  border-bottom: 1px solid var(--border);
   width: 100%;
   min-height: 44px;
-  padding: 0 16px 0 88px;
+  padding: 0 16px 0 138px;
   text-align: left;
   font-size: var(--fs-md);
   font-weight: 600;
@@ -1152,8 +1147,8 @@ svg.icon-country text { font-family: var(--font-body); }
 /* Orange means "you can tap this" (links, back, header actions, Show earlier)
    and "on now". Icons standing on their own (a box, a tile, an option), labels
    and data are in the text colours, so the taps stand out. */
-:is(.picker-option-icon, .picker-icon, .today-icon, .trip-card-icon, .act-icon, .gantt-bar-icon, .mode-tile-icon,
-    .invite-icon, .admin-card-icon, .icon-card-icon, .next-trip-icon, .route-leg-icon, .trip-kind, .place-row-icon,
+:is(.picker-option-icon, .picker-icon, .trip-card-icon, .act-icon, .gantt-bar-icon, .mode-tile-icon,
+    .invite-icon, .admin-card-icon, .icon-card-icon, .route-leg-icon, .trip-kind, .place-row-icon,
     .place-trigger-pin, .icon-card-icon) > svg.icon,
 .act-icon > span > svg.icon, .trip-kind > span > svg.icon { color: var(--text); }
 .act-icon.money > span > svg.icon { color: inherit; }
@@ -1168,7 +1163,7 @@ svg.icon-country text { font-family: var(--font-body); }
 .tint-violet { --tint-bg: var(--cat-violet); }
 .tint-pink { --tint-bg: var(--cat-pink); }
 .tint-slate { --tint-bg: var(--cat-slate); }
-:is(.list-row-icon, .act-icon, .icon-card-icon, .picker-icon, .picker-option-icon, .colour-swatch, .detail-hero-icon, .today-icon).tinted {
+:is(.list-row-icon, .act-icon, .icon-card-icon, .picker-icon, .picker-option-icon, .colour-swatch, .detail-hero-icon).tinted {
   background: var(--tint-bg); color: #fff;
 }
 .tinted svg.icon, .tinted > span > svg.icon { color: #fff; }
@@ -1996,10 +1991,9 @@ a.act-row { color: inherit; text-decoration: none; }
 }
 /* A usual hotel time standing in for one not entered on the stay. */
 .trip-entry-time.assumed { color: var(--text-3); font-style: italic; font-weight: 400; }
-.trip-entry-time.allday { font-family: var(--font-body); font-size: var(--fs-xs); font-weight: 600; white-space: nowrap; color: var(--text-3); }
+.trip-entry-time.allday { font-family: var(--font-body); font-size: var(--fs-sm); font-weight: 600; color: var(--text-3); }
 .trip-entry-time {
-  width: 48px;
-  flex-shrink: 0;
+  white-space: nowrap;
   font-family: var(--font-mono);
   font-size: var(--fs-sm);
   color: var(--text);
@@ -2950,24 +2944,16 @@ a.trip-chip:hover { border-color: var(--border-strong); }
 .next-trip-label { font-size: var(--fs-xs); font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--accent-text); }
 .next-trip-name { font-size: var(--fs-lg); font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .next-trip-dates { font-size: var(--fs-md); color: var(--text-2); }
-.next-trip-items { list-style: none; margin: 14px 0 0; padding: 12px 0 0; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 8px; }
-.next-trip-item { display: grid; grid-template-columns: 92px 52px 24px minmax(0, 1fr); align-items: baseline; gap: 8px; font-size: var(--fs-base); }
-.next-trip-day { font-size: var(--fs-md); font-weight: 600; color: var(--text-2); }
-.next-trip-time { font-variant-numeric: tabular-nums; color: var(--text-2); }
-.next-trip-icon { text-align: center; }
-.next-trip-what { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
-.next-trip-meta, .next-trip-phase { font-weight: 400; color: var(--text-3); }
+.next-trip-days { margin-top: 14px; display: flex; flex-direction: column; gap: 10px; }
+.next-trip-day { font-size: var(--fs-sm); font-weight: 600; color: var(--text-2); margin-bottom: 6px; }
+.next-trip .entry-list { background: none; border: none; border-radius: 0; }
+.next-trip .list-row.entry-row { padding-inline: 0; }
 .next-trip-foot { display: flex; justify-content: space-between; gap: 12px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border); font-size: var(--fs-md); color: var(--text-2); }
 .next-trip-open { font-weight: 600; color: var(--accent-text); white-space: nowrap; }
 /* Phones: two entries, the day above them rather than in a column */
 @media (max-width: 600px) {
   .next-trip { padding: 16px; }
-  .next-trip-item:nth-child(n+3) { display: none; }
-  .next-trip-item { grid-template-columns: 44px 22px minmax(0, 1fr); }
-  .next-trip-day { grid-column: 1 / -1; }
-  .next-trip-day:empty { display: none; }
   .next-trip-open { display: none; }
-  .next-trip-meta { display: none; }
   .next-trip-group { display: block; }
   .next-trip-sep { display: none; }
 }
@@ -3185,19 +3171,18 @@ html[data-emoji="openmoji"] {
   --font-display: 'Splitty OpenMoji', 'DM Serif Display', serif;
 }
 
-/* A day's entries on one line (TodayEntries.jsx EntryNode): each at a dot in
+/* A day's entries on one line (TripDay/TripDay.jsx EntryNode): each at a dot in
    its kind's colour (--kind): a ring while still to come, filled and bigger
    while on now, a washed-out fill once over. The line runs from the first dot
    to the last, through the rows' padding. */
-.entry-node { position: relative; align-self: stretch; width: 12px; flex-shrink: 0; margin-block: -12px; --node-y: 50%; }
-.today-entry .entry-node { --node-y: 22px; }
+.entry-node { position: relative; align-self: stretch; width: 12px; flex-shrink: 0; margin-block: -12px; --node-y: 22px; }
 .entry-node::before { content: ''; position: absolute; left: 5px; width: 2px; top: 0; bottom: 0; background: var(--border-strong); }
-:is(.entry-list, .today-list) > :first-child .entry-node::before { top: var(--node-y); }
-:is(.entry-list, .today-list) > :last-child .entry-node::before { bottom: calc(100% - var(--node-y)); }
+.entry-list > :first-child .entry-node::before { top: var(--node-y); }
+.entry-list > :last-child .entry-node::before { bottom: calc(100% - var(--node-y)); }
 /* All-day entries stand apart: no line through them, and the line starts at
    the first timed entry after them. */
 .entry-node.allday::before { display: none; }
-:is(.entry-list, .today-list) > :has(.entry-node.allday) + * .entry-node::before { top: var(--node-y); }
+.entry-list > :has(.entry-node.allday) + * .entry-node::before { top: var(--node-y); }
 .entry-dot {
   position: absolute; left: 0; top: var(--node-y); width: 12px; height: 12px; margin-top: -6px;
   border-radius: 50%; background: var(--surface); border: 2.5px solid var(--kind);
@@ -3206,16 +3191,15 @@ html[data-emoji="openmoji"] {
 .entry-node.past .entry-dot { background: color-mix(in srgb, var(--kind) 35%, var(--surface)); border-color: transparent; }
 .entry-node.now .entry-dot { left: -2px; width: 16px; height: 16px; margin-top: -8px; background: var(--kind); border: none; }
 .entry-icon { width: 22px; flex-shrink: 0; display: flex; justify-content: center; font-size: 20px; color: var(--text-2); }
-.today-entry > :is(.today-when, .entry-icon) { align-self: flex-start; }
-.today-entry .entry-icon { padding-top: 1px; }
+.entry-row .entry-icon { padding-top: 1px; }
 .entry-node.now + .entry-icon { color: var(--accent-text); }
 
 
-/* Tonight (TodayEntries.jsx): the hotel, its booking code and the way there. */
+/* Tonight (TripDay/TripDay.jsx): the hotel, its booking code and the way there. */
 .tonight-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; padding: 10px 16px; }
 .tonight-row + .tonight-row { border-top: 1px solid var(--border); }
 .tonight-name { font-size: var(--fs-md); color: var(--text-2); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tonight .today-actions { margin-top: 0; }
 /* On the trip page the card is the day's own: the Tonight line inside it. */
-.trip-day .today-list:has(+ .tonight) { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+.trip-day .entry-list:has(+ .tonight) { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
 .trip-day .tonight { border: 1px solid var(--border); border-top: none; border-radius: 0 0 var(--r-lg) var(--r-lg); background: var(--surface); }

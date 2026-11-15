@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
-import { itemIcon, buildTimeline, daysBetween, today, addDays } from '../utils/trip.js'
-import TodayEntries, { quietDayEntries, moreToday, Tonight } from './TodayEntries.jsx'
+import { itemIcon, buildTimeline, today, addDays, tripWhen } from '../utils/trip.js'
+import { TripDayBody, moreToday } from './TripDay/TripDay.jsx'
 import { useTripNow, tripNow } from '../utils/tripClock.js'
 import { useGate } from '../utils/pageGate.jsx'
 import { swrOne } from '../utils/cache.js'
@@ -16,8 +16,8 @@ import { tripIcon } from '../utils/icons.js'
 // other trips that are on too are a short "Also today" list under it.
 // Stays away if nothing loads, like the other panels.
 //
-// The rows are TodayEntries (live: now, next, booking code, directions), the
-// same as the trip page's today. Tomorrow's first entry too, once nothing
+// The day is TripDayBody (TripDay/TripDay.jsx), live: the same as the trip
+// page's today. Tomorrow's first entry too, once nothing
 // timed is left today, or from the evening on.
 const EVENING = '18:00'
 
@@ -77,7 +77,7 @@ export default function TodayTrip() {
               to={`/trips/${trip.id}`}
               icon={<Icon name={tripIcon(trip)} />}
               title={trip.title}
-              meta={`Day ${daysBetween(trip.startDate, now) + 1} of ${daysBetween(trip.startDate, trip.endDate) + 1}`}
+              meta={tripWhen(trip, now).label}
               chevron
             />
           ))}
@@ -93,10 +93,7 @@ function TodayCard({ trip, items, places }) {
   const timeline = buildTimeline(trip, items)
   const day = timeline.find(d => d.day === now)
   const tomorrow = timeline.find(d => d.day === addDays(now, 1))
-  const dayNo = daysBetween(trip.startDate, now) + 1
-  const total = daysBetween(trip.startDate, trip.endDate) + 1
   const entries = day?.entries || []
-  const sleepingAt = day?.sleepingAt || []
   const firstTomorrow = (time >= EVENING || !moreToday(now, time, entries)) && tomorrow?.entries.length
     ? tomorrow.entries.find(e => e.time) || tomorrow.entries[0]
     : null
@@ -108,18 +105,9 @@ function TodayCard({ trip, items, places }) {
           <span><Icon name={tripIcon(trip)} /></span>
           <span className="today-trip-name">Today in {trip.title}</span>
         </span>
-        <span className="today-trip-day">Day {dayNo} of {total} ›</span>
+        <span className="today-trip-day">{tripWhen(trip, now).label} ›</span>
       </Link>
-      {entries.length === 0 && sleepingAt.length > 0 ? (
-        <TodayEntries tripId={trip.id} day={now} time={time} entries={quietDayEntries(sleepingAt)} places={places} />
-      ) : entries.length === 0 ? (
-        <div className="trip-day-empty">Nothing planned today</div>
-      ) : (
-        <TodayEntries tripId={trip.id} day={now} time={time} entries={entries} places={places} />
-      )}
-      {sleepingAt.length > 0 && entries.length > 0 && (
-        <Tonight stays={sleepingAt} places={places} />
-      )}
+      <TripDayBody tripId={trip.id} day={day ?? { day: now, entries: [], sleepingAt: [] }} places={places} time={time} nothing="Nothing planned today" />
       {firstTomorrow && (
         <Link to={`/trips/${trip.id}/items/${firstTomorrow.item.id}`} className="today-trip-tomorrow">
           Tomorrow {firstTomorrow.time || ''} · <Icon name={itemIcon(firstTomorrow.item, firstTomorrow.phase)} /> {[firstTomorrow.phase, firstTomorrow.item.title].filter(Boolean).join(' ')} ›

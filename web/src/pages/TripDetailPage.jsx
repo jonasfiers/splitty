@@ -10,12 +10,12 @@ import TripFormSheet from '../components/TripForm/TripFormSheet.jsx'
 import DuplicateTripSheet from '../components/TripForm/DuplicateTripSheet.jsx'
 import QuickAddSheet from '../components/TripForm/QuickAddSheet.jsx'
 import { formatCurrency } from '../utils/currency.js'
-import { KINDS, TRANSPORT_MODES, itemIcon, buildTimeline, describe, formatDay, formatDateRange, formatMoment, daysBetween, today } from '../utils/trip.js'
+import { KINDS, TRANSPORT_MODES, buildTimeline, formatDateRange, formatMoment, daysBetween, today } from '../utils/trip.js'
 import TripGantt from '../components/TripGantt/TripGantt.jsx'
 import Expandable from '../components/Expandable/Expandable.jsx'
 import { useMediaQuery } from '../utils/useMediaQuery.js'
 import Sheet, { SheetActions } from '../components/Sheet/Sheet.jsx'
-import TodayEntries, { quietDayEntries, EntryNode, Tonight } from '../components/TodayEntries.jsx'
+import { TripDayBody, DayHead } from '../components/TripDay/TripDay.jsx'
 import { useTripNow } from '../utils/tripClock.js'
 import Segmented from '../components/Segmented/Segmented.jsx'
 import { leaveTo } from '../utils/history.js'
@@ -277,49 +277,11 @@ function TripDetailPage() {
           {showPast ? 'Hide earlier days' : `Show ${pastDays} earlier day${pastDays !== 1 ? 's' : ''}`}
         </button>
       )}
-      {shownDays.map(({ day, entries, sleepingAt, outsideTrip }) => (
-        <div key={day} className={`trip-day${day === now ? ' today' : ''}`}>
-          <div className="trip-day-head">
-            <span className="trip-day-name">{formatDay(day)}</span>
-            <span className="trip-day-meta">
-              {outsideTrip ? 'Outside the trip dates' : `Day ${daysBetween(trip.startDate, day) + 1}`}
-              {sleepingAt.length > 0 && <> · <Icon name="bed-double" /> {sleepingAt.map(s => s.title).join(', ')}</>}
-            </span>
-          </div>
-          {day === now && entries.length === 0 && sleepingAt.length > 0 ? (
-            // An empty today during a stay: the hotel, live like the rest of today.
-            <TodayEntries tripId={id} day={day} time={nowTime} entries={quietDayEntries(sleepingAt)} places={places} />
-          ) : entries.length === 0 ? (
-            <div className="trip-day-empty">Nothing planned</div>
-          ) : day === now ? (
-            // Today is live, the same rows as Home's Today card.
-            <>
-              <TodayEntries tripId={id} day={day} time={nowTime} entries={entries} places={places} />
-              {sleepingAt.length > 0 && <Tonight stays={sleepingAt} places={places} />}
-            </>
-          ) : (
-            <div className="list list-tight entry-list">
-              {entries.map(({ item, time, phase, assumed }) => (
-                <button key={`${item.id}-${phase}`} type="button" className={`list-row list-row-link${day < now ? ' past' : ''}`} onClick={() => openItem(item)}>
-                  <span className={`trip-entry-time${time ? '' : ' allday'}${assumed ? ' assumed' : ''}`} title={assumed ? 'Usual hotel time; no time set on this stay' : undefined}>{time || 'All day'}</span>
-                  <EntryNode item={item} state={day < now ? 'past' : null} allDay={!time} />
-                  <span className="entry-icon" aria-hidden="true"><Icon name={itemIcon(item, phase)} /></span>
-                  <span className="list-row-text">
-                    <span className="list-row-title">{item.title}</span>
-                    <span className="list-row-meta">
-                      {[phase, describe(item, placeName)].filter(Boolean).join(' · ') || KINDS[item.kind].label}
-                    </span>
-                  </span>
-                  <span className="list-row-aside">
-                    <span className="list-row-sub">
-                      {item.expenseCount > 0 ? '✓ paid' : ''}
-                      {item.attachmentCount > 0 && <> <Icon name="paperclip" />{item.attachmentCount}</>}
-                    </span>
-                  </span>
-                </button>
-              ))}
-            </div>
-          )}
+      {shownDays.map(d => (
+        <div key={d.day} className={`trip-day${d.day === now ? ' today' : ''}`}>
+          <DayHead trip={trip} day={d} />
+          {/* Today is live, the same as Home's Today card. */}
+          <TripDayBody tripId={id} day={d} places={places} time={d.day === now ? nowTime : null} past={d.day < now} />
         </div>
       ))}
     </div>
