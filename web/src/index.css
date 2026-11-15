@@ -3193,6 +3193,10 @@ html[data-emoji="openmoji"] {
 .entry-node::before { content: ''; position: absolute; left: 5px; width: 2px; top: 0; bottom: 0; background: var(--border-strong); }
 :is(.entry-list, .today-list) > :first-child .entry-node::before { top: var(--node-y); }
 :is(.entry-list, .today-list) > :last-child .entry-node::before { bottom: calc(100% - var(--node-y)); }
+/* All-day entries stand apart: no line through them, and the line starts at
+   the first timed entry after them. */
+.entry-node.allday::before { display: none; }
+:is(.entry-list, .today-list) > :has(.entry-node.allday) + * .entry-node::before { top: var(--node-y); }
 .entry-dot {
   position: absolute; left: 0; top: var(--node-y); width: 12px; height: 12px; margin-top: -6px;
   border-radius: 50%; background: var(--surface); border: 2.5px solid var(--kind);

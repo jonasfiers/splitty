@@ -70,9 +70,11 @@ export const quietDayEntries = sleepingAt => sleepingAt.map(item => ({ item, tim
 // colour (utils/trip.js itemColour: the matching category's): a ring for what
 // is still to come, filled for what is on now (and a bit bigger), a washed-out
 // fill for what is over.
-export function EntryNode({ item, state }) {
+// An all-day entry (no time) has its dot off the line: it is not a moment
+// in the day's order.
+export function EntryNode({ item, state, allDay = false }) {
   return (
-    <span className={`entry-node${state ? ` ${state}` : ''}`} style={{ '--kind': `var(--cat-${itemColour(item) ?? 'slate'})` }} aria-hidden="true">
+    <span className={`entry-node${state ? ` ${state}` : ''}${allDay ? ' allday' : ''}`} style={{ '--kind': `var(--cat-${itemColour(item) ?? 'slate'})` }} aria-hidden="true">
       <span className="entry-dot" />
     </span>
   )
@@ -121,7 +123,7 @@ export default function TodayEntries({ tripId, day, entries, places, time: tripT
                   {on && <span className="today-badge">Now</span>}
                   {entry === next && <span className="today-badge next">{countdown(minutes(at) - minutes(time))}</span>}
                 </div>
-                <EntryNode item={item} state={on ? 'now' : past ? 'past' : null} />
+                <EntryNode item={item} state={on ? 'now' : past ? 'past' : null} allDay={!at} />
                 <div className="entry-icon"><Icon name={itemIcon(item, phase)} /></div>
                 <div className="list-row-text">
                   <Link to={`/trips/${tripId}/items/${item.id}`} className="list-row-title list-row-stretch">{item.title}</Link>
