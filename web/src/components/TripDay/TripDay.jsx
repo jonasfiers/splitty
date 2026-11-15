@@ -4,7 +4,6 @@ import { KINDS, itemIcon, itemColour, describe, mapsLink, linkTarget, formatDay,
 import BigReference from '../BigReference/BigReference.jsx'
 import { pad, clock, onMinute } from '../../utils/tripClock.js'
 import Icon from '../Icon/Icon.jsx'
-import { formatCurrency } from '../../utils/currency.js'
 
 export { pad, clock }
 
@@ -121,9 +120,9 @@ function Actions({ item, place, onBigRef }) {
 
 // One entry. `to` makes it open the item (the whole row); without it, it is
 // plain (inside a card that is a link itself). `actions` is the third line.
-// On the right, on the title's line: what was paid for it (in the group's
-// currency, `iso`) and a paperclip for its files (counted from two).
-export function EntryRow({ entry, state, badge, to, placeName, actions, iso, showAside = true }) {
+// On the right, on the title's line: a paperclip for its files (counted from
+// two). What was paid is on the item and the trip, not here.
+export function EntryRow({ entry, state, badge, to, placeName, actions, showAside = true }) {
   const { item, time, phase, assumed, label } = entry
   const title = to
     ? <Link to={to} className="list-row-title list-row-stretch">{item.title}</Link>
@@ -145,9 +144,8 @@ export function EntryRow({ entry, state, badge, to, placeName, actions, iso, sho
         </div>
         {actions}
       </div>
-      {showAside && (item.expenseCount > 0 || item.attachmentCount > 0) && (
+      {showAside && item.attachmentCount > 0 && (
         <span className="list-row-aside entry-aside">
-          {item.expenseCount > 0 && <span className="entry-paid">{formatCurrency(item.paidBase, iso)}</span>}
           {item.attachmentCount > 0 && (
             <span className="entry-files" title={`${item.attachmentCount} file${item.attachmentCount !== 1 ? 's' : ''}`}>
               <Icon name="paperclip" label={`${item.attachmentCount} file${item.attachmentCount !== 1 ? 's' : ''}`} />{item.attachmentCount > 1 && item.attachmentCount}
@@ -162,7 +160,7 @@ export function EntryRow({ entry, state, badge, to, placeName, actions, iso, sho
 // A day's entries on their line. Live (`time` given): over, now and next,
 // what is over folded away behind one line, booking codes and directions on
 // what is not over yet. Otherwise the plan: all over if `past`.
-export function DayEntries({ tripId, day, entries, places, time, iso, past = false }) {
+export function DayEntries({ tripId, day, entries, places, time, past = false }) {
   const [bigRef, setBigRef] = useState(null)
   const [showFolded, setShowFolded] = useState(false)
   const closeBigRef = useCallback(() => setBigRef(null), [])
@@ -196,7 +194,6 @@ export function DayEntries({ tripId, day, entries, places, time, iso, past = fal
                   badge={badge}
                   to={`/trips/${tripId}/items/${item.id}`}
                   placeName={placeName}
-                  iso={iso}
                   // What is over is history: no code or directions (the row
                   // still opens the item; tonight's hotel is on Tonight).
                   actions={live && state !== 'past' && <Actions item={item} place={placeById.get(placeOf(item, phase))} onBigRef={setBigRef} />}
@@ -234,16 +231,16 @@ export function Tonight({ stays, places }) {
 // A day of the trip (utils/trip.js buildTimeline): its entries, or "Nothing
 // planned", or, on a quiet day of a stay that is today, the hotel itself as
 // the day's row. Today (`time` given) is live, with Tonight under it.
-export function TripDayBody({ tripId, day: { day, entries, sleepingAt }, places, time, iso, past = false, nothing = 'Nothing planned' }) {
+export function TripDayBody({ tripId, day: { day, entries, sleepingAt }, places, time, past = false, nothing = 'Nothing planned' }) {
   const live = time != null
   if (!entries.length) {
     return live && sleepingAt.length
-      ? <DayEntries tripId={tripId} day={day} entries={quietDayEntries(sleepingAt)} places={places} time={time} iso={iso} />
+      ? <DayEntries tripId={tripId} day={day} entries={quietDayEntries(sleepingAt)} places={places} time={time} />
       : <div className="trip-day-empty">{nothing}</div>
   }
   return (
     <>
-      <DayEntries tripId={tripId} day={day} entries={entries} places={places} time={time} iso={iso} past={past} />
+      <DayEntries tripId={tripId} day={day} entries={entries} places={places} time={time} past={past} />
       {live && sleepingAt.length > 0 && <Tonight stays={sleepingAt} places={places} />}
     </>
   )

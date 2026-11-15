@@ -898,9 +898,8 @@ body {
 .entry-when .trip-entry-time { width: auto; font-size: var(--fs-md); line-height: 21px; }
 .entry-when .today-badge { white-space: nowrap; }
 .entry-row .list-row-aside { align-self: flex-start; line-height: 21px; }
-/* Paid and files, on the title's line at the right: amounts line up down the day. */
+/* Files, on the title's line at the right. */
 .list-row-aside.entry-aside { flex-direction: row; align-items: center; gap: 10px; white-space: nowrap; }
-.entry-paid { font-family: var(--font-mono); font-size: var(--fs-sm); color: var(--text-2); }
 .entry-files { display: inline-flex; align-items: center; gap: 2px; font-size: var(--fs-sm); color: var(--text-3); }
 .today-badge { white-space: nowrap; }
 .today-badge {

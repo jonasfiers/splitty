@@ -281,7 +281,7 @@ function TripDetailPage() {
         <div key={d.day} className={`trip-day${d.day === now ? ' today' : ''}`}>
           <DayHead trip={trip} day={d} />
           {/* Today is live, the same as Home's Today card. */}
-          <TripDayBody tripId={id} day={d} places={places} time={d.day === now ? nowTime : null} iso={trip.groupIso} past={d.day < now} />
+          <TripDayBody tripId={id} day={d} places={places} time={d.day === now ? nowTime : null} past={d.day < now} />
         </div>
       ))}
     </div>
