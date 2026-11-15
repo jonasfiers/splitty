@@ -67,12 +67,13 @@ export const moreToday = (day, time, entries) =>
 export const quietDayEntries = sleepingAt => sleepingAt.map(item => ({ item, time: '', label: 'Tonight', phase: 'Staying' }))
 
 // A day's entries hang on one line (the spine), each at a dot in its kind's
-// colour (utils/trip.js itemColour: the matching category's). What is on now
-// is an orange ring instead; what is over, a grey dot.
+// colour (utils/trip.js itemColour: the matching category's): a ring for what
+// is still to come, filled for what is on now (and a bit bigger), a washed-out
+// fill for what is over.
 export function EntryNode({ item, state }) {
   return (
-    <span className={`entry-node${state ? ` ${state}` : ''}`} aria-hidden="true">
-      <span className="entry-dot" style={state ? undefined : { background: `var(--cat-${itemColour(item) ?? 'slate'})` }} />
+    <span className={`entry-node${state ? ` ${state}` : ''}`} style={{ '--kind': `var(--cat-${itemColour(item) ?? 'slate'})` }} aria-hidden="true">
+      <span className="entry-dot" />
     </span>
   )
 }

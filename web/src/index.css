@@ -3185,8 +3185,9 @@ html[data-emoji="openmoji"] {
 }
 
 /* A day's entries on one line (TodayEntries.jsx EntryNode): each at a dot in
-   its kind's colour, what is on now an orange ring, what is over a grey dot.
-   The line runs from the first dot to the last, through the rows' padding. */
+   its kind's colour (--kind): a ring while still to come, filled and bigger
+   while on now, a washed-out fill once over. The line runs from the first dot
+   to the last, through the rows' padding. */
 .entry-node { position: relative; align-self: stretch; width: 12px; flex-shrink: 0; margin-block: -12px; --node-y: 50%; }
 .today-entry .entry-node { --node-y: 22px; }
 .entry-node::before { content: ''; position: absolute; left: 5px; width: 2px; top: 0; bottom: 0; background: var(--border-strong); }
@@ -3194,10 +3195,11 @@ html[data-emoji="openmoji"] {
 :is(.entry-list, .today-list) > :last-child .entry-node::before { bottom: calc(100% - var(--node-y)); }
 .entry-dot {
   position: absolute; left: 0; top: var(--node-y); width: 12px; height: 12px; margin-top: -6px;
-  border-radius: 50%; box-shadow: 0 0 0 3px var(--surface);
+  border-radius: 50%; background: var(--surface); border: 2.5px solid var(--kind);
+  box-shadow: 0 0 0 3px var(--surface);
 }
-.entry-node.past .entry-dot { background: var(--text-3); }
-.entry-node.now .entry-dot { left: -2px; width: 16px; height: 16px; margin-top: -8px; background: var(--surface); border: 3px solid var(--accent); }
+.entry-node.past .entry-dot { background: color-mix(in srgb, var(--kind) 35%, var(--surface)); border-color: transparent; }
+.entry-node.now .entry-dot { left: -2px; width: 16px; height: 16px; margin-top: -8px; background: var(--kind); border: none; }
 .entry-icon { width: 22px; flex-shrink: 0; display: flex; justify-content: center; font-size: 20px; color: var(--text-2); }
 .today-entry > :is(.today-when, .entry-icon) { align-self: flex-start; }
 .today-entry .entry-icon { padding-top: 1px; }
