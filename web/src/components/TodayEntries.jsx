@@ -69,8 +69,7 @@ export const quietDayEntries = sleepingAt => sleepingAt.map(item => ({ item, tim
 // A day's entries hang on one line (the spine), each at a dot in its kind's
 // colour (utils/trip.js itemColour: the matching category's): a ring for what
 // is still to come, filled for what is on now (and a bit bigger), a washed-out
-// fill for what is over (a check-in that has happened too, though its row
-// stays in the list for the rest of the day).
+// fill for what is over.
 // An all-day entry (no time) has its dot off the line: it is not a moment
 // in the day's order.
 export function EntryNode({ item, state, allDay = false }) {
@@ -95,9 +94,9 @@ export default function TodayEntries({ tripId, day, entries, places, time: tripT
   const moment = `${day}T${time}`
   const isOn = item => isOnAt(item, moment)
   const next = entries.find(e => e.time && e.time > time && !isOn(e.item))
-  // Check-in is "from" its time: the row (and the hotel's booking code) stays
-  // until the day is over, however late you arrive.
-  const isPast = e => !isOn(e.item) && e.phase !== 'Check-in' && e.time && e.time <= time
+  // A check-in is over at its time like the rest; the hotel's booking code and
+  // directions stay on the Tonight line (Tonight, below) all evening.
+  const isPast = e => !isOn(e.item) && e.time && e.time <= time
   const pastCount = entries.filter(isPast).length
   // Earlier entries fold into one line where the timed part of the day starts.
   const firstTimed = entries.find(e => e.time)
@@ -109,9 +108,6 @@ export default function TodayEntries({ tripId, day, entries, places, time: tripT
             const { item, time: at, phase } = entry
             const on = isOn(item)
             const past = isPast(entry)
-            // A check-in whose time has come stays in the list for the rest of
-            // the day (isPast), but its dot is over, like the others.
-            const checkedIn = phase === 'Check-in' && at && at <= time
             const link = mapsLink(placeById.get(placeOf(item, phase)))
             return (
               <Fragment key={`${item.id}-${phase}`}>
@@ -127,7 +123,7 @@ export default function TodayEntries({ tripId, day, entries, places, time: tripT
                   {on && <span className="today-badge">Now</span>}
                   {entry === next && <span className="today-badge next">{countdown(minutes(at) - minutes(time))}</span>}
                 </div>
-                <EntryNode item={item} state={on ? 'now' : past || checkedIn ? 'past' : null} allDay={!at} />
+                <EntryNode item={item} state={on ? 'now' : past ? 'past' : null} allDay={!at} />
                 <div className="entry-icon"><Icon name={itemIcon(item, phase)} /></div>
                 <div className="list-row-text">
                   <Link to={`/trips/${tripId}/items/${item.id}`} className="list-row-title list-row-stretch">{item.title}</Link>
@@ -158,5 +154,43 @@ export default function TodayEntries({ tripId, day, entries, places, time: tripT
         </div>
       {bigRef && <BigReference value={bigRef.confirmationRef} label={`${bigRef.title} · Booking reference`} onClose={closeBigRef} />}
     </>
+  )
+}
+
+// Where you sleep tonight, under today's rows: the hotel with its booking
+// code (full screen) and directions, there all evening, however late you
+// arrive (the check-in row itself folds away once its time has passed).
+export function Tonight({ stays, places }) {
+  const [bigRef, setBigRef] = useState(null)
+  const closeBigRef = useCallback(() => setBigRef(null), [])
+  const placeById = new Map(places.map(p => [p.id, p]))
+  return (
+    <div className="tonight">
+      {stays.map(stay => {
+        const place = placeById.get(stay.placeId)
+        const link = mapsLink(place)
+        return (
+          <div key={stay.id} className="tonight-row">
+            <span className="tonight-name"><Icon name="bed-double" /> Tonight: {stay.title}</span>
+            {(stay.confirmationRef || link) && (
+              <span className="today-actions">
+                {stay.confirmationRef && (
+                  <button type="button" className="today-ref" onClick={() => setBigRef(stay)} title="Show big" aria-label={`Show booking reference ${stay.confirmationRef} full screen`}>
+                    <span>{stay.confirmationRef}</span>
+                  </button>
+                )}
+                {link && (
+                  <a className="today-nav" href={link.url} target={linkTarget(link.url)} rel="noopener noreferrer" title={link.label} aria-label={`${link.label}: ${place?.name ?? stay.title}`}>
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l18-8-8 18-2-8-8-2z" /></svg>
+                    Go
+                  </a>
+                )}
+              </span>
+            )}
+          </div>
+        )
+      })}
+      {bigRef && <BigReference value={bigRef.confirmationRef} label={`${bigRef.title} · Booking reference`} onClose={closeBigRef} />}
+    </div>
   )
 }

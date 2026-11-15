@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import { itemIcon, buildTimeline, daysBetween, today, addDays } from '../utils/trip.js'
-import TodayEntries, { quietDayEntries, moreToday } from './TodayEntries.jsx'
+import TodayEntries, { quietDayEntries, moreToday, Tonight } from './TodayEntries.jsx'
 import { useTripNow, tripNow } from '../utils/tripClock.js'
 import { useGate } from '../utils/pageGate.jsx'
 import { swrOne } from '../utils/cache.js'
@@ -118,7 +118,7 @@ function TodayCard({ trip, items, places }) {
         <TodayEntries tripId={trip.id} day={now} time={time} entries={entries} places={places} />
       )}
       {sleepingAt.length > 0 && entries.length > 0 && (
-        <div className="today-trip-night"><Icon name="bed-double" /> Tonight: {sleepingAt.map(s => s.title).join(', ')}</div>
+        <Tonight stays={sleepingAt} places={places} />
       )}
       {firstTomorrow && (
         <Link to={`/trips/${trip.id}/items/${firstTomorrow.item.id}`} className="today-trip-tomorrow">

@@ -15,7 +15,7 @@ import TripGantt from '../components/TripGantt/TripGantt.jsx'
 import Expandable from '../components/Expandable/Expandable.jsx'
 import { useMediaQuery } from '../utils/useMediaQuery.js'
 import Sheet, { SheetActions } from '../components/Sheet/Sheet.jsx'
-import TodayEntries, { quietDayEntries, EntryNode } from '../components/TodayEntries.jsx'
+import TodayEntries, { quietDayEntries, EntryNode, Tonight } from '../components/TodayEntries.jsx'
 import { useTripNow } from '../utils/tripClock.js'
 import Segmented from '../components/Segmented/Segmented.jsx'
 import { leaveTo } from '../utils/history.js'
@@ -293,7 +293,10 @@ function TripDetailPage() {
             <div className="trip-day-empty">Nothing planned</div>
           ) : day === now ? (
             // Today is live, the same rows as Home's Today card.
-            <TodayEntries tripId={id} day={day} time={nowTime} entries={entries} places={places} />
+            <>
+              <TodayEntries tripId={id} day={day} time={nowTime} entries={entries} places={places} />
+              {sleepingAt.length > 0 && <Tonight stays={sleepingAt} places={places} />}
+            </>
           ) : (
             <div className="list list-tight entry-list">
               {entries.map(({ item, time, phase, assumed }) => (

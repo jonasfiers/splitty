@@ -874,6 +874,7 @@ body {
 .today-trip .list { border: none; border-top: 1px solid var(--border); border-radius: 0; background: none; }
 .today-trip .trip-day-empty { border: none; border-top: 1px solid var(--border); border-radius: 0; padding: 12px 16px; }
 /* Footer lines: full-width 44px taps, hairline above, one line each. */
+.tonight { border-top: 1px solid var(--border); }
 .today-trip-night, .today-trip-tomorrow {
   display: block;
   padding: 0 16px;
@@ -3208,3 +3209,13 @@ html[data-emoji="openmoji"] {
 .today-entry > :is(.today-when, .entry-icon) { align-self: flex-start; }
 .today-entry .entry-icon { padding-top: 1px; }
 .entry-node.now + .entry-icon { color: var(--accent-text); }
+
+
+/* Tonight (TodayEntries.jsx): the hotel, its booking code and the way there. */
+.tonight-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; padding: 10px 16px; }
+.tonight-row + .tonight-row { border-top: 1px solid var(--border); }
+.tonight-name { font-size: var(--fs-md); color: var(--text-2); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tonight .today-actions { margin-top: 0; }
+/* On the trip page the card is the day's own: the Tonight line inside it. */
+.trip-day .today-list:has(+ .tonight) { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+.trip-day .tonight { border: 1px solid var(--border); border-top: none; border-radius: 0 0 var(--r-lg) var(--r-lg); background: var(--surface); }
