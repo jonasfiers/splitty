@@ -894,7 +894,7 @@ body {
 .today-entry.past { opacity: .55; }
 .today-entry.on { box-shadow: inset 3px 0 0 var(--accent); }
 /* What is on now, or next: its icon in orange too. */
-.today-entry:is(.on, :has(.today-badge.next)) .today-icon svg.icon { color: var(--accent-text); }
+.today-entry:is(.on, :has(.today-badge.next)) .today-icon:not(.tinted) svg.icon { color: var(--accent-text); }
 /* The Today card's trip icon: Home's headline carries the brand colour. */
 .today-trip-title svg.icon { color: var(--accent-text); }
 .today-entry .list-row-title { font-size: var(--fs-base); line-height: 21px; }
@@ -905,6 +905,8 @@ body {
 .today-entry .trip-entry-time.assumed { color: var(--text-3); font-weight: 500; font-style: italic; }
 .today-entry .trip-entry-time.allday { font-family: var(--font-body); font-size: var(--fs-xs); font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--text-3); }
 .today-icon { font-size: var(--fs-xl); line-height: 1; }
+/* A trip entry's kind colour (utils/trip.js itemColour): a small solid tile. */
+.today-icon.tinted { width: 36px; height: 36px; border-radius: var(--r-md); display: grid; place-items: center; font-size: var(--fs-lg); }
 .today-when .today-badge { white-space: nowrap; }
 .today-badge {
   padding: 0 7px;
@@ -1169,7 +1171,7 @@ svg.icon-country text { font-family: var(--font-body); }
 .tint-violet { --tint-bg: var(--cat-violet); }
 .tint-pink { --tint-bg: var(--cat-pink); }
 .tint-slate { --tint-bg: var(--cat-slate); }
-:is(.list-row-icon, .act-icon, .icon-card-icon, .picker-icon, .picker-option-icon, .colour-swatch, .detail-hero-icon).tinted {
+:is(.list-row-icon, .act-icon, .icon-card-icon, .picker-icon, .picker-option-icon, .colour-swatch, .detail-hero-icon, .today-icon).tinted {
   background: var(--tint-bg); color: #fff;
 }
 .tinted svg.icon, .tinted > span > svg.icon { color: #fff; }
@@ -1996,13 +1998,15 @@ a.act-row { color: inherit; text-decoration: none; }
   padding: 0 0 4px;
 }
 /* A usual hotel time standing in for one not entered on the stay. */
-.trip-entry-time.assumed { color: var(--text-3); font-style: italic; }
+.trip-entry-time.assumed { color: var(--text-3); font-style: italic; font-weight: 400; }
+.trip-entry-time.allday { font-family: var(--font-body); font-size: var(--fs-xs); font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--text-3); }
 .trip-entry-time {
   width: 44px;
   flex-shrink: 0;
   font-family: var(--font-mono);
   font-size: var(--fs-sm);
-  color: var(--text-2);
+  color: var(--text);
+  font-weight: 600;
   line-height: 1.2;
 }
 

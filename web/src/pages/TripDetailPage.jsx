@@ -10,7 +10,8 @@ import TripFormSheet from '../components/TripForm/TripFormSheet.jsx'
 import DuplicateTripSheet from '../components/TripForm/DuplicateTripSheet.jsx'
 import QuickAddSheet from '../components/TripForm/QuickAddSheet.jsx'
 import { formatCurrency } from '../utils/currency.js'
-import { KINDS, TRANSPORT_MODES, itemIcon, buildTimeline, describe, formatDay, formatDateRange, formatMoment, daysBetween, today } from '../utils/trip.js'
+import { KINDS, TRANSPORT_MODES, itemIcon, itemColour, buildTimeline, describe, formatDay, formatDateRange, formatMoment, daysBetween, today } from '../utils/trip.js'
+import { tintClass } from '../utils/categoryColours.js'
 import TripGantt from '../components/TripGantt/TripGantt.jsx'
 import Expandable from '../components/Expandable/Expandable.jsx'
 import { useMediaQuery } from '../utils/useMediaQuery.js'
@@ -298,8 +299,8 @@ function TripDetailPage() {
             <div className="list list-tight">
               {entries.map(({ item, time, phase, assumed }) => (
                 <button key={`${item.id}-${phase}`} type="button" className="list-row list-row-link" onClick={() => openItem(item)}>
-                  <span className={`trip-entry-time${assumed ? ' assumed' : ''}`} title={assumed ? 'Usual hotel time; no time set on this stay' : undefined}>{time || 'All day'}</span>
-                  <span className="list-row-icon" aria-hidden="true"><Icon name={itemIcon(item, phase)} /></span>
+                  <span className={`trip-entry-time${time ? '' : ' allday'}${assumed ? ' assumed' : ''}`} title={assumed ? 'Usual hotel time; no time set on this stay' : undefined}>{time || 'All day'}</span>
+                  <span className={`list-row-icon ${tintClass(itemColour(item))}`.trim()} aria-hidden="true"><Icon name={itemIcon(item, phase)} /></span>
                   <span className="list-row-text">
                     <span className="list-row-title">{item.title}</span>
                     <span className="list-row-meta">
@@ -358,7 +359,7 @@ function TripDetailPage() {
       <PageHeader
         crumbs={[{ to: '/trips', label: 'Trips' }]}
         title={<><Icon name={tripIcon(trip)} /> {trip.title}</>}
-        name={trip.title}
+        name={<><Icon name={tripIcon(trip)} /> {trip.title}</>}
         actions={readOnly ? [] : [
           { label: 'Edit', onClick: () => setShowEdit(true), primary: true },
           { label: 'Copy trip', onClick: openCopy },

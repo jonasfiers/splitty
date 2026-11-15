@@ -27,6 +27,12 @@ export const itemIcon = (item, phase) =>
     ? (TRANSPORT_MODES.find(m => m.value === item.mode)?.icon ?? KINDS.transport.icon)
     : (item.kind === 'stay' && PHASE_ICONS[phase]) || (KINDS[item.kind]?.icon ?? 'map-pin')
 
+// The colour (utils/categoryColours.js) of a trip entry's tile, by kind: the
+// colour of the matching category (Transport, Accommodation, Leisure), so a
+// train here and the train ticket in the expenses look alike.
+const KIND_COLOURS = { transport: 'blue', stay: 'violet', activity: 'pink' }
+export const itemColour = item => KIND_COLOURS[item?.kind] ?? null
+
 export const dayOf = moment => (moment ? moment.slice(0, 10) : '')
 export const timeOf = moment => (moment && moment.length > 10 ? moment.slice(11, 16) : '')
 
