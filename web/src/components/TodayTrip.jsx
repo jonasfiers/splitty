@@ -107,7 +107,7 @@ function TodayCard({ trip, items, places }) {
         </span>
         <span className="today-trip-day">{tripWhen(trip, now).label} ›</span>
       </Link>
-      <TripDayBody tripId={trip.id} day={day ?? { day: now, entries: [], sleepingAt: [] }} places={places} time={time} nothing="Nothing planned today" />
+      <TripDayBody tripId={trip.id} day={day ?? { day: now, entries: [], sleepingAt: [] }} places={places} time={time} iso={trip.groupIso} nothing="Nothing planned today" />
       {firstTomorrow && (
         <Link to={`/trips/${trip.id}/items/${firstTomorrow.item.id}`} className="today-trip-tomorrow">
           Tomorrow {firstTomorrow.time || ''} · <Icon name={itemIcon(firstTomorrow.item, firstTomorrow.phase)} /> {[firstTomorrow.phase, firstTomorrow.item.title].filter(Boolean).join(' ')} ›
