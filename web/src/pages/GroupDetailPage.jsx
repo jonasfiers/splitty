@@ -30,6 +30,7 @@ import EmptyState from '../components/EmptyState/EmptyState.jsx'
 import { swr } from '../utils/cache.js'
 import Icon from '../components/Icon/Icon.jsx'
 import { iconOr } from '../utils/icons.js'
+import { openKeyboardNow } from '../utils/keyboard.js'
 
 // Keep in sync with the .group-layout breakpoint in index.css.
 const WIDE_QUERY = '(min-width: 1180px)'
@@ -211,7 +212,8 @@ export default function GroupDetailPage() {
     } catch { setError('Failed to delete group.') }
   }
 
-  const handleNewExpense = () => navigate(`/groups/${id}/expenses/new`);
+  // In the tap, so iOS opens the keyboard for the form's amount (utils/keyboard.js).
+  const handleNewExpense = () => { openKeyboardNow(); navigate(`/groups/${id}/expenses/new`) };
 
   const handleInvite = async () => {
     try {

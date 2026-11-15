@@ -23,6 +23,7 @@ import { getOfflineItem, asOf } from '../utils/offlineTrips.js'
 import { useOfflineDocs } from '../utils/useOfflineDocs.js'
 import { useOffline, isOffline, isNetworkError, onReconnect } from '../utils/connection.js'
 import Icon from '../components/Icon/Icon.jsx'
+import { openKeyboardNow } from '../utils/keyboard.js'
 
 const START_LABEL = { transport: 'Departure', stay: 'Check-in', activity: 'Starts' }
 const END_LABEL = { transport: 'Arrival', stay: 'Check-out', activity: 'Ends' }
@@ -208,6 +209,7 @@ export default function TripItemDetailPage() {
   // the splitting, gets the item's name as a head start, and links the new
   // expense back to this item once it is saved.
   const handleCreateExpense = () => {
+    openKeyboardNow() // in the tap, for iOS (utils/keyboard.js)
     navigate(`/groups/${item.groupId}/expenses/new`, {
       state: {
         tripItem: { id: item.id, tripId, title: item.title },

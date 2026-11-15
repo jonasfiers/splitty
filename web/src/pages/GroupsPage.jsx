@@ -19,6 +19,7 @@ import EmptyState from '../components/EmptyState/EmptyState.jsx'
 import { PageGate } from '../utils/pageGate.jsx'
 import { swr } from '../utils/cache.js'
 import { iconOr } from '../utils/icons.js'
+import { openKeyboardNow } from '../utils/keyboard.js'
 
 export default function GroupsPage() {
   const navigate = useNavigate()
@@ -76,6 +77,7 @@ export default function GroupsPage() {
     if (groups.length === 0) {
       setShowNewGroup(true)
     } else if (groups.length === 1) {
+      openKeyboardNow() // in the tap, for iOS (utils/keyboard.js)
       navigate(`/groups/${groups[0].id}/expenses/new`)
     } else {
       setShowExpensePicker(true)
@@ -176,7 +178,7 @@ export default function GroupsPage() {
             {groups.map(g => (
               <ListRow
                 key={g.id}
-                onClick={() => { setShowExpensePicker(false); navigate(`/groups/${g.id}/expenses/new`) }}
+                onClick={() => { openKeyboardNow(); setShowExpensePicker(false); navigate(`/groups/${g.id}/expenses/new`) }}
                 icon={iconOr(g.icon, 'users')}
                 title={g.title}
                 chevron
