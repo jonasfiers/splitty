@@ -29,6 +29,7 @@ const path = require('path');
 const driver = require('./neo4j');
 const tripService = require('./tripService');
 const uploadStore = require('./uploadStore');
+const groupCleanup = require('./groupCleanup');
 
 const WRITE_FILE = process.env.DELETION_LIST_FILE || '';
 const READ_FILES = (process.env.DELETION_LIST_READ_FILES || '')
@@ -102,43 +103,8 @@ async function soloGroupIds(userId) {
     return records.map(r => r.get('id'));
 }
 
-// Groups whose members are all deleted accounts (e.g. left over from before
-// the rule above, or from a restore): delete them like solo groups.
-async function abandonedGroups() {
-    const { records } = await driver.executeQuery(
-        `MATCH (g:Group)<-[:MEMBER_OF]-(:User)
-         WITH DISTINCT g
-         WHERE NOT EXISTS { MATCH (g)<-[:MEMBER_OF]-(o:User) WHERE o.deleted IS NULL }
-         MATCH (g)<-[:MEMBER_OF]-(d:User)
-         RETURN g.id AS id, collect(d.id)[0] AS memberId`
-    );
-    return records.map(r => ({ groupId: r.get('id'), memberId: r.get('memberId') }));
-}
-
-async function deleteSoloGroup(groupId, userId) {
-    // Trips first, the way the group delete route does it, so their uploaded
-    // files are removed from disk too.
-    const storedNames = await tripService.deleteTripsOfGroup(groupId, userId);
-    // Right away: the graph no longer points at these files, and if the next
-    // query fails their names would be lost.
-    await uploadStore.remove(storedNames);
-    await driver.executeQuery(
-        `MATCH (g:Group {id: $groupId})
-         OPTIONAL MATCH (e:Expense)-[:BALANCE_IN]->(g)
-         WITH g, collect(e) AS expenses
-         FOREACH (e IN expenses | DETACH DELETE e)
-         WITH g
-         OPTIONAL MATCH (t:Token:Invite {groupId: $groupId})
-         WITH g, collect(t) AS invites
-         FOREACH (t IN invites | DETACH DELETE t)
-         WITH g
-         OPTIONAL MATCH (d:Deletion)-[:IN_GROUP]->(g)
-         WITH g, collect(d) AS deletions
-         FOREACH (d IN deletions | DETACH DELETE d)
-         DETACH DELETE g`,
-        { groupId }
-    );
-}
+// Deleting a group (with its trips, files and expenses) lives in
+// groupCleanup.js, shared with the leave route and the abandoned-group sweep.
 
 async function anonymise(userId) {
     await driver.executeQuery(
@@ -157,7 +123,7 @@ async function anonymise(userId) {
 
 async function erase(userId) {
     for (const groupId of await soloGroupIds(userId)) {
-        await deleteSoloGroup(groupId, userId);
+        await groupCleanup.deleteGroupCompletely(groupId);
     }
     // Their trip documents (passport copies, arrival cards...), shared or
     // not: unlike expenses and plans, nobody else needs them to stay correct.
@@ -216,11 +182,8 @@ async function reapplyDeletions() {
         await erase(r.get('id'));
         reapplied++;
     }
-    let groups = 0;
-    for (const { groupId, memberId } of await abandonedGroups()) {
-        await deleteSoloGroup(groupId, memberId);
-        groups++;
-    }
+    // Groups without a live member (all deleted accounts, or nobody at all).
+    const groups = await groupCleanup.removeAbandonedGroups();
     if (reapplied || groups || !reapplyDeletions.logged) {
         console.log(`Deletion list: ${listed.size} listed, ${reapplied} re-applied, ${groups} abandoned group(s) removed` +
             (isConfigured() ? '' : ' (DELETION_LIST_FILE not set: account deletion disabled)'));

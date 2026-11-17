@@ -713,24 +713,14 @@ const groupServiceNeo4j = {
     },
 
     // DELETE
-    deleteGroup: async (id, userId) => {
-        try {
-            const { summary } = await driver.executeQuery(
-                'MATCH (u:User {id: $userId})-[:MEMBER_OF]->(g:Group {id: $id}) ' +
-                'OPTIONAL MATCH (d:Deletion)-[:IN_GROUP]->(g) ' +
-                'WITH g, collect(d) AS deletions ' +
-                'FOREACH (d IN deletions | DETACH DELETE d) ' +
-                'DETACH DELETE g', 
-                {id, userId}
-            )
-            if (summary.counters.updates().nodesDeleted >= 1) {
-                return { success: true, message: 'Group deleted successfully'};
-            }
-            return { success: false, message: 'Group not found or access denied' };
-        }
-        catch (err) {
-            throw new Error(`Failed to delete group: ${err.message}`);
-        }
+    // (No deleteGroup: groups are removed when their last member leaves,
+    // see groupCleanup.js.)
+    isMember: async (groupId, userId) => {
+        const { records } = await driver.executeQuery(
+            'MATCH (:User {id: $userId})-[:MEMBER_OF]->(g:Group {id: $groupId}) RETURN g.id AS id',
+            { groupId, userId }
+        );
+        return records.length > 0;
     },
 
     // CREATE GROUP USER

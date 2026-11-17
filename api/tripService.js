@@ -406,20 +406,6 @@ const tripService = {
         }
     },
 
-    // Called before a group is deleted, so its trips do not outlive it.
-    deleteTripsOfGroup: async (groupId, userId) => {
-        const { records } = await driver.executeQuery(
-            'MATCH (:User {id: $userId})-[:MEMBER_OF]->(:Group {id: $groupId})<-[:PLANNED_IN]-(t:Trip) RETURN t.id AS id',
-            { groupId, userId }
-        );
-        const storedNames = [];
-        for (const r of records) {
-            const result = await tripService.deleteTrip(r.get('id'), userId);
-            if (result.success) storedNames.push(...result.storedNames);
-        }
-        return storedNames;
-    },
-
     // CREATE ITEM
     createItem: async (tripId, userId, kind, data) => {
         const session = driver.session();

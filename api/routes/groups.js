@@ -3,6 +3,7 @@ const router = require('express').Router();
 const { groupServiceNeo4j, expenseService } = require('../crudService');
 const tripService = require('../tripService');
 const uploadStore = require('../uploadStore');
+const groupCleanup = require('../groupCleanup');
 
 // CREATE
 router.post('/', async (req, res) => {
@@ -58,19 +59,10 @@ router.put('/:id', async (req, res) => {
 });
 
 // DELETE
-router.delete('/:id', async (req, res) => {
-    try {
-        const { id } = req.params;
-        // A group's trips (and their uploaded files) must not outlive it.
-        const storedNames = await tripService.deleteTripsOfGroup(id, req.user.id);
-        await uploadStore.remove(storedNames);
-        const result = await groupServiceNeo4j.deleteGroup(id, req.user.id);
-        if (!result.success) return res.status(404).json(result);
-        res.json(result);
-    }
-    catch (error) {
-        res.status(500).json({ error: error.message });
-    }
+// Groups are not deleted by hand any more: members leave, and the last one
+// leaving removes the group (groupCleanup.js). Old app versions get a reason.
+router.delete('/:id', (req, res) => {
+    res.status(410).json({ error: 'Groups can no longer be deleted. Leave the group instead: when the last member leaves, it is removed.' });
 });
 
 // GET GROUP EXPENSES
@@ -141,18 +133,38 @@ router.post('/:id/:userId', async (req, res) => {
 
 
 // DELETE USER TO GROUP
+// Leave (userId = yourself) or remove another member. Only with a settled
+// balance: nobody can walk away from, or be pushed out of, money owed. When
+// no live member is left, the group goes with everything in it.
 router.delete('/:id/:userId', async (req, res) => {
     try {
         const { id, userId } = req.params;
+        const leaving = userId === req.user.id;
+        if (!(await groupServiceNeo4j.isMember(id, req.user.id))) {
+            return res.status(404).json({ success: false, message: 'Group not found or access denied' });
+        }
+        const balance = await groupCleanup.memberBalance(id, userId);
+        if (balance === null) return res.status(404).json({ success: false, message: 'Not a member of this group' });
+        if (balance !== 0) {
+            return res.status(409).json({
+                success: false,
+                code: 'BALANCE_OPEN',
+                error: leaving
+                    ? 'Settle up first: you can leave once your balance in this group is zero.'
+                    : 'Settle up first: they can be removed once their balance in this group is zero.',
+            });
+        }
         const result = await groupServiceNeo4j.deleteGroupUser(id, userId, req.user.id);
         if (!result.success) return res.status(404).json(result);
         // Their private trip documents go with the membership: they could no
         // longer reach them, and nobody else may (tripService, "DOCUMENTS").
         await uploadStore.remove(await tripService.deletePrivateDocumentsInGroup(id, userId));
-        res.json(result);
+        const groupRemoved = await groupCleanup.removeIfAbandoned(id);
+        res.json({ ...result, groupRemoved });
     }
     catch (error) {
-        res.status(500).json({ error: error.message });
+        console.error('[groups] leave/remove:', error);
+        res.status(500).json({ error: 'Failed to update the group members' });
     }
 });
 

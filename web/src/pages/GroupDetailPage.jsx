@@ -190,27 +190,32 @@ export default function GroupDetailPage() {
   }, [id, query])
   const retry = useCallback(() => { setLoading(true); fetchAll({ fresh: true }) }, [fetchAll])
 
+  // Leave, or remove someone. Only with a settled balance (the server checks
+  // too); the last member leaving removes the group with everything in it.
   const handleRemoveMember = async userId => {
     const isSelf = userId === currentUser?.id
     const member = members.find(m => m.id === userId)
+    if (Math.round(member?.balance ?? 0) !== 0) {
+      setError(isSelf
+        ? 'Settle up first: you can leave once your balance in this group is zero.'
+        : `Settle up first: ${member?.name ?? 'they'} can be removed once their balance in this group is zero.`)
+      return
+    }
+    const last = isSelf && members.every(m => m.id === userId)
+    const withTrips = trips.length > 0 ? `, its ${trips.length} trip${trips.length !== 1 ? 's' : ''}` : ''
     const ok = await confirm(isSelf
-      ? { title: 'Leave this group?', message: 'You will no longer have access to it.', confirmLabel: 'Leave group', danger: true }
+      ? last
+        ? { title: 'Leave and remove this group?', message: `You are the last member, so the group goes with its expenses${withTrips} and files. This cannot be undone.`, confirmLabel: 'Leave and remove', danger: true }
+        : { title: 'Leave this group?', message: 'You will no longer have access to it. The others keep it.', confirmLabel: 'Leave group', danger: true }
       : { title: `Remove ${member?.name ?? 'this member'} from the group?`, confirmLabel: 'Remove', danger: true })
     if (!ok) return
     try {
       await client.delete(`/groups/${id}/${userId}`)
       if (isSelf) { leaveTo(navigate, '/groups'); return }
       await load()
-    } catch { setError('Failed to remove member.') }
-  }
-
-  const handleDeleteGroup = async () => {
-    const withTrips = trips.length > 0 ? ` and its ${trips.length} trip${trips.length !== 1 ? 's' : ''}` : ''
-    if (!(await confirm({ title: `Delete "${group?.title}"${withTrips}?`, message: 'This cannot be undone.', confirmLabel: 'Delete group', danger: true }))) return
-    try {
-      await client.delete(`/groups/${id}`)
-      leaveTo(navigate, '/groups')
-    } catch { setError('Failed to delete group.') }
+    } catch (err) {
+      setError(err?.response?.data?.error || (isSelf ? 'Failed to leave the group.' : 'Failed to remove member.'))
+    }
   }
 
   // In the tap, so iOS opens the keyboard for the form's amount (utils/keyboard.js).
@@ -479,8 +484,7 @@ export default function GroupDetailPage() {
         actions={[
           { label: 'Invite', onClick: handleInvite, primary: true },
           { label: 'Edit group', onClick: () => setShowEdit(true) },
-          { label: 'Leave group', onClick: () => handleRemoveMember(currentUser.id) },
-          { label: 'Delete group', onClick: handleDeleteGroup, danger: true },
+          { label: 'Leave group', onClick: () => handleRemoveMember(currentUser.id), danger: true },
         ]}
       >
         <div className="group-info-meta">
