@@ -5,6 +5,7 @@ import Icon from '../components/Icon/Icon.jsx'
 const SECTIONS = [
   { to: '/admin/categories', icon: 'tag', title: 'Categories', sub: 'The expense categories everyone picks from' },
   { to: '/admin/currencies', icon: 'coins', title: 'Currencies', sub: 'The currencies groups and expenses can use' },
+  { to: '/admin/admins', icon: 'shield', title: 'Admins', sub: 'Who can manage these settings' },
 ]
 
 export default function AdminPage() {

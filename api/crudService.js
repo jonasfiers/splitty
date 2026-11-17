@@ -266,6 +266,48 @@ const userServiceNeo4j = {
         return records.length ? (records[0].get('role') ?? null) : null;
     },
 
+    // ADMINS — for the admin screen (routes/admin.js, behind requireAdmin).
+    listAdmins: async () => {
+        const { records } = await driver.executeQuery(
+            "MATCH (u:User {role: 'admin'}) RETURN u.id AS id, u.name AS name, u.email AS email ORDER BY toLower(u.name)"
+        );
+        return records.map(r => r.toObject());
+    },
+
+    // Same rules as scripts/set-user-role.sh: an exact (lowercased) address,
+    // a live account with a verified email.
+    grantAdmin: async (email) => {
+        const { records } = await driver.executeQuery(
+            `MATCH (u:User {email: $email}) WHERE u.deleted IS NULL
+             RETURN u.id AS id, u.name AS name, u.emailVerified AS verified, u.role AS role`,
+            { email }
+        );
+        if (records.length === 0) return { error: 'not_found' };
+        const u = records[0].toObject();
+        if (u.verified === false) return { error: 'unverified' };
+        if (u.role === 'admin') return { error: 'already', user: u };
+        await driver.executeQuery("MATCH (u:User {id: $id}) SET u.role = 'admin'", { id: u.id });
+        return { user: u };
+    },
+
+    // Never removes the last admin (nobody could grant the role back from
+    // the app). Counted and removed in one query, so two admins revoking each
+    // other at once can't both succeed.
+    revokeAdmin: async (id) => {
+        const { records } = await driver.executeQuery(
+            `MATCH (a:User {role: 'admin'})
+             WITH count(a) AS admins
+             MATCH (u:User {id: $id})
+             WITH u, admins, u.role = 'admin' AS isAdmin
+             FOREACH (_ IN CASE WHEN isAdmin AND admins > 1 THEN [1] ELSE [] END | REMOVE u.role)
+             RETURN isAdmin, admins`,
+            { id }
+        );
+        if (records.length === 0 || !records[0].get('isAdmin')) return { error: 'not_admin' };
+        if (neo4j.integer.toNumber(records[0].get('admins')) <= 1) return { error: 'last_admin' };
+        return { success: true };
+    },
+
     getUserByIdDirect: async (id) => {
         try {
             const { records } = await driver.executeQuery(

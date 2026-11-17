@@ -1,7 +1,8 @@
 #!/bin/bash
 set -eo pipefail
-# Grant, revoke or list the admin role. There is no screen for this on
-# purpose; run it on the container as root (CT104 production, CT116 QA):
+# Grant, revoke or list the admin role from the container, as root (CT104
+# production, CT116 QA). Since 2026-11-17 admins can also do this in the app
+# (Admin > Admins); this script stays for the first admin and for recovery:
 #
 #   bash set-user-role.sh grant  <email>    make the user an admin
 #   bash set-user-role.sh revoke <email>    back to an ordinary user

@@ -15,6 +15,7 @@ const ExpenseFormPage       = lazy(() => import('./pages/ExpenseFormPage'))
 const ExpenseDetailPage     = lazy(() => import('./pages/ExpenseDetailPage'))
 const CurrenciesPage        = lazy(() => import('./pages/CurrenciesPage'))
 const CategoriesPage        = lazy(() => import('./pages/CategoriesPage'))
+const AdminsPage            = lazy(() => import('./pages/AdminsPage'))
 const AdminPage             = lazy(() => import('./pages/AdminPage'))
 const PrivacyPage           = lazy(() => import('./pages/PrivacyPage'))
 const ProfilePage           = lazy(() => import('./pages/ProfilePage'))
@@ -79,6 +80,7 @@ export default function App() {
                 <Route path="/admin" element={<AdminPage />} />
                 <Route path="/admin/currencies" element={<CurrenciesPage />} />
                 <Route path="/admin/categories" element={<CategoriesPage />} />
+                <Route path="/admin/admins" element={<AdminsPage />} />
               </Route>
               <Route path="/currencies" element={<Navigate to="/admin/currencies" replace />} />
               <Route path="/categories" element={<Navigate to="/admin/categories" replace />} />
