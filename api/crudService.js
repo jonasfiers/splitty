@@ -1056,8 +1056,12 @@ const expenseService = {
                     cur.iso AS currencyIso,
                     o.amount AS shareAmount,
                     e:Settlement AS isSettlement,
-                    e:Transfer AS isTransfer
-                ORDER BY e.date DESC
+                    e:Transfer AS isTransfer,
+                    [(e)-[cb:CREATED_BY]->(:User) | cb.on][0] AS createdOn
+                // Newest day first; within a day, most recently added first.
+                // Expenses without a CREATED_BY (legacy) go last in their
+                // day; e.id keeps paging stable on ties.
+                ORDER BY e.date DESC, createdOn IS NULL, createdOn DESC, e.id
                 SKIP $skip LIMIT $limit`,
                 {
                     groupId, userId,
