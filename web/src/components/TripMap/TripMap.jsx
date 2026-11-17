@@ -1,4 +1,4 @@
-import { useContext, useEffect, useRef } from 'react'
+import { useContext, useEffect, useRef, useState } from 'react'
 import { dayOf, timeOf } from '../../utils/trip.js'
 import { ExpandedContext } from '../Expandable/Expandable.jsx'
 import L from 'leaflet'
@@ -23,6 +23,18 @@ function visitOrder(items) {
   return order
 }
 
+// The places that belong to `day`: everything on that day, both ends of a
+// journey, and the hotel you are in (a stay counts from check-in to check-out).
+function placesOn(items, day) {
+  const ids = new Set()
+  for (const item of items) {
+    const from = dayOf(item.start), to = dayOf(item.end) || from
+    if (!from || from > day || to < day) continue
+    for (const id of [item.placeId, item.fromPlaceId, item.toPlaceId]) if (id) ids.add(id)
+  }
+  return ids
+}
+
 // The map is not stored anywhere: it is the trip's Place nodes that have
 // coordinates, one pin per place however many items happen there, and a line
 // for every transport whose two ends are both on the map.
@@ -30,7 +42,10 @@ function visitOrder(items) {
 // `highlight` (item ids) marks those items' pins and journeys and fades the
 // rest; `onHover` reports the items under the pointer, so the timeline can do
 // the same. Both are applied without rebuilding the map.
-function TripMap({ places, items, onOpenItem, highlight = null, onHover = () => {} }) {
+//
+// `today` (a day, only while the trip is on) opens the map on that day's
+// places instead of the whole trip, with a button to switch between the two.
+function TripMap({ places, items, onOpenItem, highlight = null, onHover = () => {}, today = null }) {
   const el = useRef(null)
   const pins = useRef(new Map())   // placeId -> { marker, itemIds }
   const lines = useRef(new Map())  // itemId -> { line, arrows (layer group) }
@@ -39,6 +54,10 @@ function TripMap({ places, items, onOpenItem, highlight = null, onHover = () => 
   const hover = useRef(onHover)
   hover.current = onHover
   const expanded = useContext(ExpandedContext)
+  // 'today' or 'trip'; null when there is no today to choose (nothing of it on the map).
+  const [framing, setFraming] = useState(null)
+  const framingRef = useRef(null)
+  const frameRef = useRef(() => {})
 
   useEffect(() => {
     const located = places.filter(p => p.lat != null && p.lon != null)
@@ -136,13 +155,19 @@ function TripMap({ places, items, onOpenItem, highlight = null, onHover = () => 
     }
     map.on('zoomend moveend resize', placeArrows)
 
-    const bounds = located.length ? L.latLngBounds(located.map(p => [p.lat, p.lon])) : null
-    const frame = () => {
+    const fit = list => {
       // Nothing placed yet: the world, waiting for the first pin.
-      if (!bounds) map.setView([30, 10], 2)
-      else if (located.length === 1) map.setView(bounds.getCenter(), 13)
-      else map.fitBounds(bounds, { padding: [36, 36], maxZoom: 14 })
+      if (!list.length) map.setView([30, 10], 2)
+      else if (list.length === 1) map.setView([list[0].lat, list[0].lon], 13)
+      else map.fitBounds(L.latLngBounds(list.map(p => [p.lat, p.lon])), { padding: [36, 36], maxZoom: 14 })
     }
+    const todays = today ? located.filter(p => placesOn(items, today).has(p.id)) : []
+    // Only worth a choice when today is a smaller view than the whole trip.
+    const choice = todays.length > 0 && todays.length < located.length
+    framingRef.current = choice ? (framingRef.current || 'today') : null
+    setFraming(framingRef.current)
+    const frame = () => fit(framingRef.current === 'today' ? todays : located)
+    frameRef.current = frame
     frame()
     placeArrows()
 
@@ -150,7 +175,7 @@ function TripMap({ places, items, onOpenItem, highlight = null, onHover = () => 
     const unframe = keepFramed(map, el.current, frame)
 
     return () => { unframe(); removeBasemap(); map.remove() }
-  }, [places, items, onOpenItem, expanded])
+  }, [places, items, onOpenItem, expanded, today])
 
   const applyHighlight = useRef(() => {})
   applyHighlight.current = current => {
@@ -176,6 +201,19 @@ function TripMap({ places, items, onOpenItem, highlight = null, onHover = () => 
     <div className="trip-map-wrap">
       <div ref={el} className="trip-map" />
       {empty && <p className="trip-map-hint">Places you add show up here</p>}
+      {framing && (
+        <button
+          type="button"
+          className="trip-map-frame"
+          onClick={() => {
+            framingRef.current = framing === 'today' ? 'trip' : 'today'
+            setFraming(framingRef.current)
+            frameRef.current()
+          }}
+        >
+          {framing === 'today' ? 'Whole trip' : 'Today'}
+        </button>
+      )}
     </div>
   )
 }

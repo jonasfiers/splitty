@@ -2920,6 +2920,15 @@ a.trip-chip:hover { border-color: var(--border-strong); }
   font-size: var(--fs-md); color: var(--text-2); white-space: nowrap; pointer-events: none;
 }
 
+/* Today's places or the whole trip (TripMap, while the trip is on) */
+.trip-map-frame {
+  position: absolute; left: 10px; bottom: 10px; z-index: 500;
+  min-height: 36px; padding: 0 14px; border-radius: var(--r-pill);
+  background: var(--surface); color: var(--text); border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm); font: inherit; font-size: var(--fs-md); font-weight: 600; cursor: pointer;
+}
+.trip-map-frame:hover { color: var(--accent-text); border-color: var(--accent); }
+
 /* A picker with a search keeps its height while typing (Picker.jsx) */
 .sheet.picker-sheet-tall { height: calc(100dvh - 48px); }
 @media (max-width: 767px) { .sheet.picker-sheet-tall { height: calc(100dvh - 24px); } }

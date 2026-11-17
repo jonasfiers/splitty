@@ -297,7 +297,7 @@ function TripDetailPage() {
       splitKey="trip-timeline"
       extra={!readOnly && places.some(p => p.lat != null) && (
         <Suspense fallback={<Loading />}>
-          <TripMap places={places} items={items} onOpenItem={openItem} highlight={highlight} onHover={setHighlight} />
+          <TripMap places={places} items={items} onOpenItem={openItem} highlight={highlight} onHover={setHighlight} today={onTrip ? now : null} />
         </Suspense>
       )}
     >
@@ -309,7 +309,7 @@ function TripDetailPage() {
   const mapView = readOnly ? <OfflinePlaces places={places} items={items} onOpenItem={openItem} /> : (
     <Suspense fallback={<Loading />}>
       <Expandable label={`${trip.title} · Map`}>
-        <TripMap places={places} items={items} onOpenItem={openItem} highlight={highlight} onHover={setHighlight} />
+        <TripMap places={places} items={items} onOpenItem={openItem} highlight={highlight} onHover={setHighlight} today={onTrip ? now : null} />
       </Expandable>
       {places.some(p => p.lat == null) && (
         <p className="field-note">
