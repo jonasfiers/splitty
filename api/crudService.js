@@ -821,7 +821,8 @@ const expenseService = {
             pushService.notifyGroupMembers(groupId, currUserId, {
                 title: `${creatorName} added "${description}"`,
                 body: `${formatAmount(amount, currencyIso)} · ${groupName}`,
-                url: `/groups/${groupId}/expenses/${expenseId}`
+                url: `/groups/${groupId}/expenses/${expenseId}`,
+                tag: expenseId
             })
             return {success: true, id: expenseId};
         }
@@ -880,7 +881,8 @@ const expenseService = {
             pushService.notifyGroupMembers(groupId, currUserId, {
                 title: `${creatorName} recorded a settlement`,
                 body: `${formatAmount(amount, currencyIso)} · ${groupName}`,
-                url: `/groups/${groupId}`
+                url: `/groups/${groupId}`,
+                tag: expenseId
             })
             return {success: true, id: expenseId};
         }
@@ -1008,12 +1010,14 @@ const expenseService = {
             pushService.notifyGroupMembers(sourceGroupId, currUserId, {
                 title: `${cuName} transferred a balance`,
                 body: `${formatAmount(amount, sourceIso)} settled · ${sourceTitle}`,
-                url: `/groups/${sourceGroupId}`
+                url: `/groups/${sourceGroupId}`,
+                tag: settlementId
             });
             pushService.notifyGroupMembers(targetGroupId, currUserId, {
                 title: `${cuName} transferred a balance`,
                 body: `${formatAmount(transferAmount, targetIso)} added · ${targetTitle}`,
-                url: `/groups/${targetGroupId}`
+                url: `/groups/${targetGroupId}`,
+                tag: transferId
             });
 
             return { success: true, settlementId, transferId };
@@ -1294,7 +1298,8 @@ const expenseService = {
                 pushService.notifyGroupMembers(groupId, currUserId, {
                     title: `${result.record.get('creatorName')} updated "${description}"`,
                     body: `${formatAmount(amount, currencyIso)} · ${result.record.get('groupName')}`,
-                    url: `/groups/${groupId}/expenses/${id}`
+                    url: `/groups/${groupId}/expenses/${id}`,
+                    tag: id
                 })
             }
             return { success: true, changed: result.changed, message: 'Expense has been successfully updated' };
@@ -1366,7 +1371,8 @@ const expenseService = {
                     pushService.notifyGroupMembers(info.get('groupId'), currUserId, {
                         title: `${info.get('deleterName')} deleted "${info.get('description')}"`,
                         body: `${formattedDelete}${info.get('groupName')}`,
-                        url: `/groups/${info.get('groupId')}`
+                        url: `/groups/${info.get('groupId')}`,
+                        tag: id
                     })
                 }
                 return { success: true, message: 'Expense has been successfully deleted' }

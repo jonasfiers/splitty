@@ -205,6 +205,9 @@ self.addEventListener('push', event => {
             // The status-bar icon, of which Android only uses the shape (a
             // white silhouette on transparency). iOS always shows the app icon.
             badge: '/notification-badge.png',
+            // Same tag = the same expense: the newer notification takes the
+            // older one's place instead of adding another line.
+            ...(data.tag && { tag: data.tag }),
             data: { url: data.url }
         })
     })())

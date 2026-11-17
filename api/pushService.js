@@ -75,12 +75,18 @@ const pushService = {
             } : null
 
             const body = JSON.stringify(avatar ? { ...payload, avatar } : payload)
+            // One notification per thing (payload.tag, e.g. an expense id): the
+            // push service replaces an undelivered one with the same Topic, and
+            // sw.js replaces a shown one with the same tag. A Topic is at most
+            // 32 URL-safe characters, which a UUID without its dashes fits exactly.
+            const topic = payload.tag ? String(payload.tag).replace(/[^A-Za-z0-9_-]/g, '').slice(0, 32) : null
             const results = await Promise.allSettled(
                 records.map(r => {
                     const sub = { endpoint: r.get('endpoint'), keys: JSON.parse(r.get('keys')) }
                     return webpush.sendNotification(sub, body, {
                         urgency: 'high',
-                        TTL: 3600
+                        TTL: 3600,
+                        ...(topic && { topic })
                     })
                 })
             )
