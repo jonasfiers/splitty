@@ -46,8 +46,8 @@ export default function HomePanels() {
   )
 }
 
-// The last 30 days against the 30 before (rolling, so it doesn't drop to
-// nothing on the 1st). Per currency: the one spent most in is shown, the
+// Your share of the last 30 days against the 30 before (rolling, so it doesn't
+// drop to nothing on the 1st). Your share: your part of each expense, whoever paid. Per currency: the one spent most in is shown, the
 // others as a line below (never added together).
 function RecentSpend({ currencies }) {
   if (!currencies) return null
@@ -63,11 +63,11 @@ function RecentSpend({ currencies }) {
     <div className="card home-panel">
       <div className="home-panel-head">
         <span className="section-label home-panel-label">Last 30 days</span>
-        <Link to="/insights" className="home-panel-link">Insights</Link>
+        <Link to="/insights?scope=mine" className="home-panel-link">Insights</Link>
       </div>
       <div className="home-month-total">{formatCurrency(total, iso)}</div>
       <div className="home-panel-sub">
-        spent across your groups
+        your share, across your groups
         {change !== null && (
           <> · <span className={change > 0 ? 'home-up' : 'home-down'}>{change > 0 ? '↑' : change < 0 ? '↓' : ''}{Math.abs(change)}%</span> vs the 30 days before</>
         )}

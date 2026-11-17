@@ -78,7 +78,7 @@ export default function InsightsPage() {
   // ?group=<id>: opened from a group's total.
   const [searchParams] = useSearchParams()
   const [sel, setSel] = useState(() => searchParams.get('group') || '')
-  const [scope, setScope] = useState('group')
+  const [scope, setScope] = useState(() => searchParams.get('scope') === 'mine' ? 'mine' : 'group')
   const [groups, setGroups] = useState(null) // null: not known yet
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState('')

@@ -267,11 +267,15 @@ const dashService = {
         const params = { userId, today, from: shift(days - 1), prevFrom: shift(2 * days - 1) }
         try {
             const { records } = await driver.executeQuery(
-                `MATCH (:User {id: $userId})-[:MEMBER_OF]->(g:Group)-[:EXPRESSED_IN]->(c:Currency)
+                // The user's own share only (MY_SHARE), in the group's currency
+                // through the rate stored with each expense, like the balances.
+                `MATCH (me:User {id: $userId})-[:MEMBER_OF]->(g:Group)
                 MATCH (e:Expense)-[:BALANCE_IN]->(g)
                 WHERE NOT e:Settlement AND NOT e:Transfer
                   AND e.date >= $prevFrom AND e.date <= $today
-                WITH c.iso AS iso, e, e.amount * coalesce(e.rateSnapshot, 1) AS amt, e.date >= $from AS recent
+                ${MY_SHARE}
+                MATCH (g)-[:EXPRESSED_IN]->(c:Currency)
+                WITH c.iso AS iso, e, raw * coalesce(e.rateSnapshot, 1) AS amt, e.date >= $from AS recent
                 OPTIONAL MATCH (e)-[:IN_CATEGORY]->(cat:Category)
                 OPTIONAL MATCH path = (cat)-[:CHILD_OF*]->(root:Category)
                 WHERE NOT (root)-[:CHILD_OF]->(:Category)
