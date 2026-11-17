@@ -102,4 +102,19 @@ async function sendDeletionNotice(userId, complete = true) {
     });
 }
 
-module.exports = { sendAccountDeletedEmail, sendDeletionNotice, sendVerificationEmail, sendPasswordResetEmail, sendEmailChangeVerification, sendGroupInviteEmail, sendSettlementEmail };
+// To the operator (SIGNUP_NOTIFY_EMAIL): a new account was created. Off when
+// the variable is unset (QA leaves it unset or points it at the local sink).
+async function sendSignupNotice(name, email) {
+    const to = process.env.SIGNUP_NOTIFY_EMAIL;
+    if (!to) return;
+    await transporter.sendMail({
+        from: FROM(),
+        to,
+        subject: 'Splitty: new sign-up',
+        text: `A new Splitty account was created at ${new Date().toISOString()}.\n\n` +
+            `Name:  ${name}\nEmail: ${email}\n\n` +
+            'The address is not verified yet; the user has been sent the verification link.',
+    });
+}
+
+module.exports = { sendSignupNotice, sendAccountDeletedEmail, sendDeletionNotice, sendVerificationEmail, sendPasswordResetEmail, sendEmailChangeVerification, sendGroupInviteEmail, sendSettlementEmail };

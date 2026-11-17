@@ -90,6 +90,10 @@ router.post('/register', authLimiter, async (req, res) => {
         }
 
         res.status(201).json({ success: true, verificationPending: true });
+
+        // After answering: a failed notice must never fail or slow the sign-up.
+        emailService.sendSignupNotice(name, email)
+            .catch(err => console.error('Failed to send sign-up notice:', err));
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
