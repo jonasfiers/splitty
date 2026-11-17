@@ -66,7 +66,7 @@ function RouteMap({ itineraries, highlight = null, skip = null, onHover = () => 
       it.legs.forEach((leg, n) => {
         if (stopKey(leg.from) === stopKey(leg.to)) return
         const curve = arcBetween(map, leg.from, leg.to)
-        const line = L.polyline(curve, { color: '#E8603A', weight: 2.5, opacity: .6, dashArray: '6 7', interactive: false }).addTo(map)
+        const line = L.polyline(curve, { className: 'trip-line', weight: 2.5, opacity: .6, dashArray: '6 7', interactive: false }).addTo(map)
         // A thin dashed line is hard to hit with a finger: an invisible wide
         // one on top takes the pointer.
         const hit = L.polyline(curve, { color: '#000', weight: 18, opacity: 0 }).addTo(map)

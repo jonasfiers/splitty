@@ -135,7 +135,7 @@ function TripMap({ places, items, onOpenItem, highlight = null, onHover = () => 
     legs.forEach((item, n) => {
       const from = byId.get(item.fromPlaceId), to = byId.get(item.toPlaceId)
       const curve = arcBetween(map, from, to)
-      const line = L.polyline(curve, { color: '#E8603A', weight: 2.5, opacity: .8, dashArray: '6 7' }).addTo(map)
+      const line = L.polyline(curve, { className: 'trip-line', weight: 2.5, opacity: .8, dashArray: '6 7' }).addTo(map)
 
       const arrows = L.layerGroup().addTo(map)
       const title = `${legs.length > 1 ? `${n + 1}. ` : ''}${item.title}: ${from.name} → ${to.name}`

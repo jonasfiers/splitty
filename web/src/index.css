@@ -46,15 +46,16 @@
   /* Trip entry kinds (utils/trip.js kindVars): the one place their colours
      are set, used by the timeline bars, the day-by-day dots, the map pins and
      an entry's own page. line = border/dot, bg = soft fill, fg = text/icon on
-     that fill. Stay and transport borrow green and the accent, so they follow
-     the theme on their own; activity is sky, set per theme. Never grey: grey
-     means "over" on the day view. */
+     that fill. Stay and transport is green (borrowed, follows the theme on its
+     own); transport violet and activity sky are set per theme. Never grey
+     (means "over" on the day view), never orange (orange is for links and
+     buttons). */
   --kind-stay:          var(--green);
   --kind-stay-bg:       var(--green-light);
   --kind-stay-fg:       var(--green-dark);
-  --kind-transport:     var(--accent);
-  --kind-transport-bg:  var(--accent-subtle);
-  --kind-transport-fg:  var(--accent-text);
+  --kind-transport:     #7C3AED;
+  --kind-transport-bg:  #EDE9FE;
+  --kind-transport-fg:  #6D28D9;
   --kind-activity:      #0284C7;
   --kind-activity-bg:   #E0F2FE;
   --kind-activity-fg:   #0369A1;
@@ -136,6 +137,9 @@
   --red-light:   #2D1515;
   --red-dark:    #FCA5A5;
 
+  --kind-transport:     #A78BFA;
+  --kind-transport-bg:  #271F3E;
+  --kind-transport-fg:  #C4B5FD;
   --kind-activity:      #38BDF8;
   --kind-activity-bg:   #132C38;
   --kind-activity-fg:   #7DD3FC;
@@ -2271,7 +2275,6 @@ html .leaflet-container { font-family: var(--font-body); } /* "html": Leaflet's 
   filter: invert(1) hue-rotate(180deg) brightness(.92) contrast(.88) saturate(.8);
 }
 /* Pins and Leaflet's own white chrome (zoom buttons, pop-ups, attribution) follow the theme. */
-[data-theme="dark"] .trip-pin-n { background: var(--accent-fill); }
 [data-theme="dark"] .leaflet-bar a,
 [data-theme="dark"] .leaflet-popup-content-wrapper,
 [data-theme="dark"] .leaflet-popup-tip { background: var(--surface); color: var(--text); }
@@ -2285,9 +2288,9 @@ html .leaflet-container { font-family: var(--font-body); } /* "html": Leaflet's 
   display: flex;
   align-items: center;
   justify-content: center;
-  /* In its kind's colour (TripMap.jsx pinKind); accent when it has none. */
-  --pin-line: var(--accent);
-  --pin-fg: var(--accent-text);
+  /* In its kind's colour (TripMap.jsx pinKind); neutral when it has none. */
+  --pin-line: var(--text-2);
+  --pin-fg: var(--text);
   background: var(--surface);
   border: 2px solid var(--pin-line);
   border-radius: 50%;
@@ -2312,8 +2315,8 @@ html .leaflet-container { font-family: var(--font-body); } /* "html": Leaflet's 
   height: 17px;
   padding: 0 4px;
   border-radius: 9px;
-  background: var(--accent-fill);
-  color: #fff;
+  background: var(--pin-line);
+  color: var(--surface);
   font: 700 var(--fs-xs)/17px var(--font-body);
   text-align: center;
 }
@@ -2333,14 +2336,16 @@ html .leaflet-container { font-family: var(--font-body); } /* "html": Leaflet's 
   overflow: visible;
 }
 .trip-leg path {
-  fill: #E8603A;
+  fill: var(--kind-transport);
   /* A white edge keeps it readable over sea, land and labels alike. */
   stroke: #FEFCFA;
   stroke-width: 2.5;
   stroke-linejoin: round;
   paint-order: stroke;
 }
-.trip-leg:hover path { fill: #D4512B; }
+.trip-leg:hover path { fill: var(--kind-transport-fg); }
+/* Journey lines (TripMap, RouteMap): CSS beats Leaflet's stroke attribute. */
+.trip-line { stroke: var(--kind-transport); }
 .trip-popup {
   display: flex;
   flex-direction: column;
