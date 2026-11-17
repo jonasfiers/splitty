@@ -68,7 +68,7 @@ async function resolvePlace(tx, tripId, ref, created) {
     return id;
 }
 
-async function attachPlacesAndCurrency(tx, tripId, itemId, kind, data, created) {
+async function attachPlaces(tx, tripId, itemId, kind, data, created) {
     const slots = kind === 'transport'
         ? [['DEPARTS_FROM', data.from], ['ARRIVES_AT', data.to]]
         : [['AT', data.place]];
@@ -80,12 +80,6 @@ async function attachPlacesAndCurrency(tx, tripId, itemId, kind, data, created) 
             { itemId, placeId }
         );
     }
-    if (data.price != null && data.currencyIso) {
-        await tx.run(
-            'MATCH (i:TripItem {id: $itemId}), (c:Currency {iso: $iso}) CREATE (i)-[:EXPRESSED_IN]->(c)',
-            { itemId, iso: data.currencyIso }
-        );
-    }
 }
 
 const itemProps = (kind, data) => ({
@@ -95,7 +89,6 @@ const itemProps = (kind, data) => ({
     confirmationRef: data.confirmationRef ?? '',
     url: data.url ?? '',
     notes: data.notes ?? '',
-    price: data.price ?? null,
     // Not a journey (any more, when its kind was changed): no transport fields.
     ...(kind === 'transport' ? {
         mode: data.mode,
@@ -118,7 +111,7 @@ async function insertItem(tx, tripId, userId, kind, data, created) {
     );
     if (records.length === 0) return null;
     const itemId = records[0].get('id');
-    await attachPlacesAndCurrency(tx, tripId, itemId, kind, data, created);
+    await attachPlaces(tx, tripId, itemId, kind, data, created);
     return itemId;
 }
 
@@ -182,11 +175,10 @@ const tripService = {
 
                 const { records: itemRecords } = await tx.run(
                     `MATCH (i:TripItem)-[:PART_OF]->(:Trip {id: $tripId})
-                     OPTIONAL MATCH (i)-[:EXPRESSED_IN]->(c:Currency)
                      OPTIONAL MATCH (i)-[:AT]->(p:Place)
                      OPTIONAL MATCH (i)-[:DEPARTS_FROM]->(f:Place)
                      OPTIONAL MATCH (i)-[:ARRIVES_AT]->(a:Place)
-                     RETURN i, labels(i) AS labels, c.iso AS currencyIso,
+                     RETURN i, labels(i) AS labels,
                             p.id AS placeId, f.id AS fromPlaceId, a.id AS toPlaceId`,
                     { tripId }
                 );
@@ -200,12 +192,6 @@ const tripService = {
                         await tx.run(
                             `MATCH (i:TripItem {id: $itemId}), (p:Place {id: $placeId}) CREATE (i)-[:${rel}]->(p)`,
                             { itemId, placeId: placeIds.get(oldPlaceId) }
-                        );
-                    }
-                    if (r.get('currencyIso')) {
-                        await tx.run(
-                            'MATCH (i:TripItem {id: $itemId}), (c:Currency {iso: $iso}) CREATE (i)-[:EXPRESSED_IN]->(c)',
-                            { itemId, iso: r.get('currencyIso') }
                         );
                     }
                 }
@@ -258,11 +244,10 @@ const tripService = {
 
             const { records: itemRecords } = await driver.executeQuery(
                 `MATCH (i:TripItem)-[:PART_OF]->(:Trip {id: $tripId})
-                 OPTIONAL MATCH (i)-[:EXPRESSED_IN]->(c:Currency)
                  OPTIONAL MATCH (i)-[:AT]->(p:Place)
                  OPTIONAL MATCH (i)-[:DEPARTS_FROM]->(f:Place)
                  OPTIONAL MATCH (i)-[:ARRIVES_AT]->(a:Place)
-                 RETURN i, labels(i) AS labels, c.iso AS currencyIso,
+                 RETURN i, labels(i) AS labels,
                         p.id AS placeId, f.id AS fromPlaceId, a.id AS toPlaceId,
                         COUNT { (:Attachment)-[:ATTACHED_TO]->(i) } AS attachmentCount,
                         [(at:Attachment)-[:ATTACHED_TO]->(i) | at.id] AS attachmentIds,
@@ -302,7 +287,6 @@ const tripService = {
                     return {
                         ...r.get('i').properties,
                         kind: kindOf(r.get('labels')),
-                        currencyIso: r.get('currencyIso'),
                         placeId: r.get('placeId'),
                         fromPlaceId: r.get('fromPlaceId'),
                         toPlaceId: r.get('toPlaceId'),
@@ -481,11 +465,10 @@ const tripService = {
             const { records } = await driver.executeQuery(
                 `MATCH ${ITEM_ACCESS}
                  OPTIONAL MATCH (g)-[:EXPRESSED_IN]->(gc:Currency)
-                 OPTIONAL MATCH (i)-[:EXPRESSED_IN]->(c:Currency)
                  OPTIONAL MATCH (i)-[:AT]->(p:Place)
                  OPTIONAL MATCH (i)-[:DEPARTS_FROM]->(f:Place)
                  OPTIONAL MATCH (i)-[:ARRIVES_AT]->(a:Place)
-                 RETURN i, labels(i) AS labels, c.iso AS currencyIso, p, f, a,
+                 RETURN i, labels(i) AS labels, p, f, a,
                         t.id AS tripId, t.title AS tripTitle, g.id AS groupId, gc.iso AS groupIso,
                         [(att:Attachment)-[:ATTACHED_TO]->(i) | att] AS attachments,
                         [(payer:User)-[:PAID]->(e:Expense)-[:PAYS_FOR]->(i) |
@@ -500,7 +483,6 @@ const tripService = {
                 item: {
                     ...r.get('i').properties,
                     kind: kindOf(r.get('labels')),
-                    currencyIso: r.get('currencyIso'),
                     place: place(r.get('p')),
                     from: place(r.get('f')),
                     to: place(r.get('a')),
@@ -554,7 +536,7 @@ const tripService = {
 
                 await tx.run(
                     `MATCH (i:TripItem {id: $itemId})
-                     OPTIONAL MATCH (i)-[r:AT|DEPARTS_FROM|ARRIVES_AT|EXPRESSED_IN]->()
+                     OPTIONAL MATCH (i)-[r:AT|DEPARTS_FROM|ARRIVES_AT]->()
                      DELETE r
                      WITH DISTINCT i
                      SET i += $props
@@ -563,7 +545,7 @@ const tripService = {
                      CREATE (i)-[:UPDATED_BY {on: datetime()}]->(u)`,
                     { itemId, userId, props: itemProps(kind, data) }
                 );
-                await attachPlacesAndCurrency(tx, tripId, itemId, kind, data);
+                await attachPlaces(tx, tripId, itemId, kind, data);
                 await tx.run(DELETE_ORPHAN_PLACES, { tripId });
                 return { success: true, message: 'Trip item updated successfully' };
             });

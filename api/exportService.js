@@ -126,7 +126,6 @@ async function collect(userId) {
          OPTIONAL MATCH (i)-[:CREATED_BY]->(c:User)
          RETURN t.id AS tripId, properties(i) AS item,
                 [l IN labels(i) WHERE l <> 'TripItem'][0] AS kind,
-                [(i)-[:EXPRESSED_IN]->(cur:Currency) | cur.iso][0] AS currency,
                 places, c.name AS createdBy
          ORDER BY item.start`,
         { userId });
@@ -154,7 +153,6 @@ async function collect(userId) {
         items: items.filter(x => x.tripId === trip.id).map(x => ({
             ...x.item,
             kind: (x.kind || '').toLowerCase(),
-            currency: x.currency ?? undefined,
             ...Object.fromEntries(x.places.map(p => [placeRole[p.role] || p.role, p.place])),
             createdBy: x.createdBy ?? null,
             attachments: attachments.filter(a => a.itemId === x.item.id).map(a => ({

@@ -66,8 +66,6 @@ function parseItem(kind, body) {
         confirmationRef: text(body.confirmationRef, 80),
         url: text(body.url, 600),
         notes: text(body.notes, 4000),
-        price: body.price === '' || body.price == null ? null : Number(body.price),
-        currencyIso: text(body.currencyIso, 3),
     };
     if (!item.title) return { error: 'Give it a title.' };
     if (!isValidMoment(item.start)) return { error: 'A start date is required.' };
@@ -75,8 +73,6 @@ function parseItem(kind, body) {
     if (item.end && item.end.slice(0, 10) < item.start.slice(0, 10)) return { error: 'It can not end before it starts.' };
     if (item.end && item.end.length === 16 && item.start.length === 16 && item.end < item.start) return { error: 'It can not end before it starts.' };
     if (item.url && !/^https?:\/\//i.test(item.url)) return { error: 'The link has to start with http:// or https://.' };
-    if (item.price != null && (!Number.isInteger(item.price) || item.price < 0)) return { error: 'The price is not valid.' };
-    if (item.price != null && !item.currencyIso) return { error: 'A price needs a currency.' };
 
     if (kind === 'transport') {
         item.mode = text(body.mode, 16);
@@ -700,7 +696,7 @@ router.post('/:id/routes', async (req, res) => {
 
         const items = [];
         for (const leg of legs) {
-            const { item, error } = parseItem('transport', { ...leg, from: null, to: null, price: null });
+            const { item, error } = parseItem('transport', { ...leg, from: null, to: null });
             if (error) return res.status(400).json({ error: `${text(leg?.title, 160) || 'A leg'}: ${error}` });
             item.from = refs.get(text(leg.fromKey, 40)) ?? null;
             item.to = refs.get(text(leg.toKey, 40)) ?? null;
