@@ -28,6 +28,31 @@ function deviceLabel(ua = '') {
     return [os, browser].filter(Boolean).join(' · ') || null;
 }
 
+// Email addresses are case-insensitive: stored and compared lowercase.
+const normEmail = e => (typeof e === 'string' ? e.trim().toLowerCase() : '');
+// Deliberately loose: one @, something on both sides, a dot in the domain.
+// The verification email is the real check.
+const isEmail = e => e.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
+const MAX_NAME = 80;
+const MIN_PASSWORD = 8;
+const MAX_PASSWORD = 128;
+const passwordProblem = p =>
+    typeof p !== 'string' || p.length < MIN_PASSWORD ? `Password must be at least ${MIN_PASSWORD} characters long`
+    : p.length > MAX_PASSWORD ? `Password can be at most ${MAX_PASSWORD} characters long`
+    : null;
+
+const signSession = user => jwt.sign(
+    { id: user.id, email: user.email, name: user.name, avatarColor: user.avatarColor ?? null, avatarEmoji: user.avatarEmoji ?? null },
+    process.env.JWT_SECRET,
+    { expiresIn: '7d' }
+);
+
+// Unexpected errors: the details go to the log, never to the client.
+function serverError(res, where, err, message = 'Something went wrong. Please try again.') {
+    console.error(`[auth] ${where}:`, err);
+    res.status(500).json({ error: message });
+}
+
 // lazy-load ESM-only @simplewebauthn/server
 let _webauthn;
 async function webauthn() {
@@ -61,50 +86,59 @@ function consumeChallenge(map, key) {
 }
 
 // REGISTER (password)
+// The answer is the same whether or not the address already has an account,
+// so sign-up can't be used to find out who uses Splitty: an existing owner
+// gets an email instead ("someone tried to sign up with your address").
 router.post('/register', authLimiter, async (req, res) => {
     try {
-        const { name, email, password } = req.body;
+        const { name: rawName, email: rawEmail, password } = req.body;
+        const name = typeof rawName === 'string' ? rawName.trim() : '';
+        const email = normEmail(rawEmail);
 
-        if (!name || !email || !password) {
+        if (!name || !email || password == null || password === '') {
             return res.status(400).json({ error: 'Missing required fields' });
         }
+        if (name.length > MAX_NAME) return res.status(400).json({ error: `Name can be at most ${MAX_NAME} characters long` });
+        if (!isEmail(email)) return res.status(400).json({ error: 'Please enter a valid email address' });
+        const badPassword = passwordProblem(password);
+        if (badPassword) return res.status(400).json({ error: badPassword });
 
-        if (password.length < 8) {
-            return res.status(400).json({ error: 'Password must be at least 8 characters long' });
-        }
-
-        const existingUser = await userServiceNeo4j.getUserByEmail(email);
-        if (existingUser && existingUser.id) {
-            return res.status(400).json({ error: 'Email already in use' });
-        }
-
+        // Hashed in both cases, so both take about as long.
         const hashedPassword = await bcrypt.hash(password, 10);
-        const result = await userServiceNeo4j.createUser(name, email, hashedPassword);
-
-        try {
-            const verifyToken = await tokenService.create('EmailVerification', { userId: result.id }, 24 * 60 * 60 * 1000);
-            const verifyUrl = `${process.env.APP_URL}/verify-email?token=${verifyToken}`;
-            await emailService.sendVerificationEmail(email, verifyUrl);
-        } catch (emailErr) {
-            console.error('Failed to send verification email:', emailErr);
-        }
+        const existingUser = await userServiceNeo4j.getUserByEmail(email);
+        const exists = Boolean(existingUser && existingUser.id);
+        const created = exists ? null : await userServiceNeo4j.createUser(name, email, hashedPassword);
 
         res.status(201).json({ success: true, verificationPending: true });
 
-        // After answering: a failed notice must never fail or slow the sign-up.
+        // Mail after answering, for both paths alike.
+        if (exists) {
+            emailService.sendAccountExistsEmail(existingUser.email, `${process.env.APP_URL}/login`, `${process.env.APP_URL}/forgot-password`)
+                .catch(err => console.error('[auth] account-exists email failed:', err));
+            return;
+        }
+        try {
+            const verifyToken = await tokenService.create('EmailVerification', { userId: created.id }, 24 * 60 * 60 * 1000);
+            await emailService.sendVerificationEmail(email, `${process.env.APP_URL}/verify-email?token=${verifyToken}`);
+        } catch (emailErr) {
+            console.error('[auth] verification email failed:', emailErr);
+        }
+        // A failed notice must never affect the sign-up.
         emailService.sendSignupNotice(name, email)
-            .catch(err => console.error('Failed to send sign-up notice:', err));
+            .catch(err => console.error('[auth] sign-up notice failed:', err));
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        if (res.headersSent) return console.error('[auth] register (after answering):', error);
+        serverError(res, 'register', error);
     }
 });
 
 // LOGIN (password)
 router.post('/login', authLimiter, async (req, res) => {
     try {
-        const { email, password } = req.body;
+        const { password } = req.body;
+        const email = normEmail(req.body.email);
 
-        if (typeof email !== 'string' || typeof password !== 'string' || !email || !password) {
+        if (typeof password !== 'string' || !email || !password) {
             return res.status(400).json({ error: 'Missing required fields' });
         }
 
@@ -118,10 +152,9 @@ router.post('/login', authLimiter, async (req, res) => {
             return res.status(403).json({ error: 'Please verify your email before signing in.', code: 'EMAIL_NOT_VERIFIED' });
         }
 
-        const token = jwt.sign({ id: user.id, email: user.email, name: user.name, avatarColor: user.avatarColor ?? null, avatarEmoji: user.avatarEmoji ?? null }, process.env.JWT_SECRET, { expiresIn: '7d' });
-        res.json({ token });
+        res.json({ token: signSession(user) });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        serverError(res, 'login', error);
     }
 });
 
@@ -149,12 +182,7 @@ router.get('/verify-email-change', async (req, res) => {
         if (!t) return res.status(400).json({ error: 'Token invalid or expired' });
         await userServiceNeo4j.applyPendingEmail(t.userId);
         const { user } = await userServiceNeo4j.getUserByIdDirect(t.userId);
-        const freshToken = jwt.sign(
-            { id: user.id, email: user.email, name: user.name, avatarColor: user.avatarColor ?? null, avatarEmoji: user.avatarEmoji ?? null },
-            process.env.JWT_SECRET,
-            { expiresIn: '7d' }
-        );
-        res.json({ success: true, token: freshToken });
+        res.json({ success: true, token: signSession(user) });
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: 'Failed to verify email change' });
@@ -164,8 +192,9 @@ router.get('/verify-email-change', async (req, res) => {
 // CHANGE PASSWORD
 router.post('/change-password', authMiddleware, authLimiter, async (req, res) => {
     const { currentPassword, newPassword } = req.body;
-    if (!currentPassword || !newPassword) return res.status(400).json({ error: 'Missing required fields' });
-    if (newPassword.length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters' });
+    if (typeof currentPassword !== 'string' || !currentPassword || !newPassword) return res.status(400).json({ error: 'Missing required fields' });
+    const badPassword = passwordProblem(newPassword);
+    if (badPassword) return res.status(400).json({ error: badPassword });
     try {
         const user = await userServiceNeo4j.getUserByEmail(req.user.email);
         if (!user || !user.id) return res.status(401).json({ error: 'User not found' });
@@ -173,17 +202,20 @@ router.post('/change-password', authMiddleware, authLimiter, async (req, res) =>
         const valid = await bcrypt.compare(currentPassword, user.password);
         if (!valid) return res.status(401).json({ error: 'Current password is incorrect' });
         const hashedPassword = await bcrypt.hash(newPassword, 10);
-        await userServiceNeo4j.setPassword(req.user.id, hashedPassword);
-        res.json({ success: true });
+        // Every other device is signed out; this one gets a fresh token.
+        const cutoff = Math.floor(Date.now() / 1000);
+        await userServiceNeo4j.setPassword(req.user.id, hashedPassword, cutoff);
+        authMiddleware.noteSessionCutoff(req.user.id, cutoff);
+        const { user: fresh } = await userServiceNeo4j.getUserByIdDirect(req.user.id);
+        res.json({ success: true, token: signSession(fresh) });
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: error.message });
+        serverError(res, 'change-password', error);
     }
 });
 
 // RESEND VERIFICATION EMAIL
 router.post('/resend-verification', authLimiter, async (req, res) => {
-    const { email } = req.body;
+    const email = normEmail(req.body.email);
     if (!email) return res.status(400).json({ error: 'Email required' });
     try {
         const user = await userServiceNeo4j.getUserByEmail(email);
@@ -222,7 +254,7 @@ router.post('/passkey/register/options', authMiddleware, authLimiter, async (req
         storeChallenge(registrationChallenges, req.user.id, options.challenge);
         res.json(options);
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        serverError(res, '/passkey/register/options', err);
     }
 });
 
@@ -254,7 +286,7 @@ router.post('/passkey/register/verify', authMiddleware, authLimiter, async (req,
 
         res.json({ success: true });
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        serverError(res, '/passkey/register/verify', err);
     }
 });
 
@@ -279,7 +311,7 @@ router.post('/passkey/login/options', authLimiter, async (req, res) => {
         storeChallenge(loginChallenges, nonce, options.challenge, autofill ? 5 * 60_000 : 60_000);
         res.json({ options, nonce });
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        serverError(res, '/passkey/login/options', err);
     }
 });
 
@@ -313,10 +345,9 @@ router.post('/passkey/login/verify', authLimiter, async (req, res) => {
         await passkeyService.updatePasskeyCounter(passkey.credentialId, authenticationInfo.newCounter);
 
         const { user } = await userServiceNeo4j.getUserByIdDirect(passkey.userId);
-        const token = jwt.sign({ id: user.id, email: user.email, name: user.name, avatarColor: user.avatarColor ?? null, avatarEmoji: user.avatarEmoji ?? null }, process.env.JWT_SECRET, { expiresIn: '7d' });
-        res.json({ token });
+        res.json({ token: signSession(user) });
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        serverError(res, '/passkey/login/verify', err);
     }
 });
 
@@ -333,7 +364,7 @@ router.get('/passkey/list', authMiddleware, async (req, res) => {
             lastUsedAt: p.lastUsedAt ?? null,
         })) });
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        serverError(res, '/passkey/list', err);
     }
 });
 
@@ -348,13 +379,13 @@ router.delete('/passkey/:credentialId', authMiddleware, async (req, res) => {
         if (!result.success) return res.status(404).json(result);
         res.json(result);
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        serverError(res, '/passkey/:credentialId', err);
     }
 });
 
 // FORGOT PASSWORD
 router.post('/forgot-password', authLimiter, async (req, res) => {
-    const { email } = req.body;
+    const email = normEmail(req.body.email);
     if (!email) return res.status(400).json({ error: 'Email required' });
     try {
         const user = await userServiceNeo4j.getUserByEmail(email);
@@ -373,13 +404,17 @@ router.post('/forgot-password', authLimiter, async (req, res) => {
 // RESET PASSWORD
 router.post('/reset-password', authLimiter, async (req, res) => {
     const { token, password } = req.body;
-    if (!token || !password) return res.status(400).json({ error: 'Missing required fields' });
-    if (password.length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters' });
+    if (typeof token !== 'string' || !token || !password) return res.status(400).json({ error: 'Missing required fields' });
+    const badPassword = passwordProblem(password);
+    if (badPassword) return res.status(400).json({ error: badPassword });
     try {
         const t = await tokenService.consume('Password', token);
         if (!t) return res.status(400).json({ error: 'Token invalid or expired' });
         const hashedPassword = await bcrypt.hash(password, 10);
-        await userServiceNeo4j.setPassword(t.userId, hashedPassword);
+        // Signs out every device (whoever may have had the old password).
+        const cutoff = Math.floor(Date.now() / 1000);
+        await userServiceNeo4j.setPassword(t.userId, hashedPassword, cutoff);
+        authMiddleware.noteSessionCutoff(t.userId, cutoff);
         res.json({ success: true });
     } catch (error) {
         console.error(error);

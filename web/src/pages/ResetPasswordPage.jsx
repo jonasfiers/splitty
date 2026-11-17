@@ -20,7 +20,7 @@ export default function ResetPasswordPage() {
     setLoading(true)
     try {
       await client.post('/auth/reset-password', { token, password })
-      navigate('/login', { state: { notice: 'Password reset successfully. You can now sign in.' } })
+      navigate('/login', { state: { notice: 'Password reset. You were signed out on every device; sign in with your new password.' } })
     } catch (e) {
       setError(e.response?.data?.error || 'Token invalid or expired.')
     } finally {

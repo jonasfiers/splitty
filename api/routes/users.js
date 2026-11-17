@@ -58,15 +58,19 @@ router.put('/:id', async (req, res) => {
         }
 
         let emailChangePending = false;
-        if (email && email !== req.user.email) {
-            const existing = await userServiceNeo4j.getUserByEmail(email);
+        const newEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
+        if (newEmail && newEmail !== String(req.user.email || '').toLowerCase()) {
+            if (newEmail.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) {
+                return res.status(400).json({ error: 'Please enter a valid email address' });
+            }
+            const existing = await userServiceNeo4j.getUserByEmail(newEmail);
             if (existing && existing.id && existing.id !== id) {
                 return res.status(400).json({ error: 'Email already in use' });
             }
-            await userServiceNeo4j.setPendingEmail(id, email);
-            const verifyToken = await tokenService.create('EmailChange', { userId: id, pendingEmail: email }, 24 * 60 * 60 * 1000);
+            await userServiceNeo4j.setPendingEmail(id, newEmail);
+            const verifyToken = await tokenService.create('EmailChange', { userId: id, pendingEmail: newEmail }, 24 * 60 * 60 * 1000);
             const verifyUrl = `${process.env.APP_URL}/verify-email-change?token=${verifyToken}`;
-            await emailService.sendEmailChangeVerification(email, verifyUrl);
+            await emailService.sendEmailChangeVerification(newEmail, verifyUrl);
             emailChangePending = true;
         }
 

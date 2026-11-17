@@ -43,7 +43,7 @@ export default function RegisterPage() {
           <>
             <h2>Check your inbox</h2>
             <p className="auth-message auth-message-gap">
-              We sent a verification link to <strong>{form.email}</strong>. Click it to activate your account. The link expires in 24 hours.
+              We sent an email to <strong>{form.email}</strong>. Click the link in it to activate your account; it expires in 24 hours.
             </p>
             <p className="auth-footer"><Link to="/login" state={state}>Back to sign in</Link></p>
           </>

@@ -102,6 +102,20 @@ async function sendDeletionNotice(userId, complete = true) {
     });
 }
 
+// Someone signed up with an address that already has an account. Sent
+// instead of an error, so sign-up never tells anyone which addresses exist.
+async function sendAccountExistsEmail(to, loginUrl, resetUrl) {
+    await transporter.sendMail({
+        from: FROM(),
+        to,
+        subject: 'Your Splitty account',
+        text: 'Someone just tried to create a Splitty account with this email address, but you already have one.\n\n' +
+            `If that was you, sign in here:\n${loginUrl}\n\n` +
+            `Forgot your password? Reset it here:\n${resetUrl}\n\n` +
+            "If it wasn't you, you can ignore this email: nothing has changed on your account.",
+    });
+}
+
 // To the operator (SIGNUP_NOTIFY_EMAIL): a new account was created. Off when
 // the variable is unset (QA leaves it unset or points it at the local sink).
 async function sendSignupNotice(name, email) {
@@ -117,4 +131,4 @@ async function sendSignupNotice(name, email) {
     });
 }
 
-module.exports = { sendSignupNotice, sendAccountDeletedEmail, sendDeletionNotice, sendVerificationEmail, sendPasswordResetEmail, sendEmailChangeVerification, sendGroupInviteEmail, sendSettlementEmail };
+module.exports = { sendAccountExistsEmail, sendSignupNotice, sendAccountDeletedEmail, sendDeletionNotice, sendVerificationEmail, sendPasswordResetEmail, sendEmailChangeVerification, sendGroupInviteEmail, sendSettlementEmail };

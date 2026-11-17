@@ -172,8 +172,10 @@ const userServiceNeo4j = {
     getUserByEmail: async (email) => {
         try {
             const {records} = await driver.executeQuery(
+                // Addresses are stored lowercase (checked 2026-11-17: all
+                // were), so a lowercased exact match uses the unique index.
                 'MATCH (u:User) WHERE u.email = $email RETURN u',
-                {email}
+                {email: String(email ?? '').trim().toLowerCase()}
             )
             if (records.length === 0) return { success: false, message: 'User not found' };
             return records[0].get('u').properties;
@@ -291,16 +293,37 @@ const userServiceNeo4j = {
     },
 
     // SET PASSWORD (used by password reset flow)
-    setPassword: async (userId, hashedPassword) => {
+    // A new password ends every session: tokens issued before
+    // `sessionsValidFrom` (unix seconds, compared with the JWT's iat by
+    // middleware/auth.js) stop working, and a pending email change is
+    // cancelled (it may have been started by whoever had the old password).
+    setPassword: async (userId, hashedPassword, sessionsValidFrom) => {
         try {
             await driver.executeQuery(
-                'MATCH (u:User {id: $userId}) SET u.password = $hashedPassword',
-                { userId, hashedPassword }
+                `MATCH (u:User {id: $userId})
+                 SET u.password = $hashedPassword, u.sessionsValidFrom = $sessionsValidFrom
+                 REMOVE u.pendingEmail
+                 WITH u
+                 OPTIONAL MATCH (t:Token:EmailChange {userId: u.id})
+                 DELETE t`,
+                { userId, hashedPassword, sessionsValidFrom: neo4j.int(sessionsValidFrom) }
             );
             return { success: true };
         } catch (err) {
             throw new Error(`Failed to set password: ${err.message}`);
         }
+    },
+
+    // For the auth check: does the account exist, and from when are its
+    // sessions valid (0 = no cut-off yet).
+    getSessionState: async (userId) => {
+        const { records } = await driver.executeQuery(
+            'MATCH (u:User {id: $userId}) RETURN coalesce(u.sessionsValidFrom, 0) AS validFrom',
+            { userId }
+        );
+        if (records.length === 0) return { exists: false, validFrom: 0 };
+        const v = records[0].get('validFrom');
+        return { exists: true, validFrom: neo4j.isInt(v) ? v.toNumber() : Number(v) };
     },
 
     // DELETE

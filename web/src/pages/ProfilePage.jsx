@@ -114,11 +114,13 @@ export default function ProfilePage() {
     }
     setPasswordSaving(true)
     try {
-      await client.post('/auth/change-password', {
+      const { data } = await client.post('/auth/change-password', {
         currentPassword: passwordForm.currentPassword,
         newPassword: passwordForm.newPassword,
       })
-      setPasswordMessage('Password changed successfully.')
+      // Changing the password signs out every other device; this one gets a new token.
+      if (data?.token) updateToken(data.token)
+      setPasswordMessage('Password changed. You were signed out on your other devices.')
       setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' })
       setShowPasswordForm(false)
     } catch (err) {
