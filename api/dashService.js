@@ -24,40 +24,36 @@ const dashService = {
     // minus what they paid that the user owes (settlements included: they are
     // expenses too). In the group's currency, so a total is only shown per
     // currency (FriendsPage).
+    // Everyone the user shares a group with, and per shared group every
+    // member's net balance there. The web works out the settlement plan
+    // (web/src/utils/settlePlan.js) from those balances, the same way the
+    // group page does, so the Friends page shows what Settle up would ask.
     getFriends: async (userId) => {
         try {
             const { records } = await driver.executeQuery(
-                `MATCH (u:User {id: $userId})-[:MEMBER_OF]->(g:Group)<-[:MEMBER_OF]-(other:User)
-                WHERE other <> u
+                `MATCH (:User {id: $userId})-[:MEMBER_OF]->(g:Group)
                 OPTIONAL MATCH (g)-[:EXPRESSED_IN]->(c:Currency)
-                CALL {
-                    WITH u, other, g
-                    OPTIONAL MATCH (u)-[:PAID]->(e:Expense)-[o:OWED_BY]->(other)
-                    WHERE (e)-[:BALANCE_IN]->(g)
-                    RETURN sum(coalesce(o.amount, 0) * coalesce(e.rateSnapshot, 1)) AS lent
-                }
-                CALL {
-                    WITH u, other, g
-                    OPTIONAL MATCH (other)-[:PAID]->(e:Expense)-[o:OWED_BY]->(u)
-                    WHERE (e)-[:BALANCE_IN]->(g)
-                    RETURN sum(coalesce(o.amount, 0) * coalesce(e.rateSnapshot, 1)) AS owed
-                }
-                WITH other, g, c, lent - owed AS net
-                ORDER BY g.title
-                RETURN other.id AS id, other.name AS name, other.avatarColor AS avatarColor, other.avatarEmoji AS avatarEmoji,
-                       collect({ id: g.id, title: g.title, icon: g.icon, iso: c.iso, net: net }) AS groups`,
+                ${MEMBERS_OF_GROUP}
+                RETURN g.id AS id, g.title AS title, g.icon AS icon, c.iso AS iso, members
+                ORDER BY g.title`,
                 { userId }
             );
-            return {
-                success: true,
-                friends: records.map(r => ({
-                    id: r.get('id'),
-                    name: r.get('name'),
-                    avatarColor: r.get('avatarColor') == null ? null : neo4j.integer.toNumber(r.get('avatarColor')),
-                    avatarEmoji: r.get('avatarEmoji'),
-                    groups: r.get('groups').map(g => ({ ...g, net: Math.round(neo4j.integer.toNumber(g.net)) })),
-                })),
-            };
+            const friends = new Map();
+            for (const r of records) {
+                const members = mapMembers(r.get('members'));
+                const group = {
+                    id: r.get('id'), title: r.get('title'), icon: r.get('icon'), iso: r.get('iso'),
+                    members: members.map(m => ({ id: m.id, balance: Math.round(m.balance) })),
+                };
+                for (const m of members) {
+                    if (m.id === userId) continue;
+                    if (!friends.has(m.id)) {
+                        friends.set(m.id, { id: m.id, name: m.name, avatarColor: m.avatarColor, avatarEmoji: m.avatarEmoji ?? null, groups: [] });
+                    }
+                    friends.get(m.id).groups.push(group);
+                }
+            }
+            return { success: true, friends: [...friends.values()] };
         } catch (err) {
             throw new Error(`Failed to get friends: ${err.message}`);
         }

@@ -10,6 +10,16 @@ import { formatCurrency } from '../utils/currency.js'
 import EmptyState from '../components/EmptyState/EmptyState.jsx'
 import { swrOne } from '../utils/cache.js'
 import { iconOr } from '../utils/icons.js'
+import { useAuth } from '../context/AuthContext.jsx'
+import { settlePlan, between } from '../utils/settlePlan.js'
+
+// Per shared group, what this friend and I settle in that group's settlement
+// plan (the same plan the group page's Settle up uses): positive when they pay
+// me. Not the expenses between the two of us: within a group, debts are
+// settled through the group, so a pairwise sum would disagree with it.
+function withPlan(friend, me) {
+  return { ...friend, groups: friend.groups.map(g => ({ ...g, net: between(settlePlan(g.members || []), me, friend.id) })) }
+}
 
 // What is open with someone, per currency: groups in the same currency add
 // up, different currencies are listed side by side rather than converted.
@@ -36,6 +46,7 @@ function Amounts({ list }) {
 
 export default function FriendsPage() {
   const navigate = useNavigate()
+  const { currentUser } = useAuth()
   const [friends, setFriends] = useState([])
   const [open, setOpen] = useState(null) // the friend whose groups are shown
   const [loading, setLoading] = useState(true)
@@ -56,7 +67,7 @@ export default function FriendsPage() {
   if (loadError) return <>{bare}<LoadFailed error={loadError} what="your friends" onRetry={retry} /></>
 
   // Open balances first, the largest on top; then the settled ones by name.
-  const rows = friends.map(f => ({ ...f, totals: totals(f) }))
+  const rows = friends.map(f => withPlan(f, currentUser?.id)).map(f => ({ ...f, totals: totals(f) }))
   const weight = f => f.totals.reduce((s, t) => s + Math.abs(t.net), 0)
   const openRows = rows.filter(f => f.totals.length).sort((a, b) => weight(b) - weight(a))
   const settled = rows.filter(f => !f.totals.length).sort((a, b) => a.name.localeCompare(b.name))

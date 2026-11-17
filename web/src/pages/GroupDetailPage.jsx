@@ -6,6 +6,7 @@ import CurrencyInput from '../components/CurrencyInput/CurrencyInput.jsx'
 import FabButton from '../components/FabButton/FabButton.jsx'
 import { formatCurrency } from '../utils/currency.js'
 import { useAuth } from '../context/AuthContext.jsx'
+import { settlePlan, between } from '../utils/settlePlan.js'
 import { Avatar, AvatarStack } from '../components/Avatar.jsx'
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
 import Loading from '../components/Loading.jsx'
@@ -249,27 +250,26 @@ export default function GroupDetailPage() {
     }
   }
 
+  // Settle up with a member, prefilled from the group's settlement plan
+  // (utils/settlePlan.js, also behind the Friends page): what the two of us
+  // settle in it. With nothing between us, the member's own payment in the
+  // plan (e.g. Chloé pays Bram), so recording it for others works too.
   const openSettlement = (member) => {
-    // member.balance is their net balance in the group: sum(lent) - sum(owed)
-    // If member.balance < 0, they owe money (they should pay).
-    // If member.balance > 0, they are owed money (they should receive).
-    
-    if (member.balance < 0) {
-      // Member owes money -> They are the payer
+    const plan = settlePlan(members)
+    const mine = between(plan, currentUser.id, member.id)
+    const theirs = plan.find(p => p.from === member.id || p.to === member.id)
+    const today = new Date().toISOString().slice(0, 10)
+    if (mine) {
       setSettlementForm({
-        paidByUserId: member.id,
-        receivedByUserId: currentUser.id,
-        amount: Math.abs(member.balance),
-        date: new Date().toISOString().slice(0, 10),
+        paidByUserId: mine > 0 ? member.id : currentUser.id,
+        receivedByUserId: mine > 0 ? currentUser.id : member.id,
+        amount: Math.abs(mine),
+        date: today,
       })
+    } else if (theirs) {
+      setSettlementForm({ paidByUserId: theirs.from, receivedByUserId: theirs.to, amount: theirs.amount, date: today })
     } else {
-      // Member is owed money -> They are the receiver
-      setSettlementForm({
-        paidByUserId: currentUser.id,
-        receivedByUserId: member.id,
-        amount: Math.abs(member.balance),
-        date: new Date().toISOString().slice(0, 10),
-      })
+      setSettlementForm(f => ({ ...f, amount: '', date: today }))
     }
     setShowSettlement(true)
   }
@@ -371,9 +371,13 @@ export default function GroupDetailPage() {
     months.at(-1).items.push(e)
   }
 
-  // Who the balance is with: the members on the other side of it.
-  const counterparts = !balance?.amount ? [] : members.filter(m =>
-    m.id !== currentUser?.id && (balance.amount > 0 ? m.balance < 0 : m.balance > 0))
+  // Who my balance is settled with: my payments in the group's settlement
+  // plan, with what each one is (`settle`: positive = they pay me).
+  const plan = settlePlan(members)
+  const counterparts = !currentUser ? [] : members
+    .filter(m => m.id !== currentUser.id)
+    .map(m => ({ ...m, settle: between(plan, currentUser.id, m.id) }))
+    .filter(m => m.settle)
   const openSettleUp = () => {
     if (counterparts.length === 1) openSettlement(counterparts[0])
     else if (counterparts.length > 1) setShowSettlePick(true)
@@ -747,8 +751,8 @@ export default function GroupDetailPage() {
                 className="list-row-person"
                 title={m.name}
                 aside={<>
-                  <span className={`list-row-amt ${m.balance > 0 ? 'positive' : 'negative'}`}>{formatCurrency(Math.abs(m.balance), group.iso)}</span>
-                  <span className="list-row-sub">{m.balance > 0 ? 'gets back' : 'owes'}</span>
+                  <span className={`list-row-amt ${m.settle < 0 ? 'positive' : 'negative'}`}>{formatCurrency(Math.abs(m.settle), group.iso)}</span>
+                  <span className="list-row-sub">{m.settle < 0 ? 'you pay' : 'pays you'}</span>
                 </>}
                 chevron
               />
