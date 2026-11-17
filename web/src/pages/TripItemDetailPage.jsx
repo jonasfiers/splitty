@@ -17,7 +17,7 @@ const noop = () => {}
 import { formatCurrency, formatDate } from '../utils/currency.js'
 import { ListRow } from '../components/List/List.jsx'
 import { leaveTo } from '../utils/history.js'
-import { KINDS, TRANSPORT_MODES, itemIcon, itemColour, dayOf, timeOf, formatDay, formatDuration, daysBetween, mapsLink, linkTarget, formatBytes, DEFAULT_CHECK_IN, DEFAULT_CHECK_OUT } from '../utils/trip.js'
+import { KINDS, TRANSPORT_MODES, itemIcon, kindVars, dayOf, timeOf, formatDay, formatDuration, daysBetween, mapsLink, linkTarget, formatBytes, DEFAULT_CHECK_IN, DEFAULT_CHECK_OUT } from '../utils/trip.js'
 import { swrOne } from '../utils/cache.js'
 import { getOfflineItem, asOf } from '../utils/offlineTrips.js'
 import { useOfflineDocs } from '../utils/useOfflineDocs.js'
@@ -310,7 +310,7 @@ export default function TripItemDetailPage() {
           <div className="card">
             <DetailHero
               icon={<Icon name={itemIcon(item)} />}
-              tint={itemColour(item)}
+              iconStyle={(k => k && { background: k.bg, color: k.fg })(kindVars(item.kind))}
               title={item.title}
               subtitle={<Link to={`/trips/${tripId}`}>{item.tripTitle}</Link>}
             />

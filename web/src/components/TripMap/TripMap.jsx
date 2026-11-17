@@ -85,10 +85,14 @@ function TripMap({ places, items, onOpenItem, highlight = null, onHover = () => 
       // or how many items there are when their icons differ.
       const stay = here.find(i => i.kind === 'stay')
       const icons = new Set(here.map(i => itemIcon(i)))
+      // Its colour (index.css --kind-*): a stay's if there is one (like the
+      // icon), else the items' kind when they share one, else neutral.
+      const kinds = new Set(here.map(i => i.kind))
+      const pinKind = stay ? 'stay' : kinds.size === 1 ? [...kinds][0] : kinds.size ? 'mixed' : ''
       const marker = L.marker([place.lat, place.lon], {
         icon: L.divIcon({
           className: '',
-          html: `<div class="trip-pin">${stay ? iconSvg(itemIcon(stay)) : icons.size === 1 ? iconSvg([...icons][0]) : here.length > 1 ? here.length : iconSvg('map-pin')}${numbered && order.has(place.id) ? `<span class="trip-pin-n">${order.get(place.id)}</span>` : ''}</div>`,
+          html: `<div class="trip-pin${pinKind ? ` kind-${pinKind}` : ''}">${stay ? iconSvg(itemIcon(stay)) : icons.size === 1 ? iconSvg([...icons][0]) : here.length > 1 ? here.length : iconSvg('map-pin')}${numbered && order.has(place.id) ? `<span class="trip-pin-n">${order.get(place.id)}</span>` : ''}</div>`,
           iconSize: [34, 34],
           iconAnchor: [17, 17],
         }),

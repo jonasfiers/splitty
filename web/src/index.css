@@ -43,6 +43,22 @@
   --red-light:   #FEE2E2;
   --red-dark:    #B91C1C;
 
+  /* Trip entry kinds (utils/trip.js kindVars): the one place their colours
+     are set, used by the timeline bars, the day-by-day dots, the map pins and
+     an entry's own page. line = border/dot, bg = soft fill, fg = text/icon on
+     that fill. Stay and transport borrow green and the accent, so they follow
+     the theme on their own; activity is sky, set per theme. Never grey: grey
+     means "over" on the day view. */
+  --kind-stay:          var(--green);
+  --kind-stay-bg:       var(--green-light);
+  --kind-stay-fg:       var(--green-dark);
+  --kind-transport:     var(--accent);
+  --kind-transport-bg:  var(--accent-subtle);
+  --kind-transport-fg:  var(--accent-text);
+  --kind-activity:      #0284C7;
+  --kind-activity-bg:   #E0F2FE;
+  --kind-activity-fg:   #0369A1;
+
   /* Sidebar */
   --sb-bg:        #4A2C0E;
   --sb-border:    rgba(255,255,255,0.09);
@@ -119,6 +135,10 @@
   --red:         #F87171;
   --red-light:   #2D1515;
   --red-dark:    #FCA5A5;
+
+  --kind-activity:      #38BDF8;
+  --kind-activity-bg:   #132C38;
+  --kind-activity-fg:   #7DD3FC;
 
   --sb-bg:        #1E1008;
   --sb-border:    rgba(255,255,255,0.07);
@@ -2251,7 +2271,6 @@ html .leaflet-container { font-family: var(--font-body); } /* "html": Leaflet's 
   filter: invert(1) hue-rotate(180deg) brightness(.92) contrast(.88) saturate(.8);
 }
 /* Pins and Leaflet's own white chrome (zoom buttons, pop-ups, attribution) follow the theme. */
-[data-theme="dark"] .trip-pin { background: var(--surface); border-color: var(--accent); color: var(--accent-text); }
 [data-theme="dark"] .trip-pin-n { background: var(--accent-fill); }
 [data-theme="dark"] .leaflet-bar a,
 [data-theme="dark"] .leaflet-popup-content-wrapper,
@@ -2266,16 +2285,23 @@ html .leaflet-container { font-family: var(--font-body); } /* "html": Leaflet's 
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #FEFCFA;
-  border: 2px solid #E8603A;
+  /* In its kind's colour (TripMap.jsx pinKind); accent when it has none. */
+  --pin-line: var(--accent);
+  --pin-fg: var(--accent-text);
+  background: var(--surface);
+  border: 2px solid var(--pin-line);
   border-radius: 50%;
   box-shadow: var(--shadow-md);
   font-size: var(--fs-base);
   font-weight: 700;
-  color: #E8603A;
+  color: var(--pin-fg);
 }
+.trip-pin.kind-stay      { --pin-line: var(--kind-stay);      --pin-fg: var(--kind-stay-fg); }
+.trip-pin.kind-transport { --pin-line: var(--kind-transport); --pin-fg: var(--kind-transport-fg); }
+.trip-pin.kind-activity  { --pin-line: var(--kind-activity);  --pin-fg: var(--kind-activity-fg); }
+.trip-pin.kind-mixed     { --pin-line: var(--text-2);         --pin-fg: var(--text); }
 .trip-pin { position: relative; transition: transform .15s, opacity .15s; }
-.trip-pin.active { transform: scale(1.25); box-shadow: 0 0 0 4px rgba(232, 96, 58, .25), var(--shadow-md); }
+.trip-pin.active { transform: scale(1.25); box-shadow: 0 0 0 4px color-mix(in srgb, var(--pin-line) 25%, transparent), var(--shadow-md); }
 .trip-pin.faded, .trip-leg.faded { opacity: .35; }
 /* Visiting order, in the pin's corner. */
 .trip-pin-n {

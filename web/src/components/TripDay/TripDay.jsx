@@ -1,6 +1,6 @@
 import { Fragment, useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router'
-import { KINDS, itemIcon, itemColour, describe, mapsLink, linkTarget, formatDay, daysBetween } from '../../utils/trip.js'
+import { KINDS, itemIcon, kindVars, describe, mapsLink, linkTarget, formatDay, daysBetween } from '../../utils/trip.js'
 import BigReference from '../BigReference/BigReference.jsx'
 import { pad, clock, onMinute } from '../../utils/tripClock.js'
 import Icon from '../Icon/Icon.jsx'
@@ -86,12 +86,12 @@ export function dayStates(day, time, entries) {
 export const quietDayEntries = sleepingAt => sleepingAt.map(item => ({ item, time: '', label: 'Tonight', phase: 'Staying' }))
 
 // The dot on the day's line, in the entry's kind colour (utils/trip.js
-// itemColour: the matching category's): a ring while still to come, filled
+// kindVars, shared with the timeline and the map): a ring while still to come, filled
 // (and a bit bigger) while on now, washed out once over. An all-day entry
 // sits off the line: it is not a moment in the day's order.
 export function EntryNode({ item, state, allDay = false }) {
   return (
-    <span className={`entry-node${state ? ` ${state}` : ''}${allDay ? ' allday' : ''}`} style={{ '--kind': `var(--cat-${itemColour(item) ?? 'slate'})` }} aria-hidden="true">
+    <span className={`entry-node${state ? ` ${state}` : ''}${allDay ? ' allday' : ''}`} style={{ '--kind': kindVars(item.kind)?.line ?? 'var(--text-3)' }} aria-hidden="true">
       <span className="entry-dot" />
     </span>
   )

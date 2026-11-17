@@ -64,9 +64,11 @@
     transition: filter .15s, box-shadow .15s;
 }
 .gantt-bar:hover { filter: brightness(.97); box-shadow: var(--shadow-md); }
-.gantt-bar.stay { background: var(--green-light); border-color: var(--green); color: var(--green-dark); }
-.gantt-bar.transport { background: var(--accent-subtle); border-color: var(--accent); color: var(--accent-text); }
-.gantt-bar.activity { background: var(--surface-2); border-color: var(--border-strong); color: var(--text); }
+.gantt-bar:is(.stay, .transport, .activity) { background: var(--k-bg); border-color: var(--k-line); color: var(--k-fg); }
+/* Kind colours: index.css --kind-* (shared with the day view and the map). */
+:is(.gantt-bar, .gantt-ghost).stay      { --k-bg: var(--kind-stay-bg);      --k-line: var(--kind-stay);      --k-fg: var(--kind-stay-fg); }
+:is(.gantt-bar, .gantt-ghost).transport { --k-bg: var(--kind-transport-bg); --k-line: var(--kind-transport); --k-fg: var(--kind-transport-fg); }
+:is(.gantt-bar, .gantt-ghost).activity  { --k-bg: var(--kind-activity-bg);  --k-line: var(--kind-activity);  --k-fg: var(--kind-activity-fg); }
 .gantt-bar-icon { flex-shrink: 0; font-size: var(--fs-md); }
 .gantt-bar-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
@@ -117,9 +119,7 @@
     pointer-events: none;
     box-shadow: var(--shadow-md);
 }
-.gantt-ghost.stay { background: var(--green-light); border-color: var(--green); color: var(--green-dark); }
-.gantt-ghost.transport { background: var(--accent-subtle); border-color: var(--accent); color: var(--accent-text); }
-.gantt-ghost.activity { background: var(--surface-2); border-color: var(--border-strong); color: var(--text); }
+.gantt-ghost:is(.stay, .transport, .activity) { background: var(--k-bg); border-color: var(--k-line); color: var(--k-fg); }
 .gantt-hint {
     position: sticky;
     left: 0;
