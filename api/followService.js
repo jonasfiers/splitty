@@ -60,7 +60,10 @@ async function listLinks(tripId, userId) {
     if (records.length === 0) return null;
     return records.filter(r => r.get('l')).map(r => {
         const l = r.get('l').properties;
-        return { token: l.token, url: followUrl(l.token), photos: !!l.photos, createdOn: l.createdOn?.toString(), by: r.get('by') };
+        return {
+            token: l.token, url: followUrl(l.token), photos: !!l.photos, createdOn: l.createdOn?.toString(), by: r.get('by'),
+            views: Number(l.views ?? 0), lastViewedOn: l.lastViewedOn?.toString() ?? null,
+        };
     });
 }
 
@@ -88,6 +91,29 @@ async function removeLink(tripId, userId, token) {
     );
     views.delete(token);
     return records.length > 0;
+}
+
+// ── Views ──
+// How often a link was opened, so members notice one spreading. Counted when
+// the page fetches its data (its own script, so not link previews or bots
+// reading raw HTML), once per visitor per day. A visitor is told apart by a
+// hash of address and browser, kept in memory only, under a secret renewed
+// daily; nothing about them is stored, only the count and the last time.
+let seenDay = '';
+let seenSalt = '';
+let seen = new Set();
+async function countView(token, ip, userAgent) {
+    const day = todayIn('UTC');
+    if (day !== seenDay) { seenDay = day; seenSalt = crypto.randomBytes(16).toString('hex'); seen = new Set(); }
+    const visitor = crypto.createHash('sha256').update(`${seenSalt}|${token}|${ip}|${userAgent}`).digest('base64url').slice(0, 22);
+    if (seen.has(visitor)) return;
+    if (seen.size > 50_000) seen = new Set();
+    seen.add(visitor);
+    await driver.executeQuery(
+        `MATCH (l:FollowLink {token: $token})
+         SET l.views = coalesce(l.views, 0) + 1, l.lastViewedOn = datetime()`,
+        { token }
+    );
 }
 
 // ── The public view ──
@@ -252,4 +278,4 @@ async function photoAllowed(token, albumId, assetId) {
     return tripPhotos.albumForThumbnail(albumId);
 }
 
-module.exports = { listLinks, createLink, removeLink, publicView, photoAllowed, followUrl, followOrigin };
+module.exports = { listLinks, createLink, removeLink, publicView, photoAllowed, followUrl, followOrigin, countView };

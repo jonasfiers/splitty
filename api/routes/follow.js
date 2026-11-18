@@ -13,6 +13,8 @@ router.get('/:token', async (req, res) => {
         const view = await followService.publicView(req.params.token);
         if (!view) return res.status(404).json({ error: 'This link does not work (any more).' });
         const { token } = view;
+        followService.countView(token, req.headers['x-real-ip'] || req.ip, String(req.headers['user-agent'] || ''))
+            .catch(err => console.error('[follow] count:', err.message));
         res.set('Cache-Control', 'no-store');
         res.json({
             ...view,

@@ -11,6 +11,20 @@ import { useConfirm } from '../Confirm/ConfirmProvider.jsx'
 // Android doesn't open them in the installed app).
 const linkUrl = l => l.url || `${window.location.origin}/follow/${l.token}`
 
+// "Opened 14 times · last 2 h ago": people who opened the page (counted once
+// a day each, api/followService.js countView).
+const ago = iso => {
+  const min = Math.round((Date.now() - Date.parse(iso)) / 60000)
+  if (!(min >= 0)) return ''
+  if (min < 2) return 'just now'
+  if (min < 60) return `${min} min ago`
+  if (min < 48 * 60) return `${Math.round(min / 60)} h ago`
+  return `${Math.round(min / 1440)} days ago`
+}
+const views = l => (l.views
+  ? `Opened ${l.views === 1 ? 'once' : `${l.views} times`}${l.lastViewedOn ? `, last ${ago(l.lastViewedOn)}` : ''}`
+  : 'Not opened yet')
+
 export default function FollowSheet({ tripId, tripTitle, hasPhotos, onClose }) {
   const confirm = useConfirm()
   const [links, setLinks] = useState(null)
@@ -76,7 +90,7 @@ export default function FollowSheet({ tripId, tripTitle, hasPhotos, onClose }) {
               <Icon name="globe" />
               <span className="album-list-text">
                 <strong>{linkUrl(l).replace(/^https?:\/\//, '').replace(l.token, `${l.token.slice(0, 6)}…`)}</strong>
-                <span>{l.photos ? 'With photos' : 'Without photos'}{l.by ? ` · made by ${l.by}` : ''}</span>
+                <span>{views(l)} · {l.photos ? 'with photos' : 'without photos'}{l.by ? ` · made by ${l.by}` : ''}</span>
               </span>
               <a className="btn btn-ghost btn-sm" href={linkUrl(l)} target="_blank" rel="noopener noreferrer">Open</a>
               <button type="button" className="btn btn-ghost btn-sm" onClick={() => share(l)}>{copied === l.token ? 'Copied' : navigator.share ? 'Share' : 'Copy'}</button>
