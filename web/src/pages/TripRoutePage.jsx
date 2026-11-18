@@ -36,6 +36,10 @@ const endParam = ref => (ref?.id ? ref.id : ref?.lat != null ? `${ref.lat},${ref
 // Stop names still in the local script ("臺北") are being looked up in
 // English on the server (api/stopNames.js); these apply the ones it has
 // learned since, to the stops, headsigns and lines made of stop names.
+const LOCAL_SCRIPT = /[^\x00-\u024f\u2010-\u2015]/
+const untranslatedNames = result => [...new Set((result?.itineraries ?? []).flatMap(it => it.legs.flatMap(l =>
+  [l.headsign, ...(l.line && /[-–~]/.test(l.line) ? l.line.split(/\s*[-–~]\s*/) : [])]))
+  .filter(t => t && LOCAL_SCRIPT.test(t)))]
 const untranslatedKeys = result => [...new Set((result?.itineraries ?? []).flatMap(it => it.legs.flatMap(l => [l.from, l.to]))
   .filter(s => s.nameKey && !s.originalName).map(s => s.nameKey))]
 function withNames(result, names) {
@@ -91,9 +95,10 @@ export default function TripRoutePage() {
     let tries = Math.min(Math.ceil((pendingNames * 1.3) / 3) + 2, 20)
     const timer = setInterval(async () => {
       const keys = untranslatedKeys(resultRef.current)
-      if (!keys.length || --tries < 0) return clearInterval(timer)
+      const originals = untranslatedNames(resultRef.current)
+      if ((!keys.length && !originals.length) || --tries < 0) return clearInterval(timer)
       try {
-        const { data } = await client.post('/trips/stop-names', { keys })
+        const { data } = await client.post('/trips/stop-names', { keys, originals })
         if (data.names?.length) setResult(prev => (prev ? withNames(prev, data.names) : prev))
       } catch { /* names stay as they are */ }
     }, 3000)

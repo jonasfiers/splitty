@@ -8,6 +8,7 @@ const routeService = require('../routeService');
 const uploadStore = require('../uploadStore');
 const tripPhotos = require('../tripPhotos');
 const stopNames = require('../stopNames');
+const placeAddresses = require('../placeAddresses');
 const { Readable } = require('stream');
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -728,11 +729,12 @@ router.get('/:id/routes', routeLimiter, async (req, res) => {
 });
 
 // STOP NAMES learned since a search (stopNames.js): the route page asks for
-// the ones it still shows in the local script. Body { keys: [nameKey] }.
+// the ones it still shows in the local script. Body { keys: [nameKey],
+// originals: [headsign or line station names] }.
 router.post('/stop-names', async (req, res) => {
-    const keys = (Array.isArray(req.body?.keys) ? req.body.keys : []).filter(k => typeof k === 'string' && k.length <= 200).slice(0, 200);
+    const strings = v => (Array.isArray(v) ? v : []).filter(k => typeof k === 'string' && k.length <= 200).slice(0, 200);
     try {
-        res.json({ names: await stopNames.namesFor(keys) });
+        res.json({ names: await stopNames.namesFor(strings(req.body?.keys), strings(req.body?.originals)) });
     } catch (err) {
         console.error('[routes] stop names:', err.message);
         res.json({ names: [] });
@@ -833,6 +835,8 @@ router.post('/:id/routes', async (req, res) => {
         const result = await tripService.createItems(req.params.id, req.user.id, 'transport', items);
         if (!result.success) return res.status(404).json(result);
         res.status(201).json(result);
+        // New places from stops have no address yet: looked up afterwards.
+        placeAddresses.fillMissing(req.params.id).catch(err => console.error('[routes] addresses:', err.message));
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: error.message });

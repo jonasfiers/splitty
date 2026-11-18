@@ -150,4 +150,43 @@ async function townAt(lat, lon) {
     });
 }
 
-module.exports = { search, englishStopName, isLatin, metresBetween, townAt };
+// The address at a point (Nominatim reverse, building level), for a place
+// the route finder made from a stop, which only has a name and coordinates.
+async function addressAt(lat, lon) {
+    return throttled(`addr2:${lat.toFixed(5)},${lon.toFixed(5)}`, async () => {
+        const r = await fetchJson({ lat: String(lat), lon: String(lon), zoom: '18' }, 'https://nominatim.openstreetmap.org/reverse');
+        // Without parts only in the local script (often the name of whatever
+        // building is nearest, not of the station), as the app is in English.
+        const parts = String(r?.display_name || '').split(',').map(x => x.trim()).filter(x => x && isLatin(x));
+        return parts.join(', ').slice(0, 300) || null;
+    });
+}
+
+// The English name of a railway station known only by name: a line's end
+// station or a headsign ("枋寮"), which are not stops of the search and have
+// no coordinates. Searched in a box around `near` (the leg), and only taken
+// from a station or halt whose current name is exactly that.
+async function englishStationByName(name, near) {
+    if (!name || isLatin(name) || !near) return null;
+    const d = 4; // about 400 km each way: a line's ends can be a country apart (七堵-枋寮)
+    return throttled(`station:${name}|${near.lat.toFixed(1)},${near.lon.toFixed(1)}`, async () => {
+        const data = await fetchJson({
+            q: name, limit: '10', namedetails: '1', bounded: '1',
+            viewbox: [near.lon - d, near.lat + d, near.lon + d, near.lat - d].join(','),
+        });
+        const wanted = sameName(name, true);
+        for (const r of data) {
+            const station = (r.category === 'railway' && ['station', 'halt'].includes(r.type))
+                || (r.category === 'public_transport' && r.type === 'station')
+                || (r.category === 'building' && r.type === 'train_station');
+            if (!station) continue;
+            const current = Object.entries(r.namedetails || {}).filter(([k]) => k === 'name' || k.startsWith('name:')).map(([, v]) => v);
+            if (!current.some(wanted)) continue;
+            const english = (r.namedetails?.['name:en'] || '').trim();
+            if (english && isLatin(english) && english.length <= 160) return english;
+        }
+        return null;
+    });
+}
+
+module.exports = { search, englishStopName, englishStationByName, isLatin, metresBetween, townAt, addressAt };

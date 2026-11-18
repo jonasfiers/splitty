@@ -13,7 +13,7 @@
 // and queues the rest; the route page asks again (namesFor) and fills them in.
 
 const driver = require('./neo4j');
-const { englishStopName, isLatin } = require('./geocodeService');
+const { englishStopName, englishStationByName, isLatin } = require('./geocodeService');
 
 const RECHECK_DAYS = 30;
 const MAX_QUEUE = 200;
@@ -63,7 +63,9 @@ async function work() {
             queue.delete(key);
             let english = null;
             try {
-                english = await englishStopName(stop.name, stop.lat, stop.lon);
+                english = stop.byName
+                    ? await englishStationByName(stop.name, { lat: stop.lat, lon: stop.lon })
+                    : await englishStopName(stop.name, stop.lat, stop.lon);
             } catch (err) {
                 if (err.busy) { queue.set(key, stop); await new Promise(r => setTimeout(r, 2000)); continue; }
                 console.error(`[stopNames] ${stop.name}: ${err.message}`);
@@ -83,7 +85,8 @@ async function work() {
 function learn(stops) {
     for (const s of stops) {
         if (queue.size >= MAX_QUEUE) break;
-        if (!queue.has(keyOf(s))) queue.set(keyOf(s), { name: s.name, lat: s.lat, lon: s.lon });
+        const key = s.byName ? `name:${s.name}` : keyOf(s);
+        if (!queue.has(key)) queue.set(key, { name: s.name, lat: s.lat, lon: s.lon, byName: Boolean(s.byName) });
     }
     work();
 }
@@ -111,15 +114,25 @@ async function translateResult(result) {
     }
     // Headsigns and the stations in line names ("彰化-花蓮") that are not
     // stops of this search: any stop of that name learned before.
-    const extra = new Set();
+    const extra = new Map(); // name -> near (the leg's start), for a lookup by name
     for (const it of result.itineraries || []) {
         for (const leg of it.legs || []) {
             for (const t of [leg.headsign, ...(leg.line && /[-–~]/.test(leg.line) ? leg.line.split(/\s*[-–~]\s*/) : [])]) {
-                if (t && !isLatin(t) && !byOriginal.has(t)) extra.add(t);
+                if (t && !isLatin(t) && !byOriginal.has(t) && !extra.has(t)) extra.set(t, { lat: leg.from.lat, lon: leg.from.lon });
             }
         }
     }
-    for (const [original, english] of await knownByOriginal([...extra])) byOriginal.set(original, english);
+    const learned = await knownByOriginal([...extra.keys()]);
+    for (const [original, english] of learned) byOriginal.set(original, english);
+    // Not known from any stop yet: look the station up by name (a line's end).
+    const byNameKeys = await known([...extra.keys()].filter(n => !learned.has(n)).map(n => `name:${n}`));
+    const byNameWanted = [];
+    for (const [n, near] of extra) {
+        if (learned.has(n)) continue;
+        const hit = byNameKeys.get(`name:${n}`);
+        if (hit?.english) byOriginal.set(n, hit.english);
+        if (!hit || !hit.fresh) byNameWanted.push({ name: n, lat: near.lat, lon: near.lon, byName: true });
+    }
     for (const it of result.itineraries || []) {
         for (const leg of it.legs || []) {
             applyToLeg(leg, byOriginal);
@@ -127,7 +140,8 @@ async function translateResult(result) {
     }
     const pending = [...unknown.values()].map(s => ({ name: s.originalName || s.name, lat: s.lat, lon: s.lon, stopId: s.nameKey }));
     learn(pending.map(p => ({ ...p, stopId: p.stopId })));
-    return pending.length;
+    learn(byNameWanted);
+    return pending.length + byNameWanted.length;
 }
 
 // Headsign, line and title from the names known so far.
@@ -145,15 +159,17 @@ function applyToLeg(leg, byOriginal) {
     leg.title = `${leg.from.name} → ${leg.to.name}`;
 }
 
-// For the route page's follow-up: [{ key, original, english }] for the keys
-// whose English name is known by now.
-async function namesFor(keys) {
+// For the route page's follow-up: [{ key, original, english }] for the stop
+// keys, and the headsign or line names (originals), known by now.
+async function namesFor(keys, originals = []) {
     const list = [...new Set(keys)].slice(0, 200);
-    if (!list.length) return [];
+    const names = [...new Set(originals)].slice(0, 200);
+    if (!list.length && !names.length) return [];
     await ensureIndex();
     const { records } = await driver.executeQuery(
-        'MATCH (s:StopName) WHERE s.key IN $keys AND s.english IS NOT NULL RETURN s.key AS key, s.original AS original, s.english AS english',
-        { keys: list }
+        `MATCH (s:StopName) WHERE (s.key IN $keys OR s.original IN $names) AND s.english IS NOT NULL
+         RETURN s.key AS key, s.original AS original, s.english AS english`,
+        { keys: list, names }
     );
     return records.map(r => ({ key: r.get('key'), original: r.get('original'), english: r.get('english') }));
 }
