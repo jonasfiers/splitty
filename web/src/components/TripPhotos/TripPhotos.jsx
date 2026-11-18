@@ -29,6 +29,8 @@ export function useTripPhotos(tripId, skip = false) {
 }
 
 export const photoSrc = url => `/api${url}`
+// Stops the tile's loading glow (TripPhotos.css) once its photo is there.
+const doneLoading = e => e.currentTarget.parentElement?.classList.add('loaded')
 
 // The photos of each day: { 'YYYY-MM-DD': [photo] }.
 export const photosByDay = photos => {
@@ -69,7 +71,7 @@ export function DayPhotos({ photos, onOpen }) {
               onClick={() => (isMore ? setGrid(true) : onOpen(photos, i))}
               aria-label={isMore ? `All ${photos.length} photos of this day` : `Photo at ${timeOf(p.at)}`}
             >
-              <img src={photoSrc(p.thumb)} alt="" loading="lazy" decoding="async" />
+              <img src={photoSrc(p.thumb)} alt="" loading="lazy" decoding="async" onLoad={doneLoading} onError={doneLoading} />
               {p.video && !isMore && <span className="day-photo-video" aria-hidden="true"><Icon name="play" /></span>}
               {isMore && <span className="day-photo-more">+{more + 1}</span>}
             </button>
@@ -102,7 +104,7 @@ export function PhotoGrid({ photos, onOpen, onClose }) {
       <div className="photo-grid-tiles">
         {photos.map((p, i) => (
           <button key={p.id} type="button" className="photo-grid-tile" onClick={() => onOpen(photos, i)} aria-label={`Photo at ${timeOf(p.at)}`}>
-            <img src={photoSrc(p.thumb)} alt="" loading="lazy" decoding="async" />
+            <img src={photoSrc(p.thumb)} alt="" loading="lazy" decoding="async" onLoad={doneLoading} onError={doneLoading} />
             {p.video && <span className="day-photo-video" aria-hidden="true"><Icon name="play" /></span>}
           </button>
         ))}
