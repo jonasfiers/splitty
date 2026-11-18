@@ -63,14 +63,6 @@
   font: 700 var(--fs-xs)/18px var(--font-body);
   text-align: center;
 }
-.trip-map-photos {
-  position: absolute; left: 10px; bottom: 10px; z-index: 500;
-  padding: 4px 10px; border-radius: 999px;
-  background: var(--surface); color: var(--text-2);
-  border: 1px solid var(--border); box-shadow: var(--shadow-md);
-  font-size: var(--fs-sm); font-weight: 600;
-  display: flex; align-items: center; gap: 6px;
-}
 
 /* The viewer, above everything (Expandable's full screen is 1000). */
 .photo-viewer {

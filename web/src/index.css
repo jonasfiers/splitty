@@ -2955,8 +2955,10 @@ button.trip-chip { font-family: inherit; cursor: pointer; }
 }
 
 /* Today's places or the whole trip (TripMap, while the trip is on) */
+/* The map's buttons (Today / Whole trip, photos), in one row bottom left. */
+.trip-map-controls { position: absolute; left: 10px; bottom: 10px; z-index: 500; display: flex; flex-wrap: wrap; gap: 8px; max-width: calc(100% - 20px); }
 .trip-map-frame {
-  position: absolute; left: 10px; bottom: 10px; z-index: 500;
+  display: inline-flex; align-items: center; gap: 6px;
   min-height: 36px; padding: 0 14px; border-radius: var(--r-pill);
   background: var(--surface); color: var(--text); border: 1px solid var(--border);
   box-shadow: var(--shadow-sm); font: inherit; font-size: var(--fs-md); font-weight: 600; cursor: pointer;

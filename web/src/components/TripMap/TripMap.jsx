@@ -262,23 +262,27 @@ function TripMap({ places, items, onOpenItem, highlight = null, onHover = () => 
     <div className="trip-map-wrap">
       <div ref={el} className="trip-map" />
       {empty && <p className="trip-map-hint">Places you add show up here</p>}
-      {located.length > 0 && (
-        <button type="button" className="trip-map-photos" onClick={() => setShowPhotos(v => !v)} aria-pressed={showPhotos}>
-          <Icon name="images" /> {showPhotos ? 'Hide photos' : `Show ${located.length} photo${located.length !== 1 ? 's' : ''}`}
-        </button>
-      )}
-      {framing && (
-        <button
-          type="button"
-          className="trip-map-frame"
-          onClick={() => {
-            framingRef.current = framing === 'today' ? 'trip' : 'today'
-            setFraming(framingRef.current)
-            frameRef.current()
-          }}
-        >
-          {framing === 'today' ? 'Whole trip' : 'Today'}
-        </button>
+      {(framing || located.length > 0) && (
+        <div className="trip-map-controls">
+        {framing && (
+          <button
+            type="button"
+            className="trip-map-frame"
+            onClick={() => {
+              framingRef.current = framing === 'today' ? 'trip' : 'today'
+              setFraming(framingRef.current)
+              frameRef.current()
+            }}
+          >
+            {framing === 'today' ? 'Whole trip' : 'Today'}
+          </button>
+        )}
+        {located.length > 0 && (
+          <button type="button" className="trip-map-frame trip-map-photos" onClick={() => setShowPhotos(v => !v)} aria-pressed={showPhotos}>
+            <Icon name="images" /> {showPhotos ? 'Hide photos' : `Show ${located.length} photo${located.length !== 1 ? 's' : ''}`}
+          </button>
+        )}
+        </div>
       )}
     </div>
   )
