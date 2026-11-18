@@ -67,6 +67,7 @@ export default function TripCategoriesPage() {
         onChange={id => save(r.key, id)}
         categories={categories}
         placeholder={placeholder}
+        parents
       />
     </Field>
   )

@@ -2,13 +2,16 @@ import Picker from '../Picker/Picker.jsx'
 
 // A category from the user's list, in the shared picker sheet: grouped under
 // their parent ("Eat out" › Restaurant, Bar…), searchable. Only the leaves
-// can be picked; a parent with children is a heading.
+// can be picked; a parent with children is a heading. With `parents`, a
+// parent can be picked too, as the first entry of its own section (the trip
+// categories admin: "Transport" for every kind of transport).
 //
 // id: for a <Field> label; the trigger is then read as "Category, Eat out".
-export default function CategoryPicker({ value, onChange, categories, nullable = true, id, placeholder = 'None' }) {
+export default function CategoryPicker({ value, onChange, categories, nullable = true, id, placeholder = 'None', parents = false }) {
   const byId = new Map(categories.map(c => [c.id, c]))
   const parentIds = new Set(categories.map(c => c.parentId).filter(Boolean))
   const leaves = categories.filter(c => !parentIds.has(c.id))
+  const heads = parents ? categories.filter(c => parentIds.has(c.id)) : []
 
   // The parent's full name as the section; categories without children or a
   // parent go last, under "Other".
@@ -37,6 +40,14 @@ export default function CategoryPicker({ value, onChange, categories, nullable =
       keywords: c.full_name,
     })),
   ]
+  // Each picked-able parent heads its own section, before its children.
+  for (const c of heads) {
+    const at = options.findIndex(o => o.section === c.full_name)
+    options.splice(at < 0 ? options.length : at, 0, {
+      value: c.id, label: `All ${(c.name ?? c.full_name).trim()}`, short: c.full_name,
+      icon: c.icon, tint: c.colour, section: c.full_name, keywords: c.full_name,
+    })
+  }
 
   return (
     <Picker

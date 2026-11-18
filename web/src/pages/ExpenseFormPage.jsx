@@ -92,6 +92,11 @@ export default function ExpenseFormPage() {
       const grps = results[idx++].data.groups || []
       const usrs = groupId ? (results[idx++].data.members || []) : []
       const groupIso = grps.find(g => g.id === groupId)?.iso
+      // A trip entry's category may be a parent (Admin → Trip categories
+      // allows "Transport"); an expense goes in a leaf, so then start empty.
+      if (!isEdit && prefill?.categoryId && cats.some(c => c.parentId === prefill.categoryId)) {
+        setForm(f => (f.categoryId === prefill.categoryId ? { ...f, categoryId: '' } : f))
+      }
       const expData = isEdit ? results[idx++]?.data : null
       const sharesData = isEdit ? results[idx]?.data : null
 
