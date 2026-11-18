@@ -1,6 +1,6 @@
 import { useContext, useEffect, useRef, useState } from 'react'
-import { dayOf, timeOf } from '../../utils/trip.js'
-import { ExpandedContext } from '../Expandable/Expandable.jsx'
+import { dayOf, timeOf, formatDay } from '../../utils/trip.js'
+import { ExpandedContext, CollapseContext } from '../Expandable/Expandable.jsx'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { itemIcon, linkTarget, mapsLink } from '../../utils/trip.js'
@@ -54,7 +54,31 @@ function placesOn(items, day) {
 // stays on the plan.
 const PHOTO_CELL = 56
 const escapeAttr = v => String(v).replace(/[&"<>]/g, c => ({ '&': '&amp;', '"': '&quot;', '<': '&lt;', '>': '&gt;' })[c])
-function TripMap({ places, items, onOpenItem, highlight = null, onHover = () => {}, today = null, photos = [], onOpenPhotos = null }) {
+// When an item was or is: "Wed 18 Nov · 14:00"; a stay "16 – 18 Nov" (check-in
+// to check-out), or "since 16 Nov" while a follower's view hides the end.
+const short = day => formatDay(day, { day: 'numeric', month: 'short' })
+function whenOf(item, { forFollowers, today }) {
+  const start = dayOf(item.start), end = dayOf(item.end)
+  if (!start) return ''
+  if (item.kind === 'stay') {
+    if (forFollowers && today && end > today) return `since ${short(start)}`
+    return end && end !== start ? `${short(start)} – ${short(end)}` : short(start)
+  }
+  if (end && end !== start && !timeOf(item.start)) return `${short(start)} – ${short(end)}`
+  return [formatDay(start), timeOf(item.start)].filter(Boolean).join(' · ')
+}
+
+// Photos taken within this many metres of a pin count as taken there.
+const PHOTOS_NEAR_M = 150
+const metresBetween = (a, b) => {
+  const k = Math.PI / 180
+  const x = (b.lon - a.lon) * k * Math.cos((a.lat + b.lat) / 2 * k), y = (b.lat - a.lat) * k
+  return Math.hypot(x, y) * 6_371_000
+}
+
+// `forFollowers` (the public follow page): no "Navigate here", and a stay
+// still going on shows when it began, not its (hidden) end.
+function TripMap({ places, items, onOpenItem, highlight = null, onHover = () => {}, today = null, photos = [], onOpenPhotos = null, forFollowers = false }) {
   const el = useRef(null)
   const pins = useRef(new Map())   // placeId -> { marker, itemIds }
   const lines = useRef(new Map())  // itemId -> { line, arrows (layer group) }
@@ -63,6 +87,12 @@ function TripMap({ places, items, onOpenItem, highlight = null, onHover = () => 
   const hover = useRef(onHover)
   hover.current = onHover
   const expanded = useContext(ExpandedContext)
+  const collapse = useContext(CollapseContext)
+  // Read when a pin's popup opens, so photos arriving later don't rebuild the map.
+  const photosRef = useRef(photos)
+  photosRef.current = photos
+  const openPhotos = useRef(onOpenPhotos)
+  openPhotos.current = onOpenPhotos
   // 'today' or 'trip'; null when there is no today to choose (nothing of it on the map).
   const [framing, setFraming] = useState(null)
   const framingRef = useRef(null)
@@ -119,23 +149,52 @@ function TripMap({ places, items, onOpenItem, highlight = null, onHover = () => 
       const name = document.createElement('strong')
       name.textContent = place.name
       popup.append(name)
-      const maps = mapsLink(place)
-      const nav = document.createElement('a')
-      nav.className = 'trip-popup-nav'
-      nav.href = maps.url
-      if (linkTarget(maps.url)) nav.target = linkTarget(maps.url)
-      nav.rel = 'noopener noreferrer'
-      nav.innerHTML = iconSvg('navigation', { size: 14 })
-      nav.append(` ${maps.label}`)
-      popup.append(nav)
+      if (!forFollowers) {
+        const maps = mapsLink(place)
+        const nav = document.createElement('a')
+        nav.className = 'trip-popup-nav'
+        nav.href = maps.url
+        if (linkTarget(maps.url)) nav.target = linkTarget(maps.url)
+        nav.rel = 'noopener noreferrer'
+        nav.innerHTML = iconSvg('navigation', { size: 14 })
+        nav.append(` ${maps.label}`)
+        popup.append(nav)
+      }
       for (const item of here) {
         const link = document.createElement('button')
         link.type = 'button'
+        link.className = 'trip-popup-item'
         link.innerHTML = iconSvg(itemIcon(item), { size: 14 })
-        link.append(` ${item.title}`)
-        link.onclick = () => onOpenItem(item)
+        const text = document.createElement('span')
+        const title = document.createElement('span')
+        title.textContent = item.title
+        text.append(title)
+        const when = whenOf(item, { forFollowers, today })
+        if (when) {
+          const w = document.createElement('small')
+          w.className = 'trip-popup-when'
+          w.textContent = when
+          text.append(w)
+        }
+        link.append(text)
+        link.onclick = () => { map.closePopup(); collapse(); onOpenItem(item) }
         popup.append(link)
       }
+      // "6 photos here": those taken near the pin, counted when it opens.
+      const near = document.createElement('button')
+      near.type = 'button'
+      near.className = 'trip-popup-photos'
+      near.hidden = true
+      popup.append(near)
+      marker.on('popupopen', () => {
+        const list = openPhotos.current
+          ? photosRef.current.filter(p => p.lat != null && p.lon != null && metresBetween(place, p) <= PHOTOS_NEAR_M)
+          : []
+        near.hidden = list.length === 0
+        near.innerHTML = iconSvg('images', { size: 14 })
+        near.append(` ${list.length} photo${list.length !== 1 ? 's' : ''} here`)
+        near.onclick = () => openPhotos.current?.(list, 0)
+      })
       marker.bindPopup(popup)
       marker.on('mouseover', () => hover.current(here.map(i => i.id)))
       marker.on('mouseout', () => hover.current(null))
@@ -193,13 +252,11 @@ function TripMap({ places, items, onOpenItem, highlight = null, onHover = () => 
     const unframe = keepFramed(map, el.current, frame)
 
     return () => { unframe(); removeBasemap(); mapRef.current = null; map.remove() }
-  }, [places, items, onOpenItem, expanded, today])
+  }, [places, items, onOpenItem, expanded, today, forFollowers, collapse])
 
   // Photos: their own layer, redrawn when the zoom changes (bundling is in
   // screen pixels), without touching the plan's pins and lines.
   const located = photos.filter(p => p.lat != null && p.lon != null)
-  const openPhotos = useRef(onOpenPhotos)
-  openPhotos.current = onOpenPhotos
   useEffect(() => {
     const map = mapRef.current
     if (!map || !showPhotos || located.length === 0) return

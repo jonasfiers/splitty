@@ -133,13 +133,13 @@ function Actions({ item, place, onBigRef, itemTo }) {
 
 // One entry. `to` makes it open the item (the whole row); without it, it is
 // plain (inside a card that is a link itself). `actions` is the third line.
-export function EntryRow({ entry, state, badge, to, placeName, actions }) {
+export function EntryRow({ entry, state, badge, to, placeName, actions, className = '' }) {
   const { item, time, phase, assumed, label } = entry
   const title = to
     ? <Link to={to} className="list-row-title list-row-stretch">{item.title}</Link>
     : <span className="list-row-title">{item.title}</span>
   return (
-    <div className={`list-row entry-row${to ? ' list-row-link' : ''}${state ? ` ${state}` : ''}`}>
+    <div className={`list-row entry-row${to ? ' list-row-link' : ''}${state ? ` ${state}` : ''}${className ? ` ${className}` : ''}`}>
       <div className="entry-when">
         <span className={`trip-entry-time${time ? '' : ' allday'}${assumed ? ' assumed' : ''}`} title={assumed ? 'Usual hotel time; no time set on this stay' : undefined}>
           {time || label || 'All day'}

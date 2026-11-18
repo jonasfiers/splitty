@@ -4,6 +4,9 @@ import './Expandable.css'
 
 // True for a view while it is shown full screen (the map then zooms on scroll).
 export const ExpandedContext = createContext(false)
+// Leaves full screen, for the view inside (the follow map's "show this day"
+// scrolls the page, which full screen would hide). A no-op outside one.
+export const CollapseContext = createContext(() => {})
 
 // Wraps a view (the trip timeline, the map) with a button that lets it take
 // over the whole window, and back. Done in CSS rather than with the browser's
@@ -58,6 +61,7 @@ export default function Expandable({ label, children, extra = null, splitKey = n
   const [bodyH, setBodyH] = useState(0)
   const [split, setSplit] = useState(() => loadSplit(splitKey))
   const bodyRef = useRef(null)
+  const [collapse] = useState(() => () => setOpen(false))
   const drag = useRef(null)
 
   useLayoutEffect(() => {
@@ -141,7 +145,7 @@ export default function Expandable({ label, children, extra = null, splitKey = n
         )}
       </button>
       <div className="expandable-body" ref={bodyRef} style={viewH != null ? { '--view-h': `${viewH}px` } : undefined}>
-        <ExpandedContext.Provider value={open}>
+        <ExpandedContext.Provider value={open}><CollapseContext.Provider value={collapse}>
           {children}
           {showExtra && (
             <div
@@ -162,7 +166,7 @@ export default function Expandable({ label, children, extra = null, splitKey = n
             </div>
           )}
           {showExtra && <div className="expandable-extra">{extra}</div>}
-        </ExpandedContext.Provider>
+        </CollapseContext.Provider></ExpandedContext.Provider>
       </div>
     </div>
   )

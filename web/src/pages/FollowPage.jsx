@@ -24,7 +24,18 @@ export default function FollowPage() {
   const [failed, setFailed] = useState(null)
   const [viewer, setViewer] = useState(null)
   const openPhotos = useCallback((list, index) => setViewer({ list, index }), [])
-  const noop = useCallback(() => {}, [])
+  // A pin's item: the page scrolls to its day and the entry lights up a moment
+  // (the map has left full screen first).
+  const [flash, setFlash] = useState(null)
+  const showItem = useCallback(item => {
+    const day = (item.start || '').slice(0, 10)
+    setFlash(item.id)
+    setTimeout(() => setFlash(f => (f === item.id ? null : f)), 1800)
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      const row = document.querySelector(`.${CSS.escape(`follow-item-${item.id}`)}`)
+      ;(row || document.getElementById(`day-${day}`))?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }))
+  }, [])
 
   useEffect(() => {
     // Plain fetch, not the app's client: a follower has no account, and the
@@ -78,19 +89,19 @@ export default function FollowPage() {
                 on, framed on today's places with a switch to the whole trip. */}
             <Suspense fallback={<Loading />}>
               <Expandable label={`${trip.title} · Map`}>
-                <TripMap places={places} items={items} onOpenItem={noop} photos={photos} onOpenPhotos={openPhotos} today={view.started && !trip.endDate ? today : null} />
+                <TripMap places={places} items={items} onOpenItem={showItem} forFollowers photos={photos} onOpenPhotos={openPhotos} today={view.started && !trip.endDate ? today : null} />
               </Expandable>
             </Suspense>
           </div>
         )}
 
         {days.map(d => (
-          <section key={d.day} className={`trip-day${d.day === today ? ' today' : ''}`}>
+          <section key={d.day} id={`day-${d.day}`} className={`trip-day${d.day === today ? ' today' : ''}`}>
             <DayHead trip={trip} day={d} />
             {d.entries.length > 0 ? (
               <div className="list list-tight entry-list">
                 {d.entries.map(entry => (
-                  <EntryRow key={`${entry.item.id}-${entry.phase}`} entry={entry} state={d.day < today ? 'past' : null} placeName={placeName} />
+                  <EntryRow key={`${entry.item.id}-${entry.phase}`} entry={entry} state={d.day < today ? 'past' : null} placeName={placeName} className={`follow-item-${entry.item.id}${flash === entry.item.id ? ' flash' : ''}`} />
                 ))}
               </div>
             ) : <div className="trip-day-empty">{d.sleepingAt.length ? 'A day around town' : 'Nothing planned'}</div>}
