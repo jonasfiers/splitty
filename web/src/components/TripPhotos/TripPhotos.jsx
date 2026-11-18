@@ -37,17 +37,28 @@ export const photosByDay = photos => {
   return out
 }
 
-// A row of thumbnails under a day; opens the viewer on the tapped one. With
-// more than `max`, the last tile says "+N" and opens all of the day's photos
-// as a grid instead.
-export function DayPhotos({ photos, onOpen, max = 12 }) {
+// A row of thumbnails under a day, as many as fit the width (no scrolling);
+// opens the viewer on the tapped one. When not all fit, the last tile says
+// "+N" and opens all of the day's photos as a grid instead.
+const TILE = 64, GAP = 6
+export function DayPhotos({ photos, onOpen }) {
   const [grid, setGrid] = useState(false)
+  const [fit, setFit] = useState(8)
+  const [row, setRow] = useState(null)
+  useEffect(() => {
+    if (!row) return
+    const measure = () => setFit(Math.max(1, Math.floor((row.clientWidth + GAP) / (TILE + GAP))))
+    measure()
+    const ro = new ResizeObserver(measure)
+    ro.observe(row)
+    return () => ro.disconnect()
+  }, [row])
   if (!photos?.length) return null
-  const shown = photos.slice(0, max)
+  const shown = photos.slice(0, fit)
   const more = photos.length - shown.length
   return (
     <>
-      <div className="day-photos" aria-label={`${photos.length} photo${photos.length !== 1 ? 's' : ''}`}>
+      <div className="day-photos" ref={setRow} aria-label={`${photos.length} photo${photos.length !== 1 ? 's' : ''}`}>
         {shown.map((p, i) => {
           const isMore = i === shown.length - 1 && more > 0
           return (
