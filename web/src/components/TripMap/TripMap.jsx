@@ -220,7 +220,7 @@ function TripMap({ places, items, onOpenItem, highlight = null, onHover = () => 
         const marker = L.marker([lat, lon], {
           icon: L.divIcon({
             className: '',
-            html: `<div class="photo-pin"><img src="/api${escapeAttr(first.thumb)}" alt="" loading="lazy">${group.length > 1 ? `<span class="photo-pin-n">${group.length}</span>` : ''}</div>`,
+            html: `<div class="photo-pin"><span class="photo-pin-img"><img src="/api${escapeAttr(first.thumb)}" alt="" loading="lazy"></span>${group.length > 1 ? `<span class="photo-pin-n">${group.length}</span>` : ''}</div>`,
             iconSize: [40, 40],
             iconAnchor: [20, 20],
           }),
