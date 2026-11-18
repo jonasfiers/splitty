@@ -28,6 +28,53 @@ router.get('/:token', async (req, res) => {
     }
 });
 
+// The link preview (WhatsApp, Signal, …): Open Graph tags for the page's
+// <head>, slotted in by nginx (SSI) on /follow/<token> only, since chat apps
+// read the raw HTML and run no JavaScript. Nothing beyond what the page shows.
+const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+const daysBetween = (a, b) => Math.round((Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) / 86_400_000);
+
+router.get('/:token/meta', async (req, res) => {
+    res.set({ 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
+    try {
+        const view = await followService.publicView(req.params.token);
+        if (!view) return res.send('');
+        const base = (process.env.APP_URL || '').replace(/\/+$/, '');
+        const name = id => view.places.find(p => p.id === id)?.name;
+        let where = '';
+        const last = view.items[view.items.length - 1];
+        if (last) {
+            where = last.kind === 'transport' && !last.toPlaceId
+                ? (name(last.fromPlaceId) ? `on the way from ${name(last.fromPlaceId)}` : 'on the way')
+                : (name(last.toPlaceId || last.placeId) ? `in ${name(last.toPlaceId || last.placeId)}` : '');
+        }
+        const description = !view.started
+            ? 'The trip hasn’t started yet. Each day appears here as it comes.'
+            : view.trip.endDate
+                ? `${daysBetween(view.trip.startDate, view.trip.endDate) + 1} days, with ${view.photos.length} photo${view.photos.length !== 1 ? 's' : ''}.`
+                : [`Day ${daysBetween(view.trip.startDate, view.today) + 1}`, where && `now ${where}`].filter(Boolean).join(' · ');
+        const photo = view.photos[view.photos.length - 1];
+        const image = photo
+            ? `${base}/api/follow/${view.token}/photos/${photo.album}/${photo.id}/preview`
+            : `${base}/cat-icon-512.png`;
+        const title = `Follow ${view.sharer}’s trip: ${view.trip.title}`;
+        res.send([
+            `<meta property="og:type" content="website">`,
+            `<meta property="og:site_name" content="Splitty">`,
+            `<meta property="og:title" content="${esc(title)}">`,
+            `<meta property="og:description" content="${esc(description)}">`,
+            `<meta property="og:url" content="${esc(`${base}/follow/${view.token}`)}">`,
+            `<meta property="og:image" content="${esc(image)}">`,
+            `<meta name="twitter:card" content="${photo ? 'summary_large_image' : 'summary'}">`,
+            `<meta name="description" content="${esc(description)}">`,
+            `<meta name="robots" content="noindex, nofollow">`,
+        ].join('\n'));
+    } catch (err) {
+        console.error('[follow] meta:', err);
+        res.send('');
+    }
+});
+
 router.get('/:token/photos/:albumId/:assetId/:size', async (req, res) => {
     const { token, albumId, assetId, size } = req.params;
     if (!['thumbnail', 'preview'].includes(size)) return res.status(404).end();
