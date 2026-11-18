@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, lazy, Suspense } from 'react'
-import { useParams, Link } from 'react-router'
+import { useParams } from 'react-router'
 import Loading from '../components/Loading.jsx'
 import Icon from '../components/Icon/Icon.jsx'
 import Expandable from '../components/Expandable/Expandable.jsx'
@@ -8,6 +8,9 @@ import { photosByDay, DayPhotos, PhotoViewer } from '../components/TripPhotos/Tr
 import { buildTimeline, formatDay } from '../utils/trip.js'
 import { setTripKinds } from '../utils/tripKinds.js'
 import { tripIcon } from '../utils/icons.js'
+
+// Splitty itself: on follow.<domain> that is splitty.<domain>.
+const appHome = () => (window.location.hostname.startsWith('follow.') ? `https://${window.location.hostname.replace(/^follow\./, 'splitty.')}/` : '/login')
 
 const TripMap = lazy(() => import('../components/TripMap/TripMap.jsx'))
 
@@ -96,7 +99,7 @@ export default function FollowPage() {
         ))}
 
         <p className="follow-foot">
-          Shared with <Link to="/login">Splitty</Link>. Only past days and today are shown; where {sharer} stays is shown by town only.
+          Shared with <a href={appHome()}>Splitty</a>. Only past days and today are shown; where {sharer} stays is shown by town only.
         </p>
       </article>
       {viewer && <PhotoViewer photos={viewer.list} index={viewer.index} onClose={() => setViewer(null)} />}

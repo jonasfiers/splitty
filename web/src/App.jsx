@@ -38,7 +38,25 @@ const VerifyEmailPage       = lazy(() => import('./pages/VerifyEmailPage'))
 const VerifyEmailChangePage = lazy(() => import('./pages/VerifyEmailChangePage'))
 const FollowPage            = lazy(() => import('./pages/FollowPage'))
 
+// follow.<domain> (follow-my-trip links, outside the installed app's scope)
+// serves only the follow page, at /<token>.
+const FOLLOW_HOST = typeof window !== 'undefined' && window.location.hostname.startsWith('follow.')
+
 export default function App() {
+  if (FOLLOW_HOST) {
+    return (
+      <ThemeProvider>
+        <BrowserRouter>
+          <Suspense>
+            <Routes>
+              <Route path="/:token" element={<FollowPage />} />
+              <Route path="*" element={<FollowPage />} />
+            </Routes>
+          </Suspense>
+        </BrowserRouter>
+      </ThemeProvider>
+    )
+  }
   return (
     <ThemeProvider>
     <ConfirmProvider>

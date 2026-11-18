@@ -7,7 +7,9 @@ import { useConfirm } from '../Confirm/ConfirmProvider.jsx'
 // "Follow my trip" links of a trip (api/followService.js): create, copy or
 // share, remove. Anyone with a link sees the trip up to today without signing
 // in; the page says plainly what it leaves out.
-const linkUrl = token => `${window.location.origin}/follow/${token}`
+// The server says where links live (follow.jonasfiers.eu in production, so
+// Android doesn't open them in the installed app).
+const linkUrl = l => l.url || `${window.location.origin}/follow/${l.token}`
 
 export default function FollowSheet({ tripId, tripTitle, hasPhotos, onClose }) {
   const confirm = useConfirm()
@@ -36,7 +38,7 @@ export default function FollowSheet({ tripId, tripTitle, hasPhotos, onClose }) {
   }
 
   const share = async l => {
-    const url = linkUrl(l.token)
+    const url = linkUrl(l)
     if (navigator.share) {
       try { await navigator.share({ title: `Follow my trip: ${tripTitle}`, url }); return } catch { /* cancelled: copy instead */ }
     }
@@ -73,10 +75,10 @@ export default function FollowSheet({ tripId, tripTitle, hasPhotos, onClose }) {
             <li key={l.token}>
               <Icon name="globe" />
               <span className="album-list-text">
-                <strong>…/follow/{l.token.slice(0, 6)}…</strong>
+                <strong>{linkUrl(l).replace(/^https?:\/\//, '').replace(l.token, `${l.token.slice(0, 6)}…`)}</strong>
                 <span>{l.photos ? 'With photos' : 'Without photos'}{l.by ? ` · made by ${l.by}` : ''}</span>
               </span>
-              <a className="btn btn-ghost btn-sm" href={linkUrl(l.token)} target="_blank" rel="noopener noreferrer">Open</a>
+              <a className="btn btn-ghost btn-sm" href={linkUrl(l)} target="_blank" rel="noopener noreferrer">Open</a>
               <button type="button" className="btn btn-ghost btn-sm" onClick={() => share(l)}>{copied === l.token ? 'Copied' : navigator.share ? 'Share' : 'Copy'}</button>
               <button type="button" className="btn btn-ghost btn-sm" onClick={() => remove(l)} aria-label="Remove link"><Icon name="x" /></button>
             </li>

@@ -37,6 +37,14 @@ const TOKEN = /^[A-Za-z0-9_-]{20,64}$/;
 const dayOf = m => (m ? String(m).slice(0, 10) : '');
 const addDays = (day, n) => new Date(Date.parse(`${day}T00:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10);
 const todayIn = zone => new Intl.DateTimeFormat('en-CA', { timeZone: zone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+// Where follow links point: their own name in production (FOLLOW_URL, e.g.
+// https://follow.jonasfiers.eu, outside the installed app's scope so Android
+// opens them in the browser), else /follow/ on the app's own address.
+const followBase = () => (process.env.FOLLOW_URL || `${(process.env.APP_URL || '').replace(/\/+$/, '')}/follow`).replace(/\/+$/, '');
+const followUrl = token => `${followBase()}/${token}`;
+// The origin the follow page's own requests (photos) go to.
+const followOrigin = () => new URL(followBase()).origin;
+
 const firstName = name => String(name || '').trim().split(/\s+/)[0] || 'Someone';
 
 // ── Managing links (trip members) ──
@@ -52,7 +60,7 @@ async function listLinks(tripId, userId) {
     if (records.length === 0) return null;
     return records.filter(r => r.get('l')).map(r => {
         const l = r.get('l').properties;
-        return { token: l.token, photos: !!l.photos, createdOn: l.createdOn?.toString(), by: r.get('by') };
+        return { token: l.token, url: followUrl(l.token), photos: !!l.photos, createdOn: l.createdOn?.toString(), by: r.get('by') };
     });
 }
 
@@ -68,7 +76,7 @@ async function createLink(tripId, userId, { photos = true } = {}) {
          CREATE (l)-[:CREATED_BY]->(u)`,
         { tripId, userId, token, photos: !!photos }
     );
-    return { token, photos: !!photos };
+    return { token, url: followUrl(token), photos: !!photos };
 }
 
 async function removeLink(tripId, userId, token) {
@@ -244,4 +252,4 @@ async function photoAllowed(token, albumId, assetId) {
     return tripPhotos.albumForThumbnail(albumId);
 }
 
-module.exports = { listLinks, createLink, removeLink, publicView, photoAllowed };
+module.exports = { listLinks, createLink, removeLink, publicView, photoAllowed, followUrl, followOrigin };

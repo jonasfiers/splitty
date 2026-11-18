@@ -39,7 +39,7 @@ router.get('/:token/meta', async (req, res) => {
     try {
         const view = await followService.publicView(req.params.token);
         if (!view) return res.send('');
-        const base = (process.env.APP_URL || '').replace(/\/+$/, '');
+        const base = followService.followOrigin();
         const name = id => view.places.find(p => p.id === id)?.name;
         let where = '';
         const last = view.items[view.items.length - 1];
@@ -63,7 +63,7 @@ router.get('/:token/meta', async (req, res) => {
             `<meta property="og:site_name" content="Splitty">`,
             `<meta property="og:title" content="${esc(title)}">`,
             `<meta property="og:description" content="${esc(description)}">`,
-            `<meta property="og:url" content="${esc(`${base}/follow/${view.token}`)}">`,
+            `<meta property="og:url" content="${esc(followService.followUrl(view.token))}">`,
             `<meta property="og:image" content="${esc(image)}">`,
             `<meta name="twitter:card" content="${photo ? 'summary_large_image' : 'summary'}">`,
             `<meta name="description" content="${esc(description)}">`,
