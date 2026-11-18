@@ -28,7 +28,7 @@ async function memberBalance(groupId, memberId) {
 }
 
 // Everything of the group goes: trips with their items, places, attachments,
-// photo album links and documents (and those files on disk), expenses with their shares and
+// photo album and follow links, and documents (and those files on disk), expenses with their shares and
 // history, invite links, deletion records, then the group. Needs no member,
 // so it also works for a group nobody belongs to any more.
 async function deleteGroupCompletely(groupId) {
@@ -50,7 +50,8 @@ async function deleteGroupCompletely(groupId) {
          OPTIONAL MATCH (d:Document)-[:DOCUMENT_OF]->(t)
          OPTIONAL MATCH (p:Place)-[:PLACE_OF]->(t)
          OPTIONAL MATCH (al:PhotoAlbum)-[:PHOTOS_OF]->(t)
-         WITH g, collect(DISTINCT t) + collect(DISTINCT i) + collect(DISTINCT a) + collect(DISTINCT d) + collect(DISTINCT p) + collect(DISTINCT al) AS tripNodes
+         OPTIONAL MATCH (fl:FollowLink)-[:FOLLOWS]->(t)
+         WITH g, collect(DISTINCT t) + collect(DISTINCT i) + collect(DISTINCT a) + collect(DISTINCT d) + collect(DISTINCT p) + collect(DISTINCT al) + collect(DISTINCT fl) AS tripNodes
          FOREACH (n IN tripNodes | DETACH DELETE n)
          WITH g
          OPTIONAL MATCH (e:Expense)-[:BALANCE_IN]->(g)

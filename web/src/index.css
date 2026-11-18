@@ -2613,6 +2613,16 @@ html .leaflet-container { font-family: var(--font-body); } /* "html": Leaflet's 
 
 /* Privacy page (public) */
 .auth-privacy { margin-top: 8px; font-size: var(--fs-sm); }
+/* Follow my trip (FollowPage.jsx): the privacy page's reading column. */
+.privacy.follow { max-width: 820px; }
+.privacy.follow h1 { display: flex; align-items: center; gap: 10px; }
+.follow-kicker { margin: 0; font-size: var(--fs-sm); font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--text-3); }
+.follow-map { margin: 16px 0 24px; }
+.follow-map .trip-map { height: 360px; }
+.follow-foot { margin-top: 32px; font-size: var(--fs-sm); color: var(--text-3); }
+.follow-explain { margin-bottom: 14px; }
+.follow-check { display: flex; gap: 10px; align-items: flex-start; margin: 4px 0 12px; font-size: var(--fs-base); color: var(--text); }
+.follow-check input { margin-top: 4px; }
 .privacy-page { height: 100vh; height: 100dvh; overflow-y: auto; background: var(--bg); }
 .privacy {
   max-width: 720px;

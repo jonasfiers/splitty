@@ -253,6 +253,34 @@ router.post('/:id/albums', async (req, res) => {
     } catch (err) { photoError(res, err, 'add'); }
 });
 
+// ── Follow-my-trip links (followService.js) ──
+const followService = require('../followService');
+router.get('/:id/follow-links', async (req, res) => {
+    try {
+        const links = await followService.listLinks(req.params.id, req.user.id);
+        if (!links) return res.status(404).json({ error: 'Trip not found' });
+        res.json({ links });
+    } catch (err) { console.error('[follow] list:', err); res.status(500).json({ error: 'Failed to load the links.' }); }
+});
+router.post('/:id/follow-links', async (req, res) => {
+    try {
+        const link = await followService.createLink(req.params.id, req.user.id, { photos: req.body?.photos !== false });
+        if (!link) return res.status(404).json({ error: 'Trip not found' });
+        console.log(`[follow] link created for trip ${req.params.id} by ${req.user.id}`);
+        res.status(201).json({ link });
+    } catch (err) {
+        if (err.status) return res.status(err.status).json({ error: err.message });
+        console.error('[follow] create:', err); res.status(500).json({ error: 'Failed to create the link.' });
+    }
+});
+router.delete('/:id/follow-links/:token', async (req, res) => {
+    try {
+        if (!(await followService.removeLink(req.params.id, req.user.id, req.params.token))) return res.status(404).json({ error: 'Link not found' });
+        console.log(`[follow] link removed from trip ${req.params.id} by ${req.user.id}`);
+        res.json({ success: true });
+    } catch (err) { console.error('[follow] remove:', err); res.status(500).json({ error: 'Failed to remove the link.' }); }
+});
+
 router.delete('/:id/albums/:albumId', async (req, res) => {
     try {
         if (!(await tripPhotos.removeAlbum(req.params.id, req.user.id, req.params.albumId))) return res.status(404).json({ error: 'Album not found' });

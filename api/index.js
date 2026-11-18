@@ -67,6 +67,8 @@ app.use('/invites', require('./routes/invites'));
 // Mostly protected; the router applies auth itself, after its one public route
 // (signed attachment links, which a plain <a> has to be able to open).
 app.use('/trips', require('./routes/trips.js'));
+// Public: follow-my-trip links (no login).
+app.use('/follow', require('./routes/follow.js'));
 
 
 // EXPIRED TOKEN PURGE — on startup, then daily. find/consume already ignore

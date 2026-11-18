@@ -199,4 +199,15 @@ async function thumbnail(album, assetId, size) {
     return immich(`/assets/${assetId}/thumbnail`, album, { size }, { raw: true });
 }
 
-module.exports = { enabled, PhotoError, tripPhotos, addAlbum, removeAlbum, albumForThumbnail, thumbnail };
+// For the public follow page (followService.js), which has checked its link
+// itself: the trip's albums without a member check.
+async function albumsOfTripUnchecked(tripId) {
+    const { records } = await driver.executeQuery(
+        `MATCH (a:PhotoAlbum)-[:PHOTOS_OF]->(:Trip {id: $tripId}) OPTIONAL MATCH (a)-[:ADDED_BY]->(u:User)
+         RETURN a, u.name AS addedBy ORDER BY a.addedOn`,
+        { tripId }
+    );
+    return records.map(albumProps);
+}
+
+module.exports = { enabled, PhotoError, tripPhotos, addAlbum, removeAlbum, albumForThumbnail, thumbnail, albumsOfTripUnchecked, photosOf };

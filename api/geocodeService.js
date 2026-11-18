@@ -18,12 +18,12 @@ let waiting = 0;
 
 const userAgent = () => `Splitty/1.0 (${process.env.APP_URL || 'self-hosted'})`;
 
-async function fetchJson(params) {
+async function fetchJson(params, endpoint = ENDPOINT) {
     const wait = lastCall + MIN_INTERVAL_MS - Date.now();
     if (wait > 0) await new Promise(resolve => setTimeout(resolve, wait));
     lastCall = Date.now();
 
-    const url = `${ENDPOINT}?${new URLSearchParams({ format: 'jsonv2', ...params })}`;
+    const url = `${endpoint}?${new URLSearchParams({ format: 'jsonv2', ...params })}`;
     const res = await fetch(url, {
         headers: { 'User-Agent': userAgent(), 'Accept-Language': 'en' },
         signal: AbortSignal.timeout(8000),
@@ -117,4 +117,15 @@ async function englishStopName(name, lat, lon) {
     });
 }
 
-module.exports = { search, englishStopName, isLatin, metresBetween };
+// The town or city at a point (Nominatim reverse, zoom 10), for showing
+// where a stay is without saying which building. Null when there is none.
+async function townAt(lat, lon) {
+    const key = `town:${lat.toFixed(3)},${lon.toFixed(3)}`;
+    return throttled(key, async () => {
+        const r = await fetchJson({ lat: String(lat), lon: String(lon), zoom: '10', addressdetails: '1' }, 'https://nominatim.openstreetmap.org/reverse');
+        const a = r?.address || {};
+        return a.city || a.town || a.village || a.municipality || a.county || a.state || null;
+    });
+}
+
+module.exports = { search, englishStopName, isLatin, metresBetween, townAt };

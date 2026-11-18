@@ -27,6 +27,7 @@ import { getOfflineTrip, asOf } from '../utils/offlineTrips.js'
 import { useOffline, isOffline, isNetworkError, onReconnect } from '../utils/connection.js'
 import OfflinePlaces from '../components/OfflinePlaces.jsx'
 import Icon from '../components/Icon/Icon.jsx'
+import FollowSheet from '../components/FollowSheet/FollowSheet.jsx'
 import { useTripPhotos, photosByDay, DayPhotos, PhotoViewer, AlbumsSheet } from '../components/TripPhotos/TripPhotos.jsx'
 import { tripIcon } from '../utils/icons.js'
 
@@ -186,6 +187,7 @@ function TripDetailPage() {
   const photos = useTripPhotos(id, readOnly)
   const [viewer, setViewer] = useState(null) // { list, index }
   const [showAlbums, setShowAlbums] = useState(false)
+  const [showFollow, setShowFollow] = useState(false)
   const openPhotos = useCallback((list, index) => setViewer({ list, index }), [])
   const removedRef = useRef(null)
   const sendDelete = useCallback(async item => {
@@ -335,6 +337,7 @@ function TripDetailPage() {
         name={<><Icon name={tripIcon(trip)} /> {trip.title}</>}
         actions={readOnly ? [] : [
           { label: 'Edit', onClick: () => setShowEdit(true), primary: true },
+          { label: 'Follow my trip link', onClick: () => setShowFollow(true) },
           { label: 'Copy trip', onClick: openCopy },
           { label: 'Delete trip', onClick: handleDelete, danger: true },
         ]}
@@ -440,6 +443,9 @@ function TripDetailPage() {
 
       {showAlbums && (
         <AlbumsSheet tripId={id} albums={photos.albums} onChanged={photos.reload} onClose={() => setShowAlbums(false)} />
+      )}
+      {showFollow && (
+        <FollowSheet tripId={id} tripTitle={trip.title} hasPhotos={photos.albums.length > 0} onClose={() => setShowFollow(false)} />
       )}
       {viewer && <PhotoViewer photos={viewer.list} index={viewer.index} onClose={() => setViewer(null)} />}
 

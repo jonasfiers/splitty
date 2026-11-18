@@ -36,6 +36,7 @@ const ForgotPasswordPage    = lazy(() => import('./pages/ForgotPasswordPage'))
 const ResetPasswordPage     = lazy(() => import('./pages/ResetPasswordPage'))
 const VerifyEmailPage       = lazy(() => import('./pages/VerifyEmailPage'))
 const VerifyEmailChangePage = lazy(() => import('./pages/VerifyEmailChangePage'))
+const FollowPage            = lazy(() => import('./pages/FollowPage'))
 
 export default function App() {
   return (
@@ -53,6 +54,8 @@ export default function App() {
           <Route path="/verify-email" element={<VerifyEmailPage />} />
           <Route path="/verify-email-change" element={<VerifyEmailChangePage />} />
           <Route path="/privacy" element={<PrivacyPage />} />
+          {/* Public, no login: a trip shared to follow (api/followService.js). */}
+          <Route path="/follow/:token" element={<FollowPage />} />
           {/* Kept on this device: offline and signed out too (utils/offlineDocs.js). */}
           <Route path="/offline-documents" element={<OfflineDocumentsPage />} />
           <Route path="/offline-documents/:fileId" element={<FileViewerPage />} />
