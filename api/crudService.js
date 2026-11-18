@@ -432,7 +432,55 @@ const currencyServiceNeo4j = {
     }
 };
 
+// Trip entry kinds and transport modes each link to a default category:
+// (:TripKind {key})-[:DEFAULT_CATEGORY]->(:Category). It prefills the
+// category of an expense made from a trip entry, and the kind's colour on the
+// trip screens is that category's (top-level) colour. The kinds themselves
+// live in code (web/src/utils/trip.js KINDS, TRANSPORT_MODES): they decide how
+// an entry behaves, so only the link is data. A mode without a link uses its
+// kind's. Deleting a category drops its link (DETACH DELETE).
+const TRIP_KIND_KEYS = ['stay', 'transport', 'activity',
+    'transport:flight', 'transport:train', 'transport:car', 'transport:bus', 'transport:ferry', 'transport:other'];
+
 const categoryServiceNeo4j = {
+    TRIP_KIND_KEYS,
+
+    // [{ key, categoryId, name, colour }] for every linked key.
+    getTripKinds: async () => {
+        const { records } = await driver.executeQuery(
+            `MATCH (k:TripKind)-[:DEFAULT_CATEGORY]->(c:Category)
+             WHERE k.key IN $keys
+             RETURN k.key AS key, c.id AS categoryId, c.name AS name, ${rootColour('c')} AS colour`,
+            { keys: TRIP_KIND_KEYS }
+        );
+        return records.map(r => ({
+            key: r.get('key'), categoryId: r.get('categoryId'),
+            name: (r.get('name') || '').trim(), colour: r.get('colour') ?? null,
+        }));
+    },
+
+    // Links `key` to the category, or unlinks it (categoryId null). False when
+    // the category doesn't exist (nothing changed then).
+    setTripKind: async (key, categoryId) => {
+        if (categoryId == null) {
+            await driver.executeQuery(
+                `MATCH (k:TripKind {key: $key})-[r:DEFAULT_CATEGORY]->() DELETE r`, { key });
+            return true;
+        }
+        const { records } = await driver.executeQuery(
+            `MATCH (c:Category {id: $categoryId})
+             MERGE (k:TripKind {key: $key})
+             WITH k, c
+             OPTIONAL MATCH (k)-[r:DEFAULT_CATEGORY]->()
+             DELETE r
+             WITH DISTINCT k, c
+             CREATE (k)-[:DEFAULT_CATEGORY]->(c)
+             RETURN k.key AS key`,
+            { key, categoryId }
+        );
+        return records.length > 0;
+    },
+
     // CREATE
     createCategory: async (name, parentId, icon = '', colour = null) => {
         try {

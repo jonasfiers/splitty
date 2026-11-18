@@ -4,6 +4,7 @@ import Icon from '../components/Icon/Icon.jsx'
 
 const SECTIONS = [
   { to: '/admin/categories', icon: 'tag', title: 'Categories', sub: 'The expense categories everyone picks from' },
+  { to: '/admin/trip-categories', icon: 'compass', title: 'Trip categories', sub: 'Which category trip entries belong to, and their colour' },
   { to: '/admin/currencies', icon: 'coins', title: 'Currencies', sub: 'The currencies groups and expenses can use' },
   { to: '/admin/admins', icon: 'shield', title: 'Admins', sub: 'Who can manage these settings' },
 ]

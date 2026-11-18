@@ -43,8 +43,10 @@
   --red-light:   #FEE2E2;
   --red-dark:    #B91C1C;
 
-  /* Trip entry kinds (utils/trip.js kindVars): the one place their colours
-     are set, used by the timeline bars, the day-by-day dots, the map pins and
+  /* Trip entry kinds (utils/trip.js kindVars). These are the fallbacks: when
+     a kind is linked to an expense category (Admin → Trip categories),
+     utils/tripKinds.js points them at that category's colour. Otherwise the
+     one place their colours are set, used by the timeline bars, the day-by-day dots, the map pins and
      an entry's own page. line = border/dot, bg = soft fill, fg = text/icon on
      that fill. Stay and transport is green (borrowed, follows the theme on its
      own); transport violet and activity sky are set per theme. Never grey

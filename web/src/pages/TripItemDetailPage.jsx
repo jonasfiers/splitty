@@ -17,6 +17,7 @@ const noop = () => {}
 import { formatCurrency, formatDate } from '../utils/currency.js'
 import { ListRow } from '../components/List/List.jsx'
 import { leaveTo } from '../utils/history.js'
+import { categoryFor } from '../utils/tripKinds.js'
 import { KINDS, TRANSPORT_MODES, itemIcon, kindVars, dayOf, timeOf, formatDay, formatDuration, daysBetween, mapsLink, linkTarget, formatBytes, DEFAULT_CHECK_IN, DEFAULT_CHECK_OUT } from '../utils/trip.js'
 import { swrOne } from '../utils/cache.js'
 import { getOfflineItem, asOf } from '../utils/offlineTrips.js'
@@ -206,14 +207,15 @@ export default function TripItemDetailPage() {
   }
 
   // What it costs lives in the expense: the expense form does the amount and
-  // the splitting, gets the item's name as a head start, and links the new
-  // expense back to this item once it is saved.
+  // the splitting, gets the item's name, day and category (its kind's or
+  // mode's, utils/tripKinds.js) as a head start, and links the new expense
+  // back to this item once it is saved.
   const handleCreateExpense = () => {
     openKeyboardNow() // in the tap, for iOS (utils/keyboard.js)
     navigate(`/groups/${item.groupId}/expenses/new`, {
       state: {
         tripItem: { id: item.id, tripId, title: item.title },
-        prefill: { description: item.title },
+        prefill: { description: item.title, date: dayOf(item.start) || undefined, categoryId: categoryFor(item) || undefined },
       },
     })
   }

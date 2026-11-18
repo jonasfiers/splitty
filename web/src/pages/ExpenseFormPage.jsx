@@ -53,10 +53,10 @@ export default function ExpenseFormPage() {
   const [form, setForm] = useState({
     groupId: groupId || '',
     description: (!isEdit && prefill?.description) || '',
-    categoryId: '',
+    categoryId: (!isEdit && prefill?.categoryId) || '',
     amount: (!isEdit && prefill?.amount) || '',
     currencyIso: '',
-    date: new Date().toISOString().slice(0, 10),
+    date: (!isEdit && prefill?.date) || new Date().toISOString().slice(0, 10),
     paidByUserId: '',
   })
   const [shares, setShares] = useState([])

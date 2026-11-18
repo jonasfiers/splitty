@@ -16,6 +16,31 @@ router.post('/', requireAdmin, async (req, res) => {
     }
 });
 
+// Trip kinds' default categories (crudService TRIP_KIND_KEYS). Before /:id.
+router.get('/trip-kinds', async (req, res) => {
+    try {
+        res.json({ kinds: await categoryServiceNeo4j.getTripKinds() });
+    } catch (error) {
+        console.error('[categories] trip kinds:', error);
+        res.status(500).json({ error: 'Failed to load the trip categories.' });
+    }
+});
+
+router.put('/trip-kinds/:key', requireAdmin, async (req, res) => {
+    const { key } = req.params;
+    if (!categoryServiceNeo4j.TRIP_KIND_KEYS.includes(key)) return res.status(404).json({ error: 'Unknown trip kind' });
+    const categoryId = req.body?.categoryId ?? null;
+    if (categoryId !== null && typeof categoryId !== 'string') return res.status(400).json({ error: 'categoryId must be a string or null' });
+    try {
+        if (!(await categoryServiceNeo4j.setTripKind(key, categoryId))) return res.status(404).json({ error: 'Category not found' });
+        console.log(`[admin] trip kind ${key} -> ${categoryId ?? 'none'} by ${req.user.id}`);
+        res.json({ kinds: await categoryServiceNeo4j.getTripKinds() });
+    } catch (error) {
+        console.error('[categories] set trip kind:', error);
+        res.status(500).json({ error: 'Failed to save the trip category.' });
+    }
+});
+
 // READ ALL
 router.get('/', async (req, res) => {
     try {

@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Outlet, NavLink, Link, useLocation } from 'react-router'
 import { markPageOpened } from '../utils/pageStart.js'
 import { useMediaQuery } from '../utils/useMediaQuery.js'
@@ -6,6 +6,7 @@ import { useOffline } from '../utils/connection.js'
 import { useHistoryTracker } from '../utils/history.js'
 import { useOfflineTrips, keptLabel } from '../utils/useOfflineDocs.js'
 import { useAuth } from '../context/AuthContext'
+import { loadTripKinds } from '../utils/tripKinds.js'
 import { Avatar } from './Avatar.jsx'
 import CatAvatar from './CatAvatar/CatAvatar'
 
@@ -99,6 +100,9 @@ export default function Layout() {
   const kept = keptLabel(useOfflineTrips())
   const { currentUser, isAdmin } = useAuth()
   const [collapsed, toggleCollapsed] = useSidebarCollapsed()
+  // Trip kinds' categories: their colours on the trip screens (utils/tripKinds.js).
+  const userId = currentUser?.id
+  useEffect(() => { if (userId) loadTripKinds() }, [userId])
 
   return (
     <div className={`app-shell${collapsed ? ' sidebar-collapsed' : ''}`}>
