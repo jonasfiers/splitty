@@ -55,8 +55,11 @@ export function DayPhotos({ photos, onOpen, max = 12 }) {
   )
 }
 
-// Full-screen viewer: the preview size, with previous/next (buttons, arrow
-// keys, a swipe) and Escape to close.
+// Full-screen viewer: the preview size (about 1440 px, never the original),
+// with previous/next (buttons, arrow keys, a swipe) and Escape to close.
+// Far from home a preview takes a moment, so the small thumbnail (already
+// loaded for the day row or the map) shows at once, enlarged, until the
+// preview has arrived; the neighbours' previews load in the background.
 export function PhotoViewer({ photos, index, onClose }) {
   const [at, setAt] = useState(index)
   const go = useCallback(d => setAt(i => Math.min(Math.max(i + d, 0), photos.length - 1)), [photos.length])
@@ -72,6 +75,13 @@ export function PhotoViewer({ photos, index, onClose }) {
     return () => { window.removeEventListener('keydown', key); document.body.style.overflow = prev }
   }, [go, onClose])
   const [touchX, setTouchX] = useState(null)
+  const [loaded, setLoaded] = useState(() => new Set())
+  useEffect(() => {
+    for (const n of [at + 1, at - 1, at + 2]) {
+      const q = photos[n]
+      if (q) new Image().src = photoSrc(q.preview)
+    }
+  }, [at, photos])
   const p = photos[at]
   if (!p) return null
   return createPortal(
@@ -89,7 +99,15 @@ export function PhotoViewer({ photos, index, onClose }) {
         setTouchX(null)
       }}
     >
-      <img key={p.id} className="photo-viewer-img" src={photoSrc(p.preview)} alt="" />
+      <div className="photo-viewer-frame" key={p.id}>
+        {!loaded.has(p.id) && <img className="photo-viewer-img photo-viewer-placeholder" src={photoSrc(p.thumb)} alt="" />}
+        <img
+          className={`photo-viewer-img${loaded.has(p.id) ? '' : ' loading'}`}
+          src={photoSrc(p.preview)}
+          alt=""
+          onLoad={() => setLoaded(s => new Set(s).add(p.id))}
+        />
+      </div>
       <div className="photo-viewer-bar">
         <span>{p.at ? `${formatDay(dayOf(p.at))} · ${timeOf(p.at)}` : ''}{p.video ? ' · video (still)' : ''}</span>
         <span>{at + 1} / {photos.length}</span>
