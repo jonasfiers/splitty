@@ -150,7 +150,8 @@ export function PhotoViewer({ photos, index, onClose }) {
       aria-modal="true"
       aria-label="Photo"
       onClick={e => { if (e.target === e.currentTarget) onClose() }}
-      onTouchStart={e => setTouchX(e.touches[0].clientX)}
+      // Not while scrubbing a video's controls.
+      onTouchStart={e => setTouchX(e.target.tagName === 'VIDEO' ? null : e.touches[0].clientX)}
       onTouchEnd={e => {
         if (touchX == null) return
         const dx = e.changedTouches[0].clientX - touchX
@@ -159,16 +160,30 @@ export function PhotoViewer({ photos, index, onClose }) {
       }}
     >
       <div className="photo-viewer-frame" key={p.id}>
-        {!loaded.has(p.id) && <img className="photo-viewer-img photo-viewer-placeholder" src={photoSrc(p.thumb)} alt="" />}
-        <img
-          className={`photo-viewer-img${loaded.has(p.id) ? '' : ' loading'}`}
-          src={photoSrc(p.preview)}
-          alt=""
-          onLoad={() => setLoaded(s => new Set(s).add(p.id))}
-        />
+        {/* A video plays here, streamed from Immich through the server; the
+            preview frame shows until it starts. */}
+        {p.play ? (
+          <video
+            className="photo-viewer-img"
+            src={photoSrc(p.play)}
+            poster={photoSrc(p.preview)}
+            controls
+            autoPlay
+            playsInline
+            preload="metadata"
+          />
+        ) : !loaded.has(p.id) && <img className="photo-viewer-img photo-viewer-placeholder" src={photoSrc(p.thumb)} alt="" />}
+        {!p.play && (
+          <img
+            className={`photo-viewer-img${loaded.has(p.id) ? '' : ' loading'}`}
+            src={photoSrc(p.preview)}
+            alt=""
+            onLoad={() => setLoaded(s => new Set(s).add(p.id))}
+          />
+        )}
       </div>
       <div className="photo-viewer-bar">
-        <span>{p.at ? `${formatDay(dayOf(p.at))} · ${timeOf(p.at)}` : ''}{p.video ? ' · video (still)' : ''}</span>
+        <span>{p.at ? `${formatDay(dayOf(p.at))} · ${timeOf(p.at)}` : ''}{p.video && !p.play ? ' · video (still)' : ''}</span>
         <span>{at + 1} / {photos.length}</span>
       </div>
       <button type="button" className="photo-viewer-close" onClick={onClose} aria-label="Close"><Icon name="x" /></button>

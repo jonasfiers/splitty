@@ -192,9 +192,9 @@ router.get('/files/:id', async (req, res) => {
 });
 
 // ── PUBLIC: a photo of a trip's Immich album, through a signed link ──
-router.get('/photos/:albumId/:assetId/:size', async (req, res) => {
+router.get('/photos/:albumId/:assetId/:size', async (req, res, next) => {
     const { albumId, assetId, size } = req.params;
-    if (!['thumbnail', 'preview'].includes(size)) return res.status(404).end();
+    if (!['thumbnail', 'preview'].includes(size)) return next(); // video: below
     try {
         const claim = jwt.verify(String(req.query.sig || ''), photoLinkSecret());
         if (claim.alb !== albumId) return res.status(403).end();
@@ -214,6 +214,27 @@ router.get('/photos/:albumId/:assetId/:size', async (req, res) => {
     } catch (err) {
         if (err instanceof tripPhotos.PhotoError) return res.status(err.status).end();
         console.error('[photos] thumbnail:', err);
+        res.status(500).end();
+    }
+});
+
+// ── PUBLIC: a video of a trip's album, same signed link, streamed ──
+router.get('/photos/:albumId/:assetId/video', async (req, res) => {
+    const { albumId, assetId } = req.params;
+    try {
+        const claim = jwt.verify(String(req.query.sig || ''), photoLinkSecret());
+        if (claim.alb !== albumId) return res.status(403).end();
+    } catch {
+        return res.status(403).end();
+    }
+    try {
+        const album = await tripPhotos.albumForThumbnail(albumId);
+        if (!album) return res.status(404).end();
+        await tripPhotos.streamVideo(album, assetId, req, res, 'private, max-age=86400');
+    } catch (err) {
+        if (res.headersSent) return res.destroy();
+        if (err instanceof tripPhotos.PhotoError) return res.status(err.status).end();
+        console.error('[photos] video:', err);
         res.status(500).end();
     }
 });
@@ -241,6 +262,7 @@ router.get('/:id/photos', async (req, res) => {
                 ...p,
                 thumb: `/trips/photos/${p.album}/${p.id}/thumbnail?sig=${sigs.get(p.album)}`,
                 preview: `/trips/photos/${p.album}/${p.id}/preview?sig=${sigs.get(p.album)}`,
+                ...(p.video ? { play: `/trips/photos/${p.album}/${p.id}/video?sig=${sigs.get(p.album)}` } : {}),
             })),
         });
     } catch (err) { photoError(res, err, 'list'); }

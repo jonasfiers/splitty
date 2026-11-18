@@ -215,6 +215,42 @@ async function thumbnail(album, assetId, size) {
     return immich(`/assets/${assetId}/thumbnail`, album, { size }, { raw: true });
 }
 
+// A video of the album, streamed to `res` (2026-11-18): Immich's playback
+// file (the original, or its web-friendly transcode), passed through with
+// Range requests so the player can start at once and seek. Only the response
+// headers wait on the timeout; the body may take as long as the viewer
+// watches, and stops when they close the viewer.
+const VIDEO_HEADERS = ['content-type', 'content-length', 'content-range', 'accept-ranges', 'last-modified', 'etag'];
+async function streamVideo(album, assetId, req, res, cacheControl) {
+    if (!UUID.test(assetId)) throw new PhotoError('Not found', 404);
+    const qs = new URLSearchParams(authQuery(album));
+    const abort = new AbortController();
+    const timer = setTimeout(() => abort.abort(), TIMEOUT_MS);
+    res.on('close', () => abort.abort());
+    const headers = { accept: 'video/*' };
+    const range = req.headers.range;
+    if (typeof range === 'string' && /^bytes=\d*-\d*$/.test(range)) headers.range = range;
+    let upstream;
+    try {
+        upstream = await fetch(`${INTERNAL}/api/assets/${assetId}/video/playback?${qs}`, { signal: abort.signal, headers });
+    } catch {
+        throw new PhotoError('Immich could not be reached.', 502);
+    } finally {
+        clearTimeout(timer);
+    }
+    if (upstream.status === 401 || upstream.status === 403) throw new PhotoError('Immich refused the link.', 410);
+    if (upstream.status === 404) throw new PhotoError('Not found', 404);
+    if (upstream.status === 416) { res.status(416).end(); return; }
+    if (!upstream.ok) throw new PhotoError(`Immich answered ${upstream.status}.`, 502);
+    const type = upstream.headers.get('content-type') || '';
+    if (!type.startsWith('video/')) { upstream.body?.cancel(); throw new PhotoError('Not a video.', 502); }
+    res.status(upstream.status);
+    for (const h of VIDEO_HEADERS) { const v = upstream.headers.get(h); if (v) res.set(h, v); }
+    res.set({ 'Cache-Control': cacheControl, 'X-Content-Type-Options': 'nosniff' });
+    if (req.method === 'HEAD' || !upstream.body) { upstream.body?.cancel(); res.end(); return; }
+    require('stream').Readable.fromWeb(upstream.body).on('error', () => res.destroy()).pipe(res);
+}
+
 // For the public follow page (followService.js), which has checked its link
 // itself: the trip's albums without a member check.
 async function albumsOfTripUnchecked(tripId) {
@@ -226,4 +262,4 @@ async function albumsOfTripUnchecked(tripId) {
     return records.map(albumProps);
 }
 
-module.exports = { enabled, PhotoError, tripPhotos, addAlbum, removeAlbum, albumForThumbnail, thumbnail, albumsOfTripUnchecked, photosOf };
+module.exports = { enabled, PhotoError, tripPhotos, addAlbum, removeAlbum, albumForThumbnail, thumbnail, streamVideo, albumsOfTripUnchecked, photosOf };

@@ -22,6 +22,7 @@ router.get('/:token', async (req, res) => {
                 at: p.at, lat: p.lat, lon: p.lon, ratio: p.ratio, video: p.video, id: p.id, album: p.album,
                 thumb: `/follow/${token}/photos/${p.album}/${p.id}/thumbnail`,
                 preview: `/follow/${token}/photos/${p.album}/${p.id}/preview`,
+                ...(p.video ? { play: `/follow/${token}/photos/${p.album}/${p.id}/video` } : {}),
             })),
         });
     } catch (err) {
@@ -77,9 +78,24 @@ router.get('/:token/meta', async (req, res) => {
     }
 });
 
-router.get('/:token/photos/:albumId/:assetId/:size', async (req, res) => {
+// A video the link shows, streamed (tripPhotos.streamVideo).
+router.get('/:token/photos/:albumId/:assetId/video', async (req, res) => {
+    const { token, albumId, assetId } = req.params;
+    try {
+        const album = await followService.photoAllowed(token, albumId, assetId);
+        if (!album) return res.status(404).end();
+        await tripPhotos.streamVideo(album, assetId, req, res, 'private, max-age=3600');
+    } catch (err) {
+        if (res.headersSent) return res.destroy();
+        if (err instanceof tripPhotos.PhotoError) return res.status(err.status).end();
+        console.error('[follow] video:', err);
+        res.status(500).end();
+    }
+});
+
+router.get('/:token/photos/:albumId/:assetId/:size', async (req, res, next) => {
     const { token, albumId, assetId, size } = req.params;
-    if (!['thumbnail', 'preview'].includes(size)) return res.status(404).end();
+    if (!['thumbnail', 'preview'].includes(size)) return next(); // video: below
     try {
         const album = await followService.photoAllowed(token, albumId, assetId);
         if (!album) return res.status(404).end();
