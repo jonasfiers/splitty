@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import client from '../../api/client'
 import Sheet, { SheetActions } from '../Sheet/Sheet.jsx'
@@ -114,6 +114,108 @@ export function PhotoGrid({ photos, onOpen, onClose }) {
   )
 }
 
+// Zooming a photo in the viewer with two fingers, not the page (the viewer
+// has touch-action: none). Zoomed in, one finger pans and a swipe doesn't
+// change photo; a double tap zooms in on that spot, or back out. Back to
+// normal on every new photo. Videos are left to their own controls.
+const MAX_ZOOM = 5
+const clamp = (v, lo, hi) => Math.min(Math.max(v, lo), hi)
+const NO_ZOOM = { s: 1, x: 0, y: 0 }
+
+function usePinchZoom(at, go) {
+  const frameRef = useRef(null)
+  const [zoom, setZoomState] = useState(NO_ZOOM)
+  const current = useRef(NO_ZOOM)
+  const gesture = useRef(null)
+  const lastTap = useRef(0)
+
+  // Kept within the frame: no panning the photo out of sight.
+  const setZoom = useCallback(z => {
+    const r = frameRef.current?.getBoundingClientRect()
+    const next = !r || z.s <= 1.01 ? NO_ZOOM : {
+      s: z.s,
+      x: clamp(z.x, -(z.s - 1) * r.width / 2, (z.s - 1) * r.width / 2),
+      y: clamp(z.y, -(z.s - 1) * r.height / 2, (z.s - 1) * r.height / 2),
+    }
+    current.current = next
+    setZoomState(next)
+  }, [])
+  useEffect(() => { setZoom(NO_ZOOM) }, [at, setZoom])
+
+  // A touch relative to the frame's centre (the zoom's origin).
+  const rel = t => {
+    const r = frameRef.current.getBoundingClientRect()
+    return { x: t.clientX - (r.left + r.width / 2), y: t.clientY - (r.top + r.height / 2) }
+  }
+  const pinchOf = e => {
+    const [a, b] = [rel(e.touches[0]), rel(e.touches[1])]
+    return { d: Math.hypot(a.x - b.x, a.y - b.y) || 1, m: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 } }
+  }
+  const startOne = t => {
+    gesture.current = current.current.s > 1
+      ? { type: 'pan', p0: rel(t), z0: current.current }
+      : { type: 'swipe', x0: t.clientX }
+  }
+
+  const touch = {
+    onTouchStart: e => {
+      // Not on a video (its own controls) or the viewer's buttons.
+      if (e.target.closest('video, button') || !frameRef.current) { gesture.current = null; lastTap.current = 0; return }
+      if (e.touches.length === 2) {
+        gesture.current = { type: 'pinch', ...pinchOf(e), z0: current.current }
+        return
+      }
+      if (e.touches.length !== 1) return
+      const now = Date.now()
+      if (now - lastTap.current < 300) {
+        lastTap.current = 0
+        gesture.current = null
+        if (current.current.s > 1) setZoom(NO_ZOOM)
+        else {
+          const p = rel(e.touches[0])
+          const s = 2.5
+          setZoom({ s, x: p.x * (1 - s), y: p.y * (1 - s) })
+        }
+        return
+      }
+      lastTap.current = now
+      startOne(e.touches[0])
+    },
+    onTouchMove: e => {
+      const g = gesture.current
+      if (!g) return
+      if (g.type === 'pinch' && e.touches.length === 2) {
+        const { d, m } = pinchOf(e)
+        const s = clamp(g.z0.s * d / g.d, 1, MAX_ZOOM)
+        // The spot that was under the fingers stays under them.
+        const px = (g.m.x - g.z0.x) / g.z0.s, py = (g.m.y - g.z0.y) / g.z0.s
+        setZoom({ s, x: m.x - s * px, y: m.y - s * py })
+      } else if (g.type === 'pan' && e.touches.length === 1) {
+        const p = rel(e.touches[0])
+        setZoom({ s: g.z0.s, x: g.z0.x + p.x - g.p0.x, y: g.z0.y + p.y - g.p0.y })
+      }
+    },
+    onTouchEnd: e => {
+      const g = gesture.current
+      if (!g) return
+      if (g.type === 'swipe' && e.touches.length === 0) {
+        const dx = e.changedTouches[0].clientX - g.x0
+        if (Math.abs(dx) > 50) { lastTap.current = 0; go(dx < 0 ? 1 : -1) }
+        gesture.current = null
+      } else if (e.touches.length === 1) {
+        // One finger lifted from a pinch: the other pans on (no swipe).
+        lastTap.current = 0
+        if (current.current.s > 1) startOne(e.touches[0])
+        else gesture.current = null
+      } else if (e.touches.length === 0) {
+        if (g.type === 'pinch') lastTap.current = 0
+        gesture.current = null
+      }
+    },
+  }
+  return { frameRef, zoom, touch }
+}
+
 // Full-screen viewer: the preview size (about 1440 px, never the original),
 // with previous/next (buttons, arrow keys, a swipe) and Escape to close.
 // Far from home a preview takes a moment, so the small thumbnail (already
@@ -133,8 +235,8 @@ export function PhotoViewer({ photos, index, onClose }) {
     document.body.style.overflow = 'hidden'
     return () => { window.removeEventListener('keydown', key); document.body.style.overflow = prev }
   }, [go, onClose])
-  const [touchX, setTouchX] = useState(null)
   const [loaded, setLoaded] = useState(() => new Set())
+  const { frameRef, zoom, touch } = usePinchZoom(at, go)
   useEffect(() => {
     for (const n of [at + 1, at - 1, at + 2]) {
       const q = photos[n]
@@ -150,16 +252,10 @@ export function PhotoViewer({ photos, index, onClose }) {
       aria-modal="true"
       aria-label="Photo"
       onClick={e => { if (e.target === e.currentTarget) onClose() }}
-      // Not while scrubbing a video's controls.
-      onTouchStart={e => setTouchX(e.target.tagName === 'VIDEO' ? null : e.touches[0].clientX)}
-      onTouchEnd={e => {
-        if (touchX == null) return
-        const dx = e.changedTouches[0].clientX - touchX
-        if (Math.abs(dx) > 50) go(dx < 0 ? 1 : -1)
-        setTouchX(null)
-      }}
+      {...touch}
     >
-      <div className="photo-viewer-frame" key={p.id}>
+      <div className="photo-viewer-frame" key={p.id} ref={frameRef}>
+        <div className="photo-viewer-zoom" style={zoom.s > 1 ? { transform: `translate(${zoom.x}px, ${zoom.y}px) scale(${zoom.s})` } : undefined}>
         {/* A video plays here, streamed from Immich through the server; the
             preview frame shows until it starts. */}
         {p.play ? (
@@ -181,6 +277,7 @@ export function PhotoViewer({ photos, index, onClose }) {
             onLoad={() => setLoaded(s => new Set(s).add(p.id))}
           />
         )}
+        </div>
       </div>
       <div className="photo-viewer-bar">
         <span>{p.at ? `${formatDay(dayOf(p.at))} · ${timeOf(p.at)}` : ''}{p.video && !p.play ? ' · video (still)' : ''}</span>
