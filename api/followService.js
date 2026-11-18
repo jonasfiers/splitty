@@ -141,9 +141,9 @@ async function townOf(place) {
 // A pin near the town rather than the building: rounded to ~2 km.
 const blur = v => (v == null ? null : Math.round(v * 50) / 50);
 
-// Each view is kept for a minute: a page loads dozens of thumbnails, each
+// Each view is kept for 15 seconds: a page loads dozens of thumbnails, each
 // checked against it (photoAllowed). Removing a link clears it at once.
-const VIEW_TTL_MS = 60_000;
+const VIEW_TTL_MS = 15_000;
 const views = new Map(); // token -> { at, view }
 
 async function publicView(token) {

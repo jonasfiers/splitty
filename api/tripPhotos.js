@@ -23,7 +23,7 @@ const PUBLIC_ORIGIN = (() => {
 const enabled = () => Boolean(INTERNAL && PUBLIC_ORIGIN);
 
 const TIMEOUT_MS = 10_000;
-const CACHE_TTL_MS = 5 * 60_000;
+const CACHE_TTL_MS = 5 * 60_000; // x12: a full re-read at least hourly, changed or not
 const MAX_PHOTOS = 3000;      // per album
 const MAX_BUCKETS = 60;       // months per album
 const MAX_ALBUMS = 10;        // per trip
@@ -98,20 +98,36 @@ async function fetchPhotos(album) {
     return photos;
 }
 
-const cache = new Map(); // album node id -> { at, photos } | { at, error }
+// The album's state in one cheap request (~50 ms): its change time and photo
+// count. Adding or removing a photo changes it.
+async function fingerprint(album) {
+    const link = await immich('/shared-links/me', album);
+    return `${link.album?.updatedAt ?? ''}|${link.album?.assetCount ?? ''}`;
+}
+
+// The album's photos, re-read only when Immich says it changed: checked at
+// most every FRESH_MS, so a photo removed in Immich is gone from the trip
+// within seconds, while an unchanged album costs one small request.
+const FRESH_MS = 30_000;
+const cache = new Map(); // album node id -> { at, print, photos } | { at, error }
 async function photosOf(album) {
     const hit = cache.get(album.id);
-    if (hit && Date.now() - hit.at < CACHE_TTL_MS) {
+    if (hit && Date.now() - hit.at < (hit.error ? 60_000 : FRESH_MS)) {
         if (hit.error) throw hit.error;
         return hit.photos;
     }
     try {
+        const print = await fingerprint(album);
+        if (hit?.photos && hit.print === print && Date.now() - hit.at < CACHE_TTL_MS * 12) {
+            hit.at = Date.now();
+            return hit.photos;
+        }
         const photos = await fetchPhotos(album);
-        cache.set(album.id, { at: Date.now(), photos });
+        cache.set(album.id, { at: Date.now(), print, photos });
         return photos;
     } catch (err) {
         // A broken link is remembered for a minute, not retried on every load.
-        cache.set(album.id, { at: Date.now() - CACHE_TTL_MS + 60_000, error: err });
+        cache.set(album.id, { at: Date.now(), error: err });
         throw err;
     }
 }
