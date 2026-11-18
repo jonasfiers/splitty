@@ -7,6 +7,7 @@ const geocodeService = require('../geocodeService');
 const routeService = require('../routeService');
 const uploadStore = require('../uploadStore');
 const tripPhotos = require('../tripPhotos');
+const stopNames = require('../stopNames');
 const { Readable } = require('stream');
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -710,12 +711,31 @@ router.get('/:id/routes', routeLimiter, async (req, res) => {
 
         const arriveBy = req.query.arriveBy === '1' || req.query.arriveBy === 'true';
         const wide = req.query.wide === '1';
-        const result = await routeService.search({ from: from.end, to: to.end, when, arriveBy, modes, cursor, wide });
-        res.json({ success: true, ...result });
+        // A copy: the search is cached, the names in it change as they're learned.
+        const result = structuredClone(await routeService.search({ from: from.end, to: to.end, when, arriveBy, modes, cursor, wide }));
+        let pendingNames = 0;
+        try {
+            pendingNames = await stopNames.translateResult(result);
+        } catch (err) {
+            console.error('[routes] stop names:', err.message); // the timetable names then
+        }
+        res.json({ success: true, ...result, pendingNames });
     } catch (error) {
         if (error instanceof routeService.RouteError) return res.status(error.status).json({ error: error.message });
         console.error(error);
         res.status(500).json({ error: error.message });
+    }
+});
+
+// STOP NAMES learned since a search (stopNames.js): the route page asks for
+// the ones it still shows in the local script. Body { keys: [nameKey] }.
+router.post('/stop-names', async (req, res) => {
+    const keys = (Array.isArray(req.body?.keys) ? req.body.keys : []).filter(k => typeof k === 'string' && k.length <= 200).slice(0, 200);
+    try {
+        res.json({ names: await stopNames.namesFor(keys) });
+    } catch (err) {
+        console.error('[routes] stop names:', err.message);
+        res.json({ names: [] });
     }
 });
 

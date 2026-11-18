@@ -185,6 +185,8 @@ async function plan(params) {
 const minutesBetween = (a, b) => Math.round((Date.parse(b) - Date.parse(a)) / 60000);
 
 const stopOf = place => ({
+    // The feed's stop id: stable, so stopNames.js remembers English names by it.
+    stopId: place.stopId || null,
     name: place.name,
     lat: place.lat,
     lon: place.lon,

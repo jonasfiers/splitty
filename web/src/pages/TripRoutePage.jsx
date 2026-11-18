@@ -33,7 +33,32 @@ const validMoment = m => (MOMENT.test(m || '') ? m : null)
 // A place slot as the API wants it: a place of the trip by id, or a searched one by position.
 const endParam = ref => (ref?.id ? ref.id : ref?.lat != null ? `${ref.lat},${ref.lon}` : null)
 
-const connectionKey = it => `${it.departure}|${it.arrival}|${it.legs.map(l => `${l.start}${l.line}`).join(',')}`
+// Stop names still in the local script ("臺北") are being looked up in
+// English on the server (api/stopNames.js); these apply the ones it has
+// learned since, to the stops, headsigns and lines made of stop names.
+const untranslatedKeys = result => [...new Set((result?.itineraries ?? []).flatMap(it => it.legs.flatMap(l => [l.from, l.to]))
+  .filter(s => s.nameKey && !s.originalName).map(s => s.nameKey))]
+function withNames(result, names) {
+  const byKey = new Map(names.map(n => [n.key, n.english]))
+  const byOriginal = new Map(names.map(n => [n.original, n.english]))
+  const stop = st => (st.nameKey && !st.originalName && byKey.has(st.nameKey) ? { ...st, originalName: st.name, name: byKey.get(st.nameKey) } : st)
+  const tr = t => byOriginal.get(t) ?? t
+  return {
+    ...result,
+    itineraries: result.itineraries.map(it => ({
+      ...it,
+      legs: it.legs.map(l => {
+        const from = stop(l.from), to = stop(l.to)
+        const parts = l.line && /[-–~]/.test(l.line) ? l.line.split(/\s*[-–~]\s*/) : null
+        const line = parts && parts.every(p => byOriginal.has(p) || !/[^\x00-\u024f]/.test(p)) ? parts.map(tr).join(' – ') : l.line
+        return { ...l, from, to, headsign: tr(l.headsign), line, ...(line !== l.line && { lineOriginal: l.lineOriginal ?? l.line }), title: `${from.name} → ${to.name}` }
+      }),
+    })),
+  }
+}
+
+// By the timetable's own line name: it stays the same when names are translated.
+const connectionKey = it => `${it.departure}|${it.arrival}|${it.legs.map(l => `${l.start}${l.lineOriginal ?? l.line}`).join(',')}`
 
 // Find public-transport connections between two places (Transitous) and add
 // the chosen one's legs to the trip as transport items. Times are local to the
@@ -55,6 +80,25 @@ export default function TripRoutePage() {
   const [form, setForm] = useState({ from: null, to: null, date: '', time: '', arriveBy: false, modes: 'all' })
   const [tripTitle, setTripTitle] = useState('')
   const [result, setResult] = useState(null) // { query, itineraries, previousCursor, nextCursor }
+  const resultRef = useRef(null)
+  resultRef.current = result
+  // While the server is still learning English stop names, ask it again every
+  // few seconds (it looks up one a second) and fill them in.
+  const pendingNames = result?.pendingNames ?? 0
+  const resultQuery = result?.query
+  useEffect(() => {
+    if (!pendingNames) return
+    let tries = Math.min(Math.ceil((pendingNames * 1.3) / 3) + 2, 20)
+    const timer = setInterval(async () => {
+      const keys = untranslatedKeys(resultRef.current)
+      if (!keys.length || --tries < 0) return clearInterval(timer)
+      try {
+        const { data } = await client.post('/trips/stop-names', { keys })
+        if (data.names?.length) setResult(prev => (prev ? withNames(prev, data.names) : prev))
+      } catch { /* names stay as they are */ }
+    }, 3000)
+    return () => clearInterval(timer)
+  }, [pendingNames, resultQuery])
   const [searching, setSearching] = useState(null) // 'search' | 'earlier' | 'later'
   const [error, setError] = useState('')
   const [chosen, setChosen] = useState(null)

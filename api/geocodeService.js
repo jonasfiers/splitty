@@ -96,10 +96,19 @@ function metresBetween(a, b) {
 // object is as likely a ticket office or a defibrillator as the station.
 // Returns null unless a station or stop of that name is found close by with a
 // readable name — a wrong name is worse than the original one.
+// Whether an OpenStreetMap name is the timetable's name: equal, or one
+// containing the other ("臺北" / "臺北車站"), with 臺 and 台 (both used for
+// "Tai") treated as the same.
+const normName = v => String(v || '').replace(/臺/g, '台').replace(/[\s()（）]/g, '').toLowerCase();
+const sameName = (original, exact) => {
+    const a = normName(original);
+    return v => { const b = normName(v); return Boolean(a && b && (a === b || (!exact && ((a.length >= 2 && b.includes(a)) || (b.length >= 2 && a.includes(b)))))); };
+};
+
 async function englishStopName(name, lat, lon) {
     if (!name || isLatin(name) || lat == null || lon == null) return null;
     const d = 0.01; // about a kilometre each way: the box to search in
-    return throttled(`stop:${name}|${lat.toFixed(4)},${lon.toFixed(4)}`, async () => {
+    return throttled(`stop3:${name}|${lat.toFixed(4)},${lon.toFixed(4)}`, async () => {
         const data = await fetchJson({
             q: name,
             limit: '5',
@@ -107,11 +116,24 @@ async function englishStopName(name, lat, lon) {
             bounded: '1',
             viewbox: [lon - d, lat + d, lon + d, lat - d].join(','),
         });
-        for (const r of data) {
-            if (!STOP_TYPES[r.category]?.includes(r.type)) continue;
-            if (metresBetween({ lat, lon }, { lat: Number(r.lat), lon: Number(r.lon) }) > NEAR_METRES) continue;
-            const english = (r.namedetails?.['name:en'] || r.name || '').trim();
-            if (english && isLatin(english) && english.length <= 160) return english;
+        // A stop's current name before its old or alternative ones (a bus stop
+        // renamed "北平林森路口" keeps "捷運善導寺站" as old_name, while the real
+        // 捷運善導寺站 stops are a few metres on), and exact before partial.
+        const current = nd => Object.entries(nd || {}).filter(([k]) => k === 'name' || k === 'official_name' || k.startsWith('name:')).map(([, v]) => v);
+        const any = nd => Object.values(nd || {});
+        for (const [exact, namesOf] of [[true, current], [true, any], [false, current]]) {
+            const wanted = sameName(name, exact);
+            for (const r of data) {
+                if (!STOP_TYPES[r.category]?.includes(r.type)) continue;
+                if (metresBetween({ lat, lon }, { lat: Number(r.lat), lon: Number(r.lon) }) > NEAR_METRES) continue;
+                // The stop must carry the timetable's name itself: the search also
+                // matches on nearby streets and other names, and the closest bus
+                // stop is then a different one ("捷運善導寺站" came back as
+                // "Beiping & Linsen Intersection").
+                if (!namesOf(r.namedetails).some(wanted)) continue;
+                const english = (r.namedetails?.['name:en'] || r.name || '').trim();
+                if (english && isLatin(english) && english.length <= 160) return english;
+            }
         }
         return null;
     });
