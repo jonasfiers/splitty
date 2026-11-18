@@ -37,21 +37,67 @@ export const photosByDay = photos => {
   return out
 }
 
-// A row of thumbnails under a day; opens the viewer on the tapped one.
+// A row of thumbnails under a day; opens the viewer on the tapped one. With
+// more than `max`, the last tile says "+N" and opens all of the day's photos
+// as a grid instead.
 export function DayPhotos({ photos, onOpen, max = 12 }) {
+  const [grid, setGrid] = useState(false)
   if (!photos?.length) return null
   const shown = photos.slice(0, max)
   const more = photos.length - shown.length
   return (
-    <div className="day-photos" aria-label={`${photos.length} photo${photos.length !== 1 ? 's' : ''}`}>
-      {shown.map((p, i) => (
-        <button key={p.id} type="button" className="day-photo" onClick={() => onOpen(photos, i)} aria-label={`Photo at ${timeOf(p.at)}`}>
-          <img src={photoSrc(p.thumb)} alt="" loading="lazy" decoding="async" />
-          {p.video && <span className="day-photo-video" aria-hidden="true"><Icon name="play" /></span>}
-          {i === shown.length - 1 && more > 0 && <span className="day-photo-more">+{more}</span>}
-        </button>
-      ))}
-    </div>
+    <>
+      <div className="day-photos" aria-label={`${photos.length} photo${photos.length !== 1 ? 's' : ''}`}>
+        {shown.map((p, i) => {
+          const isMore = i === shown.length - 1 && more > 0
+          return (
+            <button
+              key={p.id}
+              type="button"
+              className="day-photo"
+              onClick={() => (isMore ? setGrid(true) : onOpen(photos, i))}
+              aria-label={isMore ? `All ${photos.length} photos of this day` : `Photo at ${timeOf(p.at)}`}
+            >
+              <img src={photoSrc(p.thumb)} alt="" loading="lazy" decoding="async" />
+              {p.video && !isMore && <span className="day-photo-video" aria-hidden="true"><Icon name="play" /></span>}
+              {isMore && <span className="day-photo-more">+{more + 1}</span>}
+            </button>
+          )
+        })}
+      </div>
+      {grid && <PhotoGrid photos={photos} onOpen={onOpen} onClose={() => setGrid(false)} />}
+    </>
+  )
+}
+
+// All of a day's photos, full screen, as a grid; a tap opens the viewer
+// (which comes out on top), Escape or × closes.
+export function PhotoGrid({ photos, onOpen, onClose }) {
+  useEffect(() => {
+    const key = e => { if (e.key === 'Escape' && !document.querySelector('.photo-viewer')) onClose() }
+    window.addEventListener('keydown', key)
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { window.removeEventListener('keydown', key); document.body.style.overflow = prev }
+  }, [onClose])
+  const day = photos[0]?.at ? dayOf(photos[0].at) : ''
+  return createPortal(
+    <div className="photo-grid" role="dialog" aria-modal="true" aria-label="Photos of the day">
+      <div className="photo-grid-head">
+        <strong>{day ? formatDay(day, { weekday: 'long', day: 'numeric', month: 'long' }) : 'Photos'}</strong>
+        <span>{photos.length} photos</span>
+        <button type="button" className="photo-grid-close" onClick={onClose} aria-label="Close"><Icon name="x" /></button>
+      </div>
+      <div className="photo-grid-tiles">
+        {photos.map((p, i) => (
+          <button key={p.id} type="button" className="photo-grid-tile" onClick={() => onOpen(photos, i)} aria-label={`Photo at ${timeOf(p.at)}`}>
+            <img src={photoSrc(p.thumb)} alt="" loading="lazy" decoding="async" />
+            {p.video && <span className="day-photo-video" aria-hidden="true"><Icon name="play" /></span>}
+          </button>
+        ))}
+      </div>
+    </div>,
+    document.body
   )
 }
 

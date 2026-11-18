@@ -64,6 +64,34 @@
   text-align: center;
 }
 
+/* All of a day's photos (PhotoGrid), full screen, under the viewer. */
+.photo-grid {
+  position: fixed; inset: 0; z-index: 2900;
+  background: var(--bg);
+  display: flex; flex-direction: column;
+}
+.photo-grid-head {
+  display: flex; align-items: center; gap: 10px;
+  padding: calc(12px + env(safe-area-inset-top)) 16px 12px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-2); font-size: var(--fs-sm);
+}
+.photo-grid-head strong { color: var(--text); font-size: var(--fs-md); }
+.photo-grid-close {
+  margin-left: auto; width: 40px; height: 40px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  border: none; background: var(--surface-2); color: var(--text); font-size: 20px; cursor: pointer;
+}
+.photo-grid-tiles {
+  flex: 1; overflow-y: auto;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 4px;
+  padding: 4px 4px calc(4px + env(safe-area-inset-bottom));
+  align-content: start;
+}
+.photo-grid-tile { position: relative; aspect-ratio: 1; padding: 0; border: none; background: var(--surface-2); cursor: pointer; overflow: hidden; }
+.photo-grid-tile img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.photo-grid-tile:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
 /* The viewer, above everything (Expandable's full screen is 1000). */
 .photo-viewer {
   position: fixed; inset: 0; z-index: 3000;
