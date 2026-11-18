@@ -2702,7 +2702,8 @@ html .leaflet-container { font-family: var(--font-body); } /* "html": Leaflet's 
   border: 1px solid var(--border); background: var(--surface);
   font-size: var(--fs-md); font-weight: 600; color: var(--accent-text); text-decoration: none;
 }
-a.trip-chip:hover { border-color: var(--border-strong); }
+a.trip-chip:hover, button.trip-chip:hover { border-color: var(--border-strong); }
+button.trip-chip { font-family: inherit; cursor: pointer; }
 .trip-chip-chevron { font-size: var(--fs-base); line-height: 1; }
 .trip-paid { font-family: var(--font-mono); font-size: var(--fs-md); color: var(--text-3); }
 

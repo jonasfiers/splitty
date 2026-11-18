@@ -15,6 +15,7 @@ import {
   Percent, Shield, HeartPulse, Pill, Stethoscope, GraduationCap, Briefcase, Calendar, WashingMachine,
   Users, User, Heart, Rainbow, Star, Flag, Globe, Tag, Folder, Box,
   ArrowLeftRight, Handshake, Check, Image as ImageIcon, Paperclip, Search, Lock, CircleQuestionMark, Pencil, X, LogIn, LogOut,
+  Play, ChevronLeft, ChevronRight, Images,
 } from 'lucide'
 
 // The icons people pick for categories (IconPicker), by
@@ -193,6 +194,10 @@ const UI = {
   x: X,
   'log-in': LogIn,
   'log-out': LogOut,
+  play: Play,
+  'chevron-left': ChevronLeft,
+  'chevron-right': ChevronRight,
+  images: Images,
 }
 
 const NODES = new Map(Object.entries(UI))

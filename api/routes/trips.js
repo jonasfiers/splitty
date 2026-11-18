@@ -6,6 +6,8 @@ const tripService = require('../tripService');
 const geocodeService = require('../geocodeService');
 const routeService = require('../routeService');
 const uploadStore = require('../uploadStore');
+const tripPhotos = require('../tripPhotos');
+const { Readable } = require('stream');
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const DATE_OR_DATETIME = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2})?$/;
@@ -26,6 +28,15 @@ const NAME_LOOKUP_MS = 10000;
 // the secret itself: a link must not double as a login token, or the reverse.
 const fileLinkSecret = () => `${process.env.JWT_SECRET}:trip-attachment`;
 const signFileLink = id => `/trips/files/${id}?sig=${jwt.sign({ att: id }, fileLinkSecret(), { expiresIn: FILE_LINK_TTL })}`;
+
+// Photo links (tripPhotos.js): one signature per album per day, so the
+// browser's cache keeps the thumbnails all day. Valid two days, so a page
+// opened before midnight keeps working. Own derived key, as above.
+const photoLinkSecret = () => `${process.env.JWT_SECRET}:trip-photo`;
+const photoSig = albumId => {
+    const day = Math.floor(Date.now() / 86_400_000) * 86_400;
+    return jwt.sign({ alb: albumId, iat: day, exp: day + 2 * 86_400 }, photoLinkSecret());
+};
 
 const text = (value, max) => (typeof value === 'string' ? value.trim().slice(0, max) : '');
 
@@ -178,8 +189,76 @@ router.get('/files/:id', async (req, res) => {
     }
 });
 
+// ── PUBLIC: a photo of a trip's Immich album, through a signed link ──
+router.get('/photos/:albumId/:assetId/:size', async (req, res) => {
+    const { albumId, assetId, size } = req.params;
+    if (!['thumbnail', 'preview'].includes(size)) return res.status(404).end();
+    try {
+        const claim = jwt.verify(String(req.query.sig || ''), photoLinkSecret());
+        if (claim.alb !== albumId) return res.status(403).end();
+    } catch {
+        return res.status(403).json({ error: 'This link has expired. Reload the trip.' });
+    }
+    try {
+        const album = await tripPhotos.albumForThumbnail(albumId);
+        if (!album) return res.status(404).end();
+        const upstream = await tripPhotos.thumbnail(album, assetId, size);
+        const type = upstream.headers.get('content-type') || '';
+        if (!type.startsWith('image/')) return res.status(502).end();
+        res.set({ 'Content-Type': type, 'Cache-Control': 'private, max-age=86400', 'X-Content-Type-Options': 'nosniff' });
+        const len = upstream.headers.get('content-length');
+        if (len) res.set('Content-Length', len);
+        Readable.fromWeb(upstream.body).on('error', () => res.destroy()).pipe(res);
+    } catch (err) {
+        if (err instanceof tripPhotos.PhotoError) return res.status(err.status).end();
+        console.error('[photos] thumbnail:', err);
+        res.status(500).end();
+    }
+});
+
 // Everything below needs a logged-in user.
 router.use(require('../middleware/auth'));
+
+// ── Photos: Immich albums linked to a trip (tripPhotos.js) ──
+const photoError = (res, err, where) => {
+    if (err instanceof tripPhotos.PhotoError) return res.status(err.status).json({ error: err.message });
+    console.error(`[photos] ${where}:`, err);
+    res.status(500).json({ error: 'Something went wrong with the photos.' });
+};
+
+router.get('/:id/photos', async (req, res) => {
+    if (!tripPhotos.enabled()) return res.json({ enabled: false, albums: [], photos: [] });
+    try {
+        const result = await tripPhotos.tripPhotos(req.params.id, req.user.id);
+        if (!result) return res.status(404).json({ error: 'Trip not found' });
+        const sigs = new Map(result.albums.map(a => [a.id, photoSig(a.id)]));
+        res.json({
+            enabled: true,
+            albums: result.albums,
+            photos: result.photos.map(p => ({
+                ...p,
+                thumb: `/trips/photos/${p.album}/${p.id}/thumbnail?sig=${sigs.get(p.album)}`,
+                preview: `/trips/photos/${p.album}/${p.id}/preview?sig=${sigs.get(p.album)}`,
+            })),
+        });
+    } catch (err) { photoError(res, err, 'list'); }
+});
+
+router.post('/:id/albums', async (req, res) => {
+    if (!tripPhotos.enabled()) return res.status(503).json({ error: 'Photos are not set up on this server.' });
+    try {
+        const album = await tripPhotos.addAlbum(req.params.id, req.user.id, req.body?.url);
+        console.log(`[photos] album ${album.id} added to trip ${req.params.id} by ${req.user.id}`);
+        res.status(201).json({ album });
+    } catch (err) { photoError(res, err, 'add'); }
+});
+
+router.delete('/:id/albums/:albumId', async (req, res) => {
+    try {
+        if (!(await tripPhotos.removeAlbum(req.params.id, req.user.id, req.params.albumId))) return res.status(404).json({ error: 'Album not found' });
+        res.json({ success: true });
+    } catch (err) { photoError(res, err, 'remove'); }
+});
 
 // GEOCODE
 router.get('/geocode', geocodeLimiter, async (req, res) => {

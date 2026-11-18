@@ -1,0 +1,96 @@
+/* A day's photos: one scrolling row of square thumbnails. */
+.day-photos {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 4px 0 8px 34px; /* in line with the entries' text, past the dots */
+  scrollbar-width: thin;
+}
+.day-photo {
+  position: relative;
+  flex: 0 0 auto;
+  width: 64px;
+  height: 64px;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--surface-2);
+  cursor: pointer;
+}
+.day-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.day-photo:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.day-photo-video {
+  position: absolute; right: 4px; bottom: 4px;
+  width: 18px; height: 18px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(0, 0, 0, .55); color: #fff; font-size: 10px;
+}
+.day-photo-more {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(0, 0, 0, .5); color: #fff;
+  font-weight: 700; font-size: var(--fs-md);
+}
+
+/* Photos on the map: a thumbnail in a white frame, with how many it stands
+   for when nearby ones are bundled. */
+.photo-pin {
+  position: relative;
+  width: 40px; height: 40px;
+  border-radius: 8px;
+  border: 2px solid var(--surface);
+  box-shadow: var(--shadow-md);
+  overflow: visible;
+  background: var(--surface-2);
+  cursor: pointer;
+}
+.photo-pin img { width: 100%; height: 100%; object-fit: cover; border-radius: 6px; display: block; }
+.photo-pin-n {
+  position: absolute; top: -7px; right: -7px;
+  min-width: 18px; height: 18px; padding: 0 4px;
+  border-radius: 9px;
+  background: var(--text); color: var(--surface);
+  font: 700 var(--fs-xs)/18px var(--font-body);
+  text-align: center;
+}
+.trip-map-photos {
+  position: absolute; left: 10px; bottom: 10px; z-index: 500;
+  padding: 4px 10px; border-radius: 999px;
+  background: var(--surface); color: var(--text-2);
+  border: 1px solid var(--border); box-shadow: var(--shadow-md);
+  font-size: var(--fs-sm); font-weight: 600;
+  display: flex; align-items: center; gap: 6px;
+}
+
+/* The viewer, above everything (Expandable's full screen is 1000). */
+.photo-viewer {
+  position: fixed; inset: 0; z-index: 3000;
+  background: rgba(10, 8, 6, .94);
+  display: flex; align-items: center; justify-content: center;
+}
+.photo-viewer-img { max-width: 100%; max-height: calc(100% - 64px); object-fit: contain; user-select: none; }
+.photo-viewer-bar {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  display: flex; justify-content: space-between; gap: 12px;
+  padding: 14px 16px calc(14px + env(safe-area-inset-bottom));
+  color: rgba(255, 255, 255, .85); font-size: var(--fs-sm);
+}
+.photo-viewer-close, .photo-viewer-nav {
+  position: absolute;
+  display: flex; align-items: center; justify-content: center;
+  width: 44px; height: 44px; border-radius: 50%;
+  border: none; background: rgba(255, 255, 255, .12); color: #fff;
+  font-size: 22px; cursor: pointer;
+}
+.photo-viewer-close { top: calc(12px + env(safe-area-inset-top)); right: 12px; }
+.photo-viewer-nav { top: 50%; margin-top: -22px; }
+.photo-viewer-nav.prev { left: 12px; }
+.photo-viewer-nav.next { right: 12px; }
+.photo-viewer-close:hover, .photo-viewer-nav:hover { background: rgba(255, 255, 255, .22); }
+
+/* The albums in the Photos sheet. */
+.album-list { list-style: none; margin: 0 0 16px; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.album-list li { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--r-md, 10px); }
+.album-list-text { flex: 1; min-width: 0; display: flex; flex-direction: column; font-size: var(--fs-sm); color: var(--text-2); }
+.album-list-text strong { color: var(--text); font-size: var(--fs-base); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

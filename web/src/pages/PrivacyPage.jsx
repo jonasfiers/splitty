@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext'
 // Public: linked from the sign-in and register pages and from Profile.
 // Keep it true: when Splitty starts storing something new, sending data to a
 // new service, or keeping something longer, update this page and its date.
-const UPDATED = '10 November 2026'
+const UPDATED = '18 November 2026'
 
 export default function PrivacyPage() {
   const { token } = useAuth()
@@ -61,6 +61,7 @@ export default function PrivacyPage() {
           <li><strong>Migadu</strong>, Splitty’s email provider, handles the emails Splitty sends you (confirming your address, resetting your password, confirming a deletion).</li>
           <li><strong>Your browser’s push service</strong>, if you switch on notifications: Google for Chrome and Android, Apple for Safari, Mozilla for Firefox. It carries the notification to your device.</li>
           <li><strong>Place and route search:</strong> when you search for a place, Splitty’s server asks OpenStreetMap’s Nominatim service; when you look for a public-transport route, it asks Transitous. They receive what you searched for (a place name, or the stops and times), not your name, email or IP address.</li>
+          <li><strong>Trip photos:</strong> if someone links an Immich photo album to a trip, Splitty’s server reads that album through its shared link and shows its photos to everyone on the trip, with when and where each was taken. Splitty keeps the link, not the photos: they are passed through as they are viewed, and briefly cached by your browser. Removing the album from the trip, or the link in Immich, stops it.</li>
           <li><strong>Directions:</strong> if you tap “Navigate here”, your device opens Apple Maps, your map app, or OpenStreetMap with that place.</li>
         </ul>
         <p>Splitty does not sell or share your data with anyone else.</p>

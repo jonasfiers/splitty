@@ -390,7 +390,9 @@ const tripService = {
                  WITH t, attachments, storedNames, collect(i) AS items
                  OPTIONAL MATCH (p:Place)-[:PLACE_OF]->(t)
                  WITH t, attachments, storedNames, items, collect(p) AS places
-                 FOREACH (n IN attachments + items + places | DETACH DELETE n)
+                 OPTIONAL MATCH (al:PhotoAlbum)-[:PHOTOS_OF]->(t)
+                 WITH t, attachments, storedNames, items, places, collect(al) AS albums
+                 FOREACH (n IN attachments + items + places + albums | DETACH DELETE n)
                  WITH t, storedNames
                  MATCH (t)-[:PLANNED_IN]->(g:Group), (u:User {id: $userId})
                  CREATE (d:Deletion {id: randomUUID(), on: datetime(), kind: 'trip', title: t.title})-[:IN_GROUP]->(g)

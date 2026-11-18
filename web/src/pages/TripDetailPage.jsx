@@ -27,6 +27,7 @@ import { getOfflineTrip, asOf } from '../utils/offlineTrips.js'
 import { useOffline, isOffline, isNetworkError, onReconnect } from '../utils/connection.js'
 import OfflinePlaces from '../components/OfflinePlaces.jsx'
 import Icon from '../components/Icon/Icon.jsx'
+import { useTripPhotos, photosByDay, DayPhotos, PhotoViewer, AlbumsSheet } from '../components/TripPhotos/TripPhotos.jsx'
 import { tripIcon } from '../utils/icons.js'
 
 // Leaflet is only worth downloading once someone opens the map.
@@ -181,6 +182,11 @@ function TripDetailPage() {
   // at once and is only deleted on the server after a few seconds, so Undo is
   // just cancelling that. Leaving the page sends it straight away.
   const [removed, setRemoved] = useState(null) // { item, timer }
+  // Photos from the trip's Immich albums (TripPhotos.jsx); none offline.
+  const photos = useTripPhotos(id, readOnly)
+  const [viewer, setViewer] = useState(null) // { list, index }
+  const [showAlbums, setShowAlbums] = useState(false)
+  const openPhotos = useCallback((list, index) => setViewer({ list, index }), [])
   const removedRef = useRef(null)
   const sendDelete = useCallback(async item => {
     try { await client.delete(`/trips/items/${item.id}`) } catch {
@@ -258,6 +264,7 @@ function TripDetailPage() {
   const placeById = new Map(places.map(p => [p.id, p]))
   const placeName = placeId => placeById.get(placeId)?.name
   const timeline = buildTimeline(trip, items)
+  const dayPhotos = photosByDay(photos.photos)
 
   // What has been paid for the trip, counted by the server so an expense linked
   // to several items (both legs of a connecting flight) counts once.
@@ -282,6 +289,7 @@ function TripDetailPage() {
           <DayHead trip={trip} day={d} />
           {/* Today is live, the same as Home's Today card. */}
           <TripDayBody tripId={id} day={d} places={places} time={d.day === now ? nowTime : null} past={d.day < now} />
+          <DayPhotos photos={dayPhotos[d.day]} onOpen={openPhotos} />
         </div>
       ))}
     </div>
@@ -297,7 +305,7 @@ function TripDetailPage() {
       splitKey="trip-timeline"
       extra={!readOnly && places.some(p => p.lat != null) && (
         <Suspense fallback={<Loading />}>
-          <TripMap places={places} items={items} onOpenItem={openItem} highlight={highlight} onHover={setHighlight} today={onTrip ? now : null} />
+          <TripMap places={places} items={items} onOpenItem={openItem} highlight={highlight} onHover={setHighlight} today={onTrip ? now : null} photos={photos.photos} onOpenPhotos={openPhotos} />
         </Suspense>
       )}
     >
@@ -309,7 +317,7 @@ function TripDetailPage() {
   const mapView = readOnly ? <OfflinePlaces places={places} items={items} onOpenItem={openItem} /> : (
     <Suspense fallback={<Loading />}>
       <Expandable label={`${trip.title} · Map`}>
-        <TripMap places={places} items={items} onOpenItem={openItem} highlight={highlight} onHover={setHighlight} today={onTrip ? now : null} />
+        <TripMap places={places} items={items} onOpenItem={openItem} highlight={highlight} onHover={setHighlight} today={onTrip ? now : null} photos={photos.photos} onOpenPhotos={openPhotos} />
       </Expandable>
       {places.some(p => p.lat == null) && (
         <p className="field-note">
@@ -342,6 +350,11 @@ function TripDetailPage() {
         <Link to={`/trips/${id}/documents`} className="trip-chip">
           <Icon name="file-text" /> Documents{docCount ? ` · ${docCount}` : ''} <span className="trip-chip-chevron" aria-hidden="true">›</span>
         </Link>
+        {photos.enabled && !readOnly && (
+          <button type="button" className="trip-chip" onClick={() => setShowAlbums(true)}>
+            <Icon name="images" /> Photos{photos.photos.length ? ` · ${photos.photos.length}` : ''} <span className="trip-chip-chevron" aria-hidden="true">›</span>
+          </button>
+        )}
         {paid > 0 && (
           <span className="trip-paid" title="Paid so far, in the group's currency">
             {formatCurrency(paid, trip.groupIso)} paid
@@ -424,6 +437,11 @@ function TripDetailPage() {
           onFindRoute={findRoute}
         />
       )}
+
+      {showAlbums && (
+        <AlbumsSheet tripId={id} albums={photos.albums} onChanged={photos.reload} onClose={() => setShowAlbums(false)} />
+      )}
+      {viewer && <PhotoViewer photos={viewer.list} index={viewer.index} onClose={() => setViewer(null)} />}
 
       {showKinds && (
         <Sheet title="Add to trip" onClose={() => setShowKinds(false)}>
