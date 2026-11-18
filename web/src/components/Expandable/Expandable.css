@@ -1,4 +1,7 @@
-.expandable { position: relative; }
+/* Inline, its own stacking context: the toggle's and the map controls' 500
+   (above Leaflet's panes) count inside it only, so sheets and the nav still
+   cover it. Full screen (z-index 1000, below) is its own context anyway. */
+.expandable { position: relative; isolation: isolate; }
 .expandable-toggle {
     position: absolute;
     top: 8px;
