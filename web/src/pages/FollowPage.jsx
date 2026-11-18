@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, lazy, Suspense } from 'react'
 import { useParams, Link } from 'react-router'
 import Loading from '../components/Loading.jsx'
 import Icon from '../components/Icon/Icon.jsx'
+import Expandable from '../components/Expandable/Expandable.jsx'
 import { DayHead, EntryRow } from '../components/TripDay/TripDay.jsx'
 import { photosByDay, DayPhotos, PhotoViewer } from '../components/TripPhotos/TripPhotos.jsx'
 import { buildTimeline, formatDay } from '../utils/trip.js'
@@ -70,8 +71,12 @@ export default function FollowPage() {
 
         {located && (
           <div className="follow-map">
+            {/* As on the trip page: a full-screen button, and while the trip is
+                on, framed on today's places with a switch to the whole trip. */}
             <Suspense fallback={<Loading />}>
-              <TripMap places={places} items={items} onOpenItem={noop} photos={photos} onOpenPhotos={openPhotos} />
+              <Expandable label={`${trip.title} · Map`}>
+                <TripMap places={places} items={items} onOpenItem={noop} photos={photos} onOpenPhotos={openPhotos} today={view.started && !trip.endDate ? today : null} />
+              </Expandable>
             </Suspense>
           </div>
         )}
