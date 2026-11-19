@@ -12,8 +12,9 @@ const VIEW_LABELS = { text: 'Text', qr: 'QR', barcode: 'Barcode' }
 
 // Shows a booking reference (or the ticket's code) as large as the screen allows, at maximum
 // contrast in either theme (black on white, or white on black), for holding the phone up at a check-in desk or to a conductor.
-// On a phone held upright the content is turned sideways, so the reference
-// can use the screen's length (a page cannot force landscape on iOS).
+// On a phone held upright the reference (text, barcode, PDF417) is turned
+// sideways to use the screen's length, while the switch and labels stay
+// upright (a page cannot force landscape on iOS).
 // Tap anywhere, press Escape or the phone's Back to close. Keeps the screen
 // awake while open where the browser supports it (Screen Wake Lock; iOS 16.4+
 // in a PWA).
@@ -106,6 +107,8 @@ export default function BigReference({ item, show = 'ref', onClose: onCloseProp 
   const value = item.confirmationRef || ''
   const chars = Math.min(Math.max(value.length, 4), 24)
   const label = `${item.title} · ${view === 'ticket' ? 'Ticket' : 'Booking reference'}`
+  const ticketFormat = item.ticketFormat || 'qr'
+  const turned = view === 'text' || view === 'barcode' || (view === 'ticket' && (ticketFormat === 'code128' || ticketFormat === 'pdf417'))
 
   return createPortal(
     <div className="bigref" role="dialog" aria-modal="true" aria-label={label} onClick={() => closeRef.current()}>
@@ -118,11 +121,18 @@ export default function BigReference({ item, show = 'ref', onClose: onCloseProp 
           </div>
         )}
         <div className="bigref-label">{label}</div>
-        {view === 'text' && <div className="bigref-value" style={{ '--chars': chars }}>{value}</div>}
-        {view === 'ticket' && <TicketCode className="bigref-code" format={item.ticketFormat || 'qr'} text={item.ticketCode} />}
-        {view === 'qr' && <TicketCode className="bigref-code" format="qr" text={value} />}
-        {view === 'barcode' && <TicketCode className="bigref-code" format="code128" text={value} />}
-        {(view === 'qr' || view === 'barcode') && <div className="bigref-small">{value}</div>}
+        {/* On a phone held upright only this stage turns sideways, and only
+            for what needs the screen's length (text, barcode, PDF417); the
+            switch and labels stay upright, square codes too. */}
+        <div className="bigref-stage">
+          <div className={`bigref-payload ${turned ? 'bigref-turned' : ''}`}>
+            {view === 'text' && <div className="bigref-value" style={{ '--chars': chars }}>{value}</div>}
+            {view === 'ticket' && <TicketCode className="bigref-code" format={ticketFormat} text={item.ticketCode} />}
+            {view === 'qr' && <TicketCode className="bigref-code" format="qr" text={value} />}
+            {view === 'barcode' && <TicketCode className="bigref-code" format="code128" text={value} />}
+            {(view === 'qr' || view === 'barcode') && <div className="bigref-small">{value}</div>}
+          </div>
+        </div>
         <div className="bigref-hint">Tap anywhere to close</div>
       </div>
     </div>,

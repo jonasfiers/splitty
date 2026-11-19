@@ -82,9 +82,11 @@
   letter-spacing: 0.08em;
 }
 
-/* Codes: square ones as big as the short side allows once the switch, label,
-   reference and hint (~210px with the gaps) have their room; long ones
-   (barcode, PDF417) across the width. */
+/* The stage: everything between the label and the hint. On a wide screen it
+   simply holds the payload; codes are sized to the room the switch, label,
+   reference and hint (~210px with the gaps) leave. */
+.bigref-stage { display: flex; justify-content: center; max-width: 100%; }
+.bigref-payload { display: flex; flex-direction: column; align-items: center; gap: 12px; max-width: 100%; }
 .bigref-code.ticket-code-square { width: min(calc(100vh - 210px), 80vw); }
 .bigref-code.ticket-code-linear,
 .bigref-code.ticket-code-wide { width: min(90vw, 150vh); }
@@ -94,31 +96,43 @@
 .bigref-content.bigref-qr,
 .bigref-content.bigref-barcode { gap: 12px; }
 
-/* Phone held upright: turn the content a quarter clockwise and size it to
-   the screen's height, which is now the reading width. */
+/* Phone held upright: the switch, label and hint stay upright at the top and
+   bottom; the stage takes the rest of the screen (a size container, so its
+   cqw/cqh units are its own width/height). A turned payload is rotated a
+   quarter clockwise and sized to the stage's height, its reading width. */
 @media (orientation: portrait) and (max-width: 767px) {
   .bigref-content {
     position: absolute;
+    inset: max(24px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
+           max(24px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+    gap: 12px;
+  }
+  .bigref-stage {
+    flex: 1;
+    align-self: stretch;
+    position: relative;
+    container-type: size;
+  }
+  .bigref-payload {
+    position: absolute;
     top: 50%;
     left: 50%;
-    width: 92vh;
-    width: 92dvh;
+    width: 100cqw;
+    transform: translate(-50%, -50%);
+  }
+  .bigref-payload.bigref-turned {
+    width: 96cqh;
     max-width: none;
-    gap: 4vw;
     transform: translate(-50%, -50%) rotate(90deg);
   }
-  .bigref-value {
-    font-size: min(calc(132vh / var(--chars)), 26vw);
-    font-size: min(calc(132dvh / var(--chars)), 26vw);
-  }
-  /* Turned sideways: the screen's width is now the height to fill. */
-  .bigref-code.ticket-code-square { width: min(calc(100vw - 210px), 80dvh); }
-  .bigref-code.ticket-code-linear,
-  .bigref-code.ticket-code-wide { width: 88dvh; }
-  .bigref-code.ticket-code-linear svg { height: min(calc(100vw - 260px), 40vw); }
-  .bigref-content.bigref-ticket,
-  .bigref-content.bigref-qr,
-  .bigref-content.bigref-barcode { gap: 12px; }
+  .bigref-value { font-size: min(calc(132cqh / var(--chars)), 30cqw); }
+  /* Upright square codes: as wide as the stage allows, room left below for the reference. */
+  .bigref-code.ticket-code-square { width: min(100cqw, calc(100cqh - 48px)); }
+  /* Turned: the stage's width is now the height to fill. */
+  .bigref-turned .bigref-code.ticket-code-linear,
+  .bigref-turned .bigref-code.ticket-code-wide { width: 100%; }
+  .bigref-turned .bigref-code.ticket-code-linear svg { height: min(calc(100cqw - 110px), 45cqw); }
+  .bigref-turned .bigref-code.ticket-code-wide { max-height: 100cqw; }
 }
 
 [data-theme="dark"] .bigref {
