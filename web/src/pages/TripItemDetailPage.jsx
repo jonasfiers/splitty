@@ -6,6 +6,7 @@ import Loading from '../components/Loading.jsx'
 import PageHeader from '../components/PageHeader/PageHeader.jsx'
 import LinkExpenseSheet from '../components/TripForm/LinkExpenseSheet.jsx'
 import { RefChip, TicketChip } from '../components/BigReference/RefChip.jsx'
+import { itemTickets } from '../utils/barcode.js'
 import BigReference from '../components/BigReference/BigReference.jsx'
 import { DetailHero, DetailRows, DetailRow, DetailRowSub, RowAction } from '../components/Detail/Detail.jsx'
 import { useConfirm } from '../components/Confirm/ConfirmProvider.jsx'
@@ -311,10 +312,10 @@ export default function TripItemDetailPage() {
               subtitle={<Link to={`/trips/${tripId}`}>{item.tripTitle}</Link>}
             />
 
-            {(item.confirmationRef || item.ticketCode || goLink) && (
+            {(item.confirmationRef || itemTickets(item).length > 0 || goLink) && (
               <div className="today-actions item-quick">
                 {item.confirmationRef && <RefChip item={item} onClick={() => setShowBigRef('ref')} />}
-                {item.ticketCode && <TicketChip onClick={() => setShowBigRef('ticket')} />}
+                {itemTickets(item).length > 0 && <TicketChip count={itemTickets(item).length} onClick={() => setShowBigRef('ticket')} />}
                 {goLink && (
                   <a className="today-nav" href={goLink.url} target={linkTarget(goLink.url)} rel="noopener noreferrer" title={goLink.label}>
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l18-8-8 18-2-8-8-2z" /></svg>

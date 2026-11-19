@@ -1,5 +1,6 @@
-// Ticket codes (2026-11-19): the QR, Aztec... code printed on a ticket,
-// stored as the text it holds (TripItem.ticketCode + ticketFormat) and drawn
+// Ticket codes (2026-11-19): the QR, Aztec... codes printed on an item's
+// tickets, one per ticket, stored as the text each holds (item.tickets:
+// [{ code, format, name }], api/tripService.js ticketsOf) and drawn
 // again full screen by BigReference. A booking reference can be shown as a QR
 // code or a barcode too, for desks that scan the reference itself.
 //
@@ -20,6 +21,14 @@ export const TICKET_FORMATS = [
 ]
 
 export const isLinear = format => format === 'code128'
+
+// The most an item keeps (api/routes/trips.js MAX_TICKETS).
+export const MAX_TICKETS = 10
+
+// An item's tickets; an offline copy saved before the list may still have the
+// single ticketCode of the first version.
+export const itemTickets = item => item?.tickets
+  ?? (item?.ticketCode ? [{ code: item.ticketCode, format: item.ticketFormat || 'qr', name: '' }] : [])
 
 // BarcodeDetector's names for the formats Splitty can draw again.
 const FROM_DETECTOR = { qr_code: 'qr', aztec: 'aztec', pdf417: 'pdf417', data_matrix: 'datamatrix', code_128: 'code128' }
@@ -55,10 +64,25 @@ export function pickCode(found) {
   return { text: best.rawValue, format: FROM_DETECTOR[best.format] }
 }
 
-// Finds a code in a picked file: a screenshot or photo, or a PDF ticket (its
-// first pages, drawn large enough for small codes). Returns { text, format },
-// or throws an Error whose message can be shown as is.
-export async function readCodeFromFile(file) {
+// Every code Splitty can draw again among those found, in reading order (top
+// to bottom, then left to right), each text once. Throws (with a message to
+// show) when only codes Splitty can't draw were found.
+function usableCodes(found) {
+  const usable = found.filter(c => FROM_DETECTOR[c.format] && c.rawValue)
+  if (found.length > 0 && usable.length === 0) throw new Error(`Found a ${found[0].format.replace('_', ' ')} code, which Splitty can’t draw again.`)
+  const box = c => c.boundingBox
+  usable.sort((a, b) => (Math.abs(box(a).y - box(b).y) > Math.min(box(a).height, box(b).height) / 2 ? box(a).y - box(b).y : box(a).x - box(b).x))
+  const seen = new Set()
+  return usable
+    .filter(c => !seen.has(c.rawValue) && seen.add(c.rawValue))
+    .map(c => ({ text: c.rawValue, format: FROM_DETECTOR[c.format] }))
+}
+
+// Finds the codes in a picked file: a screenshot or photo (several tickets on
+// one photo give several codes), or a PDF (its first ten pages, drawn large enough
+// for small codes). Returns [{ text, format }], or throws an Error whose
+// message can be shown as is.
+export async function readCodesFromFile(file) {
   if (!canReadCodes()) throw new Error('This browser can’t read codes. Paste the text instead.')
   let detector
   try { detector = await getDetector() } catch { throw new Error('Couldn’t load the code reader. Check the connection and try again.') }
@@ -69,14 +93,20 @@ export async function readCodeFromFile(file) {
     const task = loadPdfData(new Uint8Array(await file.arrayBuffer()))
     try {
       const pdf = await task.promise
-      for (let n = 1; n <= Math.min(pdf.numPages, 4) && found.length === 0; n++) {
+      for (let n = 1; n <= Math.min(pdf.numPages, MAX_TICKETS); n++) {
         const page = await pdf.getPage(n)
         const viewport = page.getViewport({ scale: 3 })
         const canvas = document.createElement('canvas')
         canvas.width = Math.ceil(viewport.width)
         canvas.height = Math.ceil(viewport.height)
         await page.render({ canvas, canvasContext: canvas.getContext('2d'), viewport, annotationMode: 0 }).promise
-        found.push(...await detector.detect(canvas))
+        // Pages one under the other, so reading order runs across them.
+        const offset = (n - 1) * 100000
+        found.push(...(await detector.detect(canvas)).map(c => ({
+          format: c.format,
+          rawValue: c.rawValue,
+          boundingBox: { x: c.boundingBox.x, y: c.boundingBox.y + offset, width: c.boundingBox.width, height: c.boundingBox.height },
+        })))
         canvas.width = canvas.height = 0
       }
     } finally {
@@ -87,7 +117,7 @@ export async function readCodeFromFile(file) {
     try { found.push(...await detector.detect(bitmap)) } finally { bitmap.close?.() }
   }
 
-  const code = pickCode(found)
-  if (!code) throw new Error('No code found. Try a sharper screenshot, or paste the text.')
-  return code
+  const codes = usableCodes(found)
+  if (codes.length === 0) throw new Error('No code found. Try a sharper screenshot, or paste the text.')
+  return codes
 }

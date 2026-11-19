@@ -82,13 +82,36 @@ async function attachPlaces(tx, tripId, itemId, kind, data, created) {
     }
 }
 
+// Ticket codes (2026-11-19): the codes printed on an item's tickets, one per
+// ticket (two people, two codes), as the text each holds. Neo4j has no list of
+// maps, so they are stored as three lists of the same length on the item
+// (ticketCodes, ticketFormats, ticketNames) and handed out as
+// `tickets: [{ code, format, name }]`. Items saved with the single
+// ticketCode/ticketFormat of the first version read as a list of one; their
+// next save writes the lists and drops the old fields.
+function ticketsOf(props) {
+    if (Array.isArray(props.ticketCodes)) {
+        return props.ticketCodes.map((code, n) => ({
+            code, format: props.ticketFormats?.[n] || 'qr', name: props.ticketNames?.[n] || '',
+        }));
+    }
+    return props.ticketCode ? [{ code: props.ticketCode, format: props.ticketFormat || 'qr', name: '' }] : [];
+}
+function withTickets(props) {
+    const { ticketCodes, ticketFormats, ticketNames, ticketCode, ticketFormat, ...rest } = props;
+    return { ...rest, tickets: ticketsOf(props) };
+}
+
 const itemProps = (kind, data) => ({
     title: data.title,
     start: data.start,
     end: data.end ?? null,
     confirmationRef: data.confirmationRef ?? '',
-    ticketCode: data.ticketCode ?? '',
-    ticketFormat: data.ticketFormat ?? '',
+    ticketCodes: (data.tickets ?? []).map(t => t.code),
+    ticketFormats: (data.tickets ?? []).map(t => t.format),
+    ticketNames: (data.tickets ?? []).map(t => t.name ?? ''),
+    ticketCode: null,
+    ticketFormat: null,
     url: data.url ?? '',
     notes: data.notes ?? '',
     // Not a journey (any more, when its kind was changed): no transport fields.
@@ -119,6 +142,7 @@ async function insertItem(tx, tripId, userId, kind, data, created) {
 
 const tripService = {
     KIND_LABELS,
+    withTickets,
     TRANSPORT_MODES,
 
     // CREATE
@@ -186,7 +210,7 @@ const tripService = {
                 );
                 for (const r of itemRecords) {
                     const kind = kindOf(r.get('labels'));
-                    const data = r.get('i').properties;
+                    const data = withTickets(r.get('i').properties);
                     const itemId = await insertItem(tx, newId, userId, kind, data, null);
                     const links = [['AT', r.get('placeId')], ['DEPARTS_FROM', r.get('fromPlaceId')], ['ARRIVES_AT', r.get('toPlaceId')]];
                     for (const [rel, oldPlaceId] of links) {
@@ -287,7 +311,7 @@ const tripService = {
                 items: itemRecords.map(r => {
                     const paidAmounts = r.get('paidAmounts');
                     return {
-                        ...r.get('i').properties,
+                        ...withTickets(r.get('i').properties),
                         kind: kindOf(r.get('labels')),
                         placeId: r.get('placeId'),
                         fromPlaceId: r.get('fromPlaceId'),
@@ -473,7 +497,7 @@ const tripService = {
             return {
                 success: true,
                 item: {
-                    ...r.get('i').properties,
+                    ...withTickets(r.get('i').properties),
                     kind: kindOf(r.get('labels')),
                     place: place(r.get('p')),
                     from: place(r.get('f')),

@@ -75,6 +75,14 @@
   background: var(--bigref-fg);
   color: var(--bigref-bg);
 }
+.bigref-switch button { max-width: 9em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bigref-switch-count {
+  align-self: center;
+  padding: 0 8px;
+  font-family: var(--font-body);
+  font-size: var(--fs-base);
+  font-weight: 700;
+}
 .bigref-small {
   font-family: var(--font-mono);
   font-weight: 700;

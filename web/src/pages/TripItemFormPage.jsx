@@ -16,6 +16,7 @@ import EmptyState from '../components/EmptyState/EmptyState.jsx'
 import { getOnce } from '../utils/cache.js'
 import Icon from '../components/Icon/Icon.jsx'
 import TicketCodeField from '../components/TicketCode/TicketCodeField.jsx'
+import { itemTickets } from '../utils/barcode.js'
 
 const LABELS = {
   transport: { start: 'Departure', end: 'Arrival', title: 'Title', titleHint: 'Leave empty to use the route' },
@@ -43,7 +44,7 @@ export default function TripItemFormPage() {
     endDate: '', endTime: '',
     from: null, to: null, place: null,
     confirmationRef: '',
-    ticketCode: '', ticketFormat: '',
+    tickets: [],
     url: '',
     notes: '',
   })
@@ -84,7 +85,7 @@ export default function TripItemFormPage() {
           to: i.to ? { id: i.to.id } : null,
           place: i.place ? { id: i.place.id } : null,
           confirmationRef: i.confirmationRef || '',
-          ticketCode: i.ticketCode || '', ticketFormat: i.ticketFormat || '',
+          tickets: itemTickets(i),
           url: i.url || '',
           notes: i.notes || '',
         }))
@@ -148,8 +149,7 @@ export default function TripItemFormPage() {
       // A time alone means "same day".
       end: moment(form.endDate || (form.endTime ? form.startDate : ''), form.endTime),
       confirmationRef: form.confirmationRef,
-      ticketCode: form.ticketCode,
-      ticketFormat: form.ticketFormat,
+      tickets: form.tickets.filter(t => t.code.trim()),
       url: form.url.trim(),
       notes: form.notes,
       ...(kind === 'transport'
@@ -297,7 +297,7 @@ export default function TripItemFormPage() {
             <input value={form.confirmationRef} onChange={e => set({ confirmationRef: e.target.value })} maxLength={80} autoCapitalize="characters" />
           </Field>
 
-          <TicketCodeField code={form.ticketCode} format={form.ticketFormat} onChange={set} />
+          <TicketCodeField tickets={form.tickets} onChange={tickets => set({ tickets })} />
 
           {kind === 'transport' && titleField}
 

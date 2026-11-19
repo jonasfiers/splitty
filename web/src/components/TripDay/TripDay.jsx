@@ -2,6 +2,7 @@ import { Fragment, useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import { KINDS, itemIcon, kindVars, describe, mapsLink, linkTarget, formatDay, daysBetween } from '../../utils/trip.js'
 import { RefChip, TicketChip } from '../BigReference/RefChip.jsx'
+import { itemTickets } from '../../utils/barcode.js'
 import BigReference from '../BigReference/BigReference.jsx'
 import { pad, clock, onMinute } from '../../utils/tripClock.js'
 import Icon from '../Icon/Icon.jsx'
@@ -105,17 +106,17 @@ export function EntryNode({ item, state, allDay = false }) {
 function Actions({ item, place, onBigRef, itemTo }) {
   const link = place !== undefined ? mapsLink(place) : null
   const ref = onBigRef && item.confirmationRef
-  const ticket = onBigRef && item.ticketCode
+  const ticketCount = onBigRef ? itemTickets(item).length : 0
   const files = itemTo && item.attachmentCount > 0
     ? (item.attachmentCount === 1 && item.attachmentIds?.[0] ? `${itemTo}/files/${item.attachmentIds[0]}` : itemTo)
     : null
-  if (!ref && !ticket && !link && !files) return null
+  if (!ref && !ticketCount && !link && !files) return null
   return (
     <span className="today-actions">
       {ref && (
         <RefChip item={item} onClick={() => onBigRef({ item, show: 'ref' })} />
       )}
-      {ticket && <TicketChip onClick={() => onBigRef({ item, show: 'ticket' })} />}
+      {ticketCount > 0 && <TicketChip count={ticketCount} onClick={() => onBigRef({ item, show: 'ticket' })} />}
       {link && (
         <a className="today-nav" href={link.url} target={linkTarget(link.url)} rel="noopener noreferrer" title={link.label} aria-label={`${link.label}: ${place?.name ?? item.title}`}>
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l18-8-8 18-2-8-8-2z" /></svg>

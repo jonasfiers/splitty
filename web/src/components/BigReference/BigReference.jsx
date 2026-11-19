@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import TicketCode from '../TicketCode/TicketCode.jsx'
+import { itemTickets } from '../../utils/barcode.js'
 import './BigReference.css'
 
 // Two screens: the ticket's own code (`show="ticket"`), or the booking
@@ -25,6 +26,28 @@ const VIEW_LABELS = { text: 'Text', qr: 'QR', barcode: 'Barcode' }
 export default function BigReference({ item, show = 'ref', onClose: onCloseProp }) {
   const [refView, setRefView] = useState('text')
   const view = show === 'ticket' ? 'ticket' : refView
+  // Several tickets (one per person): one at a time, by the switch or a swipe.
+  const tickets = itemTickets(item)
+  const [nth, setNth] = useState(0)
+  const ticket = tickets[Math.min(nth, tickets.length - 1)]
+  const swipe = useRef(null)
+  const swiped = useRef(false)
+  const step = d => setNth(n => (n + d + tickets.length) % tickets.length)
+  const onPointerDown = e => { swipe.current = { x: e.clientX, y: e.clientY } }
+  const onPointerUp = e => {
+    const start = swipe.current
+    swipe.current = null
+    if (!start || view !== 'ticket' || tickets.length < 2) return
+    const dx = e.clientX - start.x, dy = e.clientY - start.y
+    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+      swiped.current = true // the click that follows is not a "tap to close"
+      step(dx < 0 ? 1 : -1)
+    }
+  }
+  const onTap = () => {
+    if (swiped.current) { swiped.current = false; return }
+    closeRef.current()
+  }
   const pick = v => e => {
     e.stopPropagation()
     setRefView(v)
@@ -106,13 +129,25 @@ export default function BigReference({ item, show = 'ref', onClose: onCloseProp 
   // longer ones stop shrinking and wrap instead.
   const value = item.confirmationRef || ''
   const chars = Math.min(Math.max(value.length, 4), 24)
-  const label = `${item.title} · ${view === 'ticket' ? 'Ticket' : 'Booking reference'}`
-  const ticketFormat = item.ticketFormat || 'qr'
+  const nthLabel = tickets.length > 1 ? ` ${tickets.indexOf(ticket) + 1}/${tickets.length}` : ''
+  const label = `${item.title} · ${view === 'ticket' ? `${ticket?.name || 'Ticket'}${nthLabel}` : 'Booking reference'}`
+  const ticketFormat = ticket?.format || 'qr'
   const turned = view === 'text' || view === 'barcode' || (view === 'ticket' && (ticketFormat === 'code128' || ticketFormat === 'pdf417'))
 
   return createPortal(
-    <div className="bigref" role="dialog" aria-modal="true" aria-label={label} onClick={() => closeRef.current()}>
+    <div className="bigref" role="dialog" aria-modal="true" aria-label={label} onClick={onTap} onPointerDown={onPointerDown} onPointerUp={onPointerUp}>
       <div className={`bigref-content bigref-${view}`}>
+        {show === 'ticket' && tickets.length > 1 && (
+          <div className="bigref-switch" role="group" aria-label="Ticket">
+            {tickets.length <= 4 ? tickets.map((t, n) => (
+              <button key={n} type="button" aria-pressed={t === ticket} onClick={e => { e.stopPropagation(); setNth(n) }}>{t.name || n + 1}</button>
+            )) : <>
+              <button type="button" aria-label="Previous ticket" onClick={e => { e.stopPropagation(); step(-1) }}>‹</button>
+              <span className="bigref-switch-count">{tickets.indexOf(ticket) + 1} / {tickets.length}</span>
+              <button type="button" aria-label="Next ticket" onClick={e => { e.stopPropagation(); step(1) }}>›</button>
+            </>}
+          </div>
+        )}
         {show !== 'ticket' && (
           <div className="bigref-switch" role="group" aria-label="Show as">
             {REF_VIEWS.map(v => (
@@ -127,13 +162,13 @@ export default function BigReference({ item, show = 'ref', onClose: onCloseProp 
         <div className="bigref-stage">
           <div className={`bigref-payload ${turned ? 'bigref-turned' : ''}`}>
             {view === 'text' && <div className="bigref-value" style={{ '--chars': chars }}>{value}</div>}
-            {view === 'ticket' && <TicketCode className="bigref-code" format={ticketFormat} text={item.ticketCode} />}
+            {view === 'ticket' && ticket && <TicketCode className="bigref-code" format={ticketFormat} text={ticket.code} />}
             {view === 'qr' && <TicketCode className="bigref-code" format="qr" text={value} />}
             {view === 'barcode' && <TicketCode className="bigref-code" format="code128" text={value} />}
             {(view === 'qr' || view === 'barcode') && <div className="bigref-small">{value}</div>}
           </div>
         </div>
-        <div className="bigref-hint">Tap anywhere to close</div>
+        <div className="bigref-hint">{view === 'ticket' && tickets.length > 1 ? 'Swipe for the next ticket · tap to close' : 'Tap anywhere to close'}</div>
       </div>
     </div>,
     document.body,

@@ -32,14 +32,15 @@ export function RefChip({ item, onClick }) {
   )
 }
 
-export function TicketChip({ onClick }) {
+export function TicketChip({ count = 1, onClick }) {
+  const label = count > 1 ? `${count} tickets` : 'Ticket'
   return (
-    <button type="button" className="today-nav" onClick={onClick} title="Show the ticket's code" aria-label="Show the ticket's code full screen">
+    <button type="button" className="today-nav" onClick={onClick} title={count > 1 ? 'Show the tickets’ codes' : 'Show the ticket’s code'} aria-label={`${label}: show full screen`}>
       <svg viewBox="0 0 24 24" aria-hidden="true">
         <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" />
         <rect x="3" y="14" width="7" height="7" rx="1" /><path d="M14 14h3v3h-3zM20 14v.01M14 20h.01M17 20h4v-3" />
       </svg>
-      Ticket
+      {label}
     </button>
   )
 }

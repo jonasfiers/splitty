@@ -18,6 +18,7 @@ const { zipSync, strToU8 } = require('fflate');
 const driver = require('./neo4j');
 const { resolveChanges } = require('./expenseHistory');
 const uploadStore = require('./uploadStore');
+const tripService = require('./tripService');
 
 const decimalsOf = iso => {
     try { return new Intl.NumberFormat('en', { style: 'currency', currency: iso }).resolvedOptions().maximumFractionDigits; }
@@ -151,7 +152,7 @@ async function collect(userId) {
         ...trip,
         group: { id: groupId, title: groupTitle },
         items: items.filter(x => x.tripId === trip.id).map(x => ({
-            ...x.item,
+            ...tripService.withTickets(x.item),
             kind: (x.kind || '').toLowerCase(),
             ...Object.fromEntries(x.places.map(p => [placeRole[p.role] || p.role, p.place])),
             createdBy: x.createdBy ?? null,
@@ -193,9 +194,9 @@ function tripsCsv(trips) {
     const list = [];
     for (const t of trips) for (const i of t.items) {
         list.push([t.title, t.group.title, i.kind, i.mode, i.title, i.start, i.end,
-            i.from?.name, i.to?.name, i.place?.name, i.carrier, i.number, i.confirmationRef, i.ticketCode, i.ticketFormat, i.url, i.notes]);
+            i.from?.name, i.to?.name, i.place?.name, i.carrier, i.number, i.confirmationRef, (i.tickets ?? []).map(t => `${t.name ? `${t.name}: ` : ''}${t.code} (${t.format})`).join('\n'), i.url, i.notes]);
     }
-    return csv(['Trip', 'Group', 'Kind', 'Mode', 'Title', 'Start', 'End', 'From', 'To', 'Place', 'Carrier', 'Number', 'Booking reference', 'Ticket code', 'Ticket code format', 'Link', 'Notes'], list);
+    return csv(['Trip', 'Group', 'Kind', 'Mode', 'Title', 'Start', 'End', 'From', 'To', 'Place', 'Carrier', 'Number', 'Booking reference', 'Ticket codes', 'Link', 'Notes'], list);
 }
 
 const README = generated => `Your Splitty data, exported ${generated}.

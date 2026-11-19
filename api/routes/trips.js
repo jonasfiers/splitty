@@ -71,14 +71,24 @@ function parsePlace(ref) {
     return { name, address: text(ref.address, 400), lat: located ? lat : null, lon: located ? lon : null };
 }
 
-// The code printed on a ticket (QR, Aztec...), as the text it holds, so the
-// app can draw it again full screen. Not trimmed: fixed-width payloads such as
-// an airline boarding pass (BCBP) pad fields with spaces.
+// The codes printed on the item's tickets (tripService: ticketsOf), each as
+// the text it holds, so the app can draw them again full screen. Codes are not
+// trimmed: fixed-width payloads such as an airline boarding pass (BCBP) pad
+// fields with spaces. A client from before the list (one ticketCode) is still
+// understood.
 const TICKET_FORMATS = ['qr', 'aztec', 'pdf417', 'datamatrix', 'code128'];
-function parseTicketCode(body) {
-    const code = typeof body.ticketCode === 'string' && body.ticketCode.trim() ? body.ticketCode.slice(0, 2000) : '';
-    const format = TICKET_FORMATS.includes(body.ticketFormat) ? body.ticketFormat : 'qr';
-    return { ticketCode: code, ticketFormat: code ? format : '' };
+const MAX_TICKETS = 10;
+function parseTickets(body) {
+    const list = Array.isArray(body.tickets) ? body.tickets
+        : typeof body.ticketCode === 'string' ? [{ code: body.ticketCode, format: body.ticketFormat }] : [];
+    return list
+        .filter(t => t && typeof t.code === 'string' && t.code.trim())
+        .slice(0, MAX_TICKETS)
+        .map(t => ({
+            code: t.code.slice(0, 2000),
+            format: TICKET_FORMATS.includes(t.format) ? t.format : 'qr',
+            name: text(t.name, 40),
+        }));
 }
 
 function parseItem(kind, body) {
@@ -87,7 +97,7 @@ function parseItem(kind, body) {
         start: text(body.start, 16),
         end: text(body.end, 16) || null,
         confirmationRef: text(body.confirmationRef, 80),
-        ...parseTicketCode(body),
+        tickets: parseTickets(body),
         url: text(body.url, 600),
         notes: text(body.notes, 4000),
     };

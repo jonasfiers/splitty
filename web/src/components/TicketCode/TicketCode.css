@@ -91,3 +91,9 @@
 }
 .ticket-code-preview.ticket-code-linear { padding: 8px 10px; }
 .ticket-code-preview.ticket-code-linear svg { height: 48px; }
+
+/* One row per ticket on the form */
+.ticket-list { list-style: none; margin: 0 0 12px; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.ticket-row { display: flex; gap: 12px; align-items: flex-start; padding: 12px; border: 1px solid var(--border); border-radius: 12px; }
+.ticket-row-bottom { display: flex; gap: 8px; align-items: center; }
+.ticket-row-bottom > :first-child { flex: 1; min-width: 0; }
