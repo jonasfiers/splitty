@@ -4,16 +4,15 @@ import { useState } from 'react'
 // when the item has one, the ticket's own code. Separate screens, since the
 // two hold different things. Used on the item page and the live day's rows.
 //
-// With `copy` (the item page) the reference chip has a copy button at its end:
-// tapping the code opens it, the icon (with a wider target) copies it.
-export function RefChip({ item, onClick, copy = false }) {
+// The reference chip has a copy button at its end: tapping the code opens it,
+// the icon (with a wider target) copies it.
+export function RefChip({ item, onClick }) {
   const [copied, setCopied] = useState(false)
   const open = (
     <button type="button" className="today-ref" onClick={onClick} title="Show big" aria-label={`Show booking reference ${item.confirmationRef} full screen`}>
       <span>{item.confirmationRef}</span>
     </button>
   )
-  if (!copy) return open
   const doCopy = () => {
     navigator.clipboard?.writeText(item.confirmationRef)
     setCopied(true)

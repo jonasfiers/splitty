@@ -969,7 +969,7 @@ body {
 .today-ref::after, .today-nav::after { content: ''; position: absolute; inset: -7px 0; }
 .today-ref { font-family: var(--font-mono); letter-spacing: .02em; max-width: 160px; }
 .today-ref span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-/* Booking reference with a copy button at its end (item page): one pill, two targets. */
+/* Booking reference with a copy button at its end: one pill, two targets. */
 .ref-chip {
   display: inline-flex;
   align-items: stretch;

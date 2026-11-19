@@ -313,7 +313,7 @@ export default function TripItemDetailPage() {
 
             {(item.confirmationRef || item.ticketCode || goLink) && (
               <div className="today-actions item-quick">
-                {item.confirmationRef && <RefChip item={item} copy onClick={() => setShowBigRef('ref')} />}
+                {item.confirmationRef && <RefChip item={item} onClick={() => setShowBigRef('ref')} />}
                 {item.ticketCode && <TicketChip onClick={() => setShowBigRef('ticket')} />}
                 {goLink && (
                   <a className="today-nav" href={goLink.url} target={linkTarget(goLink.url)} rel="noopener noreferrer" title={goLink.label}>
