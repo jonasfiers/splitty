@@ -1,8 +1,25 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import TicketCode from '../TicketCode/TicketCode.jsx'
 import './BigReference.css'
 
-// Shows a booking reference as large as the screen allows, at maximum
+// What the view can show for an item: the ticket's own code (when one was
+// added, and then first), and the booking reference as text, QR code or
+// barcode. The last of those three picked is remembered on the device.
+const VIEW_KEY = 'splitty.bigrefView'
+const REF_VIEWS = ['text', 'qr', 'barcode']
+const VIEW_LABELS = { ticket: 'Ticket', text: 'Text', qr: 'QR', barcode: 'Barcode' }
+function viewsFor(item) {
+  return [...(item.ticketCode ? ['ticket'] : []), ...(item.confirmationRef ? REF_VIEWS : [])]
+}
+function firstView(views) {
+  if (views.includes('ticket')) return 'ticket'
+  let saved = null
+  try { saved = localStorage.getItem(VIEW_KEY) } catch { /* storage blocked */ }
+  return views.includes(saved) ? saved : views[0]
+}
+
+// Shows a booking reference (or the ticket's code) as large as the screen allows, at maximum
 // contrast in either theme (black on white, or white on black), for holding the phone up at a check-in desk or to a conductor.
 // On a phone held upright the content is turned sideways, so the reference
 // can use the screen's length (a page cannot force landscape on iOS).
@@ -13,7 +30,15 @@ import './BigReference.css'
 // Android: the orientation locked as it is, so turning the phone to read the
 // sideways text doesn't make the app re-lay itself out (it flickered); in a
 // browser tab that needs full screen. iOS has neither, and keeps the plain view.
-export default function BigReference({ value, label, onClose: onCloseProp }) {
+export default function BigReference({ item, onClose: onCloseProp }) {
+  const views = viewsFor(item)
+  const [view, setView] = useState(() => firstView(views))
+  const pick = v => e => {
+    e.stopPropagation()
+    setView(v)
+    if (REF_VIEWS.includes(v)) try { localStorage.setItem(VIEW_KEY, v) } catch { /* storage blocked */ }
+  }
+
   // The latest onClose, without re-running the setup below: running it again
   // would leave full screen and step back through the history mid-view.
   const closeRef = useRef(onCloseProp)
@@ -88,13 +113,26 @@ export default function BigReference({ value, label, onClose: onCloseProp }) {
   // Size the text to the reference: up to 24 characters it shrinks to stay on
   // one line (an 18-digit booking number wrapped at the old limit of 14);
   // longer ones stop shrinking and wrap instead.
+  const value = item.confirmationRef || ''
   const chars = Math.min(Math.max(value.length, 4), 24)
+  const label = `${item.title} · ${view === 'ticket' ? 'Ticket code' : 'Booking reference'}`
 
   return createPortal(
     <div className="bigref" role="dialog" aria-modal="true" aria-label={label} onClick={() => closeRef.current()}>
-      <div className="bigref-content">
+      <div className={`bigref-content bigref-${view}`}>
+        {views.length > 1 && (
+          <div className="bigref-switch" role="group" aria-label="Show as">
+            {views.map(v => (
+              <button key={v} type="button" aria-pressed={view === v} onClick={pick(v)}>{VIEW_LABELS[v]}</button>
+            ))}
+          </div>
+        )}
         <div className="bigref-label">{label}</div>
-        <div className="bigref-value" style={{ '--chars': chars }}>{value}</div>
+        {view === 'text' && <div className="bigref-value" style={{ '--chars': chars }}>{value}</div>}
+        {view === 'ticket' && <TicketCode className="bigref-code" format={item.ticketFormat || 'qr'} text={item.ticketCode} />}
+        {view === 'qr' && <TicketCode className="bigref-code" format="qr" text={value} />}
+        {view === 'barcode' && <TicketCode className="bigref-code" format="code128" text={value} />}
+        {(view === 'qr' || view === 'barcode') && <div className="bigref-small">{value}</div>}
         <div className="bigref-hint">Tap anywhere to close</div>
       </div>
     </div>,

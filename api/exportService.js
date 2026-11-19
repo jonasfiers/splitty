@@ -193,9 +193,9 @@ function tripsCsv(trips) {
     const list = [];
     for (const t of trips) for (const i of t.items) {
         list.push([t.title, t.group.title, i.kind, i.mode, i.title, i.start, i.end,
-            i.from?.name, i.to?.name, i.place?.name, i.carrier, i.number, i.confirmationRef, i.url, i.notes]);
+            i.from?.name, i.to?.name, i.place?.name, i.carrier, i.number, i.confirmationRef, i.ticketCode, i.ticketFormat, i.url, i.notes]);
     }
-    return csv(['Trip', 'Group', 'Kind', 'Mode', 'Title', 'Start', 'End', 'From', 'To', 'Place', 'Carrier', 'Number', 'Booking reference', 'Link', 'Notes'], list);
+    return csv(['Trip', 'Group', 'Kind', 'Mode', 'Title', 'Start', 'End', 'From', 'To', 'Place', 'Carrier', 'Number', 'Booking reference', 'Ticket code', 'Ticket code format', 'Link', 'Notes'], list);
 }
 
 const README = generated => `Your Splitty data, exported ${generated}.

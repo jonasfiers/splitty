@@ -80,7 +80,7 @@ export default function FollowSheet({ tripId, tripTitle, hasPhotos, onClose }) {
     <Sheet title="Follow my trip" onClose={onClose}>
       <p className="field-note follow-explain">
         A link anyone can open without signing in. It shows the trip up to today: what you did, where, and when.
-        Hotels show by town only. Booking references, notes, files, money and who else is going are never shown.
+        Hotels show by town only. Booking references, ticket codes, notes, files, money and who else is going are never shown.
         It stops working 30 days after the trip, or when you remove it.
       </p>
       {links === null ? null : links.length > 0 && (

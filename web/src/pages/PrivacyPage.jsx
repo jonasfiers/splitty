@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext'
 // Public: linked from the sign-in and register pages and from Profile.
 // Keep it true: when Splitty starts storing something new, sending data to a
 // new service, or keeping something longer, update this page and its date.
-const UPDATED = '18 November 2026'
+const UPDATED = '19 November 2026'
 
 export default function PrivacyPage() {
   const { token } = useAuth()
@@ -32,7 +32,7 @@ export default function PrivacyPage() {
         <ul>
           <li><strong>Your account:</strong> name, email address, your password (only as a one-way hash, never the password itself), the colour and emoji of your avatar, and whether you confirmed your email address.</li>
           <li><strong>Passkeys</strong>, if you add any: the public key your device creates (your device keeps the private part), a label for the device such as “iPhone · Safari”, and when it was added and last used.</li>
-          <li><strong>What you enter:</strong> groups and who is in them, expenses, who paid and who owes what, settlements, and trips: places, times, booking references, notes, links, and files you upload such as tickets.</li>
+          <li><strong>What you enter:</strong> groups and who is in them, expenses, who paid and who owes what, settlements, and trips: places, times, booking references and ticket codes, notes, links, and files you upload such as tickets.</li>
           <li><strong>Travel documents</strong>, if you add any to a trip (arrival cards, visas, insurance, a copy of your passport): the file, its name, and when you added it. Only you see them, unless you share one with everyone on the trip. They are not shown on the Activity page.</li>
           <li><strong>Who did what:</strong> who added, changed or deleted an expense, trip, trip item or file in a group, and when; for expenses also what was changed (for example the amount from €40 to €45). Other members see this on the Activity page. When something is deleted, its content is erased; only its name (and amount, for an expense), who deleted it and when are kept, until the group itself is deleted.</li>
           <li><strong>Notifications</strong>, if you switch them on: the address your browser’s push service gives Splitty to reach your device.</li>
@@ -62,7 +62,7 @@ export default function PrivacyPage() {
           <li><strong>Your browser’s push service</strong>, if you switch on notifications: Google for Chrome and Android, Apple for Safari, Mozilla for Firefox. It carries the notification to your device.</li>
           <li><strong>Place and route search:</strong> when you search for a place, Splitty’s server asks OpenStreetMap’s Nominatim service; when you look for a public-transport route, it asks Transitous. They receive what you searched for (a place name, or the stops and times), not your name, email or IP address.</li>
           <li><strong>Trip photos:</strong> if someone links an Immich photo album to a trip, Splitty’s server reads that album through its shared link and shows its photos to everyone on the trip, with when and where each was taken. Splitty keeps the link, not the photos: they are passed through as they are viewed, and briefly cached by your browser. Removing the album from the trip, or the link in Immich, stops it.</li>
-          <li><strong>Follow-my-trip links:</strong> a trip member can make a link that lets anyone follow the trip without signing in. It shows the trip’s title, the first name of whoever made the link, and what happened up to today: entry names, times and places, and the trip’s photos if the link includes them. Where you stay is shown by town only. It never shows booking references, notes, files, documents, amounts, other members or days still to come. Members see the trip’s links, how often each was opened (counted once a day per visitor, without storing anything about who) and can remove them; a link also stops working 30 days after the trip ends.</li>
+          <li><strong>Follow-my-trip links:</strong> a trip member can make a link that lets anyone follow the trip without signing in. It shows the trip’s title, the first name of whoever made the link, and what happened up to today: entry names, times and places, and the trip’s photos if the link includes them. Where you stay is shown by town only. It never shows booking references, ticket codes, notes, files, documents, amounts, other members or days still to come. Members see the trip’s links, how often each was opened (counted once a day per visitor, without storing anything about who) and can remove them; a link also stops working 30 days after the trip ends.</li>
           <li><strong>Directions:</strong> if you tap “Navigate here”, your device opens Apple Maps, your map app, or OpenStreetMap with that place.</li>
         </ul>
         <p>Splitty does not sell or share your data with anyone else.</p>

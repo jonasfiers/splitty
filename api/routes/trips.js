@@ -71,12 +71,23 @@ function parsePlace(ref) {
     return { name, address: text(ref.address, 400), lat: located ? lat : null, lon: located ? lon : null };
 }
 
+// The code printed on a ticket (QR, Aztec...), as the text it holds, so the
+// app can draw it again full screen. Not trimmed: fixed-width payloads such as
+// an airline boarding pass (BCBP) pad fields with spaces.
+const TICKET_FORMATS = ['qr', 'aztec', 'pdf417', 'datamatrix', 'code128'];
+function parseTicketCode(body) {
+    const code = typeof body.ticketCode === 'string' && body.ticketCode.trim() ? body.ticketCode.slice(0, 2000) : '';
+    const format = TICKET_FORMATS.includes(body.ticketFormat) ? body.ticketFormat : 'qr';
+    return { ticketCode: code, ticketFormat: code ? format : '' };
+}
+
 function parseItem(kind, body) {
     const item = {
         title: text(body.title, 160),
         start: text(body.start, 16),
         end: text(body.end, 16) || null,
         confirmationRef: text(body.confirmationRef, 80),
+        ...parseTicketCode(body),
         url: text(body.url, 600),
         notes: text(body.notes, 4000),
     };

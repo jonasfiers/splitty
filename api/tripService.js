@@ -87,6 +87,8 @@ const itemProps = (kind, data) => ({
     start: data.start,
     end: data.end ?? null,
     confirmationRef: data.confirmationRef ?? '',
+    ticketCode: data.ticketCode ?? '',
+    ticketFormat: data.ticketFormat ?? '',
     url: data.url ?? '',
     notes: data.notes ?? '',
     // Not a journey (any more, when its kind was changed): no transport fields.

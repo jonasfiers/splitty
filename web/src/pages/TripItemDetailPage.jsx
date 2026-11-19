@@ -5,6 +5,7 @@ import client from '../api/client'
 import Loading from '../components/Loading.jsx'
 import PageHeader from '../components/PageHeader/PageHeader.jsx'
 import LinkExpenseSheet from '../components/TripForm/LinkExpenseSheet.jsx'
+import RefChip from '../components/BigReference/RefChip.jsx'
 import BigReference from '../components/BigReference/BigReference.jsx'
 import { DetailHero, DetailRows, DetailRow, DetailRowSub, RowAction } from '../components/Detail/Detail.jsx'
 import { useConfirm } from '../components/Confirm/ConfirmProvider.jsx'
@@ -317,13 +318,11 @@ export default function TripItemDetailPage() {
               subtitle={<Link to={`/trips/${tripId}`}>{item.tripTitle}</Link>}
             />
 
-            {(item.confirmationRef || goLink) && (
+            {(item.confirmationRef || item.ticketCode || goLink) && (
               <div className="today-actions item-quick">
+                {(item.confirmationRef || item.ticketCode) && <RefChip item={item} onClick={() => setShowBigRef(true)} />}
                 {item.confirmationRef && (
                   <>
-                    <button type="button" className="today-ref" onClick={() => setShowBigRef(true)} title="Show big" aria-label={`Show booking reference ${item.confirmationRef} full screen`}>
-                      <span>{item.confirmationRef}</span>
-                    </button>
                     <button type="button" className="today-nav" onClick={copyReference} aria-label="Copy booking reference" title={copied ? 'Copied' : 'Copy'}>
                       {copied ? (
                         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
@@ -341,7 +340,7 @@ export default function TripItemDetailPage() {
                   </a>
                 )}
                 {showBigRef && (
-                  <BigReference value={item.confirmationRef} label={`${item.title} · Booking reference`} onClose={closeBigRef} />
+                  <BigReference item={item} onClose={closeBigRef} />
                 )}
               </div>
             )}

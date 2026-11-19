@@ -24,7 +24,11 @@ export function warmUp() {
 export async function loadPdf(url) {
   const res = await fetch(url)
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
-  const data = new Uint8Array(await res.arrayBuffer())
+  return loadPdfData(new Uint8Array(await res.arrayBuffer()))
+}
+
+// The same, from bytes already in hand (a file picked on the device).
+export function loadPdfData(data) {
   return pdfjs.getDocument({
     data,
     // The CSP allows no WebAssembly: without this, pdf.js tries it first and
