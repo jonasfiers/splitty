@@ -17,5 +17,7 @@ export function drawCode(format, text) {
   if (format === 'qr') opts.eclevel = 'M'
   if (format === 'code128') opts.height = 12
   if (format === 'pdf417') opts.columns = 6
-  return encode(opts, drawingSVG())
+  const svg = encode(opts, drawingSVG())
+  // A barcode can be stretched to any width or height and still scan.
+  return format === 'code128' ? svg.replace('<svg ', '<svg preserveAspectRatio="none" ') : svg
 }

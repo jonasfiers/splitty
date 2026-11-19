@@ -4,17 +4,11 @@ import TicketCode from '../TicketCode/TicketCode.jsx'
 import './BigReference.css'
 
 // Two screens: the ticket's own code (`show="ticket"`), or the booking
-// reference (`show="ref"`) as text, QR code or barcode, the last of those
-// picked remembered on the device. They hold different things (a ticket
-// number or boarding pass is not the booking code), so they stay apart.
-const VIEW_KEY = 'splitty.bigrefView'
+// reference (`show="ref"`) as text, QR code or barcode, always opening on the
+// text (Jonas). They hold different things (a ticket number or boarding pass
+// is not the booking code), so they stay apart.
 const REF_VIEWS = ['text', 'qr', 'barcode']
 const VIEW_LABELS = { text: 'Text', qr: 'QR', barcode: 'Barcode' }
-function savedView() {
-  let saved = null
-  try { saved = localStorage.getItem(VIEW_KEY) } catch { /* storage blocked */ }
-  return REF_VIEWS.includes(saved) ? saved : 'text'
-}
 
 // Shows a booking reference (or the ticket's code) as large as the screen allows, at maximum
 // contrast in either theme (black on white, or white on black), for holding the phone up at a check-in desk or to a conductor.
@@ -28,12 +22,11 @@ function savedView() {
 // sideways text doesn't make the app re-lay itself out (it flickered); in a
 // browser tab that needs full screen. iOS has neither, and keeps the plain view.
 export default function BigReference({ item, show = 'ref', onClose: onCloseProp }) {
-  const [refView, setRefView] = useState(savedView)
+  const [refView, setRefView] = useState('text')
   const view = show === 'ticket' ? 'ticket' : refView
   const pick = v => e => {
     e.stopPropagation()
     setRefView(v)
-    try { localStorage.setItem(VIEW_KEY, v) } catch { /* storage blocked */ }
   }
 
   // The latest onClose, without re-running the setup below: running it again

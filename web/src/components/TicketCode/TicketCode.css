@@ -13,9 +13,12 @@
   width: 100%;
   height: auto;
 }
-.ticket-code-square { aspect-ratio: 1; }
-.ticket-code-square svg { height: 100%; }
-.ticket-code-linear { padding: 5% 8%; }
+.ticket-code-square { aspect-ratio: 1; position: relative; }
+.ticket-code-square svg { position: absolute; inset: 7%; width: 86%; height: 86%; }
+/* A barcode may be stretched along its length (every bar by the same factor,
+   drawCode sets preserveAspectRatio="none"); its height is set by the user of it. */
+.ticket-code-linear { padding: 16px 24px; }
+.ticket-code-linear svg { height: 96px; }
 .ticket-code-failed {
   line-height: 1.4;
   color: #555;
@@ -86,3 +89,5 @@
   font-weight: 600;
   text-shadow: 0 1px 4px rgba(0, 0, 0, .8);
 }
+.ticket-code-preview.ticket-code-linear { padding: 8px 10px; }
+.ticket-code-preview.ticket-code-linear svg { height: 48px; }

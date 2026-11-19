@@ -49,6 +49,51 @@
   color: var(--bigref-hint);
 }
 
+/* Ticket / Text / QR / Barcode */
+.bigref-switch {
+  display: flex;
+  flex: none;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 999px;
+  border: 2px solid var(--bigref-fg);
+}
+.bigref-switch button {
+  font: inherit;
+  font-family: var(--font-body);
+  font-size: var(--fs-base);
+  font-weight: 700;
+  color: var(--bigref-fg);
+  background: none;
+  border: 0;
+  border-radius: 999px;
+  padding: 8px 18px;
+  min-height: 40px;
+  cursor: pointer;
+}
+.bigref-switch button[aria-pressed="true"] {
+  background: var(--bigref-fg);
+  color: var(--bigref-bg);
+}
+.bigref-small {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: var(--fs-lg);
+  letter-spacing: 0.08em;
+}
+
+/* Codes: square ones as big as the short side allows once the switch, label,
+   reference and hint (~210px with the gaps) have their room; long ones
+   (barcode, PDF417) across the width. */
+.bigref-code.ticket-code-square { width: min(calc(100vh - 210px), 80vw); }
+.bigref-code.ticket-code-linear,
+.bigref-code.ticket-code-wide { width: min(90vw, 150vh); }
+.bigref-code.ticket-code-linear svg { height: min(calc(100vh - 260px), 40vh); }
+
+.bigref-content.bigref-ticket,
+.bigref-content.bigref-qr,
+.bigref-content.bigref-barcode { gap: 12px; }
+
 /* Phone held upright: turn the content a quarter clockwise and size it to
    the screen's height, which is now the reading width. */
 @media (orientation: portrait) and (max-width: 767px) {
@@ -67,52 +112,14 @@
     font-size: min(calc(132dvh / var(--chars)), 26vw);
   }
   /* Turned sideways: the screen's width is now the height to fill. */
-  .bigref-code.ticket-code-square { width: min(62vw, 80dvh); }
+  .bigref-code.ticket-code-square { width: min(calc(100vw - 210px), 80dvh); }
   .bigref-code.ticket-code-linear,
   .bigref-code.ticket-code-wide { width: 88dvh; }
-  .bigref-code.ticket-code-linear svg { max-height: 50vw; }
+  .bigref-code.ticket-code-linear svg { height: min(calc(100vw - 260px), 40vw); }
   .bigref-content.bigref-ticket,
-  .bigref-content.bigref-qr { gap: 3vw; }
+  .bigref-content.bigref-qr,
+  .bigref-content.bigref-barcode { gap: 12px; }
 }
-
-/* Ticket / Text / QR / Barcode */
-.bigref-switch {
-  display: flex;
-  gap: 4px;
-  padding: 3px;
-  border-radius: 999px;
-  border: 1px solid var(--bigref-hint);
-}
-.bigref-switch button {
-  font: inherit;
-  font-family: var(--font-body);
-  font-size: var(--fs-md);
-  font-weight: 600;
-  color: var(--bigref-label);
-  background: none;
-  border: 0;
-  border-radius: 999px;
-  padding: 8px 16px;
-  min-height: 36px;
-  cursor: pointer;
-}
-.bigref-switch button[aria-pressed="true"] {
-  background: var(--bigref-fg);
-  color: var(--bigref-bg);
-}
-.bigref-small {
-  font-family: var(--font-mono);
-  font-weight: 700;
-  font-size: var(--fs-lg);
-  letter-spacing: 0.08em;
-}
-
-/* Codes: square ones as big as the short side allows, long ones (barcode,
-   PDF417) across the width. */
-.bigref-code.ticket-code-square { width: min(56vh, 80vw); }
-.bigref-code.ticket-code-linear,
-.bigref-code.ticket-code-wide { width: min(90vw, 150vh); }
-.bigref-code.ticket-code-linear svg { max-height: 40vh; }
 
 [data-theme="dark"] .bigref {
   --bigref-bg: #000;
