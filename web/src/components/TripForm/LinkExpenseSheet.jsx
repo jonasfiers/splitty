@@ -45,7 +45,7 @@ function LinkExpenseSheet({ itemId, groupId, linkedIds, onClose, onLinked }) {
   }
 
   return (
-    <Sheet title="Link an existing expense" onClose={onClose} className="link-expense">
+    <Sheet title="Link an existing expense" onClose={onClose} className="link-expense picker-sheet-tall">
       <SearchField className="picker-search" value={query} onChange={e => setQuery(e.target.value)} placeholder="Search the group’s expenses…" aria-label="Search the group’s expenses" autoFocus />
       {error && <p className="error">{error}</p>}
       <div className="link-expense-list">

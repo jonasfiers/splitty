@@ -1682,8 +1682,13 @@ svg.icon-country text { font-family: var(--font-body); }
 /* Trip item: create or link an expense, and the picker for linking one. */
 .trip-expense-actions { display: flex; gap: 8px; }
 .trip-expense-actions .btn { flex: 1; }
+/* Tall from the start like the other search sheets: the search stays at the
+   top and Cancel at the bottom; only the list scrolls between them. */
+.link-expense .sheet-body { display: flex; flex-direction: column; overflow: hidden; }
+.link-expense .sheet-body > * { flex-shrink: 0; }
+.link-expense .sheet-body > .link-expense-list { flex: 0 1 auto; min-height: 0; }
+.link-expense .sheet-body > .sheet-actions { margin-top: auto; }
 .link-expense-list {
-  max-height: min(50vh, 420px);
   overflow-y: auto;
   border: 1px solid var(--border);
   border-radius: var(--r-md);
