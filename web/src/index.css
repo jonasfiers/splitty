@@ -969,7 +969,6 @@ body {
 .today-ref::after, .today-nav::after { content: ''; position: absolute; inset: -7px 0; }
 .today-ref { font-family: var(--font-mono); letter-spacing: .02em; max-width: 160px; }
 .today-ref span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.today-ref-code { flex: none; width: 14px; height: 14px; fill: none; stroke: var(--accent); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
 .today-nav svg { width: 14px; height: 14px; fill: none; stroke: var(--accent); stroke-width: 2.2; stroke-linejoin: round; }
 .home-trip { display: block; color: inherit; }
 .home-trip:hover { border-color: var(--border-strong); }

@@ -3,20 +3,17 @@ import { createPortal } from 'react-dom'
 import TicketCode from '../TicketCode/TicketCode.jsx'
 import './BigReference.css'
 
-// What the view can show for an item: the ticket's own code (when one was
-// added, and then first), and the booking reference as text, QR code or
-// barcode. The last of those three picked is remembered on the device.
+// Two screens: the ticket's own code (`show="ticket"`), or the booking
+// reference (`show="ref"`) as text, QR code or barcode, the last of those
+// picked remembered on the device. They hold different things (a ticket
+// number or boarding pass is not the booking code), so they stay apart.
 const VIEW_KEY = 'splitty.bigrefView'
 const REF_VIEWS = ['text', 'qr', 'barcode']
-const VIEW_LABELS = { ticket: 'Ticket', text: 'Text', qr: 'QR', barcode: 'Barcode' }
-function viewsFor(item) {
-  return [...(item.ticketCode ? ['ticket'] : []), ...(item.confirmationRef ? REF_VIEWS : [])]
-}
-function firstView(views) {
-  if (views.includes('ticket')) return 'ticket'
+const VIEW_LABELS = { text: 'Text', qr: 'QR', barcode: 'Barcode' }
+function savedView() {
   let saved = null
   try { saved = localStorage.getItem(VIEW_KEY) } catch { /* storage blocked */ }
-  return views.includes(saved) ? saved : views[0]
+  return REF_VIEWS.includes(saved) ? saved : 'text'
 }
 
 // Shows a booking reference (or the ticket's code) as large as the screen allows, at maximum
@@ -30,13 +27,13 @@ function firstView(views) {
 // Android: the orientation locked as it is, so turning the phone to read the
 // sideways text doesn't make the app re-lay itself out (it flickered); in a
 // browser tab that needs full screen. iOS has neither, and keeps the plain view.
-export default function BigReference({ item, onClose: onCloseProp }) {
-  const views = viewsFor(item)
-  const [view, setView] = useState(() => firstView(views))
+export default function BigReference({ item, show = 'ref', onClose: onCloseProp }) {
+  const [refView, setRefView] = useState(savedView)
+  const view = show === 'ticket' ? 'ticket' : refView
   const pick = v => e => {
     e.stopPropagation()
-    setView(v)
-    if (REF_VIEWS.includes(v)) try { localStorage.setItem(VIEW_KEY, v) } catch { /* storage blocked */ }
+    setRefView(v)
+    try { localStorage.setItem(VIEW_KEY, v) } catch { /* storage blocked */ }
   }
 
   // The latest onClose, without re-running the setup below: running it again
@@ -115,14 +112,14 @@ export default function BigReference({ item, onClose: onCloseProp }) {
   // longer ones stop shrinking and wrap instead.
   const value = item.confirmationRef || ''
   const chars = Math.min(Math.max(value.length, 4), 24)
-  const label = `${item.title} · ${view === 'ticket' ? 'Ticket code' : 'Booking reference'}`
+  const label = `${item.title} · ${view === 'ticket' ? 'Ticket' : 'Booking reference'}`
 
   return createPortal(
     <div className="bigref" role="dialog" aria-modal="true" aria-label={label} onClick={() => closeRef.current()}>
       <div className={`bigref-content bigref-${view}`}>
-        {views.length > 1 && (
+        {show !== 'ticket' && (
           <div className="bigref-switch" role="group" aria-label="Show as">
-            {views.map(v => (
+            {REF_VIEWS.map(v => (
               <button key={v} type="button" aria-pressed={view === v} onClick={pick(v)}>{VIEW_LABELS[v]}</button>
             ))}
           </div>

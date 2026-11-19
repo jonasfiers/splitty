@@ -5,7 +5,7 @@ import client from '../api/client'
 import Loading from '../components/Loading.jsx'
 import PageHeader from '../components/PageHeader/PageHeader.jsx'
 import LinkExpenseSheet from '../components/TripForm/LinkExpenseSheet.jsx'
-import RefChip from '../components/BigReference/RefChip.jsx'
+import { RefChip, TicketChip } from '../components/BigReference/RefChip.jsx'
 import BigReference from '../components/BigReference/BigReference.jsx'
 import { DetailHero, DetailRows, DetailRow, DetailRowSub, RowAction } from '../components/Detail/Detail.jsx'
 import { useConfirm } from '../components/Confirm/ConfirmProvider.jsx'
@@ -106,8 +106,8 @@ export default function TripItemDetailPage() {
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
   const [copied, setCopied] = useState(false)
-  const [showBigRef, setShowBigRef] = useState(false)
-  const closeBigRef = useCallback(() => setShowBigRef(false), [])
+  const [showBigRef, setShowBigRef] = useState(null) // 'ref' | 'ticket'
+  const closeBigRef = useCallback(() => setShowBigRef(null), [])
   const [linking, setLinking] = useState(false)
   // Same breakpoint as the other two-column pages (see index.css).
   const wide = useMediaQuery('(min-width: 1180px)')
@@ -320,9 +320,9 @@ export default function TripItemDetailPage() {
 
             {(item.confirmationRef || item.ticketCode || goLink) && (
               <div className="today-actions item-quick">
-                {(item.confirmationRef || item.ticketCode) && <RefChip item={item} onClick={() => setShowBigRef(true)} />}
                 {item.confirmationRef && (
                   <>
+                    <RefChip item={item} onClick={() => setShowBigRef('ref')} />
                     <button type="button" className="today-nav" onClick={copyReference} aria-label="Copy booking reference" title={copied ? 'Copied' : 'Copy'}>
                       {copied ? (
                         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
@@ -333,6 +333,7 @@ export default function TripItemDetailPage() {
                     </button>
                   </>
                 )}
+                {item.ticketCode && <TicketChip onClick={() => setShowBigRef('ticket')} />}
                 {goLink && (
                   <a className="today-nav" href={goLink.url} target={linkTarget(goLink.url)} rel="noopener noreferrer" title={goLink.label}>
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l18-8-8 18-2-8-8-2z" /></svg>
@@ -340,7 +341,7 @@ export default function TripItemDetailPage() {
                   </a>
                 )}
                 {showBigRef && (
-                  <BigReference item={item} onClose={closeBigRef} />
+                  <BigReference item={item} show={showBigRef} onClose={closeBigRef} />
                 )}
               </div>
             )}

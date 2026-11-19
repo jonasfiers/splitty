@@ -1,7 +1,7 @@
 import { Fragment, useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import { KINDS, itemIcon, kindVars, describe, mapsLink, linkTarget, formatDay, daysBetween } from '../../utils/trip.js'
-import RefChip from '../BigReference/RefChip.jsx'
+import { RefChip, TicketChip } from '../BigReference/RefChip.jsx'
 import BigReference from '../BigReference/BigReference.jsx'
 import { pad, clock, onMinute } from '../../utils/tripClock.js'
 import Icon from '../Icon/Icon.jsx'
@@ -104,16 +104,18 @@ export function EntryNode({ item, state, allDay = false }) {
 // the item, which lists them). Only on the live day.
 function Actions({ item, place, onBigRef, itemTo }) {
   const link = place !== undefined ? mapsLink(place) : null
-  const ref = onBigRef && (item.confirmationRef || item.ticketCode)
+  const ref = onBigRef && item.confirmationRef
+  const ticket = onBigRef && item.ticketCode
   const files = itemTo && item.attachmentCount > 0
     ? (item.attachmentCount === 1 && item.attachmentIds?.[0] ? `${itemTo}/files/${item.attachmentIds[0]}` : itemTo)
     : null
-  if (!ref && !link && !files) return null
+  if (!ref && !ticket && !link && !files) return null
   return (
     <span className="today-actions">
       {ref && (
-        <RefChip item={item} onClick={() => onBigRef(item)} />
+        <RefChip item={item} onClick={() => onBigRef({ item, show: 'ref' })} />
       )}
+      {ticket && <TicketChip onClick={() => onBigRef({ item, show: 'ticket' })} />}
       {link && (
         <a className="today-nav" href={link.url} target={linkTarget(link.url)} rel="noopener noreferrer" title={link.label} aria-label={`${link.label}: ${place?.name ?? item.title}`}>
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l18-8-8 18-2-8-8-2z" /></svg>
@@ -207,7 +209,7 @@ export function DayEntries({ tripId, day, entries, places, time, past = false })
           )
         })}
       </div>
-      {bigRef && <BigReference item={bigRef} onClose={closeBigRef} />}
+      {bigRef && <BigReference item={bigRef.item} show={bigRef.show} onClose={closeBigRef} />}
     </>
   )
 }
@@ -227,7 +229,7 @@ export function Tonight({ stays, places }) {
           <Actions item={stay} place={placeById.get(stay.placeId)} onBigRef={setBigRef} />
         </div>
       ))}
-      {bigRef && <BigReference item={bigRef} onClose={closeBigRef} />}
+      {bigRef && <BigReference item={bigRef.item} show={bigRef.show} onClose={closeBigRef} />}
     </div>
   )
 }
