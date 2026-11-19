@@ -59,7 +59,7 @@ export default function IconPicker({ value, onChange, id, kind = 'category', cle
         {value ? <Icon name={value} fallback="circle-question-mark" /> : '+'}
       </button>
       {open && createPortal(
-        <Sheet title={text.title} onClose={close} className="picker-sheet picker-sheet-tall icon-picker-sheet">
+        <Sheet title={text.title} onClose={close} className="picker-sheet icon-picker-sheet" search>
           <SearchField
             className="picker-search"
             placeholder={text.search}
@@ -68,7 +68,7 @@ export default function IconPicker({ value, onChange, id, kind = 'category', cle
             onChange={e => setQuery(e.target.value)}
             autoFocus={window.matchMedia?.('(pointer: fine)').matches}
           />
-          <div className="icon-picker-body">
+          <div className="icon-picker-body sheet-scroll">
             {clearable && !words.length && (
               <button type="button" className={`icon-picker-none${value ? '' : ' selected'}`} onClick={() => choose('')}>
                 {text.none}

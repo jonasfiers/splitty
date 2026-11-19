@@ -76,10 +76,7 @@ export default function Picker({
       )}
 
       {open && createPortal(
-        <Sheet title={title || placeholder} onClose={close}
-          // With a search: tall from the start, so it doesn't shrink as the list
-          // filters and slide its search under the keyboard.
-          className={`picker-sheet${options.length >= SEARCH_FROM ? ' picker-sheet-tall' : ''}`}>
+        <Sheet title={title || placeholder} onClose={close} className="picker-sheet" search={options.length >= SEARCH_FROM}>
           {options.length >= SEARCH_FROM && (
             <SearchField
               className="picker-search"
@@ -90,7 +87,7 @@ export default function Picker({
               autoFocus={window.matchMedia?.('(pointer: fine)').matches}
             />
           )}
-          <div className="list picker-list" role="listbox" aria-label={title || placeholder}>
+          <div className="list picker-list sheet-scroll" role="listbox" aria-label={title || placeholder}>
             {shown.map((o, i) => [
               o.section && o.section !== shown[i - 1]?.section && (
                 <div key={`s-${o.section}`} className="picker-section" role="presentation">{o.section}</div>

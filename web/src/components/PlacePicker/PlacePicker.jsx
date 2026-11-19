@@ -104,7 +104,7 @@ function PlacePicker({ value, onChange, places = [], placeholder = 'Search a pla
       </button>
 
       {open && createPortal(
-        <Sheet title={title} onClose={close} className="place-sheet">
+        <Sheet title={title} onClose={close} className="place-sheet" search>
           <SearchField
             value={query}
             onChange={e => { setQuery(e.target.value); setError('') }}
@@ -117,7 +117,7 @@ function PlacePicker({ value, onChange, places = [], placeholder = 'Search a pla
             autoFocus
           />
 
-          <div className="place-list">
+          <div className="place-list sheet-scroll">
             {matches.length > 0 && <>
               <div className="place-list-label">In this trip</div>
               {matches.map(p => (

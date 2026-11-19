@@ -10,7 +10,11 @@ import SheetHandle, { useSheetDrag } from './SheetHandle.jsx'
 // `zIndex` lifts it above a full-screen view (Expandable is 1000). A sheet
 // opened from another one (a picker in a form sheet) always comes out on top
 // of it: it takes one layer above the highest sheet already open.
-export default function Sheet({ title, onClose, className = '', zIndex, children }) {
+//
+// `search`: a search sheet (a search at the top, results under it): tall from
+// the start, the search and the actions stay put, and only the child with
+// className "sheet-scroll" scrolls (index.css, .sheet-search).
+export default function Sheet({ title, onClose, className = '', zIndex, search = false, children }) {
   const titleId = useId()
   const drag = useSheetDrag(onClose)
   const [layer] = useState(() => {
@@ -38,8 +42,8 @@ export default function Sheet({ title, onClose, className = '', zIndex, children
       style={{ zIndex: layer }}
       onClick={e => { if (e.target === e.currentTarget) onClose() }}
     >
-      <div className={`sheet${className ? ` ${className}` : ''}`} role="dialog" aria-modal="true" aria-labelledby={title ? titleId : undefined}>
-        {/* The grip and title stay put; only the body scrolls. */}
+      <div className={`sheet${search ? ' sheet-search' : ''}${className ? ` ${className}` : ''}`} role="dialog" aria-modal="true" aria-labelledby={title ? titleId : undefined}>
+        {/* The grip and title stay put; only the body (in a search sheet, its results) scrolls. */}
         <div className="sheet-head" {...drag}>
           <SheetHandle />
           {title && <p className="sheet-title" id={titleId}>{title}</p>}

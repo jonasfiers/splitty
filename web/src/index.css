@@ -817,6 +817,15 @@ body {
   overscroll-behavior: contain;
   padding: 4px 20px 32px;
 }
+/* A search sheet (<Sheet search>): tall from the start, so it doesn't shrink as
+   the results filter or slide its search under the keyboard. The search stays
+   at the top and the actions at the bottom; only the .sheet-scroll part (the
+   results) scrolls between them, and is no taller than its rows. */
+.sheet.sheet-search { height: calc(100dvh - 48px); }
+.sheet-search .sheet-body { display: flex; flex-direction: column; overflow: hidden; }
+.sheet-search .sheet-body > * { flex-shrink: 0; }
+.sheet-search .sheet-body > .sheet-scroll { flex: 0 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.sheet-search .sheet-body > .sheet-actions { margin-top: auto; }
 .sheet-handle {
   position: relative;
   width: 36px; height: 4px;
@@ -830,7 +839,7 @@ body {
   /* The sheet reaches 24px past the bottom of the screen, out of sight, so
      pulling it up (SheetHandle: LIFT_MAX) shows more sheet, never a gap. */
   .sheet { margin-bottom: -24px; padding-bottom: 24px; }
-  .sheet.place-sheet { height: calc(100dvh - 24px); }
+  .sheet.sheet-search { height: calc(100dvh - 24px); }
 }
 .sheet-title {
   font-size: var(--fs-lg);
@@ -848,6 +857,7 @@ body {
   .sheet-head { padding: 28px 28px 0; }
   .sheet-body { padding: 4px 28px 32px; }
   .sheet-handle { display: none; }
+  .sheet.sheet-search { height: min(640px, calc(100dvh - 48px)); }
 }
 
 /* ══════════════════════════════════════════
@@ -1682,12 +1692,6 @@ svg.icon-country text { font-family: var(--font-body); }
 /* Trip item: create or link an expense, and the picker for linking one. */
 .trip-expense-actions { display: flex; gap: 8px; }
 .trip-expense-actions .btn { flex: 1; }
-/* Tall from the start like the other search sheets: the search stays at the
-   top and Cancel at the bottom; only the list scrolls between them. */
-.link-expense .sheet-body { display: flex; flex-direction: column; overflow: hidden; }
-.link-expense .sheet-body > * { flex-shrink: 0; }
-.link-expense .sheet-body > .link-expense-list { flex: 0 1 auto; min-height: 0; }
-.link-expense .sheet-body > .sheet-actions { margin-top: auto; }
 .link-expense-list {
   overflow-y: auto;
   border: 1px solid var(--border);
@@ -2247,11 +2251,7 @@ a.act-row { color: inherit; text-decoration: none; }
 .place-trigger-address { font-size: var(--fs-sm); color: var(--text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .place-trigger-address:empty { display: none; }
 .place-trigger-placeholder { font-size: var(--fs-base); color: var(--text-3); }
-.sheet.place-sheet { height: calc(100dvh - 48px); }
-/* The search stays at the top; the list under it is what scrolls. */
-.place-sheet .sheet-body { display: flex; flex-direction: column; overflow: hidden; }
-@media (min-width: 768px) { .sheet.place-sheet { height: min(640px, calc(100dvh - 48px)); } }
-.place-sheet .place-list { flex: 1; min-height: 0; overflow-y: auto; border: none; padding: 0; margin: 8px -4px 0; max-height: none; }
+.place-sheet .place-list { border: none; padding: 0; margin: 8px -4px 0; max-height: none; }
 .place-list {
   display: flex; flex-direction: column;
   background: var(--surface);
@@ -3021,10 +3021,6 @@ button.trip-chip { font-family: inherit; cursor: pointer; }
 }
 .trip-map-frame:hover { color: var(--accent-text); border-color: var(--accent); }
 
-/* A picker with a search keeps its height while typing (Picker.jsx) */
-.sheet.picker-sheet-tall { height: calc(100dvh - 48px); }
-@media (max-width: 767px) { .sheet.picker-sheet-tall { height: calc(100dvh - 24px); } }
-@media (min-width: 768px) { .sheet.picker-sheet-tall { height: min(640px, calc(100dvh - 48px)); } }
 
 /* Trips page: offline documents as a plain link by the title */
 .offline-link {
