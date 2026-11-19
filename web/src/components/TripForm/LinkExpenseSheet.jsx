@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import client from '../../api/client'
 import { formatCurrency, formatDate } from '../../utils/currency.js'
 import Sheet, { SheetActions } from '../Sheet/Sheet.jsx'
+import SearchField from '../SearchField/SearchField.jsx'
 
 const LIMIT = 50
 
@@ -45,9 +46,7 @@ function LinkExpenseSheet({ itemId, groupId, linkedIds, onClose, onLinked }) {
 
   return (
     <Sheet title="Link an existing expense" onClose={onClose} className="link-expense">
-      <div className="form-group">
-        <input type="search" value={query} onChange={e => setQuery(e.target.value)} placeholder="Search the group’s expenses…" autoFocus />
-      </div>
+      <SearchField className="picker-search" value={query} onChange={e => setQuery(e.target.value)} placeholder="Search the group’s expenses…" aria-label="Search the group’s expenses" autoFocus />
       {error && <p className="error">{error}</p>}
       <div className="link-expense-list">
         {expenses === null ? (

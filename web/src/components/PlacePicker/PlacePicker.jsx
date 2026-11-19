@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import client from '../../api/client'
 import Sheet from '../Sheet/Sheet.jsx'
 import Icon from '../Icon/Icon.jsx'
+import SearchField from '../SearchField/SearchField.jsx'
 
 // A place slot on a trip item. The value is null, {id} for a place the trip
 // already has, or {name, address, lat, lon} for a new one — which is only
@@ -104,21 +105,17 @@ function PlacePicker({ value, onChange, places = [], placeholder = 'Search a pla
 
       {open && createPortal(
         <Sheet title={title} onClose={close} className="place-sheet">
-          <div className="place-field">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" /></svg>
-            <input
-              type="search"
-              value={query}
-              onChange={e => { setQuery(e.target.value); setError('') }}
-              // Enter searches the map.
-              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); search() } }}
-              placeholder={placeholder}
-              aria-label={`${title}: search`}
-              enterKeyHint="search"
-              autoComplete="off"
-              autoFocus
-            />
-          </div>
+          <SearchField
+            value={query}
+            onChange={e => { setQuery(e.target.value); setError('') }}
+            // Enter searches the map.
+            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); search() } }}
+            placeholder={placeholder}
+            aria-label={`${title}: search`}
+            enterKeyHint="search"
+            autoComplete="off"
+            autoFocus
+          />
 
           <div className="place-list">
             {matches.length > 0 && <>

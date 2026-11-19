@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import Sheet from '../Sheet/Sheet.jsx'
 import Icon from '../Icon/Icon.jsx'
 import { ICON_SETS, iconLabel } from '../../utils/icons.js'
+import SearchField from '../SearchField/SearchField.jsx'
 
 // An icon for a category, group or trip: a square button showing the current
 // one, opening a sheet with a search and the icons in a grid by section.
@@ -59,9 +60,8 @@ export default function IconPicker({ value, onChange, id, kind = 'category', cle
       </button>
       {open && createPortal(
         <Sheet title={text.title} onClose={close} className="picker-sheet picker-sheet-tall icon-picker-sheet">
-          <input
+          <SearchField
             className="picker-search"
-            type="search"
             placeholder={text.search}
             aria-label="Search icons"
             value={query}

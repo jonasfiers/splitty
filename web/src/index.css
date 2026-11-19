@@ -1100,10 +1100,11 @@ body {
 /* Search field with a filter button next to it */
 .search-row { display: flex; gap: 8px; margin-bottom: 12px; }
 .search-field {
-  flex: 1;
+  display: block;
   position: relative;
   min-width: 0;
 }
+.search-row .search-field { flex: 1; }
 .search-field svg {
   position: absolute;
   left: 12px; top: 50%;
@@ -1124,6 +1125,7 @@ body {
   outline: none;
   -webkit-appearance: none;
 }
+.sheet .search-field input { border-color: var(--border-strong); }
 .search-field input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-subtle); }
 .icon-btn {
   position: relative;
@@ -2245,14 +2247,6 @@ a.act-row { color: inherit; text-decoration: none; }
 .place-sheet .sheet-body { display: flex; flex-direction: column; overflow: hidden; }
 @media (min-width: 768px) { .sheet.place-sheet { height: min(640px, calc(100dvh - 48px)); } }
 .place-sheet .place-list { flex: 1; min-height: 0; overflow-y: auto; border: none; padding: 0; margin: 8px -4px 0; max-height: none; }
-.place-field { position: relative; }
-.place-field svg {
-  position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
-  width: 16px; height: 16px; fill: none; stroke: var(--text-3); stroke-width: 2; stroke-linecap: round;
-  pointer-events: none;
-}
-.place-field input { width: 100%; padding: 10px 12px 10px 36px; background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--r-md); font: inherit; font-size: var(--fs-base); color: var(--text); }
-.place-field input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-subtle); }
 .place-list {
   display: flex; flex-direction: column;
   background: var(--surface);
@@ -2839,7 +2833,7 @@ button.trip-chip { font-family: inherit; cursor: pointer; }
 .picker-chip-btn .picker-chev { color: inherit; }
 /* Inside a .form-group too, where inputs are otherwise full width (it made sheets scroll sideways). */
 .picker-required, .form-group .picker-required { position: absolute; left: 50%; bottom: 0; width: 1px; height: 1px; padding: 0; border: 0; opacity: 0; pointer-events: none; }
-.picker-search { width: 100%; padding: 10px 12px; margin-bottom: 10px; background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--r-md); font: inherit; font-size: var(--fs-base); color: var(--text); }
+.picker-search { flex-shrink: 0; margin-bottom: 10px; }
 .list.picker-list { margin-bottom: 8px; }
 .picker-option { width: 100%; border: none; background: none; font: inherit; text-align: left; color: var(--text); cursor: pointer; }
 .picker-option[aria-selected="true"] .list-row-title { color: var(--accent-text); }

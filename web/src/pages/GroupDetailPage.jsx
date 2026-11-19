@@ -32,6 +32,7 @@ import { swr } from '../utils/cache.js'
 import Icon from '../components/Icon/Icon.jsx'
 import { iconOr } from '../utils/icons.js'
 import { openKeyboardNow } from '../utils/keyboard.js'
+import SearchField from '../components/SearchField/SearchField.jsx'
 
 // Keep in sync with the .group-layout breakpoint in index.css.
 const WIDE_QUERY = '(min-width: 1180px)'
@@ -516,16 +517,12 @@ export default function GroupDetailPage() {
 
           {tab === 'expenses' && <>
             <div className="search-row">
-              <label className="search-field">
-                <svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" /></svg>
-                <input
-                  type="search"
-                  placeholder="Search expenses"
-                  aria-label="Search expenses"
-                  value={filters.keyword}
-                  onChange={e => setFilters(f => ({ ...f, keyword: e.target.value }))}
-                />
-              </label>
+              <SearchField
+                placeholder="Search expenses"
+                aria-label="Search expenses"
+                value={filters.keyword}
+                onChange={e => setFilters(f => ({ ...f, keyword: e.target.value }))}
+              />
               <button
                 type="button"
                 className={`icon-btn${showFilters || panelFilterCount ? ' active' : ''}`}

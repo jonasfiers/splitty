@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import Sheet from '../Sheet/Sheet.jsx'
 import { asIcon } from '../Icon/Icon.jsx'
 import { tintClass } from '../../utils/categoryColours.js'
+import SearchField from '../SearchField/SearchField.jsx'
 
 // A choice from a list, in the app's own sheet instead of the browser's
 // <select> (which looks different, and dated, on every phone).
@@ -80,9 +81,8 @@ export default function Picker({
           // filters and slide its search under the keyboard.
           className={`picker-sheet${options.length >= SEARCH_FROM ? ' picker-sheet-tall' : ''}`}>
           {options.length >= SEARCH_FROM && (
-            <input
+            <SearchField
               className="picker-search"
-              type="search"
               placeholder="Search"
               aria-label="Search"
               value={query}
