@@ -105,7 +105,6 @@ export default function TripItemDetailPage() {
   const [item, setItem] = useState(null)
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
-  const [copied, setCopied] = useState(false)
   const [showBigRef, setShowBigRef] = useState(null) // 'ref' | 'ticket'
   const closeBigRef = useCallback(() => setShowBigRef(null), [])
   const [linking, setLinking] = useState(false)
@@ -264,12 +263,6 @@ export default function TripItemDetailPage() {
     } catch { setError('Failed to delete the file.') }
   }
 
-  const copyReference = () => {
-    navigator.clipboard?.writeText(item.confirmationRef)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }
-
   // The item's own place(s) for the map, in the shape TripMap takes; memoised
   // so the map is not rebuilt on every render.
   const mapData = useMemo(() => {
@@ -320,19 +313,7 @@ export default function TripItemDetailPage() {
 
             {(item.confirmationRef || item.ticketCode || goLink) && (
               <div className="today-actions item-quick">
-                {item.confirmationRef && (
-                  <>
-                    <RefChip item={item} onClick={() => setShowBigRef('ref')} />
-                    <button type="button" className="today-nav" onClick={copyReference} aria-label="Copy booking reference" title={copied ? 'Copied' : 'Copy'}>
-                      {copied ? (
-                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
-                      ) : (
-                        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2" /><path d="M5 15V6a2 2 0 0 1 2-2h8" /></svg>
-                      )}
-                      {copied ? 'Copied' : 'Copy'}
-                    </button>
-                  </>
-                )}
+                {item.confirmationRef && <RefChip item={item} copy onClick={() => setShowBigRef('ref')} />}
                 {item.ticketCode && <TicketChip onClick={() => setShowBigRef('ticket')} />}
                 {goLink && (
                   <a className="today-nav" href={goLink.url} target={linkTarget(goLink.url)} rel="noopener noreferrer" title={goLink.label}>

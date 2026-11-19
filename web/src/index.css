@@ -969,6 +969,32 @@ body {
 .today-ref::after, .today-nav::after { content: ''; position: absolute; inset: -7px 0; }
 .today-ref { font-family: var(--font-mono); letter-spacing: .02em; max-width: 160px; }
 .today-ref span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Booking reference with a copy button at its end (item page): one pill, two targets. */
+.ref-chip {
+  display: inline-flex;
+  align-items: stretch;
+  height: 30px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-2);
+  min-width: 0;
+}
+.ref-chip .today-ref { height: 100%; border: 0; background: none; padding-right: 8px; border-radius: 999px 0 0 999px; }
+.ref-chip-copy {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  padding: 0 12px 0 8px;
+  border: 0;
+  border-left: 1px solid var(--border);
+  border-radius: 0 999px 999px 0;
+  background: none;
+  color: var(--text);
+  cursor: pointer;
+}
+.ref-chip-copy::after { content: ''; position: absolute; inset: -7px -4px -7px 0; }
+.ref-chip-copy svg { width: 15px; height: 15px; fill: none; stroke: var(--accent); stroke-width: 2.2; stroke-linejoin: round; stroke-linecap: round; }
 .today-nav svg { width: 14px; height: 14px; fill: none; stroke: var(--accent); stroke-width: 2.2; stroke-linejoin: round; }
 .home-trip { display: block; color: inherit; }
 .home-trip:hover { border-color: var(--border-strong); }

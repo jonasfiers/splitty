@@ -1,11 +1,35 @@
+import { useState } from 'react'
+
 // The chips that open BigReference: the booking reference, and next to it,
 // when the item has one, the ticket's own code. Separate screens, since the
 // two hold different things. Used on the item page and the live day's rows.
-export function RefChip({ item, onClick }) {
-  return (
+//
+// With `copy` (the item page) the reference chip has a copy button at its end:
+// tapping the code opens it, the icon (with a wider target) copies it.
+export function RefChip({ item, onClick, copy = false }) {
+  const [copied, setCopied] = useState(false)
+  const open = (
     <button type="button" className="today-ref" onClick={onClick} title="Show big" aria-label={`Show booking reference ${item.confirmationRef} full screen`}>
       <span>{item.confirmationRef}</span>
     </button>
+  )
+  if (!copy) return open
+  const doCopy = () => {
+    navigator.clipboard?.writeText(item.confirmationRef)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+  return (
+    <span className="ref-chip">
+      {open}
+      <button type="button" className="ref-chip-copy" onClick={doCopy} aria-label={copied ? 'Copied' : 'Copy booking reference'} title={copied ? 'Copied' : 'Copy'}>
+        {copied ? (
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
+        ) : (
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2" /><path d="M5 15V6a2 2 0 0 1 2-2h8" /></svg>
+        )}
+      </button>
+    </span>
   )
 }
 
