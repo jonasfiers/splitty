@@ -2,11 +2,12 @@ import { useRef, useState } from 'react'
 import Field from '../Field/Field.jsx'
 import Picker from '../Picker/Picker.jsx'
 import TicketCode from './TicketCode.jsx'
-import { TICKET_FORMATS, canReadCodes, readCodeFromFile } from '../../utils/barcode.js'
+import CodeScanner from './CodeScanner.jsx'
+import { TICKET_FORMATS, canReadCodes, canScanLive, readCodeFromFile } from '../../utils/barcode.js'
 
 // The ticket's own code on the trip item form (2026-11-19): read from a
-// screenshot, photo or PDF of the ticket where the browser can (BarcodeDetector),
-// or pasted as text with its format picked. A small preview shows what the
+// screenshot, photo or PDF of the ticket, scanned live with the camera, or
+// pasted as text with its format picked. A small preview shows what the
 // full-screen view will draw. `code` / `format` / `onChange({ ticketCode, ticketFormat })`.
 export default function TicketCodeField({ code, format, onChange }) {
   const fileRef = useRef(null)
@@ -14,7 +15,9 @@ export default function TicketCodeField({ code, format, onChange }) {
   const [problem, setProblem] = useState('')
   const [drawError, setDrawError] = useState(null)
   const [typing, setTyping] = useState(false)
+  const [scanning, setScanning] = useState(false)
   const canRead = canReadCodes()
+  const canScan = canScanLive()
 
   const onFile = async e => {
     const file = e.target.files?.[0]
@@ -34,16 +37,28 @@ export default function TicketCodeField({ code, format, onChange }) {
 
   const readButton = canRead && (
     <button type="button" className="btn btn-secondary btn-sm" onClick={() => fileRef.current?.click()} disabled={reading}>
-      {reading ? 'Reading…' : code ? 'Read again' : 'Read from ticket'}
+      {reading ? 'Reading…' : 'Read from file'}
     </button>
   )
-  const fileInput = <input ref={fileRef} type="file" accept="image/*,application/pdf" hidden onChange={onFile} />
+  const scanButton = canScan && (
+    <button type="button" className="btn btn-secondary btn-sm" onClick={() => { setProblem(''); setScanning(true) }}>Scan with camera</button>
+  )
+  const fileInput = <>
+    <input ref={fileRef} type="file" accept="image/*,application/pdf" hidden onChange={onFile} />
+    {scanning && (
+      <CodeScanner
+        onResult={({ text, format: found }) => { setScanning(false); onChange({ ticketCode: text, ticketFormat: found }) }}
+        onClose={() => setScanning(false)}
+      />
+    )}
+  </>
 
   if (!code && !typing) {
     return (
-      <Field label="Ticket code" optional group hint={canRead ? 'The QR code or barcode on the ticket, from a screenshot, photo or PDF.' : 'The text inside the ticket’s QR code or barcode.'}>
+      <Field label="Ticket code" optional group hint={canRead ? 'The QR code or barcode on the ticket: from a screenshot or PDF, or scanned with the camera.' : 'The text inside the ticket’s QR code or barcode.'}>
         <div className="ticket-code-actions">
           {readButton}
+          {scanButton}
           <button type="button" className="btn btn-ghost btn-sm" onClick={() => setTyping(true)}>Paste the text</button>
         </div>
         {fileInput}
@@ -77,6 +92,7 @@ export default function TicketCodeField({ code, format, onChange }) {
           />
           <div className="ticket-code-actions">
             {readButton}
+            {scanButton}
             <button type="button" className="btn btn-ghost btn-sm" onClick={() => { onChange({ ticketCode: '', ticketFormat: '' }); setTyping(false); setProblem('') }}>Remove</button>
           </div>
           {problem && <p className="field-note error-text">{problem}</p>}

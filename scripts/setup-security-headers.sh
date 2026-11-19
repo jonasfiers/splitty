@@ -33,7 +33,10 @@ SNIPPET=/etc/nginx/snippets/splitty-security-headers.conf
 # and the map code sets style attributes; scripts stay strictly 'self', which
 # is what blocks injected code. Fonts and a few images are data: URLs in the
 # built CSS/JS. Violations are reported to the API (api/routes/cspReport.js).
-CSP="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'self'; report-uri /api/csp-report"
+# 'wasm-unsafe-eval' (2026-11-19) lets WebAssembly from Splitty's own files run,
+# for the ticket code reader (zxing-wasm, utils/barcode.js); it does not allow
+# JavaScript eval or scripts from anywhere else.
+CSP="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'self'; report-uri /api/csp-report"
 
 NEW_SNIPPET="# Splitty's security headers (scripts/setup-security-headers.sh). Included at
 # server level and in every location with its own add_header: nginx drops an

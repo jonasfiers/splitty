@@ -32,3 +32,57 @@
 .ticket-code-preview.ticket-code-square { flex: none; width: 104px; padding: 8px; border: 1px solid var(--border); }
 .ticket-code-preview.ticket-code-linear,
 .ticket-code-preview.ticket-code-wide { flex: none; width: 140px; padding: 8px; border: 1px solid var(--border); }
+
+/* Live scanner (CodeScanner) */
+.scanner {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: #000;
+  color: #fff;
+}
+.scanner-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.scanner-frame {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: min(72vw, 72vh, 420px);
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  border: 3px solid rgba(255, 255, 255, .9);
+  border-radius: 20px;
+  box-shadow: 0 0 0 100vmax rgba(0, 0, 0, .45);
+}
+.scanner-top {
+  position: absolute;
+  top: max(16px, env(safe-area-inset-top));
+  left: 16px;
+  right: 16px;
+  display: flex;
+  justify-content: space-between;
+}
+.scanner-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 0;
+  background: rgba(0, 0, 0, .55);
+  color: #fff;
+  font-size: 20px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+.scanner-btn svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.scanner-btn[aria-pressed="true"] { background: #fff; color: #000; }
+.scanner-hint {
+  position: absolute;
+  left: 24px;
+  right: 24px;
+  bottom: max(32px, env(safe-area-inset-bottom));
+  margin: 0;
+  text-align: center;
+  font-size: var(--fs-base);
+  font-weight: 600;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, .8);
+}

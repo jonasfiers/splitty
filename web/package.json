@@ -16,6 +16,7 @@
     "@protomaps/basemaps": "^5.7.2",
     "@simplewebauthn/browser": "^14.0.0",
     "axios": "^1.20.0",
+    "barcode-detector": "3.2.3",
     "bwip-js": "4.11.4",
     "leaflet": "^1.9.4",
     "lucide": "1.73.0",
@@ -26,7 +27,8 @@
     "react-dom": "^19.3.1",
     "react-number-format": "^5.4.5",
     "react-router": "^8.5.0",
-    "recharts": "^3.10.1"
+    "recharts": "^3.10.1",
+    "zxing-wasm": "3.1.6"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^6.1.2",
