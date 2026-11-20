@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo, lazy, Suspense } from 'react'
 import LoadFailed from '../components/LoadFailed.jsx'
-import { useParams, useNavigate, Link } from 'react-router'
+import { useParams, useNavigate, useLocation, Link } from 'react-router'
 import client from '../api/client'
 import Loading from '../components/Loading.jsx'
 import PageHeader from '../components/PageHeader/PageHeader.jsx'
@@ -112,7 +112,8 @@ export default function TripItemDetailPage() {
   // Same breakpoint as the other two-column pages (see index.css).
   const wide = useMediaQuery('(min-width: 1180px)')
   const standalone = useMemo(isStandalone, [])
-  const [error, setError] = useState('')
+  // A notice from the page before (a shared file that couldn't be attached).
+  const [error, setError] = useState(useLocation().state?.notice || '')
   // From the trip's copy kept on this device (utils/offlineTrips.js): when it
   // was saved. Offline nothing can be changed, whichever copy is on screen.
   const [offlineAsOf, setOfflineAsOf] = useState(null)

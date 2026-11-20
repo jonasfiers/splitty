@@ -98,6 +98,17 @@ export default defineConfig(({ mode }) => {
           start_url: '/',
           scope: '/',
           orientation: 'any',
+          // Splitty in Android's share sheet for a ticket (a PDF, a screenshot,
+          // a photo): the service worker keeps the files (src/sw.js) and opens
+          // /share (pages/SharePage.jsx). The types an attachment may be
+          // (api/uploadStore.js). Chrome reads this when it refreshes the
+          // installed app, which can take a day; reinstalling is immediate.
+          share_target: {
+            action: '/share-target',
+            method: 'POST',
+            enctype: 'multipart/form-data',
+            params: { files: [{ name: 'files', accept: ['application/pdf', 'image/jpeg', 'image/png', 'image/webp', '.pdf', '.jpg', '.jpeg', '.png', '.webp'] }] },
+          },
           icons: [
             {
               src: '/cat-icon-192.png',

@@ -5,6 +5,7 @@ import PlacePicker from '../components/PlacePicker/PlacePicker.jsx'
 import Loading from '../components/Loading.jsx'
 import PageHeader from '../components/PageHeader/PageHeader.jsx'
 import { leaveTo } from '../utils/history.js'
+import { getPendingShare, donePendingShare } from '../utils/shared.js'
 import BackLink from '../components/BackLink.jsx'
 import { KINDS, TRANSPORT_MODES, dayOf, timeOf } from '../utils/trip.js'
 import { useMediaQuery } from '../utils/useMediaQuery.js'
@@ -35,6 +36,9 @@ export default function TripItemFormPage() {
   const navigate = useNavigate()
 
   const [kind, setKind] = useState(KINDS[searchParams.get('kind')] ? searchParams.get('kind') : 'activity')
+  // A ticket shared into Splitty (pages/SharePage.jsx): its codes fill in the
+  // tickets, its files are attached once the item is saved.
+  const [shared] = useState(() => (!isEdit && searchParams.get('shared') ? getPendingShare() : null))
   const [form, setForm] = useState({
     title: '',
     mode: TRANSPORT_MODES.some(m => m.value === searchParams.get('mode')) ? searchParams.get('mode') : 'flight',
@@ -44,7 +48,7 @@ export default function TripItemFormPage() {
     endDate: '', endTime: '',
     from: null, to: null, place: null,
     confirmationRef: '',
-    tickets: [],
+    tickets: shared?.tickets ?? [],
     url: '',
     notes: '',
   })
@@ -164,7 +168,18 @@ export default function TripItemFormPage() {
         leaveTo(navigate, `/trips/${tripId}/items/${itemId}`)
       } else {
         const { data } = await client.post(`/trips/${tripId}/items`, payload)
-        navigate(`/trips/${tripId}/items/${data.id}`, { replace: true })
+        // The shared files: the item is saved already, so a file that fails is
+        // said on its page rather than here (and can be added there again).
+        let failed = 0
+        for (const file of shared?.files ?? []) {
+          try {
+            const body = new FormData()
+            body.append('file', file)
+            await client.post(`/trips/items/${data.id}/attachments`, body, { timeout: 120000 })
+          } catch { failed++ }
+        }
+        if (shared) await donePendingShare()
+        navigate(`/trips/${tripId}/items/${data.id}`, { replace: true, state: failed ? { notice: `${failed === 1 ? 'A shared file' : `${failed} shared files`} couldn’t be attached. Add ${failed === 1 ? 'it' : 'them'} again with “Add a file”.` } : undefined })
       }
     } catch (err) {
       console.error('Save trip item failed:', err)
@@ -298,6 +313,9 @@ export default function TripItemFormPage() {
           </Field>
 
           <TicketCodeField tickets={form.tickets} onChange={tickets => set({ tickets })} />
+          {shared?.files?.length > 0 && (
+            <p className="field-note">Attached once saved: {shared.files.map(f => f.name).join(', ')}</p>
+          )}
 
           {kind === 'transport' && titleField}
 

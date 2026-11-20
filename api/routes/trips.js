@@ -398,6 +398,21 @@ router.patch('/items/:itemId/when', async (req, res) => {
     }
 });
 
+// ADD TICKETS — {tickets: [{code, format, name}]} appended to the item's own
+// (a ticket shared into Splitty); the rest of the item is left alone.
+router.post('/items/:itemId/tickets', async (req, res) => {
+    try {
+        const tickets = parseTickets({ tickets: req.body.tickets });
+        if (!tickets.length) return res.status(400).json({ error: 'No ticket codes given.' });
+        const result = await tripService.addTickets(req.params.itemId, req.user.id, tickets, MAX_TICKETS);
+        if (!result.success) return res.status(404).json(result);
+        res.json(result);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // DELETE
 router.delete('/items/:itemId', async (req, res) => {
     try {

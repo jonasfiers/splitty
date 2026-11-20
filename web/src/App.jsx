@@ -28,6 +28,7 @@ const TripDetailPage        = lazy(() => import('./pages/TripDetailPage'))
 const TripItemFormPage      = lazy(() => import('./pages/TripItemFormPage'))
 const TripItemDetailPage    = lazy(() => import('./pages/TripItemDetailPage'))
 const TripRoutePage         = lazy(() => import('./pages/TripRoutePage'))
+const SharePage             = lazy(() => import('./pages/SharePage'))
 const TripDocumentsPage     = lazy(() => import('./pages/TripDocumentsPage'))
 const FileViewerPage        = lazy(() => import('./pages/FileViewerPage'))
 const OfflineDocumentsPage  = lazy(() => import('./pages/OfflineDocumentsPage'))
@@ -95,6 +96,8 @@ export default function App() {
               <Route path="/trips/:tripId/documents" element={<TripDocumentsPage />} />
               <Route path="/trips/:tripId/items/:itemId" element={<TripItemDetailPage />} />
               <Route path="/trips/:tripId/items/:itemId/edit" element={<TripItemFormPage />} />
+              {/* A ticket shared from another app (manifest share_target, sw.js). */}
+              <Route path="/share" element={<SharePage />} />
               <Route path="/activity" element={<ActivityPage />} />
               <Route path="/insights" element={<InsightsPage />} />
               <Route path="/friends" element={<FriendsPage />} />

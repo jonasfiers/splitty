@@ -9,6 +9,9 @@ import { colorFor, getInitials } from './utils/avatar.js'
 //   /pdfjs/        pdf.js's fonts and character maps: saved when first used
 //   /offline-docs/ documents kept offline (utils/offlineDocs.js): only ever
 //                  from the phone's storage
+//   POST /share-target  a file shared into Splitty from another app (the
+//                  manifest's share_target, Android): kept in SHARED, then
+//                  the app opens /share (pages/SharePage.jsx)
 //   everything else (the API, the map, tiles) goes to the network untouched.
 //
 // The list of app files is the build's (vite-plugin-pwa, injectManifest).
@@ -19,6 +22,8 @@ const hash = [...version].reduce((h, c) => (h * 31 + c.charCodeAt(0)) | 0, 0)
 const APP_CACHE = `splitty-app-${(hash >>> 0).toString(36)}`
 const PDFJS_CACHE = 'splitty-pdfjs'
 const OFFLINE_DOCS = 'splitty-offline-docs'   // also utils/offlineDocs.js
+const SHARED = 'splitty-shared'               // also utils/shared.js
+const MAX_SHARED = 10
 // Unique: the plugin lists the manifest's icons a second time, and one
 // duplicate makes saving the whole list fail.
 const APP_URLS = [...new Set(MANIFEST.map(e => new URL(e.url, self.location).pathname))]
@@ -109,9 +114,13 @@ async function previousApp(keys) {
 
 self.addEventListener('fetch', event => {
     const { request } = event
-    if (request.method !== 'GET') return
     const url = new URL(request.url)
     if (url.origin !== self.location.origin) return
+    if (request.method === 'POST' && url.pathname === '/share-target') {
+        event.respondWith(receiveShare(request))
+        return
+    }
+    if (request.method !== 'GET') return
 
     if (url.pathname.startsWith('/offline-docs/')) {
         event.respondWith((async () => (await (await caches.open(OFFLINE_DOCS)).match(url.pathname))
@@ -131,6 +140,22 @@ self.addEventListener('fetch', event => {
         event.respondWith((async () => (await fromApp(url.pathname)) ?? fetch(request))())
     }
 })
+
+// Files shared into Splitty: kept (only the last share) until the share page
+// has dealt with them, under /shared/0, /shared/1... with their name in a
+// header. The page is then opened with a GET, as the spec asks (303).
+async function receiveShare(request) {
+    try {
+        const form = await request.formData()
+        const files = form.getAll('files').filter(f => typeof f !== 'string' && f.size > 0).slice(0, MAX_SHARED)
+        await caches.delete(SHARED)
+        const cache = await caches.open(SHARED)
+        await Promise.all(files.map((file, n) => cache.put(`/shared/${n}`, new Response(file, {
+            headers: { 'Content-Type': file.type || 'application/octet-stream', 'X-Name': encodeURIComponent(file.name || `file-${n + 1}`) },
+        }))))
+    } catch { /* the share page says nothing arrived */ }
+    return Response.redirect('/share', 303)
+}
 
 async function navigation(request) {
     const network = fetch(request)

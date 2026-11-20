@@ -592,6 +592,41 @@ const tripService = {
         }
     },
 
+    // ADD TICKETS — appended to the item's own (a ticket shared into Splitty,
+    // web/src/pages/SharePage.jsx), nothing else about the item changes. A code
+    // already on the item is not added again; `max` caps the list. Returns how
+    // many were added.
+    addTickets: async (itemId, userId, tickets, max) => {
+        const session = driver.session();
+        try {
+            return await session.executeWrite(async tx => {
+                const { records } = await tx.run(`MATCH ${ITEM_ACCESS} RETURN properties(i) AS props`, { itemId, userId });
+                if (!records.length) return { success: false, message: 'Trip item not found or access denied' };
+                const current = ticketsOf(records[0].get('props'));
+                const known = new Set(current.map(t => t.code));
+                const fresh = tickets.filter(t => !known.has(t.code) && known.add(t.code));
+                const all = [...current, ...fresh].slice(0, max);
+                const added = all.length - current.length;
+                if (added > 0) {
+                    await tx.run(
+                        `MATCH ${ITEM_ACCESS}
+                         SET i.ticketCodes = $codes, i.ticketFormats = $formats, i.ticketNames = $names,
+                             i.ticketCode = null, i.ticketFormat = null
+                         WITH i
+                         MATCH (u:User {id: $userId})
+                         CREATE (i)-[:UPDATED_BY {on: datetime()}]->(u)`,
+                        { itemId, userId, codes: all.map(t => t.code), formats: all.map(t => t.format), names: all.map(t => t.name ?? '') }
+                    );
+                }
+                return { success: true, added, total: all.length };
+            });
+        } catch (err) {
+            throw new Error(`Failed to add tickets: ${err.message}`);
+        } finally {
+            await session.close();
+        }
+    },
+
     // DELETE ITEM — its attachments go with it, its expenses stay in the group.
     deleteItem: async (itemId, userId) => {
         const session = driver.session();
