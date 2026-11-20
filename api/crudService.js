@@ -111,16 +111,6 @@ async function readExpenseState(tx, id) {
 }
 
 
-const isSettlementOrTransfer = async (expenseId, currUserId) => {
-    const { records } = await driver.executeQuery(
-        `MATCH (:User {id: $currUserId})-[:MEMBER_OF]->(:Group)<-[:BALANCE_IN]-(e:Expense {id: $expenseId})
-        WHERE e:Settlement OR e:Transfer
-        RETURN e.id`,
-        { expenseId, currUserId }
-    );
-    return records.length > 0;
-}
-
 const userServiceNeo4j = {
     // CREATE
     createUser: async (name, email, password) => {
@@ -875,7 +865,7 @@ const expenseService = {
                 'MATCH (u:User {id: $currUserId})-[:MEMBER_OF]->(g:Group {id: $groupId}) RETURN g',
                 { currUserId, groupId }
             );
-            if (memberRecords.length === 0) throw new Error('Access denied: You are not a member of this group');
+            if (memberRecords.length === 0) return { success: false, status: 404, message: 'Group not found or access denied', error: 'Group not found or access denied' };
             const invalid = await checkExpenseLinks({ groupId, categoryId, currencyIso, paidByUserId }, ['group', 'currency', 'category', 'payer']);
             if (invalid) return invalid;
             const checked = await checkShares(shares, { amount, paidByUserId, groupId });
@@ -942,7 +932,7 @@ const expenseService = {
                 'MATCH (u:User {id: $currUserId})-[:MEMBER_OF]->(g:Group {id: $groupId}) RETURN g',
                 { currUserId, groupId }
             );
-            if (memberRecords.length === 0) throw new Error('Access denied: You are not a member of this group');
+            if (memberRecords.length === 0) return { success: false, status: 404, message: 'Group not found or access denied', error: 'Group not found or access denied' };
             const invalid = await checkExpenseLinks({ groupId, currencyIso, paidByUserId, receivedByUserId }, ['group', 'currency', 'payer', 'receiver']);
             if (invalid) return invalid;
 
@@ -1005,7 +995,7 @@ const expenseService = {
                 RETURN sc.iso AS sourceIso, tc.iso AS targetIso, sg.title AS sourceTitle, tg.title AS targetTitle, cu.name AS cuName`,
                 { currUserId, targetUserId, sourceGroupId, targetGroupId }
             );
-            if (setupRecords.length === 0) throw new Error('Access denied or groups not found');
+            if (setupRecords.length === 0) return { success: false, status: 404, message: 'Group not found or access denied', error: 'Group not found or access denied' };
 
             const sourceIso = setupRecords[0].get('sourceIso');
             const targetIso = setupRecords[0].get('targetIso');
@@ -1302,7 +1292,7 @@ const expenseService = {
                 RETURN g, e:Settlement OR e:Transfer AS fixed`,
                 { id, groupId, currUserId }
             );
-            if (memberRecords.length === 0) throw new Error('Access denied: You are not a member of this group');
+            if (memberRecords.length === 0) return { success: false, status: 404, message: 'Group not found or access denied', error: 'Group not found or access denied' };
             if (memberRecords[0].get('fixed')) return NOT_AN_EXPENSE;
             const invalid = await checkExpenseLinks({ groupId, categoryId, currencyIso, paidByUserId }, ['group', 'currency', 'category', 'payer']);
             if (invalid) return invalid;
@@ -1392,6 +1382,16 @@ const expenseService = {
                              MATCH (u:User {id: s.userId})
                              CREATE (e)-[:OWED_BY {amount: s.amount}]->(u)`,
                             { id, shares: newShares }
+                        );
+                    } else {
+                        // Shares kept, payer changed: a share the new payer
+                        // had becomes theirs (the remainder), as the history
+                        // above records it. Left in place, the payer would owe
+                        // themselves and the group's balances would no longer
+                        // add up to zero (found by tests/expenses.test.js).
+                        await tx.run(
+                            'MATCH (e:Expense {id: $id})-[o:OWED_BY]->(:User {id: $paidByUserId}) DELETE o',
+                            { id, paidByUserId }
                         );
                     }
                     return { record: records[0], changed: changes !== null, updated: summary.counters.containsUpdates() };
@@ -1494,24 +1494,6 @@ const expenseService = {
 
 const shareService = {
 
-    createShare: async (expenseId, userId, amount, currUserId) => {
-        try {
-            if (await isSettlementOrTransfer(expenseId, currUserId)) return NOT_AN_EXPENSE;
-            const { summary } = await driver.executeQuery(
-                `MATCH (cu:User {id: $currUserId})-[:MEMBER_OF]->(g:Group)<-[:BALANCE_IN]-(e:Expense {id: $expenseId})
-                MATCH (u:User {id: $userId})
-                MERGE (u)<-[:OWED_BY {amount: $amount}]-(e)`,
-                {userId, expenseId, amount, currUserId }
-            );
-            if (summary.counters.updates().relationshipsCreated >= 1 || summary.counters.updates().propertiesSet >= 1) {
-                return { success: true, message: 'Share created/updated successfully' };
-            }
-            return { success: false, message: 'Could not create share (access denied or objects not found)' };
-        } catch (err) {
-            throw new Error(`Failed to create share: ${err.message}`);
-        }
-    },
-
     // READ SHARES
     getShares: async (expenseId, excludePayer, currUserId) => {
         try{
@@ -1533,26 +1515,6 @@ const shareService = {
         }
         catch (err) {
             throw new Error(`Failed to get shares: ${err.message}`);
-        }
-    },
-
-    // DELETE SHARE
-    deleteShare: async (expenseId, userId, currUserId) => {
-        try {
-            if (await isSettlementOrTransfer(expenseId, currUserId)) return NOT_AN_EXPENSE;
-            const { summary } = await driver.executeQuery(
-                'MATCH (cu:User {id: $currUserId})-[:MEMBER_OF]->(g:Group)<-[:BALANCE_IN]-(e:Expense {id: $expenseId}) ' +
-                'MATCH (e)-[r:OWED_BY]->(u:User {id: $userId}) ' +
-                'DELETE r',
-                { expenseId, userId, currUserId }
-            );
-            if (summary.counters.updates().relationshipsDeleted >= 1) {
-                return { success: true, message: 'Share deleted successfully' };
-            }
-            return { success: false, message: 'Share not found or access denied' };
-        }
-        catch (err) {
-            throw new Error(`Failed to delete share: ${err.message}`);
         }
     }
 }

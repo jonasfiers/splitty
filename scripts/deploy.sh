@@ -47,7 +47,7 @@
 #  ----------------------
 #  Neither tier is ever edited in place. Each is staged beside the live copy,
 #  validated, then swapped in with rename(2), keeping the outgoing version as
-#  a .prev rollback target. After the swap, four health checks must pass; if
+#  a .prev rollback target. After the swap, the health checks (four, plus a live API check when the API is deployed) must pass; if
 #  any fails, every tier this run touched is rolled back automatically and the
 #  script exits non-zero.
 #
@@ -61,6 +61,8 @@
 #       --allow-dirty         proceed despite a dirty devbox worktree
 #       --skip-pull           do not `git pull` the devbox worktree first
 #       --skip-smoke          publish the web build without the smoke test
+#       --skip-api-tests      deploy the API without scripts/test-api.sh
+#                             (only if CT116 itself is down)
 #                             (web/smoke/smoke.mjs); only if Chromium is broken
 #       --simulate-failure=X  rollback drill: force a health check to fail.
 #                             X = api-local | api-via-nginx | public | neo4j | all
@@ -92,6 +94,7 @@ DRY_RUN=false
 ALLOW_DIRTY=false
 SKIP_PULL=false
 SKIP_SMOKE=false
+SKIP_API_TESTS=false
 SIMULATE_FAILURE=""
 
 usage() { awk 'NR>1 && /^#/ { sub(/^# ?/, ""); print; next } NR>1 { exit }' "${BASH_SOURCE[0]}"; }
@@ -104,6 +107,7 @@ for arg in "$@"; do
     --allow-dirty)         ALLOW_DIRTY=true ;;
     --skip-pull)           SKIP_PULL=true ;;
     --skip-smoke)          SKIP_SMOKE=true ;;
+    --skip-api-tests)      SKIP_API_TESTS=true ;;
     --simulate-failure=*)  SIMULATE_FAILURE="${arg#*=}" ;;
     -h|--help)             usage; exit 0 ;;
     *) printf 'Unknown option: %s\n\n' "$arg" >&2; usage >&2; exit 2 ;;
@@ -156,6 +160,12 @@ ship() {
 }
 
 # ------------------------------------------------------------ health gate ---
+live_api_check() {
+  ship "$CT_API" "${SCRIPT_DIR}/api-live-check.js" /var/tmp/api-live-check.js || return 1
+  pve_ssh "pct exec $CT_API -- bash -c 'runuser -u splitty -- /opt/node24/bin/node --env-file=/etc/splitty-api.env /var/tmp/api-live-check.js /opt/splitty-api-node24; rc=\$?; rm -f /var/tmp/api-live-check.js; exit \$rc'" \
+    | sed 's/^/           /'
+}
+
 # Each check names where it runs. splitty.jonasfiers.eu is checked from devbox
 # because that is a genuine outside-in view. neo4j.home.jonasfiers.eu is a
 # Tailscale-only name served by CT115 (homeproxy); devbox is not on Tailscale and
@@ -213,6 +223,12 @@ run_health_checks() { # -> 0 all good, 1 something failed
   if simulated neo4j; then code=000; warn "SIMULATED FAILURE: neo4j"; else
     code="$(http_code_in_ct "$CT_HOME" "$NEO4J_URL")"; fi
   check "CT115  ${NEO4J_URL}" 200 "$code" || failures=$((failures + 1))
+
+  # The API answering correctly, not just running (scripts/api-live-check.js):
+  # read-only calls as a group member, and every group's balances adding up.
+  if $DO_API; then
+    if live_api_check; then ok "CT104  live API check"; else err "CT104  live API check FAILED"; failures=$((failures + 1)); fi
+  fi
 
   [ "$failures" -eq 0 ]
 }
@@ -315,6 +331,21 @@ if $DO_WEB; then
   esac
 fi
 
+# API tests: this commit's api/ against the tests' own Neo4j on CT116 —
+# balances, splits, currencies, settlements, who may see what
+# (scripts/test-api.sh, api/tests/). Before anything is built or published.
+if $DO_API; then
+  if $SKIP_API_TESTS; then
+    warn "skipping the API tests (--skip-api-tests)"
+  elif $DRY_RUN; then
+    plan "scripts/test-api.sh   (API tests on CT116; stops here if one fails)"
+  else
+    stage "API tests (on CT116, the tests' own Neo4j)"
+    "${SCRIPT_DIR}/test-api.sh" 2>&1 | grep -vE '^\s+at ' | sed 's/^/    /' \
+      || die "API tests failed — nothing was deployed"
+  fi
+fi
+
 # ------------------------------------------------- 2. ship helper scripts ---
 stage "Shipping helper scripts to the containers"
 if $DRY_RUN; then
@@ -389,6 +420,7 @@ if $DO_WEB; then
   if $DRY_RUN; then
     plan "${INSTALL_CMD[*]}"
     plan "npm run lint --workspace web    (errors stop the deploy)"
+    plan "npm test --workspace web        (unit tests)"
     plan "npm run build --workspace web   (output: web/dist)"
     $SKIP_SMOKE || plan "node web/smoke/smoke.mjs   (headless browser; stops here if it fails)"
     plan "tar czf /tmp/splitty-web-${STAMP}.tgz -C web/dist ."
@@ -398,6 +430,8 @@ if $DO_WEB; then
     # Errors stop the deploy; warnings (effect dependencies) are only shown.
     log "npm run lint --workspace web"
     npm run lint --workspace web --silent -- --quiet || die "lint errors (above) — fix them, nothing was published"
+    log "npm test --workspace web   (unit tests: settle-up plan)"
+    npm test --workspace web --silent >/dev/null 2>&1 || { npm test --workspace web 2>&1 | tail -30; die "web unit tests failed — nothing was published"; }
     log "npm run build --workspace web"
     rm -rf "${REPO_ROOT}/web/dist"
     npm run build --workspace web
@@ -487,12 +521,12 @@ fi
 stage "Health gate"
 if $DRY_RUN; then
   log "running the health checks read-only (they change nothing):"
-  if run_health_checks; then ok "all four checks pass right now"; else warn "one or more checks are failing BEFORE any deploy"; fi
+  if run_health_checks; then ok "all health checks pass right now"; else warn "one or more checks are failing BEFORE any deploy"; fi
 else
   # Give nginx/the API a moment to settle after the swaps.
   sleep 2
   if run_health_checks; then
-    ok "all four health checks passed"
+    ok "all health checks passed"
   else
     err "health gate FAILED — rolling back automatically"
     rollback_all || err "rollback itself reported problems"

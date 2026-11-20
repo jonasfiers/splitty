@@ -96,6 +96,26 @@ failure stops the deploy with the live site untouched:
   in smoke.mjs, and the data it needs in server.mjs. `--skip-smoke` bypasses
   it (only if Chromium itself is broken).
 
+**Before anything is deployed (API).** `scripts/test-api.sh` sends this
+worktree's `api/` (with `api/tests/`) to CT116 and runs `node --test` there
+against the tests' own Neo4j (`splitty-test-neo4j`, port 7697, localhost only,
+started for the run and stopped after; its data is wiped by every test file
+and never holds anything real). Each test file starts the API from the
+checkout and calls it over HTTP: balances and splits, editing and deleting,
+currencies, settlements and balance transfers, leaving a group, and who may
+see or change what (groups, expenses, trips). A failing test stops the deploy
+before anything is built. Tests marked `todo` are known issues: they show,
+but don't stop it. `--skip-api-tests` only if CT116 itself is down. One-time
+setup on CT116: `scripts/test-api.sh --setup` (idempotent; the helpers refuse
+to wipe any database that is not the tests' own). Web unit tests
+(`npm test -w web`, e.g. the settle-up plan) run next to lint.
+
+**After the API swap.** Besides the four health checks, `scripts/api-live-check.js`
+runs on CT104 as the service user: read-only calls with a 60-second session of
+one existing member (each must answer 200 with the right shape; a failure
+rolls back), and a check that every group's balances add up to zero (a
+warning only). It prints status codes and counts, no personal data.
+
 **Web (CT101).** Build on devbox → tar → unpack into
 `/var/www/splitty.staging.XXXXXX` → validate the payload really contains
 `index.html` and `assets/` → swap by rename. The live document root is never
