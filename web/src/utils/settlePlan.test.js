@@ -30,12 +30,13 @@ test('several people: everything settles, in at most members − 1 payments, nob
   assert.ok(plan.every(p => p.amount > 0 && Number.isInteger(p.amount)))
 })
 
-test('fractions of a cent (other currencies) are rounded, and still settle', {
-  todo: 'KNOWN ISSUE (2026-11-20): an expense in another currency gives fractional balances (€1.404, −€0.936, −€0.468); rounded one by one they no longer add up (140 − 94 − 47 = −1), so a cent stays open after settling up, and that member can never leave (leaving needs exactly 0). Needs every converted share rounded once, in the API.',
-}, () => {
-  const members = [m('ann', 140.4), m('bob', -93.6), m('cas', -46.8)]
+test('whole-cent balances that add up to zero always settle completely', () => {
+  // The API rounds each converted share once (api/money.js), so balances are
+  // whole minor units adding up to exactly zero, even with other currencies.
+  const members = [m('ann', 141), m('bob', -94), m('cas', -47)]
   const plan = settlePlan(members)
   assert.ok(settles(members, plan), JSON.stringify(plan))
+  assert.deepEqual(plan, [{ from: 'bob', to: 'ann', amount: 94 }, { from: 'cas', to: 'ann', amount: 47 }])
 })
 
 test('the same balances always give the same plan, whatever the order', () => {

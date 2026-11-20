@@ -114,6 +114,10 @@ let proc;
 let workDir;
 // The API itself, from this checkout, against the test database.
 async function startApi() {
+    // Something already answering here would be tested instead of this
+    // checkout (e.g. the API of a run that was cut off): refuse.
+    const busy = await fetch(`${BASE}/health`).then(() => true, () => false);
+    if (busy) throw new Error(`Port ${PORT} is already in use: a leftover API? Stop it, then run again.`);
     secret = crypto.randomBytes(32).toString('hex');
     workDir = fs.mkdtempSync(path.join(os.tmpdir(), 'splitty-api-test-'));
     const vapid = webpush.generateVAPIDKeys();

@@ -2,6 +2,7 @@ const neo4j = require('neo4j-driver');
 const driver = require('./neo4j');
 const { resolveChanges } = require('./expenseHistory');
 const { MEMBERS_OF_GROUP, mapMembers } = require('./groupMembers');
+const { shareInGroupCurrency: share } = require('./money');
 
 // The user's own part of each expense, for getInsights' "mine" scope. The payer
 // has no OWED_BY of their own: only the others' shares are stored, so what the
@@ -72,11 +73,11 @@ const dashService = {
                 CALL (u) {
                   MATCH (u)-[:PAID]->(e:Expense)-[o:OWED_BY]->(other:User) WHERE other <> u
                   MATCH (e)-[:BALANCE_IN]->(:Group)-[:EXPRESSED_IN]->(c:Currency)
-                  RETURN other, c.iso AS iso, o.amount * coalesce(e.rateSnapshot, 1) AS lent, 0 AS owed
+                  RETURN other, c.iso AS iso, ${share('o', 'e')} AS lent, 0 AS owed
                   UNION ALL
                   MATCH (other:User)-[:PAID]->(e:Expense)-[o:OWED_BY]->(u) WHERE other <> u
                   MATCH (e)-[:BALANCE_IN]->(:Group)-[:EXPRESSED_IN]->(c:Currency)
-                  RETURN other, c.iso AS iso, 0 AS lent, o.amount * coalesce(e.rateSnapshot, 1) AS owed
+                  RETURN other, c.iso AS iso, 0 AS lent, ${share('o', 'e')} AS owed
                 }
                 WITH iso, other, sum(lent) AS totalLent, sum(owed) AS totalOwed
                 WITH iso, totalLent, totalOwed, totalLent - totalOwed AS net

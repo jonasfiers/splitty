@@ -4,6 +4,7 @@
 // because leaving (or being removed) needs a settled balance first.
 
 const driver = require('./neo4j');
+const { shareInGroupCurrency: share } = require('./money');
 const uploadStore = require('./uploadStore');
 
 // A member's net balance in a group (minor units of the group's currency,
@@ -14,12 +15,12 @@ async function memberBalance(groupId, memberId) {
         `MATCH (g:Group {id: $groupId})<-[:MEMBER_OF]-(m:User {id: $memberId})
          CALL (g, m) {
              OPTIONAL MATCH (g)<-[:BALANCE_IN]-(e:Expense)-[o:OWED_BY]->(m)
-             RETURN sum(o.amount * coalesce(e.rateSnapshot, 1)) AS owed
+             RETURN sum(${share('o', 'e')}) AS owed
          }
          CALL (g, m) {
              OPTIONAL MATCH (m)-[:PAID]->(e:Expense)-[:BALANCE_IN]->(g)
              OPTIONAL MATCH (e)-[p:OWED_BY]->(:User)
-             RETURN sum(p.amount * coalesce(e.rateSnapshot, 1)) AS lent
+             RETURN sum(${share('p', 'e')}) AS lent
          }
          RETURN lent - owed AS balance`,
         { groupId, memberId }

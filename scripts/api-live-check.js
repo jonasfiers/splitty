@@ -56,18 +56,15 @@ const ROUTES = [
             }
         }
 
-        // Same balance as the group page (groupMembers.js MEMBERS_OF_GROUP).
+        // The group page's own balance formula (groupMembers.js), from the
+        // deployed app, so this checks exactly what people see.
+        const { MEMBERS_OF_GROUP } = require(path.join(app, 'groupMembers.js'));
         const { records } = await session.run(
             `MATCH (g:Group)
-             CALL (g) {
-                 MATCH (g)<-[:MEMBER_OF]-(m:User)
-                 OPTIONAL MATCH (g)<-[:BALANCE_IN]-(e:Expense)
-                 OPTIONAL MATCH (e)-[o:OWED_BY]->(m)
-                 OPTIONAL MATCH (m)-[:PAID]->(e)-[p:OWED_BY]->(:User)
-                 WITH m, sum(p.amount * coalesce(e.rateSnapshot, 1)) - sum(o.amount * coalesce(e.rateSnapshot, 1)) AS b
-                 RETURN sum(b) AS total
-             }
-             RETURN count(g) AS groups, sum(CASE WHEN abs(total) >= 1 THEN 1 ELSE 0 END) AS off`
+             ${MEMBERS_OF_GROUP}
+             WITH g, reduce(t = 0.0, m IN members | t + m.balance) AS total
+             RETURN count(g) AS groups, sum(CASE WHEN abs(total) >= 1 THEN 1 ELSE 0 END) AS off`,
+            { userId: '' }
         );
         const groups = records[0].get('groups').toNumber();
         const off = Number(records[0].get('off'));

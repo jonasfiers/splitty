@@ -12,4 +12,15 @@ const currencyOptions = iso => ({
     ...(WHOLE_IN_PRACTICE.has(iso) ? { trailingZeroDisplay: 'stripIfInteger' } : {}),
 });
 
-module.exports = { WHOLE_IN_PRACTICE, currencyOptions };
+// A share of an expense in the group's currency (minor units), as Cypher for
+// OWED_BY relationship `o` of expense `e` (2026-11-20). Each share is
+// converted with the expense's rate and rounded ONCE, and that one amount is
+// used on both sides: what the person owes and what the payer is owed. So
+// balances are whole minor units and a group always adds up to exactly zero.
+// (Unrounded, three people on a foreign-currency expense could end a cent
+// apart after settling up, and the one left with it could never leave.) The
+// payer's own share, never stored, absorbs the rounding. Every balance query
+// uses this; same-currency expenses (rate 1) are whole amounts already.
+const shareInGroupCurrency = (o, e) => `round(${o}.amount * coalesce(${e}.rateSnapshot, 1))`;
+
+module.exports = { WHOLE_IN_PRACTICE, currencyOptions, shareInGroupCurrency };

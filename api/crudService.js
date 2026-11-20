@@ -4,7 +4,7 @@ const neo4j = require('neo4j-driver');
 const driver = require('./neo4j');
 const pushService = require('./pushService');
 const rateService = require('./rateService');
-const { currencyOptions } = require('./money');
+const { currencyOptions, shareInGroupCurrency: share } = require('./money');
 
 // A category's colour is its top-level category's (subcategories share it).
 // Cypher for the colour of category variable `v` (null-safe).
@@ -819,10 +819,10 @@ const groupServiceNeo4j = {
                 `MATCH (cu:User {id: $currUserId})-[:MEMBER_OF]->(sg:Group {id: $sourceGroupId})<-[:MEMBER_OF]-(tu:User {id: $targetUserId})
                 OPTIONAL MATCH (cu)-[:PAID]->(e1:Expense)-[o1:OWED_BY]->(tu)
                 WHERE (e1)-[:BALANCE_IN]->(sg)
-                WITH cu, tu, sg, sum(coalesce(o1.amount, 0) * coalesce(e1.rateSnapshot, 1)) AS lent
+                WITH cu, tu, sg, sum(coalesce(${share('o1', 'e1')}, 0)) AS lent
                 OPTIONAL MATCH (tu)-[:PAID]->(e2:Expense)-[o2:OWED_BY]->(cu)
                 WHERE (e2)-[:BALANCE_IN]->(sg)
-                WITH lent, sum(coalesce(o2.amount, 0) * coalesce(e2.rateSnapshot, 1)) AS owed
+                WITH lent, sum(coalesce(${share('o2', 'e2')}, 0)) AS owed
                 RETURN lent - owed AS bilateralBalance`,
                 { currUserId, targetUserId, sourceGroupId }
             );
@@ -1007,10 +1007,10 @@ const expenseService = {
                 `MATCH (cu:User {id: $currUserId})-[:MEMBER_OF]->(sg:Group {id: $sourceGroupId})<-[:MEMBER_OF]-(tu:User {id: $targetUserId})
                 OPTIONAL MATCH (cu)-[:PAID]->(e1:Expense)-[o1:OWED_BY]->(tu)
                 WHERE (e1)-[:BALANCE_IN]->(sg)
-                WITH cu, tu, sg, sum(coalesce(o1.amount, 0) * coalesce(e1.rateSnapshot, 1)) AS lent
+                WITH cu, tu, sg, sum(coalesce(${share('o1', 'e1')}, 0)) AS lent
                 OPTIONAL MATCH (tu)-[:PAID]->(e2:Expense)-[o2:OWED_BY]->(cu)
                 WHERE (e2)-[:BALANCE_IN]->(sg)
-                WITH lent, sum(coalesce(o2.amount, 0) * coalesce(e2.rateSnapshot, 1)) AS owed
+                WITH lent, sum(coalesce(${share('o2', 'e2')}, 0)) AS owed
                 RETURN lent - owed AS bilateralBalance`,
                 { currUserId, targetUserId, sourceGroupId }
             );

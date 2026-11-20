@@ -27,6 +27,12 @@ trap cleanup EXIT
 as_splitty() { runuser -u splitty -- env PATH="$NODE_BIN:/usr/bin:/bin" HOME=/var/tmp/splitty-npm-home \
   npm_config_cache=/var/tmp/splitty-npm-home/.npm "$@"; }
 
+# A run that was cut off can leave its API behind on the test port, and the
+# next run would then talk to it (with another JWT secret). Clear it first.
+for pid in $(pgrep -u splitty -f '^/opt/node24/bin/node index.js$' || true); do
+  case "$(readlink "/proc/$pid/cwd")" in "$APP"*) kill "$pid" && log "stopped a leftover test API (pid $pid)" ;; esac
+done
+
 install -d -o splitty -g splitty "$BASE" /var/tmp/splitty-npm-home
 rm -rf "$APP.new" && mkdir -p "$APP.new"
 tar xzf "/var/tmp/splitty-api-test-$STAMP.tgz" -C "$APP.new"

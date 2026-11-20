@@ -8,6 +8,7 @@
 // Members carry only what other members may see: no email, no account state.
 
 const neo4j = require('neo4j-driver');
+const { shareInGroupCurrency: share } = require('./money');
 
 const MEMBERS_OF_GROUP = `
     CALL (g) {
@@ -15,7 +16,7 @@ const MEMBERS_OF_GROUP = `
         OPTIONAL MATCH (g)<-[:BALANCE_IN]-(e:Expense)
         OPTIONAL MATCH (e)-[o:OWED_BY]->(m)
         OPTIONAL MATCH (m)-[:PAID]->(e)-[p:OWED_BY]->(:User)
-        WITH m, sum(p.amount * coalesce(e.rateSnapshot, 1)) - sum(o.amount * coalesce(e.rateSnapshot, 1)) AS balance
+        WITH m, sum(${share('p', 'e')}) - sum(${share('o', 'e')}) AS balance
         ORDER BY m.id = $userId, toLower(m.name)
         RETURN collect({id: m.id, name: m.name, balance: balance, avatarColor: m.avatarColor, avatarEmoji: m.avatarEmoji}) AS members,
                count(m) AS memberCount

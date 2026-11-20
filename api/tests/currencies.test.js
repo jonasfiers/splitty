@@ -13,10 +13,12 @@ before(async () => {
 });
 after(stopApi);
 
-// Balances may carry fractions of a cent: compare to the cent.
+// Each converted share is rounded once (money.js shareInGroupCurrency), so
+// balances are whole minor units: compared exactly.
 const near = (actual, expected, label) => {
     for (const [id, v] of Object.entries(expected)) {
-        assert.ok(Math.abs(actual[id] - v) < 0.5, `${label}: ${id} is ${actual[id]}, expected ${v}`);
+        assert.ok(Number.isInteger(actual[id]), `${label}: ${id} is ${actual[id]}, not a whole minor unit`);
+        assert.equal(actual[id], v, `${label}: ${id}`);
     }
 };
 
@@ -72,15 +74,22 @@ test('an unknown currency is refused', async () => {
     assert.match(res.body.error, /currency/i);
 });
 
-test('after settling up as the app suggests, everyone can leave', {
-    todo: 'KNOWN ISSUE (2026-11-20): fractional converted shares leave a cent open (see web/src/utils/settlePlan.test.js); Cas ends at −0.79 cents, which rounds to −1, so leaving is refused.',
-}, async () => {
+test('uneven shares in another currency: each share rounded once, balances whole cents adding up to zero', async () => {
+    const cas = await createUser('Cas');
+    const g = await createGroup([ann, bob, cas]);
+    // NT$100, Bob NT$33.43 (93.604 cents), Cas NT$16.71 (46.788 cents)
+    await addExpense(ann, g, { amount: 10000, payer: ann, shares: { [bob.id]: 3343, [cas.id]: 1671 }, currencyIso: 'TWD' });
+    assert.deepEqual(await balances(ann, g), { [ann.id]: 141, [bob.id]: -94, [cas.id]: -47 });
+});
+
+test('after settling up as the app suggests, everyone can leave', async () => {
     const cas = await createUser('Cas');
     const g = await createGroup([ann, bob, cas]);
     await addExpense(ann, g, { amount: 10000, payer: ann, shares: { [bob.id]: 3343, [cas.id]: 1671 }, currencyIso: 'TWD' });
-    const b = await balances(ann, g); // ≈ +140.39, −93.60, −46.79 cents
-    // The app's plan (web/src/utils/settlePlan.js, greedy on rounded
-    // balances): Ann is owed 140, so Bob pays 94 and Cas the 46 left.
+    const b = await balances(ann, g); // +141, −94, −47 (shares rounded once)
+    // The app's plan (web/src/utils/settlePlan.js, greedy on the balances):
+    // Ann is owed 141, Bob pays 94 and Cas 47. (Before shares were rounded
+    // once, Ann showed 140, Cas could pay only 46 and was stuck a cent short.)
     const owedToAnn = Math.round(b[ann.id]);
     const bobPays = Math.min(-Math.round(b[bob.id]), owedToAnn);
     const casPays = Math.min(-Math.round(b[cas.id]), owedToAnn - bobPays);
@@ -89,6 +98,6 @@ test('after settling up as the app suggests, everyone can leave', {
     }
     for (const who of [bob, cas, ann]) {
         const res = await who.api.del(`/groups/${g}/${who.id}`);
-        assert.equal(res.status, 200, `${who.name} leaving → ${res.status} ${JSON.stringify(res.body)}; balances now ${JSON.stringify(await balances(ann, g))}`);
+        if (res.status !== 200) assert.fail(`${who.name} leaving → ${res.status} ${JSON.stringify(res.body)}; balances now ${JSON.stringify(await balances(ann, g))}`);
     }
 });
