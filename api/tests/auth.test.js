@@ -4,7 +4,8 @@
 const { test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
 const jwt = require('jsonwebtoken');
-const { setup, stopApi, client, run, mailbox, testSecret } = require('./helpers');
+const crypto = require('node:crypto');
+const { setup, stopApi, restartApi, client, run, mailbox, testSecret } = require('./helpers');
 
 before(setup);
 after(stopApi);
@@ -12,6 +13,7 @@ after(stopApi);
 let n = 0;
 const address = name => `${name}-${Date.now()}-${++n}@example.test`;
 const PASSWORD = 'correct horse battery';
+const hash = t => crypto.createHash('sha256').update(t).digest('hex');
 
 // Signs up and verifies through the mailed link; returns { email, token, api }.
 async function signUp(name) {
@@ -115,7 +117,7 @@ test('an expired or made-up reset link is refused', async () => {
     const sent = mailbox.to(ann.email).length;
     await client(null).post('/auth/forgot-password', { email: ann.email });
     const token = mailbox.tokenIn(await mailbox.waitFor(ann.email, /Reset your Splitty password/, sent), 'reset-password');
-    await run('MATCH (t:Token:Password {token: $token}) SET t.expiresAt = datetime() - duration("PT1M")', { token });
+    await run('MATCH (t:Token:Password {tokenHash: $h}) SET t.expiresAt = datetime() - duration("PT1M")', { h: hash(token) });
     assert.equal((await client(null).post('/auth/reset-password', { token, password: 'new password!' })).status, 400);
     assert.equal((await client(null).post('/auth/reset-password', { token: 'a'.repeat(64), password: 'new password!' })).status, 400);
     assert.equal((await client(null).post('/auth/login', { email: ann.email, password: PASSWORD })).status, 200, 'the password is unchanged');
@@ -172,4 +174,31 @@ test('sign-in attempts are limited per address', async () => {
     assert.equal(statuses[0], 401);
     assert.equal(statuses[31], 429, `statuses: ${statuses.join(',')}`);
     assert.equal((await client(null).post('/auth/login', { email: address('x'), password: 'guess' })).status, 401, 'another address is not affected');
+});
+
+test('the database holds only hashes of mailed links, never the links themselves', async () => {
+    const ann = await signUp('Ann');
+    const sent = mailbox.to(ann.email).length;
+    await client(null).post('/auth/forgot-password', { email: ann.email });
+    const token = mailbox.tokenIn(await mailbox.waitFor(ann.email, /Reset your Splitty password/, sent), 'reset-password');
+    const { records } = await run('MATCH (t:Token) RETURN properties(t) AS p');
+    const stored = JSON.stringify(records.map(r => r.get('p')));
+    assert.ok(!stored.includes(token), 'the token itself is not stored');
+    assert.ok(stored.includes(hash(token)), 'its hash is');
+    assert.ok(records.every(r => r.get('p').token === undefined), 'no token in plain text, of any kind');
+});
+
+test('a link mailed before tokens were hashed still works after the API restarts', async () => {
+    const ann = await signUp('Ann');
+    const sent = mailbox.to(ann.email).length;
+    await client(null).post('/auth/forgot-password', { email: ann.email });
+    const token = mailbox.tokenIn(await mailbox.waitFor(ann.email, /Reset your Splitty password/, sent), 'reset-password');
+    // Put it back the way the old code stored it.
+    await run('MATCH (t:Token:Password {tokenHash: $h}) SET t.token = $token REMOVE t.tokenHash', { h: hash(token), token });
+    await restartApi();
+    const { records } = await run('MATCH (t:Token:Password {userId: $id}) RETURN t.token AS plain, t.tokenHash AS h', { id: jwt.decode(ann.token).id });
+    assert.equal(records[0].get('plain'), null, 'converted on start');
+    assert.equal(records[0].get('h'), hash(token));
+    const reset = await client(null).post('/auth/reset-password', { token, password: 'after the upgrade' });
+    assert.equal(reset.status, 200, JSON.stringify(reset.body));
 });

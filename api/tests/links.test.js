@@ -47,7 +47,7 @@ test('an invite: only members make one; it shows only the group\'s name; it work
 
 test('an expired or made-up invite gets nothing', async () => {
     const { body } = await ann.api.post(`/invites/groups/${g}`);
-    await run('MATCH (t:Token:Invite {token: $token}) SET t.expiresAt = datetime() - duration("PT1M")', { token: body.token });
+    await run('MATCH (t:Token:Invite {tokenHash: $h}) SET t.expiresAt = datetime() - duration("PT1M")', { h: require('node:crypto').createHash('sha256').update(body.token).digest('hex') });
     assert.equal((await client(null).get(`/invites/${body.token}`)).status, 404);
     assert.equal((await dan.api.post(`/invites/${body.token}/redeem`)).status, 404);
     for (const token of ['0'.repeat(64), 'abc', "x' OR 1=1 --"]) {

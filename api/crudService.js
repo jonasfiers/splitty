@@ -1592,7 +1592,15 @@ const TOKEN_TYPES = new Set(['Invite', 'Password', 'EmailVerification', 'EmailCh
 // email works. Invites stay many-per-group (several links may be shared at once).
 const PER_USER_TOKEN_TYPES = new Set(['Password', 'EmailVerification', 'EmailChange']);
 
+// Only a SHA-256 of each token is stored (2026-11-20), so a leaked database or
+// backup holds no working reset, verification or invite link. No salt: the
+// tokens are 256 random bits, nothing to guess or precompute, and an unsalted
+// hash can be looked up directly.
+const hashToken = token => crypto.createHash('sha256').update(String(token)).digest('hex');
+
 const tokenService = {
+    hash: hashToken,
+
     create: async (type, payload, ttlMs) => {
         if (!TOKEN_TYPES.has(type)) throw new Error(`Invalid token type: ${type}`);
         const perUser = PER_USER_TOKEN_TYPES.has(type);
@@ -1607,9 +1615,9 @@ const tokenService = {
             FOREACH (o IN olds | DELETE o)
             `
                 : '') +
-            `CREATE (t:Token:${type} {token: $token, expiresAt: datetime($expiresAt)})
+            `CREATE (t:Token:${type} {tokenHash: $tokenHash, expiresAt: datetime($expiresAt)})
             SET t += $payload`,
-            { token, expiresAt, payload, userId: payload.userId ?? null }
+            { tokenHash: hashToken(token), expiresAt, payload, userId: payload.userId ?? null }
         );
         return token;
     },
@@ -1617,8 +1625,8 @@ const tokenService = {
     find: async (type, token) => {
         if (!TOKEN_TYPES.has(type)) throw new Error(`Invalid token type: ${type}`);
         const { records } = await driver.executeQuery(
-            `MATCH (t:Token:${type} {token: $token}) WHERE t.expiresAt > datetime() RETURN properties(t) AS props`,
-            { token }
+            `MATCH (t:Token:${type} {tokenHash: $tokenHash}) WHERE t.expiresAt > datetime() RETURN t { .*, tokenHash: null } AS props`,
+            { tokenHash: hashToken(token) }
         );
         return records.length > 0 ? records[0].get('props') : null;
     },
@@ -1629,20 +1637,35 @@ const tokenService = {
         if (!TOKEN_TYPES.has(type)) throw new Error(`Invalid token type: ${type}`);
         const { records } = await driver.executeQuery(
             PER_USER_TOKEN_TYPES.has(type)
-                ? `MATCH (t:Token:${type} {token: $token}) WHERE t.expiresAt > datetime()
-            WITH t, properties(t) AS props
+                ? `MATCH (t:Token:${type} {tokenHash: $tokenHash}) WHERE t.expiresAt > datetime()
+            WITH t, t { .*, tokenHash: null } AS props
             OPTIONAL MATCH (other:Token:${type} {userId: t.userId}) WHERE other <> t
             WITH t, props, collect(other) AS others
             FOREACH (o IN others | DELETE o)
             DELETE t
             RETURN props`
-                : `MATCH (t:Token:${type} {token: $token}) WHERE t.expiresAt > datetime()
-            WITH t, properties(t) AS props
+                : `MATCH (t:Token:${type} {tokenHash: $tokenHash}) WHERE t.expiresAt > datetime()
+            WITH t, t { .*, tokenHash: null } AS props
             DELETE t
             RETURN props`,
-            { token }
+            { tokenHash: hashToken(token) }
         );
         return records.length > 0 ? records[0].get('props') : null;
+    },
+
+    // Tokens stored before hashing: hash them in place so links already sent
+    // keep working. Returns how many were converted (none after the first run).
+    hashLegacy: async () => {
+        const { records } = await driver.executeQuery(
+            'MATCH (t:Token) WHERE t.token IS NOT NULL RETURN elementId(t) AS id, t.token AS token'
+        );
+        if (!records.length) return 0;
+        await driver.executeQuery(
+            `UNWIND $rows AS row MATCH (t:Token) WHERE elementId(t) = row.id
+             SET t.tokenHash = row.hash REMOVE t.token`,
+            { rows: records.map(r => ({ id: r.get('id'), hash: hashToken(r.get('token')) })) }
+        );
+        return records.length;
     },
 
     // Deletes expired tokens of every type; returns how many went.

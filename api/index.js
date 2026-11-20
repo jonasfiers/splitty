@@ -72,10 +72,13 @@ app.use('/follow', require('./routes/follow.js'));
 
 
 // EXPIRED TOKEN PURGE — on startup, then daily. find/consume already ignore
-// expired tokens; this only stops them piling up. Never fatal.
+// expired tokens; this only stops them piling up. Never fatal. Also hashes any
+// token stored before tokens were hashed (once, on the first start).
 const { tokenService } = require('./crudService');
 const purgeExpiredTokens = async () => {
     try {
+        const hashed = await tokenService.hashLegacy();
+        if (hashed > 0) console.log(`Hashed ${hashed} stored token${hashed === 1 ? '' : 's'}`);
         const n = await tokenService.purgeExpired();
         if (n > 0) console.log(`Purged ${n} expired token${n === 1 ? '' : 's'}`);
     } catch (err) {
