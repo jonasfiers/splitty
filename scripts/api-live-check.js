@@ -21,7 +21,7 @@ const jwt = require(path.join(app, 'node_modules/jsonwebtoken'));
 const BASE = 'http://127.0.0.1:3000';
 const ROUTES = [
     ['/groups', b => Array.isArray(b.groups) && b.groups.every(g => Array.isArray(g.members))],
-    ['/dash/balance', b => ['balanceLent', 'balanceOwed'].every(k => Number.isFinite(b[k]))],
+    ['/dash/balance', b => Array.isArray(b.currencies) && b.currencies.every(c => typeof c.iso === 'string' && Number.isFinite(c.lent) && Number.isFinite(c.owed))],
     ['/dash/groups', b => Array.isArray(b.groups)],
     ['/dash/friends', b => Array.isArray(b.friends)],
     ['/dash/activity', b => Array.isArray(b.activities)],

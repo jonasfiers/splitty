@@ -59,36 +59,47 @@ const dashService = {
         }
     },
 
-    // BALANCE HEADER
+    // BALANCE HEADER — Home's "Across all groups", one total per currency
+    // (2026-11-20): every amount stays in the currency of the group it is in
+    // (minor units), and is never converted. Per person, what they owe me and
+    // what I owe them net out within a currency only.
+    // `currencies`: [{ iso, lent, owed, grossLent, grossOwed }], most money
+    // first. lent = owed to me (after netting), owed = what I owe.
     getBalances: async (userId) => {
         try {
-            const {records} = await driver.executeQuery(
+            const { records } = await driver.executeQuery(
                 `MATCH (u:User {id: $userId})
-                CALL {
-                  WITH u
+                CALL (u) {
                   MATCH (u)-[:PAID]->(e:Expense)-[o:OWED_BY]->(other:User) WHERE other <> u
-                  RETURN other, sum(o.amount * coalesce(e.rateSnapshot, 1)) as lent, 0 as owed
+                  MATCH (e)-[:BALANCE_IN]->(:Group)-[:EXPRESSED_IN]->(c:Currency)
+                  RETURN other, c.iso AS iso, o.amount * coalesce(e.rateSnapshot, 1) AS lent, 0 AS owed
                   UNION ALL
-                  WITH u
                   MATCH (other:User)-[:PAID]->(e:Expense)-[o:OWED_BY]->(u) WHERE other <> u
-                  RETURN other, 0 as lent, sum(o.amount * coalesce(e.rateSnapshot, 1)) as owed
+                  MATCH (e)-[:BALANCE_IN]->(:Group)-[:EXPRESSED_IN]->(c:Currency)
+                  RETURN other, c.iso AS iso, 0 AS lent, o.amount * coalesce(e.rateSnapshot, 1) AS owed
                 }
-                WITH other, sum(lent) as totalLent, sum(owed) as totalOwed
-                WITH totalLent - totalOwed as net, totalLent, totalOwed
-                RETURN 
-                  sum(totalLent) as grossLent,
-                  sum(totalOwed) as grossOwed,
-                  sum(CASE WHEN net > 0 THEN net ELSE 0 END) as balanceLent,
-                  sum(CASE WHEN net < 0 THEN -net ELSE 0 END) as balanceOwed`, {userId: userId}
-            )
-            const rec = records[0];
-            return {
-                success: true,
-                grossLent: Number(rec?.get('grossLent') ?? 0),
-                grossOwed: Number(rec?.get('grossOwed') ?? 0),
-                balanceLent: Number(rec?.get('balanceLent') ?? 0),
-                balanceOwed: Number(rec?.get('balanceOwed') ?? 0)
-            }
+                WITH iso, other, sum(lent) AS totalLent, sum(owed) AS totalOwed
+                WITH iso, totalLent, totalOwed, totalLent - totalOwed AS net
+                WITH iso,
+                     sum(totalLent) AS grossLent,
+                     sum(totalOwed) AS grossOwed,
+                     sum(CASE WHEN net > 0 THEN net ELSE 0 END) AS lent,
+                     sum(CASE WHEN net < 0 THEN -net ELSE 0 END) AS owed
+                RETURN iso, lent, owed, grossLent, grossOwed
+                ORDER BY lent + owed DESC, iso`,
+                { userId }
+            );
+            const currencies = records
+                .map(r => ({
+                    iso: r.get('iso'),
+                    lent: Number(r.get('lent')),
+                    owed: Number(r.get('owed')),
+                    grossLent: Number(r.get('grossLent')),
+                    grossOwed: Number(r.get('grossOwed')),
+                }))
+                // Less than a minor unit either way is settled.
+                .filter(c => Math.round(c.lent) !== 0 || Math.round(c.owed) !== 0);
+            return { success: true, currencies };
         } catch (err) {
             throw new Error(`Failed to get balances: ${err.message}`);
         }
@@ -224,17 +235,9 @@ const dashService = {
                 OPTIONAL MATCH (g)<-[:BALANCE_IN]-(e:Expense)
                 WHERE NOT e:Settlement AND NOT e:Transfer
                 WITH u, count(distinct g) AS groupCount, count(distinct e) AS expenseCount
-                CALL {
-                    WITH u
-                    OPTIONAL MATCH (u)-[:PAID]->(ep:Expense)-[p:OWED_BY]->(:User)
-                    RETURN sum(p.amount * coalesce(ep.rateSnapshot, 1)) AS balanceLent
-                }
-                CALL {
-                    WITH u
-                    OPTIONAL MATCH (eo:Expense)-[o:OWED_BY]->(u)
-                    RETURN sum(o.amount * coalesce(eo.rateSnapshot, 1)) AS balanceOwed
-                }
-                RETURN u, groupCount, expenseCount, balanceLent - balanceOwed AS balance`
+                // No overall balance here: it would add up group currencies
+                // (2026-11-20). Home has it per currency (getBalances).
+                RETURN u, groupCount, expenseCount`
                 ,{userId})
             if (!records[0]) return { success: true, profile: null };
             const { password, pendingEmail, ...userProps } = records[0].get('u').properties;
@@ -246,7 +249,6 @@ const dashService = {
                     pendingEmail: pendingEmail || null,
                     groupCount: Number(records[0].get('groupCount')),
                     expenseCount: Number(records[0].get('expenseCount')),
-                    balance: Number(records[0].get('balance')),
                 }
             }
         }

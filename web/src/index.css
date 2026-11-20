@@ -876,6 +876,10 @@ body {
   font-size: var(--fs-md); color: var(--text-3);
 }
 .home-balance-split b { font-family: var(--font-mono); font-weight: 600; color: var(--text); margin-left: 4px; }
+.home-balance-list { list-style: none; margin: 2px 0 0; padding: 0; display: flex; flex-direction: column; }
+.home-balance-list li + li { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
+.home-balance-list .home-balance-main { font-size: var(--fs-lg); margin-top: 0; }
+.home-balance-list .home-balance-split { margin-top: 6px; padding-top: 0; border-top: none; }
 
 .home-section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
 .home-section-head .section-label { margin: 0; padding: 0; }

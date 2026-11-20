@@ -24,7 +24,7 @@ import { openKeyboardNow } from '../utils/keyboard.js'
 export default function GroupsPage() {
   const navigate = useNavigate()
   const { currentUser } = useAuth()
-  const [balance, setBalance] = useState({ balanceOwed: 0, balanceLent: 0 })
+  const [balances, setBalances] = useState([]) // [{ iso, lent, owed }]: one per currency
   const [groups, setGroups] = useState([])
   const [currencies, setCurrencies] = useState([])
   const [showNewGroup, setShowNewGroup] = useState(false)
@@ -45,10 +45,7 @@ export default function GroupsPage() {
         const curs = cr.data.currencies || []
         setCurrencies(curs)
         if (curs.length > 0) setForm(f => ({ ...f, currencyIso: curs[0].iso }))
-        setBalance({
-          balanceOwed: Number(bal.data.balanceOwed ?? 0),
-          balanceLent: Number(bal.data.balanceLent ?? 0),
-        })
+        setBalances(bal.data.currencies || [])
     }, { fresh: attempt > 0 })
     if (cached) setLoading(false)
     fresh
@@ -101,29 +98,8 @@ export default function GroupsPage() {
         <div className="home-main">
           {/* on a trip: today's plan comes first */}
           <TodayTrip />
-          {/* What is open now, across all groups (per person, netted over groups) */}
-          {(() => {
-            const owed = balance.balanceLent
-            const owe = balance.balanceOwed
-            const net = owed - owe
-            const settled = owed < 1 && owe < 1
-            return (
-              <div className="card home-balance">
-                <div className="home-balance-lbl">Across all groups</div>
-                <div className="home-balance-main">
-                  {settled ? "You're all settled up"
-                    : net >= 0 ? <>You're owed <span className="owed">{formatCurrency(net)}</span></>
-                    : <>You owe <span className="owe">{formatCurrency(-net)}</span></>}
-                </div>
-                {owed >= 1 && owe >= 1 && (
-                  <div className="home-balance-split">
-                    <span>Owed to you<b>{formatCurrency(owed)}</b></span>
-                    <span>You owe<b>{formatCurrency(owe)}</b></span>
-                  </div>
-                )}
-              </div>
-            )
-          })()}
+          {/* What is open now, across all groups: per person, netted over groups, one total per currency */}
+          <HomeBalance balances={balances} />
 
           <div className="home-section-head">
             <div className="section-label">Groups</div>
@@ -225,5 +201,38 @@ export default function GroupsPage() {
         </Sheet>
       )}
     </>
+  )
+}
+
+// "Across all groups" (2026-11-20): one total per currency, never converted:
+// each amount stays in the currency of the groups it comes from, so every
+// figure is one that can actually be settled. With one currency it reads as a
+// single sentence; with more, a line each, most money first. A currency with
+// money both ways also shows the two sides.
+function HomeBalance({ balances }) {
+  const open = balances.filter(c => c.lent >= 1 || c.owed >= 1)
+  const line = c => {
+    const net = c.lent - c.owed
+    return net >= 0
+      ? <>You're owed <span className="owed">{formatCurrency(net, c.iso)}</span></>
+      : <>You owe <span className="owe">{formatCurrency(-net, c.iso)}</span></>
+  }
+  const split = c => c.lent >= 1 && c.owed >= 1 && (
+    <div className="home-balance-split">
+      <span>Owed to you<b>{formatCurrency(c.lent, c.iso)}</b></span>
+      <span>You owe<b>{formatCurrency(c.owed, c.iso)}</b></span>
+    </div>
+  )
+  return (
+    <div className="card home-balance">
+      <div className="home-balance-lbl">Across all groups</div>
+      {open.length === 0 && <div className="home-balance-main">You're all settled up</div>}
+      {open.length === 1 && <><div className="home-balance-main">{line(open[0])}</div>{split(open[0])}</>}
+      {open.length > 1 && (
+        <ul className="home-balance-list">
+          {open.map(c => <li key={c.iso}><div className="home-balance-main">{line(c)}</div>{split(c)}</li>)}
+        </ul>
+      )}
+    </div>
   )
 }

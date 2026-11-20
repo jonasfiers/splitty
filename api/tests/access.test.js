@@ -81,7 +81,7 @@ test('a member cannot put a debt on someone outside the group, or bypass the sha
     const { records } = await run('MATCH (:Expense {id: $expenseId})-[o:OWED_BY]->(u:User) RETURN u.id AS u, o.amount AS a', { expenseId });
     assert.deepEqual(records.map(r => [r.get('u'), Number(r.get('a'))]), [[bob.id, 1000]]);
     const dash = await dan.api.get('/dash/balance');
-    assert.equal(dash.body.balanceOwed, 0, 'Dan owes nothing');
+    assert.deepEqual(dash.body.currencies, [], 'Dan owes nothing');
     await unchanged();
 });
 
