@@ -15,6 +15,7 @@ import TabHeader from '../components/PageHeader/TabHeader.jsx'
 import Sheet, { SheetActions } from '../components/Sheet/Sheet.jsx'
 import { List, ListRow } from '../components/List/List.jsx'
 import { useConfirm } from '../components/Confirm/ConfirmProvider.jsx'
+import { versionLabel } from '../utils/version.js'
 import Field from '../components/Field/Field.jsx'
 
 export default function ProfilePage() {
@@ -350,6 +351,7 @@ export default function ProfilePage() {
 
       <button type="button" className="btn btn-ghost profile-signout" onClick={handleSignOut}>Sign out</button>
       <button type="button" className="profile-delete" onClick={() => setShowDelete(true)}>Delete account…</button>
+      <p className="profile-version">Version {versionLabel()}</p>
 
       {showEdit && (
         <Sheet title="Edit profile" onClose={() => setShowEdit(false)}>

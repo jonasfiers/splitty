@@ -12,6 +12,7 @@
 // Exit 0 when all pass. deploy.sh runs it before publishing the web build.
 import { cpSync, mkdtempSync, rmSync, appendFileSync, readFileSync } from 'fs'
 import { tmpdir } from 'os'
+import { execSync } from 'child_process'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import { launch, sleep } from './cdp.mjs'
@@ -81,6 +82,12 @@ try {
     const path = await evaluate('location.pathname')
     expect(errs.length === 0 && text > 20 && path === page, `${page}${path !== page ? ` (ended on ${path})` : ''}${text <= 20 ? ' — blank page' : ''}${errs.length ? ` — ${errs.join(' | ')}` : ''}`)
   }
+
+  console.log('Version on the profile page')
+  await navigate(`${server.url}/profile`); await settle()
+  const version = await evaluate(`document.querySelector('.profile-version')?.textContent || ''`)
+  const commit = (() => { try { return execSync('git rev-parse --short HEAD', { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim() } catch { return '' } })()
+  expect(/^Version .+\d{4}/.test(version) && (!commit || version.includes(commit)), `shows the build: "${version}"`)
 
   console.log('A new version under an open page')
   const builds = ['B', 'C'].map(name => {

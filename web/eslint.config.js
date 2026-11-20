@@ -13,7 +13,7 @@ export default [
       ecmaVersion: 'latest',
       sourceType: 'module',
       parserOptions: { ecmaFeatures: { jsx: true } },
-      globals: { ...globals.browser },
+      globals: { ...globals.browser, __APP_BUILD__: 'readonly' },
     },
     plugins: { 'react-hooks': reactHooks },
     rules: {

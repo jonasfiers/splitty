@@ -2,8 +2,17 @@ import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 import { cpSync } from 'node:fs'
+import { execSync } from 'node:child_process'
 import { createRequire } from 'node:module'
 import { dirname, join } from 'node:path'
+
+// Which build this is, shown on the profile page (src/utils/version.js): the
+// git commit, whether the worktree had changes on top of it (QA deploys
+// uncommitted work), and when it was built. No git (the Docker build): unknown.
+function buildInfo() {
+  const git = cmd => { try { return execSync(`git ${cmd}`, { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim() } catch { return '' } }
+  return { commit: git('rev-parse --short HEAD') || null, changed: git('status --porcelain -uno') !== '', builtAt: new Date().toISOString() }
+}
 
 // pdf.js (the in-app file viewer, src/utils/pdf.js) loads fonts, character
 // maps, colour profiles and image decoders at run time from /pdfjs/: copied
@@ -62,6 +71,7 @@ export default defineConfig(({ mode }) => {
 
   return {
     css: { postcss: { plugins: [hoverOnlyWithMouse()] } },
+    define: { __APP_BUILD__: JSON.stringify(buildInfo()) },
     plugins: [
       react(),
       copyPdfjsAssets(),
