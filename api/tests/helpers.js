@@ -12,6 +12,7 @@ const path = require('node:path');
 const neo4j = require('neo4j-driver');
 const jwt = require('jsonwebtoken');
 const webpush = require('web-push');
+const mailbox = require('./mailbox');
 
 const TEST_URI = 'bolt://127.0.0.1:7697';
 const PORT = Number(process.env.TEST_API_PORT || 3099);
@@ -89,13 +90,24 @@ async function createUser(name) {
     return { id, name, email, token, api: client(token) };
 }
 
-// fetch, as the app calls the API. Answers { status, body }.
-function client(token) {
+// A made-up client address per client: the API trusts one proxy hop, as
+// behind nginx, so X-Forwarded-For is the address it rate-limits on. Each
+// client gets its own, so one test's logins never use up another's limit.
+const randomIp = () => `10.${Math.floor(Math.random() * 250)}.${Math.floor(Math.random() * 250)}.${1 + Math.floor(Math.random() * 250)}`;
+
+// fetch, as the app calls the API. Answers { status, body }. `body` may be
+// FormData (uploads).
+function client(token, { ip = randomIp() } = {}) {
     const call = async (method, url, body) => {
+        const form = body instanceof FormData;
         const res = await fetch(BASE + url, {
             method,
-            headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(body ? { 'Content-Type': 'application/json' } : {}) },
-            body: body ? JSON.stringify(body) : undefined,
+            headers: {
+                'X-Forwarded-For': ip,
+                ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                ...(body && !form ? { 'Content-Type': 'application/json' } : {}),
+            },
+            body: body ? (form ? body : JSON.stringify(body)) : undefined,
         });
         const text = await res.text();
         let parsed;
@@ -106,42 +118,62 @@ function client(token) {
         get: url => call('GET', url),
         post: (url, body) => call('POST', url, body ?? {}),
         put: (url, body) => call('PUT', url, body ?? {}),
-        del: url => call('DELETE', url),
+        del: (url, body) => call('DELETE', url, body),
     };
 }
 
 let proc;
 let workDir;
+let env;
+let deletionList;
+// The deletion list must sit in a folder that is a mount point holding the
+// marker file (accountDeletion.js checkMount). On CT116 /dev/shm is its own
+// tmpfs; each run gets its own list file there, removed afterwards.
+const SHM = '/dev/shm';
+function makeDeletionList() {
+    if (fs.statSync(SHM).dev === fs.statSync(path.dirname(SHM)).dev) throw new Error(`${SHM} is not a mount point here`);
+    const marker = path.join(SHM, '.splitty-deletion-list');
+    if (!fs.existsSync(marker)) fs.writeFileSync(marker, 'Splitty API tests\n');
+    return path.join(SHM, `splitty-api-test-${crypto.randomBytes(6).toString('hex')}.list`);
+}
+
 // The API itself, from this checkout, against the test database.
-async function startApi() {
+// `deletion`: account deletion on, with its own deletion list.
+async function startApi({ deletion = false } = {}) {
     // Something already answering here would be tested instead of this
     // checkout (e.g. the API of a run that was cut off): refuse.
     const busy = await fetch(`${BASE}/health`).then(() => true, () => false);
     if (busy) throw new Error(`Port ${PORT} is already in use: a leftover API? Stop it, then run again.`);
     secret = crypto.randomBytes(32).toString('hex');
     workDir = fs.mkdtempSync(path.join(os.tmpdir(), 'splitty-api-test-'));
+    deletionList = deletion ? makeDeletionList() : null;
     const vapid = webpush.generateVAPIDKeys();
+    env = {
+        PATH: process.env.PATH,
+        NODE_ENV: 'test',
+        PORT: String(PORT),
+        NEO4J_URI: TEST_URI,
+        NEO4J_USER: process.env.NEO4J_USER || 'neo4j',
+        NEO4J_PASSWORD: process.env.NEO4J_PASSWORD,
+        JWT_SECRET: secret,
+        VAPID_EMAIL: 'mailto:tests@example.test',
+        VAPID_PUBLIC_KEY: vapid.publicKey,
+        VAPID_PRIVATE_KEY: vapid.privateKey,
+        // The tests' own mail catcher (mailbox.js): nothing is delivered.
+        SMTP_HOST: '127.0.0.1', SMTP_PORT: String(mailbox.PORT), SMTP_USER: 'tests@example.test', SMTP_PASS: 'x',
+        APP_URL: 'http://localhost', RP_ORIGIN: 'http://localhost', RP_ID: 'localhost',
+        UPLOAD_DIR: path.join(workDir, 'uploads'), UPLOAD_MIN_FREE_MB: '1',
+        ...(deletionList ? { DELETION_LIST_FILE: deletionList } : {}),
+    };
+    await spawnApi();
+}
+
+// Starts the API process with the current settings and waits for /health.
+async function spawnApi() {
     const output = [];
     proc = spawn(process.execPath, ['index.js'], {
         cwd: API_DIR,
-        env: {
-            PATH: process.env.PATH,
-            NODE_ENV: 'test',
-            PORT: String(PORT),
-            NEO4J_URI: TEST_URI,
-            NEO4J_USER: process.env.NEO4J_USER || 'neo4j',
-            NEO4J_PASSWORD: process.env.NEO4J_PASSWORD,
-            JWT_SECRET: secret,
-            VAPID_EMAIL: 'mailto:tests@example.test',
-            VAPID_PUBLIC_KEY: vapid.publicKey,
-            VAPID_PRIVATE_KEY: vapid.privateKey,
-            // QA's mail sink on CT116: accepts everything, delivers nothing.
-            SMTP_HOST: '127.0.0.1', SMTP_PORT: '2525', SMTP_USER: 'tests@example.test', SMTP_PASS: 'x',
-            APP_URL: 'http://localhost', RP_ORIGIN: 'http://localhost', RP_ID: 'localhost',
-            UPLOAD_DIR: path.join(workDir, 'uploads'), UPLOAD_MIN_FREE_MB: '1',
-            // No DELETION_LIST_FILE: it must sit on a host mount, so account
-            // deletion is off in the tests (the API says so and starts).
-        },
+        env,
         stdio: ['ignore', 'pipe', 'pipe'],
     });
     proc.stdout.on('data', d => output.push(String(d)));
@@ -154,20 +186,34 @@ async function startApi() {
     throw new Error(`API did not answer /health:\n${output.join('')}`);
 }
 
-async function stopApi() {
+async function killApi() {
     if (proc && proc.exitCode === null) {
         proc.kill('SIGTERM');
         await new Promise(r => proc.once('exit', r));
     }
+}
+
+// The same API stopped and started again, same data, settings and secret:
+// what a restart (or a restore followed by one) does.
+async function restartApi() {
+    await killApi();
+    await spawnApi();
+}
+
+async function stopApi() {
+    await killApi();
+    await mailbox.stop();
     await driver?.close();
     driver = undefined;
     if (workDir) fs.rmSync(workDir, { recursive: true, force: true });
+    if (deletionList) fs.rmSync(deletionList, { force: true });
 }
 
-// Before/after each test file: clean database, fresh API.
-async function setup() {
+// Before/after each test file: clean database, fresh API, empty mailbox.
+async function setup(options = {}) {
     await resetDatabase();
-    await startApi();
+    await mailbox.start();
+    await startApi(options);
 }
 
 // A group of `users` (the first creates it, the rest are added).
@@ -199,4 +245,10 @@ async function balances(as, groupId) {
     return Object.fromEntries(res.body.groups[0].members.map(m => [m.id, m.balance]));
 }
 
-module.exports = { setup, stopApi, createUser, createGroup, addExpense, balances, client, run, DATES, RATES };
+// For tests that need to sign something themselves (e.g. a forged or
+// expired link) or read the deletion list.
+const testSecret = () => secret;
+const deletionListFile = () => deletionList;
+const uploadDir = () => path.join(workDir, 'uploads');
+
+module.exports = { setup, stopApi, restartApi, createUser, createGroup, addExpense, balances, client, run, mailbox, testSecret, deletionListFile, uploadDir, BASE, DATES, RATES };

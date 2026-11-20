@@ -103,7 +103,12 @@ started for the run and stopped after; its data is wiped by every test file
 and never holds anything real). Each test file starts the API from the
 checkout and calls it over HTTP: balances and splits, editing and deleting,
 currencies, settlements and balance transfers, leaving a group, and who may
-see or change what (groups, expenses, trips). A failing test stops the deploy
+see or change what (groups, expenses, trips), and security: sign-up,
+verification, sign-in, password reset and change, email change, sessions,
+rate limits, account deletion (incl. re-applying it after a restore), and the
+links that work without signing in (invites, signed file links, follow links).
+Mail goes to the tests' own catcher (`api/tests/mailbox.js`); the deletion
+list to a fresh file in CT116's `/dev/shm`. A failing test stops the deploy
 before anything is built. Tests marked `todo` are known issues: they show,
 but don't stop it. `--skip-api-tests` only if CT116 itself is down. One-time
 setup on CT116: `scripts/test-api.sh --setup` (idempotent; the helpers refuse
