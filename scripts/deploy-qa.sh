@@ -58,6 +58,15 @@ log "branch $(git rev-parse --abbrev-ref HEAD) at $(git rev-parse --short HEAD)$
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
 
 if $DO_WEB; then
+  # QA serves every path, so a route missing from production's allowlist only
+  # shows there. Warn now; deploy.sh refuses it.
+  if routes_out="$(pve_ssh "pct exec 101 -- cat /etc/nginx/sites-available/splitty.conf" 2>/dev/null | node scripts/check-routes.mjs -)"; then
+    log "$routes_out (production nginx)"
+  else
+    log "WARNING: production nginx can't serve these routes yet: $routes_out"
+    log "         (prod deploy will refuse until they are in CT101's allowlist)"
+  fi
+
   stage "Web: build on devbox"
   npm run build -w web >/dev/null
   tar czf "$TMP/web.tgz" -C web/dist .

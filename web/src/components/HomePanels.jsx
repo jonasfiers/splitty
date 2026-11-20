@@ -12,7 +12,6 @@ import { tripIcon } from '../utils/icons.js'
 import Icon from './Icon/Icon.jsx'
 
 const RECENT = 5
-const TOP_CATEGORIES = 3
 
 // Home's extra context: the last 30 days' spending, the next trip and the latest
 // activity. Each panel loads on its own and simply stays away if its data

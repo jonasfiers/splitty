@@ -80,6 +80,22 @@ word arguments.
 
 ## What a deploy actually does
 
+**Before anything is published (web).** Three gates, all on devbox; any
+failure stops the deploy with the live site untouched:
+
+- *Routes:* every top-level route in `web/src/App.jsx` must be in CT101
+  nginx's SPA allowlist (`scripts/check-routes.mjs`), or that page would 404
+  on production only. QA has no allowlist, so `deploy-qa.sh` just warns.
+- *Lint:* `npm run lint -w web` (ESLint, `web/eslint.config.js`). Errors stop
+  it; hook-dependency warnings are shown only.
+- *Smoke test:* `web/smoke/smoke.mjs` opens the fresh build in headless
+  Chromium against a made-up API (`web/smoke/server.mjs`): every page opens
+  without errors, an open page moves onto a new build only on returning to
+  the foreground, and sharing a file into Splitty works. Run it by hand with
+  `npm run build -w web && npm run smoke -w web`. A new page goes in `PAGES`
+  in smoke.mjs, and the data it needs in server.mjs. `--skip-smoke` bypasses
+  it (only if Chromium itself is broken).
+
 **Web (CT101).** Build on devbox → tar → unpack into
 `/var/www/splitty.staging.XXXXXX` → validate the payload really contains
 `index.html` and `assets/` → swap by rename. The live document root is never

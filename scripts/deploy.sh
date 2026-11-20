@@ -60,6 +60,8 @@
 #       --dry-run             print the plan, change nothing anywhere
 #       --allow-dirty         proceed despite a dirty devbox worktree
 #       --skip-pull           do not `git pull` the devbox worktree first
+#       --skip-smoke          publish the web build without the smoke test
+#                             (web/smoke/smoke.mjs); only if Chromium is broken
 #       --simulate-failure=X  rollback drill: force a health check to fail.
 #                             X = api-local | api-via-nginx | public | neo4j | all
 #       -h, --help            this text
@@ -89,6 +91,7 @@ DO_API=true
 DRY_RUN=false
 ALLOW_DIRTY=false
 SKIP_PULL=false
+SKIP_SMOKE=false
 SIMULATE_FAILURE=""
 
 usage() { awk 'NR>1 && /^#/ { sub(/^# ?/, ""); print; next } NR>1 { exit }' "${BASH_SOURCE[0]}"; }
@@ -100,6 +103,7 @@ for arg in "$@"; do
     --dry-run)             DRY_RUN=true ;;
     --allow-dirty)         ALLOW_DIRTY=true ;;
     --skip-pull)           SKIP_PULL=true ;;
+    --skip-smoke)          SKIP_SMOKE=true ;;
     --simulate-failure=*)  SIMULATE_FAILURE="${arg#*=}" ;;
     -h|--help)             usage; exit 0 ;;
     *) printf 'Unknown option: %s\n\n' "$arg" >&2; usage >&2; exit 2 ;;
@@ -297,6 +301,20 @@ if $DO_API; then
   fi
 fi
 
+# A client route missing from CT101's SPA allowlist 404s on production only
+# (QA has no allowlist). Read-only, so it runs on --dry-run too.
+if $DO_WEB; then
+  routes_out="$(ct_capture "$CT_WEB" cat /etc/nginx/sites-available/splitty.conf | node "$SCRIPT_DIR/check-routes.mjs" -)" && routes_rc=0 || routes_rc=$?
+  case $routes_rc in
+    0) ok "$routes_out (CT101 nginx)" ;;
+    1) die "routes not in CT101 nginx's SPA allowlist: $routes_out
+      They would 404 on production. Add them to the location ~ ^/(...) regex in
+      CT101:/etc/nginx/sites-available/splitty.conf (back it up first, then
+      nginx -t && systemctl reload nginx), and deploy again." ;;
+    *) die "could not check the routes against CT101 nginx: $routes_out" ;;
+  esac
+fi
+
 # ------------------------------------------------- 2. ship helper scripts ---
 stage "Shipping helper scripts to the containers"
 if $DRY_RUN; then
@@ -370,16 +388,31 @@ if $DO_WEB; then
 
   if $DRY_RUN; then
     plan "${INSTALL_CMD[*]}"
+    plan "npm run lint --workspace web    (errors stop the deploy)"
     plan "npm run build --workspace web   (output: web/dist)"
+    $SKIP_SMOKE || plan "node web/smoke/smoke.mjs   (headless browser; stops here if it fails)"
     plan "tar czf /tmp/splitty-web-${STAMP}.tgz -C web/dist ."
   else
     log "${INSTALL_CMD[*]}"
     "${INSTALL_CMD[@]}"
+    # Errors stop the deploy; warnings (effect dependencies) are only shown.
+    log "npm run lint --workspace web"
+    npm run lint --workspace web --silent -- --quiet || die "lint errors (above) — fix them, nothing was published"
     log "npm run build --workspace web"
     rm -rf "${REPO_ROOT}/web/dist"
     npm run build --workspace web
     [ -f "${REPO_ROOT}/web/dist/index.html" ] || die "build produced no web/dist/index.html"
     ok "built $(find "${REPO_ROOT}/web/dist" -type f | wc -l) files into web/dist"
+
+    # Every page opens, an open page moves onto a new build, sharing works;
+    # in headless Chromium against a made-up API. Nothing is live yet.
+    if $SKIP_SMOKE; then
+      warn "skipping the smoke test (--skip-smoke)"
+    else
+      stage "Web: smoke test (headless Chromium, on devbox)"
+      node "${REPO_ROOT}/web/smoke/smoke.mjs" "${REPO_ROOT}/web/dist" | sed 's/^/    /' \
+        || die "smoke test failed — nothing was published, the live site is untouched"
+    fi
 
     WEB_TARBALL="/tmp/splitty-web-${STAMP}.tgz"
     tar -czf "$WEB_TARBALL" -C "${REPO_ROOT}/web/dist" .

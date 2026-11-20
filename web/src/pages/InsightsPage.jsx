@@ -165,11 +165,6 @@ export default function InsightsPage() {
     return { monthly, categories, chartData, stackKeys, members, dowMatrix, dowMax }
   }, [data])
 
-  const rootNames = useMemo(() => {
-    if (!categories) return []
-    return [...new Set(categories.map(c => c.name.split(' - ')[0]))]
-  }, [categories])
-
   const { displayCategories, totalPieAmount } = useMemo(() => {
     if (!categories || !categories.length) return { displayCategories: [], totalPieAmount: 0 }
 
