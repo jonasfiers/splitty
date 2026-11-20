@@ -9,3 +9,4 @@ api/package-lock.json
 .idea/
 .junie/
 uploads/
+scripts/deploy.env

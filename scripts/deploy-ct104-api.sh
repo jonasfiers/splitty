@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Splitty API deploy — runs INSIDE CT104 (splitty, 192.168.0.244).
+# Splitty API deploy — runs INSIDE CT104 (splitty).
 #
 # Pushed here by scripts/deploy.sh on devbox; not meant to be run by hand.
 #

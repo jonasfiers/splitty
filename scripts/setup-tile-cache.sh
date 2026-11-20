@@ -20,7 +20,10 @@ set -euo pipefail
 STAMP=$(date +%Y%m%d-%H%M%S)
 case "${1:-}" in
   prod) SITE=/etc/nginx/sites-available/splitty.conf
-        UPSTREAM=http://192.168.0.244:3000/tiles/
+        # The API's address: taken from the site's own `location /api/` rule.
+        API=$(grep -oE 'proxy_pass http://[0-9.]+:3000/;' "$SITE" | grep -oE '[0-9.]+:3000' | head -1)
+        [ -n "$API" ] || { echo "no 'proxy_pass http://<api>:3000/;' in $SITE" >&2; exit 1; }
+        UPSTREAM=http://$API/tiles/
         PROTO='$scheme'
         SIZE=1g ;;
   qa)   SITE=/etc/nginx/sites-available/splitty-qa.conf

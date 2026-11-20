@@ -13,7 +13,13 @@
 #
 # Exit 0 when every test passes.
 set -euo pipefail
-PVE="root@192.168.0.240"
+# Addresses (pve, the API container, internal names) live in scripts/deploy.env,
+# which is not committed: copy scripts/deploy.env.example and fill it in.
+DEPLOY_ENV="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/deploy.env"
+[ -f "$DEPLOY_ENV" ] || { echo "Missing $DEPLOY_ENV: copy scripts/deploy.env.example and fill it in." >&2; exit 2; }
+# shellcheck source=/dev/null
+. "$DEPLOY_ENV"
+PVE="$PVE_SSH"
 CT=116
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 STAMP="$(date +%Y%m%d-%H%M%S)-$$"

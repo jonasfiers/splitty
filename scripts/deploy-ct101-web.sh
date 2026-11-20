@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Splitty web publish — runs INSIDE CT101 (npm, 192.168.0.241).
+# Splitty web publish — runs INSIDE CT101 (npm).
 #
 # Pushed here by scripts/deploy.sh on devbox; not meant to be run by hand.
 # CT101 has no Node and never builds anything: it only receives a tarball of an

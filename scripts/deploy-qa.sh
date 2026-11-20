@@ -14,9 +14,9 @@
 #
 #  TOPOLOGY
 #  --------
-#     CT116   192.168.0.236 splitty-qa   nginx (web + /api/ proxy), the API,
+#     CT116   splitty-qa                 nginx (web + /api/ proxy), the API,
 #                                        Neo4j holding a copy of production
-#     CT115   homeproxy                  https://splitty-qa.home.jonasfiers.eu
+#     CT115   homeproxy                  QA_URL in scripts/deploy.env
 #                                        (Tailscale-only) -> CT116:80
 #
 #  QA is not production: it has its own secrets, its mail goes to a local sink
@@ -29,9 +29,15 @@
 #
 set -euo pipefail
 
-PVE="root@192.168.0.240"
+# Addresses (pve, the API container, internal names) live in scripts/deploy.env,
+# which is not committed: copy scripts/deploy.env.example and fill it in.
+DEPLOY_ENV="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/deploy.env"
+[ -f "$DEPLOY_ENV" ] || { echo "Missing $DEPLOY_ENV: copy scripts/deploy.env.example and fill it in." >&2; exit 2; }
+# shellcheck source=/dev/null
+. "$DEPLOY_ENV"
+PVE="$PVE_SSH"
 CT=116
-QA_URL="https://splitty-qa.home.jonasfiers.eu"
+QA_NAME="${QA_URL#https://}"; QA_NAME="${QA_NAME%%/*}"
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 STAMP="$(date +%Y%m%d-%H%M%S)"
 DO_WEB=true DO_API=true
@@ -93,7 +99,7 @@ pve_ssh "pct exec $CT -- bash /root/deploy-ct116-qa.sh $STAMP $DO_WEB $DO_API"
 stage "Check through CT115"
 # From inside CT115: devbox is not on the tailnet, and CT115 admits no LAN HTTPS.
 code=$(pve_ssh "pct exec 115 -- curl -s -o /dev/null -w '%{http_code}' --max-time 15 \
-  --resolve splitty-qa.home.jonasfiers.eu:443:127.0.0.1 $QA_URL/api/health" || true)
+  --resolve $QA_NAME:443:127.0.0.1 $QA_URL/api/health" || true)
 log "$QA_URL/api/health -> $code"
 [ "$code" = 200 ] || { echo "QA health check failed" >&2; exit 1; }
 log "QA is live: $QA_URL"

@@ -65,12 +65,17 @@ publish an unpushed frontend change.
 
 ## Topology
 
-| Host  | Address       | Role                                                        |
-| ----- | ------------- | ----------------------------------------------------------- |
-| devbox (CT111) | —    | dev repo, **build host**, where `deploy.sh` runs            |
-| pve   | 192.168.0.240 | Proxmox host; the only way into the containers (`pct exec`) |
-| CT101 | 192.168.0.241 | native nginx; serves `/var/www/splitty`, proxies `/api/` to CT104:3000 |
-| CT104 | 192.168.0.244 | `splitty-api.service` (`/opt/splitty-api-node24`) + `neo4j.service` |
+| Host  | Role                                                        |
+| ----- | ----------------------------------------------------------- |
+| devbox (CT111) | dev repo, **build host**, where `deploy.sh` runs   |
+| pve   | Proxmox host; the only way into the containers (`pct exec`) |
+| CT101 | native nginx; serves `/var/www/splitty`, proxies `/api/` to CT104:3000 |
+| CT104 | `splitty-api.service` (`/opt/splitty-api-node24`) + `neo4j.service` |
+
+The addresses are not in the repo: `deploy.sh`, `deploy-qa.sh` and
+`test-api.sh` read them from `scripts/deploy.env` (git-ignored). Copy
+`scripts/deploy.env.example` and fill in pve's ssh target, CT104's address and
+the two Tailscale-only URLs; the scripts stop with a clear message without it.
 
 Everything reaches the containers as devbox → `ssh pve` → `pct exec`. Nested
 quoting through that chain breaks past two or three layers, so `deploy.sh`
@@ -190,9 +195,9 @@ After the swaps, four checks must return 200:
 | Check                              | Run from | Why there |
 | ---------------------------------- | -------- | --------- |
 | `127.0.0.1:3000/health`            | CT104    | the API process itself |
-| `192.168.0.244:3000/health`        | CT101    | the path nginx actually proxies over |
+| `$API_HOST:3000/health`            | CT101    | the path nginx actually proxies over |
 | `https://splitty.jonasfiers.eu/`   | devbox   | a genuine outside-in view |
-| `https://neo4j.home.jonasfiers.eu` | CT115    | Tailscale-only name served by CT115; devbox is not on Tailscale, CT101 is public-only |
+| `$NEO4J_URL`                       | CT115    | Tailscale-only name served by CT115; devbox is not on Tailscale, CT101 is public-only |
 
 If any check fails, **every tier this run touched is rolled back
 automatically** (previous directory restored, service restarted), the checks
@@ -389,7 +394,7 @@ Browsers report what was blocked to `/api/csp-report`; the API logs each kind on
 
 `scripts/deploy-qa.sh` (`--web-only`, `--api-only`) publishes **this worktree as it is**
 — any branch, committed or not — to CT116 `splitty-qa`, reachable over Tailscale at
-`https://splitty-qa.home.jonasfiers.eu`. QA runs on a copy of production data with its own
+`$QA_URL` (from `scripts/deploy.env`). QA runs on a copy of production data with its own
 secrets; its mail goes to a local sink and it has no push subscriptions or passkeys.
 Use it to look at a change on a working Splitty before it goes to `main`.
 
@@ -407,8 +412,9 @@ Docker-era name) and finds Neo4j through `neo4j.service`. Copy it in through
 pve and run it as root, here on CT116; use 104 for production:
 
 ```sh
-scp scripts/migrate-expense-kind-labels.sh root@192.168.0.240:/tmp/mekl.sh
-ssh root@192.168.0.240 "pct push 116 /tmp/mekl.sh /root/mekl.sh && pct exec 116 -- bash /root/mekl.sh phase1"
+. scripts/deploy.env
+scp scripts/migrate-expense-kind-labels.sh "$PVE_SSH:/tmp/mekl.sh"
+ssh "$PVE_SSH" "pct push 116 /tmp/mekl.sh /root/mekl.sh && pct exec 116 -- bash /root/mekl.sh phase1"
 ```
 
 | Phase      | Does                                                                 |

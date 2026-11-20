@@ -33,10 +33,11 @@
 #  TOPOLOGY
 #  --------
 #     devbox  CT111                 this host; build host; git remote is SSH
-#     pve     192.168.0.240         Proxmox host; the only way into the CTs
-#     CT101   192.168.0.241  npm    native nginx; serves /var/www/splitty,
-#                                   proxies /api/ -> 192.168.0.244:3000
-#     CT104   192.168.0.244 splitty splitty-api.service + neo4j.service
+#     pve                   Proxmox host; the only way into the CTs
+#     CT101           npm   native nginx; serves /var/www/splitty,
+#                           proxies /api/ -> CT104:3000
+#     CT104        splitty  splitty-api.service + neo4j.service
+#     (addresses: scripts/deploy.env, not committed)
 #
 #  All container commands go devbox -> ssh pve -> pct exec. Deep nested
 #  quoting through that chain is unreliable, so this script never inlines shell
@@ -74,14 +75,20 @@
 set -Eeuo pipefail
 
 # ---------------------------------------------------------------- config ----
-PVE="root@192.168.0.240"
+# Addresses (pve, the API container, internal names) live in scripts/deploy.env,
+# which is not committed: copy scripts/deploy.env.example and fill it in.
+DEPLOY_ENV="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/deploy.env"
+[ -f "$DEPLOY_ENV" ] || { echo "Missing $DEPLOY_ENV: copy scripts/deploy.env.example and fill it in." >&2; exit 2; }
+# shellcheck source=/dev/null
+. "$DEPLOY_ENV"
+PVE="$PVE_SSH"
 CT_WEB=101
 CT_API=104
 CT_HOME=115
-API_HOST="192.168.0.244"
+API_HOST="$API_HOST"
 BRANCH="main"
 PUBLIC_URL="https://splitty.jonasfiers.eu/"
-NEO4J_URL="https://neo4j.home.jonasfiers.eu"
+NEO4J_URL="$NEO4J_URL"
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SCRIPT_DIR="${REPO_ROOT}/scripts"
@@ -167,7 +174,7 @@ live_api_check() {
 }
 
 # Each check names where it runs. splitty.jonasfiers.eu is checked from devbox
-# because that is a genuine outside-in view. neo4j.home.jonasfiers.eu is a
+# because that is a genuine outside-in view. NEO4J_URL is a
 # Tailscale-only name served by CT115 (homeproxy); devbox is not on Tailscale and
 # CT101 is public-only, so that one is checked from CT115.
 http_code_local() {
