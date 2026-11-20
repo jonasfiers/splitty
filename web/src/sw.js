@@ -136,6 +136,14 @@ self.addEventListener('fetch', event => {
         event.respondWith(cacheFirst(PDFJS_CACHE, request))
         return
     }
+    // The manifest from the network whenever there is one: Chrome reads it to
+    // install the app and to update the installed one (its name, icons, share
+    // target), and a saved copy from the previous build installed an app
+    // without the new share target (2026-11-20). Offline, the saved one.
+    if (url.pathname === '/manifest.webmanifest') {
+        event.respondWith(fetch(request, { cache: 'no-store' }).catch(async () => (await fromApp(url.pathname)) ?? Response.error()))
+        return
+    }
     if (APP_URLS.includes(url.pathname)) {
         event.respondWith((async () => (await fromApp(url.pathname)) ?? fetch(request))())
     }
