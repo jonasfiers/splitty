@@ -451,7 +451,7 @@ if $DO_WEB; then
       warn "skipping the smoke test (--skip-smoke)"
     else
       stage "Web: smoke test (headless Chromium, on devbox)"
-      node "${REPO_ROOT}/web/smoke/smoke.mjs" "${REPO_ROOT}/web/dist" | sed 's/^/    /' \
+      timeout --kill-after=10 300 node "${REPO_ROOT}/web/smoke/smoke.mjs" "${REPO_ROOT}/web/dist" | sed 's/^/    /' \
         || die "smoke test failed — nothing was published, the live site is untouched"
     fi
 

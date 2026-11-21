@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "smoke": "node smoke/smoke.mjs",
+    "smoke": "timeout --kill-after=10 300 node smoke/smoke.mjs",
     "lint": "eslint .",
     "test": "node --test 'src/**/*.test.js'"
   },
