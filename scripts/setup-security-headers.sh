@@ -38,9 +38,13 @@ SNIPPET=/etc/nginx/snippets/splitty-security-headers.conf
 # JavaScript eval or scripts from anywhere else.
 CSP="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'self'; report-uri /api/csp-report"
 
+# HSTS (2026-11-21): browsers use HTTPS only for this name for a year. No
+# includeSubDomains/preload on purpose: other names under jonasfiers.eu are not
+# all ours to promise.
 NEW_SNIPPET="# Splitty's security headers (scripts/setup-security-headers.sh). Included at
 # server level and in every location with its own add_header: nginx drops an
 # enclosing level's add_header lines in a location that sets any.
+add_header Strict-Transport-Security \"max-age=31536000\" always;
 add_header X-Frame-Options \"SAMEORIGIN\" always;
 add_header X-Content-Type-Options \"nosniff\" always;
 add_header Referrer-Policy \"strict-origin-when-cross-origin\" always;
