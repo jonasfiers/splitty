@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router'
-import { ListRow } from '../List/List.jsx'
+import { FileTiles, FileTile, AddFileButtons, uploadFile, uploadError, usePreviews } from '../FileTiles/FileTiles.jsx'
 import client from '../../api/client'
 import { isStandalone } from '../../utils/standalone.js'
 import { formatBytes } from '../../utils/trip.js'
-import { keepOffline, removeOffline, syncTrip, offlineSupported } from '../../utils/offlineDocs.js'
+import { keepOffline, removeOffline, syncTrip, offlineSupported, offlineSrc } from '../../utils/offlineDocs.js'
 import { useOfflineDocs, useOfflineTrips } from '../../utils/useOfflineDocs.js'
 import { keepTripsEnabled, getOfflineTrip, asOf } from '../../utils/offlineTrips.js'
 import { useOffline, isOffline, isNetworkError, onReconnect } from '../../utils/connection.js'
@@ -14,7 +14,6 @@ import Loading from '../Loading.jsx'
 import LoadFailed from '../LoadFailed.jsx'
 import EmptyState from '../EmptyState/EmptyState.jsx'
 import { useConfirm } from '../Confirm/ConfirmProvider.jsx'
-import Icon from '../Icon/Icon.jsx'
 
 // A trip's travel documents: arrival cards, visas, insurance, passport copies
 // (on their own page, pages/TripDocumentsPage, from the trip's Documents chip).
@@ -40,11 +39,12 @@ export default function TripDocuments({ tripId, tripTitle, heading = true }) {
   const [error, setError] = useState('')
   const [uploading, setUploading] = useState(false)
   const [busy, setBusy] = useState(null)
-  const fileInput = useRef(null)
   const loadedAt = useRef(0)
   const [offlineAsOf, setOfflineAsOf] = useState(null)
   const noConnection = useOffline()
   const readOnly = noConnection || !!offlineAsOf
+  // Previews for documents without one, drawn here and sent (components/FileTiles).
+  const preview = usePreviews(documents, { enabled: !readOnly })
 
   const offline = useOfflineDocs()
   const kept = useMemo(() => new Set((offline ?? []).map(d => d.id)), [offline])
@@ -118,21 +118,18 @@ export default function TripDocuments({ tripId, tripTitle, heading = true }) {
     return () => cancel(handle)
   }, [standalone, hasPdf])
 
-  const upload = async e => {
-    const file = e.target.files?.[0]
-    e.target.value = ''
-    if (!file || uploading) return
+  // Each with its preview (components/FileTiles); private until shared.
+  const upload = async files => {
+    if (!files.length || uploading) return
     setError('')
     setUploading(true)
     try {
-      const body = new FormData()
-      body.append('file', file)
-      await client.post(`/trips/${tripId}/documents`, body, { timeout: 120000 }) // private until shared
-      await load()
+      for (const file of files) await uploadFile(`/trips/${tripId}/documents`, file)
     } catch (err) {
-      setError(err.response?.data?.error || 'Upload failed.')
+      setError(uploadError(err))
     } finally {
       setUploading(false)
+      load().catch(() => {})
     }
   }
 
@@ -206,29 +203,29 @@ export default function TripDocuments({ tripId, tripTitle, heading = true }) {
       {error && <p className="error">{error}</p>}
       {documents.length === 0 && <EmptyState compact art={false} title="No documents yet" />}
       {documents?.length > 0 && (
-        <div className="list">
+        <FileTiles className="trip-docs-tiles">
           {documents.map(doc => {
             const viewer = `/trips/${tripId}/documents/${doc.id}`
-            // Offline: what is on this device opens in Splitty's viewer; the rest can't.
-            if (readOnly && !kept.has(doc.id)) return (
-              <ListRow
-                key={doc.id}
-                icon={<Icon name={doc.mimeType === 'application/pdf' ? 'file-text' : 'image'} />}
-                title={doc.filename}
-                meta={<>{who(doc)} · {formatBytes(doc.size)} · Not on this device</>}
+            const here = kept.has(doc.id)
+            // Offline: what is on this device opens in Splitty's viewer, its
+            // picture from that copy; the rest is listed dim and can't open.
+            if (readOnly) return (
+              <FileTile
+                key={doc.id} caption name={doc.filename} type={doc.mimeType} dim={!here}
+                src={here && doc.mimeType?.startsWith('image/') ? offlineSrc(doc.id) : null}
+                href={here ? viewer : undefined}
+                onOpen={here ? event => { event.preventDefault(); navigate(viewer) } : undefined}
+                meta={here ? who(doc) : <>{who(doc)} · Not on this device</>}
               />
             )
             return (
-              <ListRow
-                key={doc.id}
-                href={standalone || readOnly ? viewer : `/api${doc.url}`}
-                {...(standalone || readOnly
-                  ? { onClick: event => { event.preventDefault(); navigate(viewer) } }
-                  : { target: '_blank', rel: 'noopener noreferrer' })}
-                icon={<Icon name={doc.mimeType === 'application/pdf' ? 'file-text' : 'image'} />}
-                title={doc.filename}
+              <FileTile
+                key={doc.id} caption name={doc.filename} type={doc.mimeType}
+                src={doc.thumbUrl ? `/api${doc.thumbUrl}` : preview(doc.id)}
+                href={standalone ? viewer : `/api${doc.url}`}
+                onOpen={standalone ? event => { event.preventDefault(); navigate(viewer) } : undefined}
                 meta={<>{who(doc)} · {formatBytes(doc.size)}</>}
-                end={!readOnly && (
+                actions={(tripKept && !doc.mine) || doc.mine ? (
                   <div className="trip-docs-actions">
                     {tripKept && !doc.mine && (
                       <button
@@ -267,17 +264,14 @@ export default function TripDocuments({ tripId, tripTitle, heading = true }) {
                       </button>
                     </>)}
                   </div>
-                )}
+                ) : null}
               />
             )
           })}
-        </div>
+        </FileTiles>
       )}
       {!readOnly && <>
-        <input ref={fileInput} type="file" accept="application/pdf,image/jpeg,image/png,image/webp" hidden onChange={upload} />
-        <button className="btn btn-secondary trip-docs-add" onClick={() => fileInput.current?.click()} disabled={uploading}>
-          {uploading ? 'Uploading…' : 'Add a document'}
-        </button>
+        <AddFileButtons onFiles={upload} busy={uploading} pickLabel="Add a document" />
         <p className="trip-docs-hint">
           Arrival cards, visas, insurance, a copy of your passport. Only you see what you add, until you share it with the trip.
           {tripKept && ' Your own are kept on this device by themselves, to open without a connection; one shared by someone else you can keep with the arrow.'}

@@ -1,0 +1,19 @@
+/* Files as tiles (FileTiles.jsx): trip item files, trip documents, receipts. */
+.file-tiles { list-style: none; margin: 0 0 12px; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 10px 8px; }
+.file-tile { min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.file-tile-face { position: relative; aspect-ratio: 3 / 4; border-radius: var(--r-md); overflow: hidden; background: var(--surface-2); border: 1px solid var(--border); }
+.file-tile-face > a { display: block; width: 100%; height: 100%; }
+.file-tile-face img { width: 100%; height: 100%; object-fit: cover; object-position: top; display: block; background: #fff; }
+.file-tile-icon { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; width: 100%; height: 100%; padding: 8px; color: var(--text-2); text-align: center; }
+.file-tile-icon svg { width: 28px; height: 28px; }
+.file-tile-icon span { font-size: var(--fs-xs); overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; word-break: break-all; }
+.file-tile.dim .file-tile-face { opacity: 0.5; }
+.file-tile-remove { position: absolute; top: 4px; right: 4px; width: 28px; height: 28px; border: 0; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.55); color: #fff; cursor: pointer; }
+.file-tile-remove::after { content: ''; position: absolute; inset: -8px; } /* 44px to tap */
+.file-tile-remove svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; }
+.file-tile-caption { display: flex; flex-direction: column; min-width: 0; }
+.file-tile-name { font-size: var(--fs-sm); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.file-tile-meta { font-size: var(--fs-xs); color: var(--text-3); overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.file-tile-actions { display: flex; gap: 2px; margin-top: -2px; }
+.file-add { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.file-add .btn svg { width: 16px; height: 16px; margin-right: 4px; vertical-align: -3px; }

@@ -39,7 +39,7 @@ async function deleteGroupCompletely(groupId) {
          OPTIONAL MATCH (t:Trip)-[:PLANNED_IN]->(g)
          OPTIONAL MATCH (a:Attachment)-[:ATTACHED_TO]->(:TripItem)-[:PART_OF]->(t)
          OPTIONAL MATCH (d:Document)-[:DOCUMENT_OF]->(t)
-         RETURN [x IN collect(DISTINCT a.storedName) + collect(DISTINCT d.storedName) WHERE x IS NOT NULL] AS storedNames`,
+         RETURN [x IN collect(DISTINCT a.storedName) + collect(DISTINCT a.thumbStoredName) + collect(DISTINCT d.storedName) + collect(DISTINCT d.thumbStoredName) WHERE x IS NOT NULL] AS storedNames`,
         { groupId }
     );
     if (records.length === 0) return false;

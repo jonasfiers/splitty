@@ -21,6 +21,14 @@ const fileLinkSecret = () => `${process.env.JWT_SECRET}:trip-attachment`;
 const signFileLink = (id, { thumb = false } = {}) =>
     `/trips/files/${id}${thumb ? '/thumb' : ''}?sig=${jwt.sign({ att: id }, fileLinkSecret(), { expiresIn: FILE_LINK_TTL })}`;
 
+// Files as the API hands them out: never their names on disk, with a fresh
+// link to each and to its preview when it has one (hasThumb).
+const withFileLinks = files => files.map(({ storedName, thumbStoredName, hasThumb, ...f }) => ({
+    ...f,
+    url: signFileLink(f.id),
+    thumbUrl: (hasThumb ?? !!thumbStoredName) ? signFileLink(f.id, { thumb: true }) : null,
+}));
+
 // The file id the link was signed for, or null when it is invalid or expired.
 function verifyFileLink(sig) {
     try {
@@ -30,4 +38,4 @@ function verifyFileLink(sig) {
     }
 }
 
-module.exports = { FILE_LINK_TTL, signFileLink, verifyFileLink };
+module.exports = { FILE_LINK_TTL, signFileLink, verifyFileLink, withFileLinks };

@@ -1,12 +1,12 @@
-/* See TripDocuments.jsx. Rows as the item page's files (.list). */
+/* See TripDocuments.jsx. Tiles as every file's (components/FileTiles), a
+   little wider here for the share, keep and delete buttons under each. */
 .trip-docs { margin: 4px 0 20px; }
-.trip-docs .list { margin-bottom: 10px; }
+.trip-docs-tiles { grid-template-columns: repeat(auto-fill, minmax(108px, 1fr)); }
 .trip-docs-actions {
   display: flex;
   align-items: center;
   gap: 2px;
-  flex-shrink: 0;
-  margin-right: -6px;
+  margin-left: -8px;
 }
 /* 40 px targets for a thumb; the icon itself 20 px, as in the navigation. */
 .trip-docs-icon {
@@ -28,5 +28,4 @@
 .trip-docs-icon.on:hover { color: var(--accent-text); }
 .trip-docs-icon.danger:hover { color: var(--red); }
 .trip-docs-icon:disabled { opacity: .5; cursor: default; }
-.trip-docs-add { width: 100%; padding: 10px; }
 .trip-docs-hint { font-size: var(--fs-sm); color: var(--text-3); margin-top: 8px; }

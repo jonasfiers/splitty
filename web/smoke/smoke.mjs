@@ -86,7 +86,7 @@ try {
   console.log('Receipts on an expense')
   await navigate(`${server.url}/groups/g1/expenses/e1`); await settle()
   await sleep(500)
-  const thumb = await evaluate(`(() => { const i = document.querySelector('.receipts .receipt-tile img'); return i ? { alt: i.alt, w: i.naturalWidth, thumb: i.src.includes('/thumb?') } : null })()`)
+  const thumb = await evaluate(`(() => { const i = document.querySelector('.receipts .file-tile img'); return i ? { alt: i.alt, w: i.naturalWidth, thumb: i.src.includes('/thumb?') } : null })()`)
   expect(thumb?.alt === 'supermarket-bill.jpg' && thumb.w > 0 && thumb.thumb, `the expense shows its receipt's preview as a thumbnail (${JSON.stringify(thumb)})`)
   expect((await evaluate(`document.querySelector('.receipts')?.textContent || ''`)).includes('Add a photo or PDF'), 'and offers another')
   // A big phone photo carrying a (fake) location in its EXIF block.
@@ -120,12 +120,12 @@ try {
   expect((await evaluate(`document.body.textContent`)).includes('Add a photo or PDF'), 'a new expense can take a receipt')
   const picked = await evaluate(`(async () => {
     const bytes = await (await fetch('/api/trips/files/any?sig=x')).blob()
-    const input = document.querySelector('.receipt-add input[type=file][multiple]')
+    const input = document.querySelector('.file-add input[type=file][multiple]')
     const dt = new DataTransfer(); dt.items.add(new File([bytes], 'lunch.png', { type: 'image/png' })); input.files = dt.files
     input.dispatchEvent(new Event('change', { bubbles: true }))
     await new Promise(r => setTimeout(r, 100))
-    for (let i = 0; i < 20 && !document.querySelector('.receipt-tile img')?.naturalWidth; i++) await new Promise(r => setTimeout(r, 100))
-    const img = document.querySelector('.receipt-tile img')
+    for (let i = 0; i < 20 && !document.querySelector('.file-tile img')?.naturalWidth; i++) await new Promise(r => setTimeout(r, 100))
+    const img = document.querySelector('.file-tile img')
     return img ? { src: img.src.slice(0, 15), w: img.naturalWidth } : null
   })()`)
   expect(picked?.w > 0, `a picked photo shows as a thumbnail before saving (${JSON.stringify(picked)})`)
@@ -143,15 +143,15 @@ try {
     const xref = parts.join('').length
     parts.push('xref\\n0 6\\n0000000000 65535 f \\n' + offsets.map(o => String(o).padStart(10, '0') + ' 00000 n \\n').join(''))
     parts.push('trailer << /Size 6 /Root 1 0 R >>\\nstartxref\\n' + xref + '\\n%%EOF\\n')
-    const input = document.querySelector('.receipt-add input[type=file][multiple]')
+    const input = document.querySelector('.file-add input[type=file][multiple]')
     const dt = new DataTransfer(); dt.items.add(new File([parts.join('')], 'invoice.pdf', { type: 'application/pdf' })); input.files = dt.files
     input.dispatchEvent(new Event('change', { bubbles: true }))
     for (let i = 0; i < 80; i++) {
-      const imgs = [...document.querySelectorAll('.receipt-tile img')]
+      const imgs = [...document.querySelectorAll('.file-tile img')]
       if (imgs.length > 1 && imgs[1].naturalWidth) break
       await new Promise(r => setTimeout(r, 100))
     }
-    const img = document.querySelectorAll('.receipt-tile img')[1]
+    const img = document.querySelectorAll('.file-tile img')[1]
     if (!img) return null
     // Not a blank page: some pixels are dark (the text).
     const c = Object.assign(document.createElement('canvas'), { width: img.naturalWidth, height: img.naturalHeight })
@@ -161,6 +161,19 @@ try {
     return { w: img.naturalWidth, h: img.naturalHeight, dark }
   })()`)
   expect(pdfPreview?.h > pdfPreview?.w && pdfPreview.dark > 50, `a picked PDF shows its first page (${JSON.stringify(pdfPreview)})`)
+  takeErrors()
+
+  console.log('Files on a trip item and the trip documents')
+  await navigate(`${server.url}/trips/t1/items/i1`); await settle()
+  for (let i = 0; i < 30 && !server.uploads.some(u => u.path === '/trips/files/a2/thumb'); i++) await sleep(200)
+  const itemTiles = await evaluate(`[...document.querySelectorAll('.file-tile')].map(t => ({ name: t.querySelector('.file-tile-name')?.textContent, img: t.querySelector('img')?.naturalWidth || 0, thumb: !!t.querySelector('img')?.src.includes('/thumb?') }))`)
+  expect(itemTiles.length === 2 && itemTiles.every(t => t.img > 0), `the item's files show as tiles with pictures (${JSON.stringify(itemTiles)})`)
+  expect(itemTiles[0]?.thumb, 'a file with a stored preview shows that preview')
+  const sentPreview = server.uploads.find(u => u.path === '/trips/files/a2/thumb')
+  expect(!!sentPreview && /name="thumbnail"[\s\S]*Content-Type: image\/jpeg/.test(sentPreview.body.toString('latin1')), 'a file without one gets a preview drawn on the phone and sent')
+  await navigate(`${server.url}/trips/t1/documents`); await settle()
+  const docTile = await evaluate(`(() => { const t = document.querySelector('.trip-docs .file-tile'); return t ? { name: t.querySelector('.file-tile-name')?.textContent, meta: t.querySelector('.file-tile-meta')?.textContent, img: t.querySelector('img')?.naturalWidth || 0, actions: t.querySelectorAll('.trip-docs-icon').length } : null })()`)
+  expect(docTile?.name === 'arrival-card.png' && docTile.img > 0 && docTile.actions === 2 && /Only you/.test(docTile.meta), `a document is a tile with its preview, who sees it and its buttons (${JSON.stringify(docTile)})`)
   takeErrors()
 
   console.log('Version on the profile page')

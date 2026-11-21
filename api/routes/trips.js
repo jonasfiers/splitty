@@ -1,11 +1,11 @@
 const router = require('express').Router();
 const jwt = require('jsonwebtoken');
-const multer = require('multer');
 const rateLimit = require('express-rate-limit');
 const tripService = require('../tripService');
 const geocodeService = require('../geocodeService');
 const routeService = require('../routeService');
 const uploadStore = require('../uploadStore');
+const fileUpload = require('../fileUpload');
 const tripPhotos = require('../tripPhotos');
 const stopNames = require('../stopNames');
 const placeAddresses = require('../placeAddresses');
@@ -23,7 +23,7 @@ const MAX_NAME_LOOKUPS = 8;
 const NAME_LOOKUP_MS = 10000;
 
 // Signed file links (5 minutes): fileLinks.js.
-const { signFileLink, verifyFileLink } = require('../fileLinks');
+const { verifyFileLink, withFileLinks } = require('../fileLinks');
 
 // Photo links (tripPhotos.js): one signature per album per day, so the
 // browser's cache keeps the thumbnails all day. Valid two days, so a page
@@ -115,10 +115,6 @@ function parseItem(kind, body) {
     return { item };
 }
 
-const upload = multer({
-    storage: multer.memoryStorage(),
-    limits: { fileSize: uploadStore.MAX_BYTES, files: 1 },
-}).single('file');
 
 // Nominatim is a shared, donated service; keep one user from hammering it.
 const geocodeLimiter = rateLimit({
@@ -261,6 +257,24 @@ router.get('/photos/:albumId/:assetId/video', async (req, res) => {
 // Everything below needs a logged-in user.
 router.use(require('../middleware/auth'));
 
+// A preview for a file that has none yet (tripService.setPreviewIfMissing):
+// multipart with only `thumbnail`.
+router.post('/files/:id/thumb', async (req, res) => {
+    const got = await fileUpload.receive(req, res, { fileRequired: false });
+    if (!got) return;
+    if (!got.thumb) return res.status(400).json({ error: 'No preview was sent.' });
+    try {
+        const thumbStoredName = await uploadStore.save(got.thumb.buffer);
+        const outcome = await tripService.setPreviewIfMissing(req.params.id, req.user.id, thumbStoredName);
+        if (outcome === 'set') return res.status(201).json({ success: true });
+        await uploadStore.remove([thumbStoredName]);
+        if (outcome === 'exists') return res.status(409).json({ error: 'This file already has a preview.' });
+        res.status(404).json({ error: 'File not found' });
+    } catch (error) {
+        fileUpload.failed(res, error);
+    }
+});
+
 // ── Photos: Immich albums linked to a trip (tripPhotos.js) ──
 const photoError = (res, err, where) => {
     if (err instanceof tripPhotos.PhotoError) return res.status(err.status).json({ error: err.message });
@@ -351,7 +365,7 @@ router.get('/items/:itemId', async (req, res) => {
     try {
         const result = await tripService.getItemById(req.params.itemId, req.user.id);
         if (!result.success) return res.status(404).json(result);
-        result.item.attachments = result.item.attachments.map(({ storedName, ...a }) => ({ ...a, url: signFileLink(a.id) }));
+        result.item.attachments = withFileLinks(result.item.attachments);
         res.json(result);
     } catch (error) {
         console.error(error);
@@ -448,48 +462,30 @@ router.delete('/items/:itemId/expenses/:expenseId', async (req, res) => {
 });
 
 // UPLOAD ATTACHMENT
-router.post('/items/:itemId/attachments', (req, res) => {
-    upload(req, res, async uploadError => {
-        try {
-            if (uploadError) {
-                const tooBig = uploadError.code === 'LIMIT_FILE_SIZE';
-                return res.status(tooBig ? 413 : 400).json({
-                    error: tooBig ? `The file is larger than ${uploadStore.MAX_BYTES / 1024 / 1024} MB.` : 'Upload failed.',
-                });
-            }
-            if (!req.file) return res.status(400).json({ error: 'No file was sent.' });
-            if (!uploadStore.isAllowed(req.file.mimetype, req.file.buffer)) {
-                return res.status(415).json({ error: 'Only PDF, JPEG, PNG and WebP files can be attached.' });
-            }
-
-            const { itemId } = req.params;
-            const item = await tripService.getItemById(itemId, req.user.id);
-            if (!item.success) return res.status(404).json(item);
-            if (await tripService.countAttachments(itemId) >= uploadStore.MAX_PER_ITEM) {
-                return res.status(400).json({ error: `An item can have at most ${uploadStore.MAX_PER_ITEM} attachments.` });
-            }
-
-            const filename = uploadStore.cleanFilename(req.file.originalname, 'attachment');
-
-            const storedName = await uploadStore.save(req.file.buffer);
-            const result = await tripService.createAttachment(itemId, req.user.id, {
-                filename, mimeType: req.file.mimetype, size: req.file.size, storedName,
-            });
-            if (!result.success) {
-                await uploadStore.remove([storedName]);
-                return res.status(404).json(result);
-            }
-            res.status(201).json(result);
-        } catch (error) {
-            if (error.code === 'STORAGE_FULL') {
-                console.error(`Upload refused: less than ${uploadStore.MIN_FREE_BYTES / 1024 / 1024} MB would be left free in ${uploadStore.UPLOAD_DIR}`);
-                return res.status(507).json({ error: 'Splitty’s storage is full, so files cannot be uploaded right now. Please tell the admin.' });
-            }
-            console.error(error);
-            // Not error.message: it can carry server paths.
-            res.status(500).json({ error: 'Upload failed.' });
+router.post('/items/:itemId/attachments', async (req, res) => {
+    const got = await fileUpload.receive(req, res);
+    if (!got) return;
+    const { file, thumb } = got;
+    try {
+        const { itemId } = req.params;
+        const item = await tripService.getItemById(itemId, req.user.id);
+        if (!item.success) return res.status(404).json(item);
+        if (await tripService.countAttachments(itemId) >= uploadStore.MAX_PER_ITEM) {
+            return res.status(400).json({ error: `An item can have at most ${uploadStore.MAX_PER_ITEM} attachments.` });
         }
-    });
+        const names = await fileUpload.save(file, thumb);
+        const result = await tripService.createAttachment(itemId, req.user.id, {
+            filename: uploadStore.cleanFilename(file.originalname, 'attachment'),
+            mimeType: file.mimetype, size: file.size, ...names,
+        });
+        if (!result.success) {
+            await uploadStore.remove([names.storedName, names.thumbStoredName]);
+            return res.status(404).json(result);
+        }
+        res.status(201).json(result);
+    } catch (error) {
+        fileUpload.failed(res, error);
+    }
 });
 
 // DELETE ATTACHMENT
@@ -509,7 +505,7 @@ router.delete('/attachments/:id', async (req, res) => {
 // private to the uploader unless shared with the trip.
 const MAX_DOCUMENTS = 30; // per person per trip
 
-const withLinks = docs => docs.map(d => ({ ...d, url: signFileLink(d.id) }));
+const withLinks = withFileLinks;
 
 router.get('/:id/documents', async (req, res) => {
     try {
@@ -523,45 +519,31 @@ router.get('/:id/documents', async (req, res) => {
 });
 
 // multipart: file, and shared ("true" to share with the trip; private otherwise)
-router.post('/:id/documents', (req, res) => {
-    upload(req, res, async uploadError => {
-        try {
-            if (uploadError) {
-                const tooBig = uploadError.code === 'LIMIT_FILE_SIZE';
-                return res.status(tooBig ? 413 : 400).json({
-                    error: tooBig ? `The file is larger than ${uploadStore.MAX_BYTES / 1024 / 1024} MB.` : 'Upload failed.',
-                });
-            }
-            if (!req.file) return res.status(400).json({ error: 'No file was sent.' });
-            if (!uploadStore.isAllowed(req.file.mimetype, req.file.buffer)) {
-                return res.status(415).json({ error: 'Only PDF, JPEG, PNG and WebP files can be added.' });
-            }
-            const tripId = req.params.id;
-            const trip = await tripService.getTripById(tripId, req.user.id);
-            if (!trip.success) return res.status(404).json(trip);
-            if (await tripService.countOwnDocuments(tripId, req.user.id) >= MAX_DOCUMENTS) {
-                return res.status(400).json({ error: `You can add at most ${MAX_DOCUMENTS} documents to a trip.` });
-            }
-            const filename = uploadStore.cleanFilename(req.file.originalname, 'document');
-            const storedName = await uploadStore.save(req.file.buffer);
-            const result = await tripService.createDocument(tripId, req.user.id, {
-                filename, mimeType: req.file.mimetype, size: req.file.size, storedName,
-                shared: req.body?.shared === 'true',
-            });
-            if (!result.success) {
-                await uploadStore.remove([storedName]);
-                return res.status(404).json(result);
-            }
-            res.status(201).json(result);
-        } catch (error) {
-            if (error.code === 'STORAGE_FULL') {
-                console.error(`Upload refused: less than ${uploadStore.MIN_FREE_BYTES / 1024 / 1024} MB would be left free in ${uploadStore.UPLOAD_DIR}`);
-                return res.status(507).json({ error: 'Splitty’s storage is full, so files cannot be uploaded right now. Please tell the admin.' });
-            }
-            console.error(error);
-            res.status(500).json({ error: 'Upload failed.' });
+router.post('/:id/documents', async (req, res) => {
+    const got = await fileUpload.receive(req, res);
+    if (!got) return;
+    const { file, thumb } = got;
+    try {
+        const tripId = req.params.id;
+        const trip = await tripService.getTripById(tripId, req.user.id);
+        if (!trip.success) return res.status(404).json(trip);
+        if (await tripService.countOwnDocuments(tripId, req.user.id) >= MAX_DOCUMENTS) {
+            return res.status(400).json({ error: `You can add at most ${MAX_DOCUMENTS} documents to a trip.` });
         }
-    });
+        const names = await fileUpload.save(file, thumb);
+        const result = await tripService.createDocument(tripId, req.user.id, {
+            filename: uploadStore.cleanFilename(file.originalname, 'document'),
+            mimeType: file.mimetype, size: file.size, ...names,
+            shared: req.body?.shared === 'true',
+        });
+        if (!result.success) {
+            await uploadStore.remove([names.storedName, names.thumbStoredName]);
+            return res.status(404).json(result);
+        }
+        res.status(201).json(result);
+    } catch (error) {
+        fileUpload.failed(res, error);
+    }
 });
 
 // {ids: [...]} -> {ids: [...]}: those still visible to this user, for the
@@ -659,7 +641,7 @@ router.get('/offline', async (req, res) => {
         // Links to fetch the files with (signed for FILE_LINK_TTL).
         for (const t of result.trips) {
             t.documents = withLinks(t.documents);
-            for (const item of t.items) item.attachments = item.attachments.map(a => ({ ...a, url: signFileLink(a.id) }));
+            for (const item of t.items) item.attachments = withFileLinks(item.attachments);
         }
         res.json(result);
     } catch (error) {

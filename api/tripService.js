@@ -353,7 +353,7 @@ const tripService = {
             const { records: extra } = await driver.executeQuery(
                 `MATCH (i:TripItem)-[:PART_OF]->(:Trip {id: $tripId})
                  RETURN i.id AS id,
-                        [(att:Attachment)-[:ATTACHED_TO]->(i) | att {.id, .filename, .mimeType, .size}] AS attachments,
+                        [(att:Attachment)-[:ATTACHED_TO]->(i) | att {.id, .filename, .mimeType, .size, hasThumb: att.thumbStoredName IS NOT NULL}] AS attachments,
                         [(payer:User)-[:PAID]->(e:Expense)-[:PAYS_FOR]->(i) |
                             {id: e.id, description: e.description, amount: e.amount, amountBase: e.amountBase, date: e.date,
                              paidByName: payer.name, currencyIso: [(e)-[:EXPRESSED_IN]->(ec:Currency) | ec.iso][0]}] AS expenses`,
@@ -408,9 +408,9 @@ const tripService = {
             const { records } = await driver.executeQuery(
                 `MATCH ${TRIP_ACCESS}
                  OPTIONAL MATCH (a:Attachment)-[:ATTACHED_TO]->(:TripItem)-[:PART_OF]->(t)
-                 WITH t, collect(a) AS files, collect(a.storedName) AS fileNames
+                 WITH t, collect(a) AS files, collect(a.storedName) + collect(a.thumbStoredName) AS fileNames
                  OPTIONAL MATCH (doc:Document)-[:DOCUMENT_OF]->(t)
-                 WITH t, files, fileNames, collect(doc) AS docs, collect(doc.storedName) AS docNames
+                 WITH t, files, fileNames, collect(doc) AS docs, collect(doc.storedName) + collect(doc.thumbStoredName) AS docNames
                  WITH t, files + docs AS attachments, fileNames + docNames AS storedNames
                  OPTIONAL MATCH (i:TripItem)-[:PART_OF]->(t)
                  WITH t, attachments, storedNames, collect(i) AS items
@@ -635,7 +635,7 @@ const tripService = {
                 const { records } = await tx.run(
                     `MATCH ${ITEM_ACCESS}
                      OPTIONAL MATCH (a:Attachment)-[:ATTACHED_TO]->(i)
-                     WITH t, g, i, collect(a) AS attachments, collect(a.storedName) AS storedNames
+                     WITH t, g, i, collect(a) AS attachments, collect(a.storedName) + collect(a.thumbStoredName) AS storedNames
                      FOREACH (a IN attachments | DETACH DELETE a)
                      WITH t.id AS tripId, t, g, i, storedNames
                      MATCH (u:User {id: $userId})
@@ -744,15 +744,15 @@ const tripService = {
 
     // ATTACHMENTS — the file lives on disk under `storedName`; the graph only
     // holds what is needed to find it and serve it back.
-    createAttachment: async (itemId, userId, { filename, mimeType, size, storedName }) => {
+    createAttachment: async (itemId, userId, { filename, mimeType, size, storedName, thumbStoredName = null }) => {
         try {
             const { records } = await driver.executeQuery(
                 `MATCH ${ITEM_ACCESS}
                  MATCH (u:User {id: $userId})
-                 CREATE (a:Attachment {id: randomUUID(), filename: $filename, mimeType: $mimeType, size: $size, storedName: $storedName})-[:ATTACHED_TO]->(i)
+                 CREATE (a:Attachment {id: randomUUID(), filename: $filename, mimeType: $mimeType, size: $size, storedName: $storedName, thumbStoredName: $thumbStoredName})-[:ATTACHED_TO]->(i)
                  CREATE (a)-[:UPLOADED_BY {on: datetime()}]->(u)
                  RETURN a.id AS id`,
-                { itemId, userId, filename, mimeType, size: neo4j.int(size), storedName }
+                { itemId, userId, filename, mimeType, size: neo4j.int(size), storedName, thumbStoredName }
             );
             if (records.length === 0) return { success: false, message: 'Trip item not found or access denied' };
             return { success: true, id: records[0].get('id') };
@@ -767,6 +767,34 @@ const tripService = {
             { itemId }
         );
         return num(records[0].get('n'));
+    },
+
+    // A preview for a file that has none (uploaded before previews, or from a
+    // device that could not draw one): the first phone that shows the file
+    // draws it and sends it. Only someone who can see the file, and never
+    // over an existing preview, so nobody can swap what others see.
+    // 'set' | 'exists' (a preview is already there) | 'not-found'.
+    setPreviewIfMissing: async (id, userId, thumbStoredName) => {
+        const { records } = await driver.executeQuery(
+            `CALL {
+                 MATCH (:User {id: $userId})-[:MEMBER_OF]->(:Group)<-[:PLANNED_IN]-(:Trip)<-[:PART_OF]-(:TripItem)<-[:ATTACHED_TO]-(f:Attachment {id: $id})
+                 RETURN f
+                 UNION
+                 MATCH (:User {id: $userId})-[:MEMBER_OF]->(:Group)<-[:PLANNED_IN]-(:Trip)<-[:DOCUMENT_OF]-(f:Document {id: $id})-[:UPLOADED_BY]->(o:User)
+                 WHERE f.shared = true OR o.id = $userId
+                 RETURN f
+                 UNION
+                 MATCH (:User {id: $userId})-[:MEMBER_OF]->(:Group)<-[:BALANCE_IN]-(:Expense)<-[:RECEIPT_OF]-(f:Receipt {id: $id})
+                 RETURN f
+             }
+             WITH f LIMIT 1
+             WITH f, f.thumbStoredName IS NULL AS missing
+             FOREACH (_ IN CASE WHEN missing THEN [1] ELSE [] END | SET f.thumbStoredName = $thumbStoredName)
+             RETURN missing`,
+            { id, userId, thumbStoredName }
+        );
+        if (!records.length) return 'not-found';
+        return records[0].get('missing') ? 'set' : 'exists';
     },
 
     // No user here on purpose: the download route authorises with a signed,
@@ -784,18 +812,18 @@ const tripService = {
         try {
             const { records } = await driver.executeQuery(
                 `MATCH (u:User {id: $userId})-[:MEMBER_OF]->(g:Group)<-[:PLANNED_IN]-(t:Trip)<-[:PART_OF]-(i:TripItem)<-[:ATTACHED_TO]-(a:Attachment {id: $id})
-                 WITH u, g, t, i, a, a.storedName AS storedName
+                 WITH u, g, t, i, a, [x IN [a.storedName, a.thumbStoredName] WHERE x IS NOT NULL] AS storedNames
                  CREATE (d:Deletion {
                      id: randomUUID(), on: datetime(), kind: 'file', title: a.filename,
                      tripId: t.id, tripTitle: t.title, itemId: i.id, itemTitle: i.title
                  })-[:IN_GROUP]->(g)
                  CREATE (d)-[:DELETED_BY]->(u)
                  DETACH DELETE a
-                 RETURN storedName`,
+                 RETURN storedNames`,
                 { id, userId }
             );
             if (records.length === 0) return { success: false, message: 'Attachment not found or access denied' };
-            return { success: true, message: 'Attachment deleted successfully', storedNames: [records[0].get('storedName')] };
+            return { success: true, message: 'Attachment deleted successfully', storedNames: records[0].get('storedNames') };
         } catch (err) {
             throw new Error(`Failed to delete attachment: ${err.message}`);
         }
@@ -821,10 +849,11 @@ const tripService = {
             { tripId, userId }
         );
         return records.map(r => {
-            const { storedName, ...d } = r.get('d').properties;
+            const { storedName, thumbStoredName, ...d } = r.get('d').properties;
             return {
                 ...d,
                 size: num(d.size),
+                hasThumb: !!thumbStoredName,
                 shared: d.shared === true,
                 mine: r.get('ownerId') === userId,
                 ownerName: r.get('ownerName'),
@@ -855,15 +884,15 @@ const tripService = {
         return num(records[0].get('n'));
     },
 
-    createDocument: async (tripId, userId, { filename, mimeType, size, storedName, shared }) => {
+    createDocument: async (tripId, userId, { filename, mimeType, size, storedName, thumbStoredName = null, shared }) => {
         const { records } = await driver.executeQuery(
             `MATCH ${TRIP_ACCESS}
              MATCH (u:User {id: $userId})
              CREATE (d:Document {id: randomUUID(), filename: $filename, mimeType: $mimeType, size: $size,
-                                 storedName: $storedName, shared: $shared})-[:DOCUMENT_OF]->(t)
+                                 storedName: $storedName, thumbStoredName: $thumbStoredName, shared: $shared})-[:DOCUMENT_OF]->(t)
              CREATE (d)-[:UPLOADED_BY {on: datetime()}]->(u)
              RETURN d.id AS id`,
-            { tripId, userId, filename, mimeType, size: neo4j.int(size), storedName, shared: shared === true }
+            { tripId, userId, filename, mimeType, size: neo4j.int(size), storedName, thumbStoredName, shared: shared === true }
         );
         if (records.length === 0) return { success: false, message: 'Trip not found or access denied' };
         return { success: true, id: records[0].get('id') };
@@ -884,13 +913,13 @@ const tripService = {
     deleteDocument: async (id, userId) => {
         const { records } = await driver.executeQuery(
             `MATCH (u:User {id: $userId})-[:MEMBER_OF]->(:Group)<-[:PLANNED_IN]-(:Trip)<-[:DOCUMENT_OF]-(d:Document {id: $id})-[:UPLOADED_BY]->(u)
-             WITH d, d.storedName AS storedName
+             WITH d, [x IN [d.storedName, d.thumbStoredName] WHERE x IS NOT NULL] AS storedNames
              DETACH DELETE d
-             RETURN storedName`,
+             RETURN storedNames`,
             { id, userId }
         );
         if (records.length === 0) return { success: false, message: 'Document not found or not yours' };
-        return { success: true, storedNames: [records[0].get('storedName')] };
+        return { success: true, storedNames: records[0].get('storedNames') };
     },
 
     // Leaving (or being removed from) a group: that member's private
@@ -899,9 +928,9 @@ const tripService = {
         const { records } = await driver.executeQuery(
             `MATCH (:Group {id: $groupId})<-[:PLANNED_IN]-(:Trip)<-[:DOCUMENT_OF]-(d:Document)-[:UPLOADED_BY]->(:User {id: $userId})
              WHERE d.shared IS NULL OR d.shared = false
-             WITH d, d.storedName AS storedName
-             DETACH DELETE d
-             RETURN collect(storedName) AS storedNames`,
+             WITH collect(d) AS docs, collect(d.storedName) + collect(d.thumbStoredName) AS storedNames
+             FOREACH (x IN docs | DETACH DELETE x)
+             RETURN storedNames`,
             { groupId, userId }
         );
         return records[0]?.get('storedNames') ?? [];
@@ -911,9 +940,9 @@ const tripService = {
     deleteAllDocumentsOf: async (userId) => {
         const { records } = await driver.executeQuery(
             `MATCH (d:Document)-[:UPLOADED_BY]->(:User {id: $userId})
-             WITH d, d.storedName AS storedName
-             DETACH DELETE d
-             RETURN collect(storedName) AS storedNames`,
+             WITH collect(d) AS docs, collect(d.storedName) + collect(d.thumbStoredName) AS storedNames
+             FOREACH (x IN docs | DETACH DELETE x)
+             RETURN storedNames`,
             { userId }
         );
         return records[0]?.get('storedNames') ?? [];

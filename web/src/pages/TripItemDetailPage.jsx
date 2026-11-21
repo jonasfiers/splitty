@@ -26,6 +26,8 @@ import { getOfflineItem, asOf } from '../utils/offlineTrips.js'
 import { useOfflineDocs } from '../utils/useOfflineDocs.js'
 import { useOffline, isOffline, isNetworkError, onReconnect } from '../utils/connection.js'
 import Icon from '../components/Icon/Icon.jsx'
+import { FileTiles, FileTile, AddFileButtons, uploadFile, uploadError, usePreviews } from '../components/FileTiles/FileTiles.jsx'
+import { offlineSrc } from '../utils/offlineDocs.js'
 import { openKeyboardNow } from '../utils/keyboard.js'
 
 const START_LABEL = { transport: 'Departure', stay: 'Check-in', activity: 'Starts' }
@@ -101,7 +103,6 @@ export default function TripItemDetailPage() {
   const confirm = useConfirm()
   const { tripId, itemId } = useParams()
   const navigate = useNavigate()
-  const fileInput = useRef(null)
 
   const [item, setItem] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -122,6 +123,8 @@ export default function TripItemDetailPage() {
   // This item's files kept on the device (utils/offlineDocs.js).
   const keptFiles = useOfflineDocs()
   const onDevice = useMemo(() => new Set((keptFiles ?? []).map(f => f.id)), [keptFiles])
+  // Previews for files without one, drawn here and sent (components/FileTiles).
+  const preview = usePreviews(item?.attachments, { enabled: !readOnly })
 
   // Opening it: the last state at once if its file links still work (4 min,
   // utils/cache.js), then fresh; the refreshes below ask the server only.
@@ -236,23 +239,19 @@ export default function TripItemDetailPage() {
     } catch { setError('Failed to unlink the expense.') }
   }
 
-  const handleUpload = async e => {
-    const file = e.target.files?.[0]
-    e.target.value = ''
-    if (!file || uploading) return
+  // Each with its preview (components/FileTiles); a ticket is sent as it is,
+  // so a barcode in a photo stays readable.
+  const handleUpload = async files => {
+    if (!files.length || uploading) return
     setError('')
     setUploading(true)
     try {
-      const body = new FormData()
-      body.append('file', file)
-      await client.post(`/trips/items/${itemId}/attachments`, body, { timeout: 120000 })
-      await load()
+      for (const file of files) await uploadFile(`/trips/items/${itemId}/attachments`, file)
     } catch (err) {
-      setError(err?.response?.status === 413
-        ? 'The file is too large (10 MB at most).'
-        : err?.response?.data?.error || 'Failed to upload the file.')
+      setError(uploadError(err, 'Failed to upload the file.'))
     } finally {
       setUploading(false)
+      load().catch(() => {})
     }
   }
 
@@ -365,41 +364,42 @@ export default function TripItemDetailPage() {
           )}
           <div className="section-label">Tickets and documents</div>
           {item.attachments.length > 0 && (
-            <div className="list">
-              {item.attachments.map(a => readOnly && !onDevice.has(a.id) ? (
-                // Offline and not (yet) on this device.
-                <ListRow
-                  key={a.id}
-                  icon={<Icon name={a.mimeType === 'application/pdf' ? 'file-text' : 'image'} />}
-                  title={a.filename}
-                  meta={`${formatBytes(a.size)} · Not on this device`}
-                />
-              ) : (
+            <FileTiles>
+              {item.attachments.map(a => {
+                const viewer = `/trips/${tripId}/items/${itemId}/files/${a.id}`
+                const here = onDevice.has(a.id)
+                // Offline: only what is on this device opens (Splitty's
+                // viewer), its picture from that copy; the rest is listed dim.
+                if (readOnly) return (
+                  <FileTile
+                    key={a.id} caption name={a.filename} type={a.mimeType} dim={!here}
+                    src={here && a.mimeType?.startsWith('image/') ? offlineSrc(a.id) : null}
+                    href={here ? viewer : undefined}
+                    onOpen={here ? event => { event.preventDefault(); navigate(viewer) } : undefined}
+                    meta={here ? `${formatBytes(a.size)} · on this device` : 'Not on this device'}
+                  />
+                )
                 // In a browser tab: a plain link, so the browser's own PDF and
                 // image viewers open it in a new tab. In the installed app that
                 // would fill the window with no way back: Splitty's viewer.
-                // Offline: Splitty's viewer, from the copy on this device.
-                <ListRow
-                  key={a.id}
-                  href={standalone || readOnly ? `/trips/${tripId}/items/${itemId}/files/${a.id}` : `/api${a.url}`}
-                  {...(standalone || readOnly
-                    ? { onClick: event => { event.preventDefault(); navigate(`/trips/${tripId}/items/${itemId}/files/${a.id}`) } }
-                    : { target: '_blank', rel: 'noopener noreferrer' })}
-                  icon={<Icon name={a.mimeType === 'application/pdf' ? 'file-text' : 'image'} />}
-                  title={a.filename}
-                  meta={onDevice.has(a.id) ? `${formatBytes(a.size)} · on this device` : formatBytes(a.size)}
-                  {...(!readOnly && { end: <RowAction label={`Delete ${a.filename}`} onClick={() => handleDeleteAttachment(a)} /> })}
-                />
-              ))}
-            </div>
+                return (
+                  <FileTile
+                    key={a.id} caption name={a.filename} type={a.mimeType}
+                    src={a.thumbUrl ? `/api${a.thumbUrl}` : preview(a.id)}
+                    href={standalone ? viewer : `/api${a.url}`}
+                    onOpen={standalone ? event => { event.preventDefault(); navigate(viewer) } : undefined}
+                    meta={here ? `${formatBytes(a.size)} · on this device` : formatBytes(a.size)}
+                    onRemove={() => handleDeleteAttachment(a)}
+                    removeLabel={`Delete ${a.filename}`}
+                  />
+                )
+              })}
+            </FileTiles>
           )}
           {readOnly ? (
             item.attachments.length === 0 && <p className="field-note">No files.</p>
           ) : <>
-            <input ref={fileInput} type="file" accept="application/pdf,image/jpeg,image/png,image/webp" hidden onChange={handleUpload} />
-            <button className="btn btn-secondary btn-block" onClick={() => fileInput.current?.click()} disabled={uploading}>
-              {uploading ? 'Uploading…' : 'Add a file'}
-            </button>
+            <AddFileButtons onFiles={handleUpload} busy={uploading} pickLabel="Add a file" />
             <p className="field-note">PDF or image, 10 MB at most.</p>
           </>}
           <div className="section-label">Paid for with</div>

@@ -11,6 +11,7 @@ import { loadShared, clearShared, setPendingShare } from '../utils/shared.js'
 import { readCodesFromFile, MAX_TICKETS } from '../utils/barcode.js'
 import { today, formatDateRange, formatMoment, itemIcon, kindVars, formatBytes } from '../utils/trip.js'
 import { tripIcon } from '../utils/icons.js'
+import { uploadFile } from '../components/FileTiles/FileTiles.jsx'
 
 // A ticket shared into Splitty from another app (2026-11-20): Android's share
 // sheet → the service worker keeps the files (sw.js, utils/shared.js) → here.
@@ -87,9 +88,7 @@ export default function SharePage() {
     if (willAttach) {
       for (const file of keepable) {
         try {
-          const body = new FormData()
-          body.append('file', file)
-          await client.post(`/trips/items/${item.id}/attachments`, body, { timeout: 120000 })
+          await uploadFile(`/trips/items/${item.id}/attachments`, file) // with its preview
         } catch (err) {
           failed.push(err?.response?.status === 413 ? `${file.name} (over 10 MB)` : `${file.name}${err?.response?.data?.error ? ` (${err.response.data.error})` : ''}`)
         }

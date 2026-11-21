@@ -21,7 +21,12 @@ const expense = {
 const shares = [{ userId: 'u1', user: USER, amount: 12.5 }, { userId: 'u2', user: OTHER, amount: 12.5 }]
 const trip = { id: 't1', title: 'Taiwan', startDate: day(-2), endDate: day(10), icon: 'country:TW', groupId: 'g1', group }
 const items = [
-  { id: 'i1', tripId: 't1', kind: 'activity', title: 'Taipei 101 observatory', start: `${day(1)}T10:00`, end: `${day(1)}T12:00`, attachments: [], expenses: [], tickets: [] },
+  { id: 'i1', tripId: 't1', kind: 'activity', title: 'Taipei 101 observatory', start: `${day(1)}T10:00`, end: `${day(1)}T12:00`, expenses: [], tickets: [],
+    // One file with a stored preview, one without (the phone draws and sends it).
+    attachments: [
+      { id: 'a1', filename: 'observatory-ticket.png', mimeType: 'image/png', size: 5282, url: '/trips/files/a1?sig=smoke', thumbUrl: '/trips/files/a1/thumb?sig=smoke' },
+      { id: 'a2', filename: 'booking.png', mimeType: 'image/png', size: 5282, url: '/trips/files/a2?sig=smoke', thumbUrl: null },
+    ] },
   { id: 'i2', tripId: 't1', kind: 'transport', mode: 'flight', title: 'TPE → AMS', start: `${day(10)}T23:30`, attachments: [], expenses: [], tickets: [] },
 ]
 
@@ -50,6 +55,7 @@ const ROUTES = [
   [/^\/trips\/offline/, () => ({ trips: [] })],
   [/^\/trips$/, () => ({ trips: [trip], groups: [group] })],
   [/^\/trips\/t1$/, () => ({ trip, items, places: [], documents: [] })],
+  [/^\/trips\/t1\/documents$/, () => ({ documents: [{ id: 'd1', filename: 'arrival-card.png', mimeType: 'image/png', size: 5282, shared: false, mine: true, ownerName: 'Smoke Tester', url: '/trips/files/d1?sig=smoke', thumbUrl: '/trips/files/d1/thumb?sig=smoke' }] })],
   [/^\/trips\/t1\/(documents|photos|albums|follow-links|routes)/, () => ({ documents: [], photos: [], albums: [], links: [], routes: [], places: [] })],
   [/^\/trips\/items\/i\d$/, m => ({ item: items.find(i => m.input.endsWith(i.id)) })],
   [/^\/activity/, () => ({ activities: [], groups: [group], trips: [trip] })],
