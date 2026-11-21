@@ -1,6 +1,6 @@
 // uploadStore.js
 //
-// Where trip attachments live on disk. The directory must sit OUTSIDE the API's
+// Where uploaded files (trip attachments and documents, expense receipts) live on disk. The directory must sit OUTSIDE the API's
 // own directory: a deploy replaces that directory wholesale, and anything
 // stored inside it would be gone with the previous release.
 const fs = require('fs/promises');
@@ -76,4 +76,9 @@ async function remove(storedNames = []) {
     }));
 }
 
-module.exports = { UPLOAD_DIR, MAX_BYTES, MAX_PER_ITEM, MIN_FREE_BYTES, ALLOWED_TYPES: Object.keys(SIGNATURES), StorageFullError, isAllowed, filePath, freeBytes, save, remove };
+// Multipart filenames arrive as latin1 bytes; turn them back into UTF-8 and
+// drop anything that is not part of a plain file name.
+const cleanFilename = (original, fallback = 'file') => Buffer.from(String(original || ''), 'latin1').toString('utf8')
+    .replace(/[\u0000-\u001f\u007f/\\]/g, '').trim().slice(0, 150) || fallback;
+
+module.exports = { cleanFilename, UPLOAD_DIR, MAX_BYTES, MAX_PER_ITEM, MIN_FREE_BYTES, ALLOWED_TYPES: Object.keys(SIGNATURES), StorageFullError, isAllowed, filePath, freeBytes, save, remove };

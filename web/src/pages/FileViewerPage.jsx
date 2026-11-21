@@ -5,8 +5,8 @@ import Loading from '../components/Loading.jsx'
 import ZoomArea from '../components/FileViewer/ZoomArea.jsx'
 import { listOffline, offlineSrc } from '../utils/offlineDocs.js'
 
-// A trip item's file (ticket, booking...) or a trip document (arrival card,
-// passport copy...) full screen inside Splitty, for the
+// A trip item's file (ticket, booking...), a trip document (arrival card,
+// passport copy...) or an expense's receipt full screen inside Splitty, for the
 // installed app (utils/standalone.js): no sidebar, no bottom bar, only a slim
 // bar ("‹ Back", the name, Download) over the document. Images as they are,
 // PDFs drawn by pdf.js; Download saves the file or opens it in another app.
@@ -32,10 +32,16 @@ const PAGE_PIXELS = 16e6
 //     both without a connection: the copy kept on this device, if there is one
 //   /offline-documents/:fileId                   a document kept on this device
 //                                                (works offline and signed out)
+//   /groups/:groupId/expenses/:expenseId/receipts/:fileId   an expense's receipt
 const fromServer = list => list.map(f => ({ ...f, src: `/api${f.url}` }))
 const fromDevice = list => list.map(f => ({ ...f, src: offlineSrc(f.id) }))
 
-function sourceOf(tripId, itemId) {
+function sourceOf(tripId, itemId, groupId, expenseId) {
+  if (expenseId) return {
+    load: async () => fromServer((await client.get(`/expenses/${expenseId}/receipts`)).data.receipts),
+    page: `/groups/${groupId}/expenses/${expenseId}`,
+    gone: 'This receipt was deleted.',
+  }
   if (itemId) return {
     load: async () => {
       try {
@@ -68,12 +74,12 @@ function sourceOf(tripId, itemId) {
 }
 
 export default function FileViewerPage() {
-  const { tripId, itemId, fileId } = useParams()
+  const { tripId, itemId, groupId, expenseId, fileId } = useParams()
   const navigate = useNavigate()
   const location = useLocation()
   const [files, setFiles] = useState(null)
   const [error, setError] = useState('')
-  const source = sourceOf(tripId, itemId)
+  const source = sourceOf(tripId, itemId, groupId, expenseId)
 
   useEffect(() => {
     source.load()
@@ -82,7 +88,7 @@ export default function FileViewerPage() {
         setFiles(list)
       })
       .catch(() => setError('Could not load this file. Go back and try again.'))
-  }, [tripId, itemId, fileId]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [tripId, itemId, expenseId, fileId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const file = files?.find(a => a.id === fileId)
 

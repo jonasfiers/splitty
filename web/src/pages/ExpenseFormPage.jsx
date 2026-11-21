@@ -16,6 +16,8 @@ import Picker from '../components/Picker/Picker.jsx'
 import { Avatar } from '../components/Avatar.jsx'
 import DatePicker from '../components/DatePicker/DatePicker.jsx'
 import { getOnce } from '../utils/cache.js'
+import { MAX_RECEIPTS, RECEIPT_TYPES, uploadReceipt, uploadError } from '../components/Receipts/Receipts.jsx'
+import { RowAction } from '../components/Detail/Detail.jsx'
 
 function recalculate(shares, total, payerId) {
   const included = shares.filter(s => s.included)
@@ -66,6 +68,9 @@ export default function ExpenseFormPage() {
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  // Receipts picked for a new expense, uploaded once it is saved.
+  const [receipts, setReceipts] = useState([])
+  const receiptInput = useRef(null)
   const wide = useMediaQuery('(min-width: 768px)') // the header's own breakpoint
   const mouse = useMediaQuery('(hover: hover) and (pointer: fine)') // a real keyboard, most likely
   const [error, setError] = useState('')
@@ -205,6 +210,15 @@ export default function ExpenseFormPage() {
       } else {
         const { data } = await client.post('/expenses', { ...payload, shares: otherShares })
         expenseId = data.id
+        // The expense is saved; a receipt that fails is not a reason to undo
+        // it: say so, and it can be added again on the expense's page.
+        try {
+          for (const file of receipts) await uploadReceipt(expenseId, file)
+        } catch (err) {
+          leaveTo(navigate, `/groups/${form.groupId || groupId}/expenses/${expenseId}`,
+            { notice: `The expense was added, but not the receipt: ${uploadError(err)}` })
+          return
+        }
       }
 
       if (tripItem && !isEdit) {
@@ -334,6 +348,34 @@ export default function ExpenseFormPage() {
                   </Field>
                 )}
               </div>
+
+              {!isEdit && (
+                <Field label="Receipt" group>
+                  {receipts.length > 0 && (
+                    <ul className="receipt-picks">
+                      {receipts.map((f, i) => (
+                        <li key={`${f.name}-${i}`}>
+                          <span>{f.name}</span>
+                          <RowAction label={`Remove ${f.name}`} onClick={() => setReceipts(list => list.filter((_, j) => j !== i))} />
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  {receipts.length < MAX_RECEIPTS && <>
+                    <input
+                      ref={receiptInput} type="file" accept={RECEIPT_TYPES} multiple hidden
+                      onChange={e => {
+                        const picked = [...(e.target.files ?? [])]
+                        e.target.value = ''
+                        setReceipts(list => [...list, ...picked].slice(0, MAX_RECEIPTS))
+                      }}
+                    />
+                    <button type="button" className="btn btn-secondary btn-sm" onClick={() => receiptInput.current?.click()}>
+                      {receipts.length ? 'Add another' : 'Add a photo or PDF'}
+                    </button>
+                  </>}
+                </Field>
+              )}
             </FormColumn>
 
             {shares.length > 0 && (

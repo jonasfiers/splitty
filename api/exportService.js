@@ -109,6 +109,21 @@ async function collect(userId) {
         };
     });
 
+    // Receipts on the expenses above (every member sees them).
+    const receipts = await q(
+        `MATCH (:User {id: $userId})-[:MEMBER_OF]->(:Group)<-[:BALANCE_IN]-(e:Expense)<-[:RECEIPT_OF]-(r:Receipt)
+         OPTIONAL MATCH (r)-[up:UPLOADED_BY]->(u:User)
+         RETURN r.id AS id, r.filename AS filename, r.mimeType AS mimeType, r.size AS size, r.storedName AS storedName,
+                e.id AS expenseId, u.id AS uploadedById, u.name AS uploadedBy, up.on AS uploadedAt`,
+        { userId });
+    for (const e of expenses) {
+        e.receipts = receipts.filter(r => r.expenseId === e.id).map(r => ({
+            id: r.id, filename: r.filename, mimeType: r.mimeType, size: r.size,
+            uploadedBy: r.uploadedBy ?? null, uploadedAt: r.uploadedAt ?? null,
+            includedAs: r.uploadedById === userId ? fileName(r) : null,
+        }));
+    }
+
     // Change records name people by id; resolve them to current names.
     const flat = expenses.flatMap(e => e.history);
     const resolved = await resolveChanges(flat.map(h => h.changes ?? null));
@@ -170,7 +185,7 @@ async function collect(userId) {
     }));
 
     const own = list => list.filter(a => a.uploadedById === userId);
-    return { account, passkeys, groups, expenses, trips: tripList, ownFiles: [...own(attachments), ...own(documents)] };
+    return { account, passkeys, groups, expenses, trips: tripList, ownFiles: [...own(attachments), ...own(documents), ...own(receipts)] };
 }
 
 const safe = s => String(s || 'file').replace(/[\\/:*?"<>|\x00-\x1f]/g, '_').slice(0, 120);
@@ -202,14 +217,15 @@ function tripsCsv(trips) {
 const README = generated => `Your Splitty data, exported ${generated}.
 
 data.json     Everything Splitty holds that you can see: your account, passkeys,
-              your groups and their members, every expense with its shares,
-              and your trips with their items, places, attachments and travel
+              your groups and their members, every expense with its shares
+              and receipts, and your trips with their items, places, attachments and travel
               documents (yours, and those others shared with the trip).
 expenses.csv  One row per expense in your groups (amounts in normal units,
               e.g. 12.50; "My share" is your part of it).
 trips.csv     One row per trip item.
-files/        The files and travel documents you uploaded to trips. Files other
-              people uploaded are listed in data.json but not included.
+files/        The files and travel documents you uploaded to trips, and the
+              receipts you added to expenses. Files other people uploaded are
+              listed in data.json but not included.
 
 Not included: your password (Splitty only stores a one-way hash of it) and the
 private part of your passkeys (it never leaves your device).

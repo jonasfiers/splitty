@@ -6,6 +6,7 @@
 const driver = require('./neo4j');
 const { shareInGroupCurrency: share } = require('./money');
 const uploadStore = require('./uploadStore');
+const receiptService = require('./receiptService');
 
 // A member's net balance in a group (minor units of the group's currency,
 // positive = gets money back), computed like MEMBERS_OF_GROUP. Null when they
@@ -29,7 +30,7 @@ async function memberBalance(groupId, memberId) {
 }
 
 // Everything of the group goes: trips with their items, places, attachments,
-// photo album and follow links, and documents (and those files on disk), expenses with their shares and
+// photo album and follow links, and documents (and those files on disk), expenses with their receipts, shares and
 // history, invite links, deletion records, then the group. Needs no member,
 // so it also works for a group nobody belongs to any more.
 async function deleteGroupCompletely(groupId) {
@@ -72,6 +73,7 @@ async function deleteGroupCompletely(groupId) {
     // After the graph: a file without a node is harmless, a node pointing at
     // a missing file is not.
     await uploadStore.remove(storedNames);
+    await receiptService.removeOrphans();
     return true;
 }
 

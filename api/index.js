@@ -77,6 +77,9 @@ app.use('/follow', require('./routes/follow.js'));
 const { tokenService } = require('./crudService');
 const purgeExpiredTokens = async () => {
     try {
+        // Receipts whose expense went while a cleanup failed (receiptService.js).
+        const receipts = await require('./receiptService').removeOrphans();
+        if (receipts > 0) console.log(`Removed ${receipts} receipt${receipts === 1 ? '' : 's'} of deleted expenses`);
         const hashed = await tokenService.hashLegacy();
         if (hashed > 0) console.log(`Hashed ${hashed} stored token${hashed === 1 ? '' : 's'}`);
         const n = await tokenService.purgeExpired();

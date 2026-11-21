@@ -83,6 +83,39 @@ try {
     expect(errs.length === 0 && text > 20 && path === page, `${page}${path !== page ? ` (ended on ${path})` : ''}${text <= 20 ? ' — blank page' : ''}${errs.length ? ` — ${errs.join(' | ')}` : ''}`)
   }
 
+  console.log('Receipts on an expense')
+  await navigate(`${server.url}/groups/g1/expenses/e1`); await settle()
+  const receiptText = await evaluate(`document.querySelector('.receipts')?.textContent || ''`)
+  expect(receiptText.includes('supermarket-bill.jpg') && receiptText.includes('Add another receipt'), 'the expense lists its receipt and offers another')
+  // A big phone photo carrying a (fake) location in its EXIF block.
+  const sent = await evaluate(`(async () => {
+    const c = Object.assign(document.createElement('canvas'), { width: 3200, height: 2400 })
+    const g = c.getContext('2d')
+    for (let i = 0; i < 4000; i++) { g.fillStyle = 'hsl(' + (i * 37 % 360) + ',60%,' + (30 + i % 50) + '%)'; g.fillRect((i * 97) % 3200, (i * 53) % 2400, 60, 40) }
+    const jpeg = new Uint8Array(await (await new Promise(r => c.toBlob(r, 'image/jpeg', 0.97))).arrayBuffer())
+    const tag = new TextEncoder().encode('SMOKE-GPS-52.37N')
+    const tiff = [0x4d, 0x4d, 0, 0x2a, 0, 0, 0, 8, 0, 0, 0, 0, 0, 0]
+    const payload = [...new TextEncoder().encode('Exif'), 0, 0, ...tiff, ...tag]
+    const app1 = [0xff, 0xe1, (payload.length + 2) >> 8, (payload.length + 2) & 255, ...payload]
+    const photo = new File([jpeg.slice(0, 2), new Uint8Array(app1), jpeg.slice(2)], 'IMG_0042.jpeg', { type: 'image/jpeg' })
+    const input = document.querySelector('.receipts input[type=file]')
+    const dt = new DataTransfer(); dt.items.add(photo); input.files = dt.files
+    input.dispatchEvent(new Event('change', { bubbles: true }))
+    return photo.size
+  })()`)
+  for (let i = 0; i < 50 && !server.uploads.some(u => u.path === '/expenses/e1/receipts'); i++) await sleep(200)
+  const up = server.uploads.find(u => u.path === '/expenses/e1/receipts')
+  expect(!!up, 'the photo is uploaded to the expense')
+  if (up) {
+    const body = up.body.toString('latin1')
+    expect(/filename="IMG_0042\.jpg"/.test(body) && /Content-Type: image\/jpeg/.test(body), 'sent as a JPEG')
+    expect(up.body.length < sent / 2, `made smaller before sending (${Math.round(sent / 1024)} KB -> ${Math.round(up.body.length / 1024)} KB)`)
+    expect(!body.includes('SMOKE-GPS'), 'its location is gone')
+  }
+  await navigate(`${server.url}/groups/g1/expenses/new`); await settle()
+  expect((await evaluate(`document.body.textContent`)).includes('Add a photo or PDF'), 'a new expense can take a receipt')
+  takeErrors()
+
   console.log('Version on the profile page')
   await navigate(`${server.url}/profile`); await settle()
   const version = await evaluate(`document.querySelector('.profile-version')?.textContent || ''`)

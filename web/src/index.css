@@ -1401,6 +1401,11 @@ svg.icon-country text { font-family: var(--font-body); }
 /* Expense form: on desktop the narrow form is centred instead of hugging the
    left edge; from 1180px the split gets its own pane next to the fields. */
 .expense-form-split { margin-top: 1rem; }
+/* Receipts picked on the new-expense form (uploaded once it is saved). */
+.receipt-picks { list-style: none; margin: 0 0 8px; padding: 0; display: grid; gap: 4px; }
+.receipt-picks li { display: flex; align-items: center; gap: 8px; min-height: 36px; padding: 0 4px 0 12px; border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--surface); }
+.receipt-picks span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-sm); }
+.receipts .field-note { margin-top: 6px; }
 .member-av {
   width: 34px; height: 34px;
   border-radius: 50%;

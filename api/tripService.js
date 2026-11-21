@@ -771,10 +771,10 @@ const tripService = {
 
     // No user here on purpose: the download route authorises with a signed,
     // short-lived link instead of the bearer token (see routes/trips.js).
-    // Item attachments and trip documents alike (one download route).
+    // Item attachments, trip documents and expense receipts alike (one download route).
     getAttachmentById: async (id) => {
         const { records } = await driver.executeQuery(
-            `CALL { MATCH (a:Attachment {id: $id}) RETURN a UNION MATCH (a:Document {id: $id}) RETURN a }
+            `CALL { MATCH (a:Attachment {id: $id}) RETURN a UNION MATCH (a:Document {id: $id}) RETURN a UNION MATCH (a:Receipt {id: $id}) RETURN a }
              RETURN a LIMIT 1`, { id }
         );
         return records.length ? records[0].get('a').properties : null;

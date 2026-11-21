@@ -13,10 +13,6 @@ const { Readable } = require('stream');
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const DATE_OR_DATETIME = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2})?$/;
-// Signed attachment links are short-lived: anyone holding one can open the
-// file until it expires, also after leaving the group. The item page fetches
-// fresh links every few minutes (TripItemDetailPage), so this can stay short.
-const FILE_LINK_TTL = '5m';
 const LAT_LON = /^(-?\d{1,2}(?:\.\d+)?),(-?\d{1,3}(?:\.\d+)?)$/;
 const NEAR_METRES = 300; // a stop this close to a place of the trip is that place
 const MAX_LEGS = 12;
@@ -26,10 +22,8 @@ const MAX_LEGS = 12;
 const MAX_NAME_LOOKUPS = 8;
 const NAME_LOOKUP_MS = 10000;
 
-// Attachment links are signed with a key derived from JWT_SECRET, never with
-// the secret itself: a link must not double as a login token, or the reverse.
-const fileLinkSecret = () => `${process.env.JWT_SECRET}:trip-attachment`;
-const signFileLink = id => `/trips/files/${id}?sig=${jwt.sign({ att: id }, fileLinkSecret(), { expiresIn: FILE_LINK_TTL })}`;
+// Signed file links (5 minutes): fileLinks.js.
+const { signFileLink, verifyFileLink } = require('../fileLinks');
 
 // Photo links (tripPhotos.js): one signature per album per day, so the
 // browser's cache keeps the thumbnails all day. Valid two days, so a page
@@ -182,18 +176,13 @@ function parseStop(stop) {
     return { name, lat, lon };
 }
 
-// ── PUBLIC: download an attachment through a signed link ──
-// A link, not the bearer token, because a file has to open with a plain <a>:
-// the browser's own PDF and image viewers can not send an Authorization header.
+// ── PUBLIC: download a file through a signed link (fileLinks.js) ──
+// Trip attachments, trip documents and expense receipts alike.
 router.get('/files/:id', async (req, res) => {
     try {
-        let claim;
-        try {
-            claim = jwt.verify(String(req.query.sig || ''), fileLinkSecret());
-        } catch {
-            return res.status(403).json({ error: 'This link has expired. Reopen the item and try again.' });
-        }
-        if (claim.att !== req.params.id) return res.status(403).json({ error: 'Invalid link' });
+        const signedFor = verifyFileLink(req.query.sig);
+        if (!signedFor) return res.status(403).json({ error: 'This link has expired. Reopen the page and try again.' });
+        if (signedFor !== req.params.id) return res.status(403).json({ error: 'Invalid link' });
 
         const attachment = await tripService.getAttachmentById(req.params.id);
         if (!attachment) return res.status(404).json({ error: 'Attachment not found' });
@@ -471,10 +460,7 @@ router.post('/items/:itemId/attachments', (req, res) => {
                 return res.status(400).json({ error: `An item can have at most ${uploadStore.MAX_PER_ITEM} attachments.` });
             }
 
-            // Multipart filenames arrive as latin1 bytes; turn them back into
-            // UTF-8 and drop anything that is not part of a plain file name.
-            const filename = Buffer.from(req.file.originalname, 'latin1').toString('utf8')
-                .replace(/[\u0000-\u001f\u007f/\\]/g, '').trim().slice(0, 150) || 'attachment';
+            const filename = uploadStore.cleanFilename(req.file.originalname, 'attachment');
 
             const storedName = await uploadStore.save(req.file.buffer);
             const result = await tripService.createAttachment(itemId, req.user.id, {
@@ -547,8 +533,7 @@ router.post('/:id/documents', (req, res) => {
             if (await tripService.countOwnDocuments(tripId, req.user.id) >= MAX_DOCUMENTS) {
                 return res.status(400).json({ error: `You can add at most ${MAX_DOCUMENTS} documents to a trip.` });
             }
-            const filename = Buffer.from(req.file.originalname, 'latin1').toString('utf8')
-                .replace(/[\u0000-\u001f\u007f/\\]/g, '').trim().slice(0, 150) || 'document';
+            const filename = uploadStore.cleanFilename(req.file.originalname, 'document');
             const storedName = await uploadStore.save(req.file.buffer);
             const result = await tripService.createDocument(tripId, req.user.id, {
                 filename, mimeType: req.file.mimetype, size: req.file.size, storedName,

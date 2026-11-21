@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { useParams, Link, useNavigate } from 'react-router'
+import { useState, useEffect, useCallback } from 'react'
+import { useParams, Link, useNavigate, useLocation } from 'react-router'
 import client from '../api/client'
 import { formatCurrency, formatDate } from '../utils/currency.js'
 import { Avatar, colorFor } from '../components/Avatar.jsx'
@@ -14,6 +14,7 @@ import { leaveTo } from '../utils/history.js'
 import { useAuth } from '../context/AuthContext.jsx'
 import { swr } from '../utils/cache.js'
 import { iconOr } from '../utils/icons.js'
+import Receipts from '../components/Receipts/Receipts.jsx'
 
 export default function ExpenseDetailPage() {
   const confirm = useConfirm()
@@ -27,7 +28,8 @@ export default function ExpenseDetailPage() {
   const [shares, setShares] = useState([])
   const [members, setMembers] = useState([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
+  // A notice from the form (a receipt that could not be added).
+  const [error, setError] = useState(useLocation().state?.notice || '')
 
   const handleDelete = async () => {
     const what = expense.isTransfer ? 'transfer' : expense.isSettlement ? 'settlement' : 'expense'
@@ -66,6 +68,25 @@ export default function ExpenseDetailPage() {
       if (!cached) navigate(`/groups/${groupId}`, { state: { notice: 'This expense could not be found.' }, replace: true })
     }).finally(() => setLoading(false))
   }, [id, groupId])
+
+  // Receipt links are signed for 5 minutes (api/fileLinks.js): read the
+  // expense again after a change, every 4 minutes while the page is open,
+  // and on coming back to it, so a tap never hits an expired link.
+  const reload = useCallback(() => client.get(`/expenses/${id}`)
+    .then(({ data }) => { if (data.expense) setExpense(data.expense) })
+    .catch(() => {}), [id])
+  useEffect(() => {
+    let loadedAt = Date.now()
+    const refresh = () => {
+      if (document.visibilityState !== 'visible') return
+      loadedAt = Date.now()
+      reload()
+    }
+    const timer = setInterval(refresh, 4 * 60 * 1000)
+    const onVisible = () => { if (Date.now() - loadedAt > 60 * 1000) refresh() }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => { clearInterval(timer); document.removeEventListener('visibilitychange', onVisible) }
+  }, [reload])
 
   if (loading || !expense) return (
     <>
@@ -185,6 +206,9 @@ export default function ExpenseDetailPage() {
                 </div>
               </div>
             </>
+          )}
+          {!expense.isSettlement && !expense.isTransfer && (
+            <Receipts groupId={groupId} expenseId={id} receipts={expense.receipts ?? []} onChange={reload} onError={setError} />
           )}
           {!expense.isSettlement && !expense.isTransfer && <ExpenseHistory expenseId={id} />}
         </div>
