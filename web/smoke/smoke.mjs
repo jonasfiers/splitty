@@ -85,8 +85,10 @@ try {
 
   console.log('Receipts on an expense')
   await navigate(`${server.url}/groups/g1/expenses/e1`); await settle()
-  const receiptText = await evaluate(`document.querySelector('.receipts')?.textContent || ''`)
-  expect(receiptText.includes('supermarket-bill.jpg') && receiptText.includes('Add another receipt'), 'the expense lists its receipt and offers another')
+  await sleep(500)
+  const thumb = await evaluate(`(() => { const i = document.querySelector('.receipts .receipt-tile img'); return i ? { alt: i.alt, w: i.naturalWidth } : null })()`)
+  expect(thumb?.alt === 'supermarket-bill.jpg' && thumb.w > 0, `the expense shows its receipt as a thumbnail (${JSON.stringify(thumb)})`)
+  expect((await evaluate(`document.querySelector('.receipts')?.textContent || ''`)).includes('Add a photo or PDF'), 'and offers another')
   // A big phone photo carrying a (fake) location in its EXIF block.
   const sent = await evaluate(`(async () => {
     const c = Object.assign(document.createElement('canvas'), { width: 3200, height: 2400 })
@@ -98,7 +100,7 @@ try {
     const payload = [...new TextEncoder().encode('Exif'), 0, 0, ...tiff, ...tag]
     const app1 = [0xff, 0xe1, (payload.length + 2) >> 8, (payload.length + 2) & 255, ...payload]
     const photo = new File([jpeg.slice(0, 2), new Uint8Array(app1), jpeg.slice(2)], 'IMG_0042.jpeg', { type: 'image/jpeg' })
-    const input = document.querySelector('.receipts input[type=file]')
+    const input = document.querySelector('.receipts input[type=file][multiple]')
     const dt = new DataTransfer(); dt.items.add(photo); input.files = dt.files
     input.dispatchEvent(new Event('change', { bubbles: true }))
     return photo.size
@@ -114,6 +116,16 @@ try {
   }
   await navigate(`${server.url}/groups/g1/expenses/new`); await settle()
   expect((await evaluate(`document.body.textContent`)).includes('Add a photo or PDF'), 'a new expense can take a receipt')
+  const picked = await evaluate(`(async () => {
+    const bytes = await (await fetch('/api/trips/files/any?sig=x')).blob()
+    const input = document.querySelector('.receipt-add input[type=file][multiple]')
+    const dt = new DataTransfer(); dt.items.add(new File([bytes], 'lunch.png', { type: 'image/png' })); input.files = dt.files
+    input.dispatchEvent(new Event('change', { bubbles: true }))
+    await new Promise(r => setTimeout(r, 400))
+    const img = document.querySelector('.receipt-tile img')
+    return img ? { blob: img.src.startsWith('blob:'), w: img.naturalWidth } : null
+  })()`)
+  expect(picked?.blob && picked.w > 0, 'a picked photo shows as a thumbnail before saving')
   takeErrors()
 
   console.log('Version on the profile page')

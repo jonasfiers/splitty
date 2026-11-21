@@ -68,6 +68,11 @@ export function startServer({ root, port = 5190 }) {
       const chunks = []
       req.on('data', c => chunks.push(c)).on('end', () => {
         const json = (o, s = 200) => { res.writeHead(s, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(o)) }
+        // A signed file link (thumbnails): any image will do.
+        if (req.method === 'GET' && api.startsWith('/trips/files/')) {
+          res.writeHead(200, { 'Content-Type': 'image/png' })
+          return res.end(fs.readFileSync(new URL('./ticket.png', import.meta.url)))
+        }
         if (req.method !== 'GET') {
           posts.push(`${req.method} ${api}`)
           if (/multipart/.test(req.headers['content-type'] || '')) uploads.push({ path: api, body: Buffer.concat(chunks) })

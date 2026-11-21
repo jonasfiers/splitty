@@ -1,16 +1,15 @@
-import { useRef, useState, useMemo } from 'react'
+import { useRef, useState, useMemo, useEffect } from 'react'
 import { useNavigate } from 'react-router'
 import client from '../../api/client'
-import { ListRow } from '../List/List.jsx'
-import { RowAction } from '../Detail/Detail.jsx'
 import Icon from '../Icon/Icon.jsx'
 import { useConfirm } from '../Confirm/ConfirmProvider.jsx'
 import { isStandalone } from '../../utils/standalone.js'
-import { formatBytes } from '../../utils/trip.js'
+import { useMediaQuery } from '../../utils/useMediaQuery.js'
 import { shrinkImage } from '../../utils/shrinkImage.js'
 
 // Receipts on an expense (api/receiptService.js): photos or PDFs of the bill,
-// seen, added and removed by everyone in the group.
+// seen, added and removed by everyone in the group. Shown as thumbnails; a
+// PDF as its icon and name.
 export const MAX_RECEIPTS = 5
 export const RECEIPT_TYPES = 'image/*,application/pdf'
 
@@ -25,19 +24,83 @@ export const uploadError = err => err?.response?.status === 413
   ? 'The file is too large (10 MB at most).'
   : err?.response?.data?.error || 'Failed to add the receipt.'
 
-const fileIcon = r => <Icon name={r.mimeType === 'application/pdf' ? 'file-text' : 'image'} />
+const isPdf = type => type === 'application/pdf'
 
+// One receipt: its picture (or a PDF's icon and name), a tap opens it, ✕ removes it.
+// The picture keeps the link it first loaded: the page refreshes its signed
+// links every 4 minutes, and a new link would download the image again. Only
+// when that link has expired (a page shown from cache) is the fresh one used.
+function ReceiptTile({ name, type, src, href, onOpen, onRemove, title }) {
+  const [shown, setShown] = useState(src)
+  const face = isPdf(type) || !src
+    ? <span className="receipt-tile-file"><Icon name="file-text" /><span>{name}</span></span>
+    : <img src={shown} alt={name} loading="lazy" onError={() => { if (shown !== src) setShown(src) }} />
+  return (
+    <li className="receipt-tile" title={title ?? name}>
+      {href
+        ? <a href={href} onClick={onOpen} {...(!onOpen && { target: '_blank', rel: 'noopener noreferrer' })} aria-label={`Open ${name}`}>{face}</a>
+        : face}
+      {onRemove && (
+        <button type="button" className="receipt-tile-remove" aria-label={`Remove ${name}`} onClick={onRemove}>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7L7 17" /></svg>
+        </button>
+      )}
+    </li>
+  )
+}
+
+// "Take a photo" (the phone's own camera: a full-resolution still, with focus
+// and flash) on touch screens, and "Choose a file" everywhere.
+function AddButtons({ onFiles, busy, label }) {
+  const camera = useRef(null)
+  const picker = useRef(null)
+  const touch = useMediaQuery('(pointer: coarse)')
+  const take = e => { const files = [...(e.target.files ?? [])]; e.target.value = ''; if (files.length) onFiles(files) }
+  return (
+    <div className="receipt-add">
+      <input ref={camera} type="file" accept="image/*" capture="environment" hidden onChange={take} />
+      <input ref={picker} type="file" accept={RECEIPT_TYPES} multiple hidden onChange={take} />
+      {touch && (
+        <button type="button" className="btn btn-secondary btn-sm" onClick={() => camera.current?.click()} disabled={busy}>
+          <Icon name="camera" /> {busy ? 'Adding…' : label ?? 'Take a photo'}
+        </button>
+      )}
+      <button type="button" className={`btn btn-sm ${touch ? 'btn-ghost' : 'btn-secondary'}`} onClick={() => picker.current?.click()} disabled={busy}>
+        {touch ? 'Choose a file' : busy ? 'Adding…' : 'Add a photo or PDF'}
+      </button>
+    </div>
+  )
+}
+
+// On the new-expense form: files picked, not yet sent (uploaded once the
+// expense is saved). Thumbnails from the files themselves.
+export function PickedReceipts({ files, onChange }) {
+  const urls = useMemo(() => files.map(f => (f.type.startsWith('image/') ? URL.createObjectURL(f) : null)), [files])
+  useEffect(() => () => urls.forEach(u => u && URL.revokeObjectURL(u)), [urls])
+  return <>
+    {files.length > 0 && (
+      <ul className="receipt-tiles">
+        {files.map((f, i) => (
+          <ReceiptTile key={`${f.name}-${f.lastModified}-${i}`} name={f.name} type={f.type} src={urls[i]}
+            onRemove={() => onChange(files.filter((_, j) => j !== i))} />
+        ))}
+      </ul>
+    )}
+    {files.length < MAX_RECEIPTS && (
+      <AddButtons label={files.length ? 'Take another' : undefined} onFiles={picked => onChange([...files, ...picked].slice(0, MAX_RECEIPTS))} />
+    )}
+  </>
+}
+
+// On the expense page: what is stored, with adding and removing.
 export default function Receipts({ groupId, expenseId, receipts, onChange, onError }) {
   const confirm = useConfirm()
   const navigate = useNavigate()
-  const fileInput = useRef(null)
   const [uploading, setUploading] = useState(false)
   const standalone = useMemo(isStandalone, [])
-  const full = receipts.length >= MAX_RECEIPTS
 
-  const handleAdd = async e => {
-    const files = [...(e.target.files ?? [])].slice(0, MAX_RECEIPTS - receipts.length)
-    e.target.value = ''
+  const handleAdd = async picked => {
+    const files = picked.slice(0, MAX_RECEIPTS - receipts.length)
     if (!files.length || uploading) return
     setUploading(true)
     onError('')
@@ -62,38 +125,34 @@ export default function Receipts({ groupId, expenseId, receipts, onChange, onErr
     onChange()
   }
 
+  // In a browser tab: the browser's own viewer in a new tab. In the installed
+  // app that would fill the window with no way back: Splitty's viewer.
   const viewer = r => `/groups/${groupId}/expenses/${expenseId}/receipts/${r.id}`
 
   return (
     <div className="receipts">
       <div className="section-label">Receipts</div>
-      {receipts.length > 0 && (
-        <div className="list">
-          {receipts.map(r => (
-            // In a browser tab: the browser's own viewer in a new tab. In the
-            // installed app that would fill the window with no way back:
-            // Splitty's viewer (as for trip files).
-            <ListRow
-              key={r.id}
-              href={standalone ? viewer(r) : `/api${r.url}`}
-              {...(standalone
-                ? { onClick: event => { event.preventDefault(); navigate(viewer(r)) } }
-                : { target: '_blank', rel: 'noopener noreferrer' })}
-              icon={fileIcon(r)}
-              title={r.filename}
-              meta={[formatBytes(r.size), r.uploadedBy && `added by ${r.uploadedBy}`].filter(Boolean).join(' · ')}
-              end={<RowAction label={`Delete ${r.filename}`} onClick={() => handleDelete(r)} />}
-            />
-          ))}
-        </div>
-      )}
-      {!full && <>
-        <input ref={fileInput} type="file" accept={RECEIPT_TYPES} multiple hidden onChange={handleAdd} />
-        <button type="button" className="btn btn-secondary btn-block" onClick={() => fileInput.current?.click()} disabled={uploading}>
-          {uploading ? 'Adding…' : receipts.length ? 'Add another receipt' : 'Add a receipt'}
-        </button>
-        <p className="field-note">A photo of the bill or a PDF. Photos are made smaller before they’re sent.</p>
-      </>}
+      <div className="card">
+        {receipts.length > 0 && (
+          <ul className="receipt-tiles">
+            {receipts.map(r => (
+              <ReceiptTile
+                key={r.id}
+                name={r.filename}
+                type={r.mimeType}
+                src={`/api${r.url}`}
+                href={standalone ? viewer(r) : `/api${r.url}`}
+                onOpen={standalone ? e => { e.preventDefault(); navigate(viewer(r)) } : undefined}
+                onRemove={() => handleDelete(r)}
+                title={r.uploadedBy ? `${r.filename} · added by ${r.uploadedBy}` : r.filename}
+              />
+            ))}
+          </ul>
+        )}
+        {receipts.length < MAX_RECEIPTS
+          ? <AddButtons onFiles={handleAdd} busy={uploading} label={receipts.length ? 'Take another' : undefined} />
+          : <p className="field-note">That’s the most an expense can have ({MAX_RECEIPTS}).</p>}
+      </div>
     </div>
   )
 }
