@@ -16,7 +16,7 @@ const members = [{ ...USER, isAdmin: true }, OTHER]
 const group = { id: 'g1', name: 'Flatmates', currencyIso: 'EUR', icon: 'home', balanceLent: 12.5, balanceOwed: 0, memberCount: 2, members }
 const expense = {
   id: 'e1', groupId: 'g1', description: 'Groceries', amount: 25, currencyIso: 'EUR', date: day(-1), createdAt: `${day(-1)}T10:00:00Z`, paidBy: USER, paidByUserId: 'u1', categoryId: null, splitType: 'equal',
-  receipts: [{ id: 'r1', filename: 'supermarket-bill.jpg', mimeType: 'image/jpeg', size: 182000, uploadedBy: 'Ann', url: '/trips/files/r1?sig=smoke' }],
+  receipts: [{ id: 'r1', filename: 'supermarket-bill.jpg', mimeType: 'image/jpeg', size: 182000, uploadedBy: 'Ann', url: '/trips/files/r1?sig=smoke', thumbUrl: '/trips/files/r1/thumb?sig=smoke' }],
 }
 const shares = [{ userId: 'u1', user: USER, amount: 12.5 }, { userId: 'u2', user: OTHER, amount: 12.5 }]
 const trip = { id: 't1', title: 'Taiwan', startDate: day(-2), endDate: day(10), icon: 'country:TW', groupId: 'g1', group }

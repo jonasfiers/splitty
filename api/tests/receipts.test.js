@@ -13,10 +13,14 @@ const PNG = Buffer.from('89504e470d0a1a0a0000000d4948445200000001000000010806000
 const PDF = Buffer.from('%PDF-1.4\n%receipt\n');
 const raw = url => fetch(BASE + url);
 
-// Adds a receipt as `who`; returns the response.
-function addReceipt(who, expenseId, { bytes = PNG, type = 'image/png', name = 'bill.png' } = {}) {
+// The smallest JPEG start the server checks for, as a stand-in preview.
+const JPEG = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.from('thumbnail')]);
+
+// Adds a receipt as `who` (with a preview when `thumb` is given); returns the response.
+function addReceipt(who, expenseId, { bytes = PNG, type = 'image/png', name = 'bill.png', thumb } = {}) {
     const form = new FormData();
     form.append('file', new Blob([bytes], { type }), name);
+    if (thumb) form.append('thumbnail', new Blob([thumb], { type: 'image/jpeg' }), 'thumb.jpg');
     return who.api.post(`/expenses/${expenseId}/receipts`, form);
 }
 const receiptsOf = async (who, expenseId) => (await who.api.get(`/expenses/${expenseId}`)).body.expense.receipts;
@@ -153,4 +157,41 @@ test('the export holds the receipts on your expenses, and the files you added', 
     assert.ok(mine.includedAs && zip[mine.includedAs], 'your own file is in the zip');
     assert.deepEqual(Buffer.from(zip[mine.includedAs]), PNG);
     assert.equal(exp.receipts.find(r => r.filename === 'bobs.pdf').includedAs, null, "someone else's is listed, not included");
+});
+
+test('a photo can come with a small preview: served on its own link, gone with the receipt', async () => {
+    const g = await createGroup([ann, bob]);
+    const e = (await addExpense(ann, g, { amount: 1000, payer: ann, shares: { [bob.id]: 500 } })).body.id;
+    const files = filesOnDisk();
+    const up = await addReceipt(ann, e, { thumb: JPEG });
+    assert.equal(up.status, 201, JSON.stringify(up.body));
+    assert.equal(filesOnDisk(), files + 2, 'the photo and its preview');
+    const [r] = await receiptsOf(bob, e);
+    assert.match(r.thumbUrl, /^\/trips\/files\/[0-9a-f-]+\/thumb\?sig=/);
+    const thumb = await raw(r.thumbUrl);
+    assert.equal(thumb.status, 200);
+    assert.equal(thumb.headers.get('content-type'), 'image/jpeg');
+    assert.deepEqual(Buffer.from(await thumb.arrayBuffer()), JPEG);
+    assert.deepEqual(Buffer.from(await (await raw(r.url)).arrayBuffer()), PNG, 'the link without /thumb is the receipt itself');
+    assert.equal((await raw(`/trips/files/${r.id}/thumb`)).status, 403, 'a preview needs the signature too');
+
+    const withoutThumb = await addReceipt(ann, e);
+    const plain = (await receiptsOf(ann, e)).find(x => x.id === withoutThumb.body.receipt.id);
+    assert.equal(plain.thumbUrl, null, 'no preview sent, none offered');
+    assert.equal((await raw(plain.url.replace('?', '/thumb?'))).status, 404);
+
+    assert.equal((await bob.api.del(`/expenses/receipts/${r.id}`)).status, 200);
+    assert.equal(filesOnDisk(), files + 1, 'both files of the removed receipt are gone');
+    assert.equal((await ann.api.del(`/expenses/${e}`)).status, 200);
+    assert.equal(filesOnDisk(), files, 'and the rest with the expense');
+});
+
+test('a preview that is not a small JPEG is refused, and nothing is kept', async () => {
+    const g = await createGroup([ann, bob]);
+    const e = (await addExpense(ann, g, { amount: 1000, payer: ann, shares: { [bob.id]: 500 } })).body.id;
+    const files = filesOnDisk();
+    assert.equal((await addReceipt(ann, e, { thumb: Buffer.from('<svg onload=alert(1)>') })).status, 415);
+    assert.equal((await addReceipt(ann, e, { thumb: Buffer.concat([JPEG, Buffer.alloc(300 * 1024)]) })).status, 415, 'too big to be a preview');
+    assert.equal(filesOnDisk(), files);
+    assert.deepEqual(await receiptsOf(ann, e), []);
 });

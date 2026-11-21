@@ -86,8 +86,8 @@ try {
   console.log('Receipts on an expense')
   await navigate(`${server.url}/groups/g1/expenses/e1`); await settle()
   await sleep(500)
-  const thumb = await evaluate(`(() => { const i = document.querySelector('.receipts .receipt-tile img'); return i ? { alt: i.alt, w: i.naturalWidth } : null })()`)
-  expect(thumb?.alt === 'supermarket-bill.jpg' && thumb.w > 0, `the expense shows its receipt as a thumbnail (${JSON.stringify(thumb)})`)
+  const thumb = await evaluate(`(() => { const i = document.querySelector('.receipts .receipt-tile img'); return i ? { alt: i.alt, w: i.naturalWidth, thumb: i.src.includes('/thumb?') } : null })()`)
+  expect(thumb?.alt === 'supermarket-bill.jpg' && thumb.w > 0 && thumb.thumb, `the expense shows its receipt's preview as a thumbnail (${JSON.stringify(thumb)})`)
   expect((await evaluate(`document.querySelector('.receipts')?.textContent || ''`)).includes('Add a photo or PDF'), 'and offers another')
   // A big phone photo carrying a (fake) location in its EXIF block.
   const sent = await evaluate(`(async () => {
@@ -113,6 +113,8 @@ try {
     expect(/filename="IMG_0042\.jpg"/.test(body) && /Content-Type: image\/jpeg/.test(body), 'sent as a JPEG')
     expect(up.body.length < sent / 2, `made smaller before sending (${Math.round(sent / 1024)} KB -> ${Math.round(up.body.length / 1024)} KB)`)
     expect(!body.includes('SMOKE-GPS'), 'its location is gone')
+    const preview = /name="thumbnail"; filename="thumbnail\.jpg"\r\nContent-Type: image\/jpeg\r\n\r\n([\s\S]*?)\r\n--/.exec(body)
+    expect(!!preview && preview[1].length < 60 * 1024, `a small preview goes with it (${preview ? Math.round(preview[1].length / 1024) + ' KB' : 'none'})`)
   }
   await navigate(`${server.url}/groups/g1/expenses/new`); await settle()
   expect((await evaluate(`document.body.textContent`)).includes('Add a photo or PDF'), 'a new expense can take a receipt')

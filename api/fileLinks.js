@@ -16,7 +16,10 @@ const FILE_LINK_TTL = '5m';
 const fileLinkSecret = () => `${process.env.JWT_SECRET}:trip-attachment`;
 
 // The download route lives in routes/trips.js: GET /trips/files/:id?sig=…
-const signFileLink = id => `/trips/files/${id}?sig=${jwt.sign({ att: id }, fileLinkSecret(), { expiresIn: FILE_LINK_TTL })}`;
+// A file's preview (a receipt's thumbnail) is /trips/files/:id/thumb, under
+// the same signature: it shows nothing the file itself doesn't.
+const signFileLink = (id, { thumb = false } = {}) =>
+    `/trips/files/${id}${thumb ? '/thumb' : ''}?sig=${jwt.sign({ att: id }, fileLinkSecret(), { expiresIn: FILE_LINK_TTL })}`;
 
 // The file id the link was signed for, or null when it is invalid or expired.
 function verifyFileLink(sig) {

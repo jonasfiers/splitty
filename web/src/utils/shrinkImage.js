@@ -36,10 +36,20 @@ export async function shrinkImage(file) {
   }
 }
 
-// A small preview of a picked photo, as a data: URL: the site's CSP allows
-// data: images but not blob: ones (img-src 'self' data:). Null when the
-// browser can not draw the file.
+// A small preview of a photo, drawn on a canvas; null when the browser can
+// not draw the file. thumbnailOf gives a data: URL to show (the site's CSP
+// allows data: images but not blob: ones), thumbnailBlob a JPEG to upload
+// (fetching a data: URL is refused too: connect-src 'self').
 export async function thumbnailOf(file, edge = 320) {
+  return (await drawThumbnail(file, edge))?.toDataURL('image/jpeg', 0.75) ?? null
+}
+
+export async function thumbnailBlob(file, edge = 320) {
+  const canvas = await drawThumbnail(file, edge)
+  return canvas ? new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.75)) : null
+}
+
+async function drawThumbnail(file, edge) {
   if (!file?.type?.startsWith('image/')) return null
   let bitmap
   try {
@@ -56,7 +66,7 @@ export async function thumbnailOf(file, edge = 320) {
     ctx.fillStyle = '#fff'
     ctx.fillRect(0, 0, canvas.width, canvas.height)
     ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height)
-    return canvas.toDataURL('image/jpeg', 0.75)
+    return canvas
   } finally {
     bitmap.close?.()
   }

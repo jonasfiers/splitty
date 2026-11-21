@@ -177,8 +177,9 @@ function parseStop(stop) {
 }
 
 // ── PUBLIC: download a file through a signed link (fileLinks.js) ──
-// Trip attachments, trip documents and expense receipts alike.
-router.get('/files/:id', async (req, res) => {
+// Trip attachments, trip documents and expense receipts alike; /thumb gives
+// a receipt's small preview (404 when it has none: show the file instead).
+router.get(['/files/:id', '/files/:id/thumb'], async (req, res) => {
     try {
         const signedFor = verifyFileLink(req.query.sig);
         if (!signedFor) return res.status(403).json({ error: 'This link has expired. Reopen the page and try again.' });
@@ -186,6 +187,14 @@ router.get('/files/:id', async (req, res) => {
 
         const attachment = await tripService.getAttachmentById(req.params.id);
         if (!attachment) return res.status(404).json({ error: 'Attachment not found' });
+
+        if (req.path.endsWith('/thumb')) {
+            if (!attachment.thumbStoredName) return res.status(404).json({ error: 'No preview' });
+            res.set({ 'Content-Type': 'image/jpeg', 'Cache-Control': 'private, max-age=300' });
+            return res.sendFile(uploadStore.filePath(attachment.thumbStoredName), err => {
+                if (err && !res.headersSent) res.status(404).json({ error: 'Preview is missing' });
+            });
+        }
 
         res.set({
             'Content-Type': attachment.mimeType,
