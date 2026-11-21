@@ -191,6 +191,16 @@ try {
   await send('Network.emulateNetworkConditions', { offline: false, latency: 0, downloadThroughput: -1, uploadThroughput: -1 })
   takeErrors()
 
+  console.log('Receipts in the Activity feed')
+  // Network back on before this (the offline check above turns it off and on).
+  await navigate(`${server.url}/activity`); await settle()
+  const actRows = await evaluate(`[...document.querySelectorAll('.act-row')].map(r => ({ desc: r.querySelector('.act-desc')?.textContent, meta: r.querySelector('.act-text .act-meta')?.textContent, amt: r.querySelector('.act-amt')?.textContent || null, href: r.getAttribute('href') }))`)
+  const rcpt = actRows.find(r => /added a receipt/.test(r.meta || ''))
+  expect(rcpt && rcpt.desc === 'Groceries' && rcpt.amt === null && rcpt.href === '/groups/g1/expenses/e1', `a receipt row names its expense, has no amount and opens the expense (${JSON.stringify(rcpt)})`)
+  const exp = actRows.find(r => /Smoke Tester added/.test(r.meta || ''))
+  expect(exp && exp.amt, `the expense row keeps its amount (${JSON.stringify(exp)})`)
+  takeErrors()
+
   console.log('Version on the profile page')
   await navigate(`${server.url}/profile`); await settle()
   const version = await evaluate(`document.querySelector('.profile-version')?.textContent || ''`)

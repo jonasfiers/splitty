@@ -7,7 +7,7 @@ import Loading from '../components/Loading.jsx'
 import { useMediaQuery } from '../utils/useMediaQuery.js'
 import TabHeader from '../components/PageHeader/TabHeader.jsx'
 import { tintClass, moneyTile } from '../utils/categoryColours.js'
-import { activityLink, activityVerb, activityMatches, activityIcon, activityTone, isTripActivity, isDeletedActivity, actionOf } from '../utils/activity.js'
+import { activityLink, activityVerb, activityMatches, activityIcon, activityTone, isDeletedActivity, actionOf, hasAmount } from '../utils/activity.js'
 import { summarizeChanges } from '../utils/expenseChanges.js'
 import EmptyState from '../components/EmptyState/EmptyState.jsx'
 import { waitAtMost } from '../utils/pageGate.jsx'
@@ -206,7 +206,6 @@ export default function ActivityPage() {
           <div className="card act-day-card">
             {items.map((a, i) => {
               const g = groups.get(a.groupId)
-              const trip = isTripActivity(a)
               const to = activityLink(a)
               const Row = to ? Link : 'div'
               return (
@@ -228,7 +227,7 @@ export default function ActivityPage() {
                     {a.changes?.length > 0 && <div className="act-changes">{summarizeChanges(a.changes)}</div>}
                   </div>
                   <div className="act-end">
-                    {!trip && <div className="act-amt">{formatCurrency(a.amount, a.currencyIso)}</div>}
+                    {hasAmount(a) && <div className="act-amt">{formatCurrency(a.amount, a.currencyIso)}</div>}
                     <div className="act-meta">{timeLabel(a.timestamp)}</div>
                   </div>
                 </Row>

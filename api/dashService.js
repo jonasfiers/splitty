@@ -138,9 +138,10 @@ const dashService = {
         }
     },
 
-    // ACTIVITY CARDS — expenses (added / edited / settlements) and trips
-    // (trip or item added / edited, file uploaded) in the user's groups,
-    // newest first. Every row carries `kind`: expense | trip | tripItem | file.
+    // ACTIVITY CARDS — expenses (added / edited / settlements), receipts on
+    // expenses (added / removed) and trips (trip or item added / edited, file
+    // uploaded) in the user's groups, newest first. Every row carries `kind`:
+    // expense | receipt | trip | tripItem | file.
     getActivity: async (userId) => {
         try {
             // Every branch returns the same columns, in the same order.
@@ -178,13 +179,20 @@ const dashService = {
                        [l IN labels(i) WHERE l <> 'TripItem'][0] AS itemKind, i.mode AS itemMode, i.title AS itemTitle,
                        null AS changes
                 UNION ALL
+                MATCH (u:User)<-[r:UPLOADED_BY]-(rc:Receipt)-[:RECEIPT_OF]->(e:Expense)-[:BALANCE_IN]->(g:Group)<-[:MEMBER_OF]-(:User {id: $userId})
+                RETURN 'receipt' AS kind, u.name AS userName, g.id AS groupId, 'UPLOADED_BY' AS action, r.on AS timestamp,
+                       e.id AS expenseId, e.description AS description, null AS amount, null AS currencyIso,
+                       false AS isSettlement, false AS isTransfer, null AS categoryIcon, null AS categoryColour,
+                       null AS tripId, null AS tripTitle, null AS itemId, null AS itemKind, null AS itemMode, rc.filename AS itemTitle,
+                       null AS changes
+                UNION ALL
                 MATCH (u:User)<-[:DELETED_BY]-(d:Deletion)-[:IN_GROUP]->(g:Group)<-[:MEMBER_OF]-(:User {id: $userId})
                 RETURN CASE WHEN d.kind IN ['expense', 'settlement', 'transfer'] THEN 'expense' ELSE d.kind END AS kind,
                        u.name AS userName, g.id AS groupId, 'DELETED_BY' AS action, d.on AS timestamp,
-                       null AS expenseId, d.title AS description, d.amount AS amount, d.currencyIso AS currencyIso,
+                       d.expenseId AS expenseId, d.title AS description, d.amount AS amount, d.currencyIso AS currencyIso,
                        d.kind = 'settlement' AS isSettlement, d.kind = 'transfer' AS isTransfer, d.categoryIcon AS categoryIcon, d.categoryColour AS categoryColour,
                        d.tripId AS tripId, d.tripTitle AS tripTitle, d.itemId AS itemId, d.itemKind AS itemKind,
-                       d.itemMode AS itemMode, d.itemTitle AS itemTitle, null AS changes`,
+                       d.itemMode AS itemMode, coalesce(d.itemTitle, d.filename) AS itemTitle, null AS changes`,
                 {userId}
             )
             const activities = records.map(record => {
@@ -207,6 +215,14 @@ const dashService = {
                     categoryIcon: record.get('categoryIcon') || null,
                     categoryColour: record.get('categoryColour') || null,
                     changesRaw: record.get('changes') ?? null,
+                }
+                // A receipt added to / removed from an expense (2026-11-21):
+                // the expense is the row's subject; `filename` is the file.
+                if (kind === 'receipt') return {
+                    ...base,
+                    expenseId: record.get('expenseId'),
+                    filename: record.get('itemTitle'),
+                    isSettlement: false,
                 }
                 return {
                     ...base,

@@ -47,7 +47,12 @@ const ROUTES = [
   [/^\/groups\/g1\/category-totals/, () => ({ totals: [] })],
   [/^\/dash\/insights/, () => ({ monthly: [], categories: [], members: [], byDow: [] })],
   [/^\/dash\/balance/, () => ({ currencies: [{ iso: 'TWD', lent: 20000, owed: 50000 }, { iso: 'EUR', lent: 1250, owed: 0 }] })],
-  [/^\/dash\/(recent-spend|activity|friends)/, () => ({})],
+  // Activity: an expense and a receipt added to it (kind 'receipt', 2026-11-21).
+  [/^\/dash\/activity/, () => ({ success: true, activities: [
+    { kind: 'receipt', action: 'UPLOADED_BY', userName: 'Ann', groupId: 'g1', timestamp: Date.now() - 60000, description: 'Groceries', expenseId: 'e1', filename: 'bill.jpg', isSettlement: false },
+    { kind: 'expense', action: 'CREATED_BY', userName: 'Smoke Tester', groupId: 'g1', timestamp: Date.now() - 120000, description: 'Groceries', expenseId: 'e1', amount: 2500, currencyIso: 'EUR', isSettlement: false, isTransfer: false, categoryIcon: null, categoryColour: null, changes: [] },
+  ] })],
+  [/^\/dash\/(recent-spend|friends)/, () => ({})],
   [/^\/expenses\/e1\/history$/, () => ({ history: [] })],
   [/^\/expenses\/e1$/, () => ({ expense, shares, members })],
   [/^\/currencies/, () => ({ currencies: [{ iso: 'EUR', name: 'Euro', symbol: '€' }, { iso: 'TWD', name: 'New Taiwan dollar', symbol: 'NT$' }] })],

@@ -195,3 +195,34 @@ test('a preview that is not a small JPEG is refused, and nothing is kept', async
     assert.equal(filesOnDisk(), files);
     assert.deepEqual(await receiptsOf(ann, e), []);
 });
+
+test('receipts show in the Activity feed: added and removed, for the group only, linked to their expense', async () => {
+    const g = await createGroup([ann, bob]);
+    const e = (await addExpense(ann, g, { amount: 2000, payer: ann, shares: { [bob.id]: 1000 }, description: 'Night market' })).body.id;
+    const r = (await addReceipt(bob, e, { name: 'stall.png' })).body.receipt;
+    const rows = async who => (await who.api.get('/dash/activity')).body.activities.filter(a => a.kind === 'receipt' && a.groupId === g);
+
+    const [added] = await rows(ann);
+    assert.ok(added, 'a member sees the receipt being added');
+    assert.equal(added.action, 'UPLOADED_BY');
+    assert.equal(added.userName, 'Bob');
+    assert.equal(added.expenseId, e);
+    assert.equal(added.description, 'Night market', 'the expense is the subject');
+    assert.equal(added.filename, 'stall.png');
+    assert.equal(added.amount, undefined, 'no amount: the row is not a new expense');
+    assert.deepEqual(await rows(dan), [], 'someone outside the group sees nothing');
+
+    assert.equal((await ann.api.del(`/expenses/receipts/${r.id}`)).status, 200);
+    const after = await rows(bob);
+    assert.equal(after.length, 1, 'the upload row goes with the receipt; a removal row takes its place');
+    assert.equal(after[0].action, 'DELETED_BY');
+    assert.equal(after[0].userName, 'Ann');
+    assert.equal(after[0].description, 'Night market');
+    assert.equal(after[0].filename, 'stall.png');
+
+    await addReceipt(bob, e);
+    assert.equal((await ann.api.del(`/expenses/${e}`)).status, 200);
+    const gone = (await bob.api.get('/dash/activity')).body.activities.filter(a => a.groupId === g);
+    assert.equal(gone.filter(a => a.kind === 'receipt' && a.action === 'UPLOADED_BY').length, 0, 'receipts deleted with their expense leave no upload rows');
+    assert.equal(gone.filter(a => a.kind === 'receipt' && a.action === 'DELETED_BY').length, 1, 'and no extra removal rows: the expense deletion covers them');
+});

@@ -69,10 +69,18 @@ const receiptService = {
 
     // Removes it if the user is in its group; returns the stored names (the
     // file and its preview) to delete from disk, empty when nothing was removed.
+    // Leaves a (:Deletion {kind: 'receipt'}) for the Activity feed, created in
+    // the same query (2026-11-21), like trip files do. Receipts that go with
+    // their expense leave none: the expense's own deletion record covers them.
     remove: async (receiptId, userId) => {
         const { records } = await driver.executeQuery(
-            `MATCH (:User {id: $userId})-[:MEMBER_OF]->(:Group)<-[:BALANCE_IN]-(:Expense)<-[:RECEIPT_OF]-(r:Receipt {id: $receiptId})
-             WITH r, [x IN [r.storedName, r.thumbStoredName] WHERE x IS NOT NULL] AS storedNames
+            `MATCH (u:User {id: $userId})-[:MEMBER_OF]->(g:Group)<-[:BALANCE_IN]-(e:Expense)<-[:RECEIPT_OF]-(r:Receipt {id: $receiptId})
+             WITH u, g, e, r, [x IN [r.storedName, r.thumbStoredName] WHERE x IS NOT NULL] AS storedNames
+             CREATE (d:Deletion {
+                 id: randomUUID(), on: datetime(), kind: 'receipt', title: e.description,
+                 filename: r.filename, expenseId: e.id
+             })-[:IN_GROUP]->(g)
+             CREATE (d)-[:DELETED_BY]->(u)
              DETACH DELETE r
              RETURN storedNames`,
             { receiptId, userId }

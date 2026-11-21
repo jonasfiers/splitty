@@ -5,7 +5,7 @@ import { formatCurrency } from '../utils/currency.js'
 import { timeAgo } from '../utils/time.js'
 import { today, formatDateRange, tripWhen } from '../utils/trip.js'
 import { isActive } from './TodayTrip.jsx'
-import { activityLink, activityVerb, isTripActivity } from '../utils/activity.js'
+import { activityLink, activityVerb, hasAmount } from '../utils/activity.js'
 import { useGate } from '../utils/pageGate.jsx'
 import { swrOne } from '../utils/cache.js'
 import { tripIcon } from '../utils/icons.js'
@@ -135,7 +135,7 @@ function RecentActivity({ activity }) {
             to={activityLink(a) || '/activity'}
             title={a.description}
             meta={`${a.userName} ${activityVerb(a)} · ${timeAgo(a.timestamp)}`}
-            aside={!isTripActivity(a) && <span className="list-row-amt">{formatCurrency(a.amount, a.currencyIso)}</span>}
+            aside={hasAmount(a) && <span className="list-row-amt">{formatCurrency(a.amount, a.currencyIso)}</span>}
           />
         ))}
       </List>
