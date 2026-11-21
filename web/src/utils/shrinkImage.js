@@ -50,6 +50,7 @@ export async function thumbnailBlob(file, edge = 320) {
 }
 
 async function drawThumbnail(file, edge) {
+  if (file?.type === 'application/pdf') return drawPdfPage(file, edge)
   if (!file?.type?.startsWith('image/')) return null
   let bitmap
   try {
@@ -69,5 +70,30 @@ async function drawThumbnail(file, edge) {
     return canvas
   } finally {
     bitmap.close?.()
+  }
+}
+
+// A PDF's first page, drawn with pdf.js (utils/pdf.js, loaded only now: about
+// half a megabyte). Null for a PDF it can not open (damaged, encrypted).
+async function drawPdfPage(file, edge) {
+  let task
+  try {
+    const { loadPdfData } = await import('./pdf.js')
+    task = loadPdfData(new Uint8Array(await file.arrayBuffer()))
+    const page = await (await task.promise).getPage(1)
+    const base = page.getViewport({ scale: 1 })
+    const viewport = page.getViewport({ scale: edge / Math.max(base.width, base.height) })
+    const canvas = document.createElement('canvas')
+    canvas.width = Math.max(1, Math.floor(viewport.width))
+    canvas.height = Math.max(1, Math.floor(viewport.height))
+    const ctx = canvas.getContext('2d')
+    ctx.fillStyle = '#fff' // a page without a background is white on paper
+    ctx.fillRect(0, 0, canvas.width, canvas.height)
+    await page.render({ canvas, canvasContext: ctx, viewport, annotationMode: 0 }).promise
+    return canvas
+  } catch {
+    return null
+  } finally {
+    task?.destroy()
   }
 }

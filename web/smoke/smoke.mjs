@@ -129,6 +129,38 @@ try {
     return img ? { src: img.src.slice(0, 15), w: img.naturalWidth } : null
   })()`)
   expect(picked?.w > 0, `a picked photo shows as a thumbnail before saving (${JSON.stringify(picked)})`)
+  // A one-page PDF invoice (built here, with a correct cross-reference table).
+  const pdfPreview = await evaluate(`(async () => {
+    const parts = [], offsets = []
+    const add = s => { offsets.push(parts.join('').length); parts.push(s) }
+    parts.push('%PDF-1.4\\n')
+    const text = 'BT /F1 28 Tf 40 700 Td (HOTEL LISBOA - INVOICE) Tj 0 -60 Td (Total EUR 312.00) Tj ET'
+    add('1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj\\n')
+    add('2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj\\n')
+    add('3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >> endobj\\n')
+    add('4 0 obj << /Length ' + text.length + ' >> stream\\n' + text + '\\nendstream endobj\\n')
+    add('5 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> endobj\\n')
+    const xref = parts.join('').length
+    parts.push('xref\\n0 6\\n0000000000 65535 f \\n' + offsets.map(o => String(o).padStart(10, '0') + ' 00000 n \\n').join(''))
+    parts.push('trailer << /Size 6 /Root 1 0 R >>\\nstartxref\\n' + xref + '\\n%%EOF\\n')
+    const input = document.querySelector('.receipt-add input[type=file][multiple]')
+    const dt = new DataTransfer(); dt.items.add(new File([parts.join('')], 'invoice.pdf', { type: 'application/pdf' })); input.files = dt.files
+    input.dispatchEvent(new Event('change', { bubbles: true }))
+    for (let i = 0; i < 80; i++) {
+      const imgs = [...document.querySelectorAll('.receipt-tile img')]
+      if (imgs.length > 1 && imgs[1].naturalWidth) break
+      await new Promise(r => setTimeout(r, 100))
+    }
+    const img = document.querySelectorAll('.receipt-tile img')[1]
+    if (!img) return null
+    // Not a blank page: some pixels are dark (the text).
+    const c = Object.assign(document.createElement('canvas'), { width: img.naturalWidth, height: img.naturalHeight })
+    const g = c.getContext('2d'); g.drawImage(img, 0, 0)
+    const px = g.getImageData(0, 0, c.width, c.height).data
+    let dark = 0; for (let i = 0; i < px.length; i += 4) if (px[i] < 100) dark++
+    return { w: img.naturalWidth, h: img.naturalHeight, dark }
+  })()`)
+  expect(pdfPreview?.h > pdfPreview?.w && pdfPreview.dark > 50, `a picked PDF shows its first page (${JSON.stringify(pdfPreview)})`)
   takeErrors()
 
   console.log('Version on the profile page')

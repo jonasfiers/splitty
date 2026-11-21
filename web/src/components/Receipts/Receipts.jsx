@@ -13,9 +13,9 @@ import { shrinkImage, thumbnailOf, thumbnailBlob } from '../../utils/shrinkImage
 export const MAX_RECEIPTS = 5
 export const RECEIPT_TYPES = 'image/*,application/pdf'
 
-// Uploads one file to the expense: a photo shrunk first (utils/shrinkImage.js)
-// and sent with a small preview (~20 KB), which the expense page shows as its
-// tile instead of downloading the whole receipt. PDFs go without one.
+// Uploads one file to the expense: a photo shrunk first (utils/shrinkImage.js),
+// with a small preview (~20 KB; a PDF's first page) which the expense page
+// shows as its tile instead of downloading the whole receipt.
 export async function uploadReceipt(expenseId, file) {
   const body = new FormData()
   const photo = await shrinkImage(file)
@@ -37,7 +37,8 @@ const isPdf = type => type === 'application/pdf'
 // when that link has expired (a page shown from cache) is the fresh one used.
 function ReceiptTile({ name, type, src, href, onOpen, onRemove, title }) {
   const [shown, setShown] = useState(src)
-  const face = isPdf(type) || !src
+  // A PDF shows its first page when it has a preview, its icon and name otherwise.
+  const face = !src
     ? <span className="receipt-tile-file"><Icon name="file-text" /><span>{name}</span></span>
     : <img src={shown || src} alt={name} loading="lazy" onError={() => { if (shown && shown !== src) setShown(src) }} />
   return (
@@ -156,7 +157,7 @@ export default function Receipts({ groupId, expenseId, receipts, onChange, onErr
                 key={r.id}
                 name={r.filename}
                 type={r.mimeType}
-                src={`/api${r.thumbUrl ?? r.url}`}
+                src={r.thumbUrl ? `/api${r.thumbUrl}` : isPdf(r.mimeType) ? null : `/api${r.url}`}
                 href={standalone ? viewer(r) : `/api${r.url}`}
                 onOpen={standalone ? e => { e.preventDefault(); navigate(viewer(r)) } : undefined}
                 onRemove={() => handleDelete(r)}
