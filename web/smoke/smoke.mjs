@@ -121,11 +121,12 @@ try {
     const input = document.querySelector('.receipt-add input[type=file][multiple]')
     const dt = new DataTransfer(); dt.items.add(new File([bytes], 'lunch.png', { type: 'image/png' })); input.files = dt.files
     input.dispatchEvent(new Event('change', { bubbles: true }))
-    await new Promise(r => setTimeout(r, 400))
+    await new Promise(r => setTimeout(r, 100))
+    for (let i = 0; i < 20 && !document.querySelector('.receipt-tile img')?.naturalWidth; i++) await new Promise(r => setTimeout(r, 100))
     const img = document.querySelector('.receipt-tile img')
-    return img ? { blob: img.src.startsWith('blob:'), w: img.naturalWidth } : null
+    return img ? { src: img.src.slice(0, 15), w: img.naturalWidth } : null
   })()`)
-  expect(picked?.blob && picked.w > 0, 'a picked photo shows as a thumbnail before saving')
+  expect(picked?.w > 0, `a picked photo shows as a thumbnail before saving (${JSON.stringify(picked)})`)
   takeErrors()
 
   console.log('Version on the profile page')

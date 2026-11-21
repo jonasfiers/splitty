@@ -25,6 +25,11 @@ const items = [
   { id: 'i2', tripId: 't1', kind: 'transport', mode: 'flight', title: 'TPE → AMS', start: `${day(10)}T23:30`, attachments: [], expenses: [], tickets: [] },
 ]
 
+// The Content-Security-Policy production's nginx sends (CT101
+// snippets/splitty-security-headers.conf), so the app is tested under it:
+// something it refuses (a blob: image, say) fails here too. Keep in step.
+const CSP = "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'self'"
+
 // GET path → body. Anything else answers {} (logged, so a test can show it).
 const ROUTES = [
   [/^\/admin\/me$/, () => ({ isAdmin: false })],
@@ -86,7 +91,7 @@ export function startServer({ root, port = 5190 }) {
     }
     let file = path.join(dir, p)
     if (!file.startsWith(dir) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) file = path.join(dir, 'index.html')
-    res.writeHead(200, { 'Content-Type': TYPES[path.extname(file)] || 'application/octet-stream', 'Cache-Control': 'no-cache' })
+    res.writeHead(200, { 'Content-Type': TYPES[path.extname(file)] || 'application/octet-stream', 'Cache-Control': 'no-cache', 'Content-Security-Policy': CSP })
     fs.createReadStream(file).pipe(res)
   })
   return new Promise(resolve => server.listen(port, '127.0.0.1', () => resolve({

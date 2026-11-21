@@ -35,3 +35,29 @@ export async function shrinkImage(file) {
     bitmap.close?.()
   }
 }
+
+// A small preview of a picked photo, as a data: URL: the site's CSP allows
+// data: images but not blob: ones (img-src 'self' data:). Null when the
+// browser can not draw the file.
+export async function thumbnailOf(file, edge = 320) {
+  if (!file?.type?.startsWith('image/')) return null
+  let bitmap
+  try {
+    bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' })
+  } catch {
+    return null
+  }
+  try {
+    const scale = Math.min(1, edge / Math.max(bitmap.width, bitmap.height))
+    const canvas = document.createElement('canvas')
+    canvas.width = Math.max(1, Math.round(bitmap.width * scale))
+    canvas.height = Math.max(1, Math.round(bitmap.height * scale))
+    const ctx = canvas.getContext('2d')
+    ctx.fillStyle = '#fff'
+    ctx.fillRect(0, 0, canvas.width, canvas.height)
+    ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height)
+    return canvas.toDataURL('image/jpeg', 0.75)
+  } finally {
+    bitmap.close?.()
+  }
+}

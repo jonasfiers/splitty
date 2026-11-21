@@ -5,7 +5,7 @@ import Icon from '../Icon/Icon.jsx'
 import { useConfirm } from '../Confirm/ConfirmProvider.jsx'
 import { isStandalone } from '../../utils/standalone.js'
 import { useMediaQuery } from '../../utils/useMediaQuery.js'
-import { shrinkImage } from '../../utils/shrinkImage.js'
+import { shrinkImage, thumbnailOf } from '../../utils/shrinkImage.js'
 
 // Receipts on an expense (api/receiptService.js): photos or PDFs of the bill,
 // seen, added and removed by everyone in the group. Shown as thumbnails; a
@@ -34,7 +34,7 @@ function ReceiptTile({ name, type, src, href, onOpen, onRemove, title }) {
   const [shown, setShown] = useState(src)
   const face = isPdf(type) || !src
     ? <span className="receipt-tile-file"><Icon name="file-text" /><span>{name}</span></span>
-    : <img src={shown} alt={name} loading="lazy" onError={() => { if (shown !== src) setShown(src) }} />
+    : <img src={shown || src} alt={name} loading="lazy" onError={() => { if (shown && shown !== src) setShown(src) }} />
   return (
     <li className="receipt-tile" title={title ?? name}>
       {href
@@ -73,10 +73,21 @@ function AddButtons({ onFiles, busy, label }) {
 }
 
 // On the new-expense form: files picked, not yet sent (uploaded once the
-// expense is saved). Thumbnails from the files themselves.
+// expense is saved). Previews drawn from the files themselves, as data: URLs
+// (the CSP refuses blob: images); a file shows its icon until its preview is ready.
+const previews = new WeakMap() // File -> data: URL, so each is drawn once
 export function PickedReceipts({ files, onChange }) {
-  const urls = useMemo(() => files.map(f => (f.type.startsWith('image/') ? URL.createObjectURL(f) : null)), [files])
-  useEffect(() => () => urls.forEach(u => u && URL.revokeObjectURL(u)), [urls])
+  const [, redraw] = useState(0)
+  const mounted = useRef(true)
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false } }, [])
+  useEffect(() => {
+    for (const f of files) {
+      if (previews.has(f)) continue
+      previews.set(f, null)
+      thumbnailOf(f).then(url => { previews.set(f, url); if (mounted.current) redraw(n => n + 1) })
+    }
+  }, [files])
+  const urls = files.map(f => previews.get(f) ?? null)
   return <>
     {files.length > 0 && (
       <ul className="receipt-tiles">
