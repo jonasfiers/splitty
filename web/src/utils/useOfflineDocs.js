@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { listOffline, onOfflineDocsChange } from './offlineDocs.js'
+import { listOffline, listOfflineThumbs, onOfflineDocsChange } from './offlineDocs.js'
 import { listOfflineTrips, onOfflineTripsChange } from './offlineTrips.js'
 
 // The documents kept on this device (utils/offlineDocs.js), kept current.
@@ -14,6 +14,19 @@ export function useOfflineDocs() {
     return () => { live = false; off() }
   }, [])
   return list
+}
+
+// The ids of files whose preview is kept on this device, kept current.
+export function useOfflineThumbs() {
+  const [ids, setIds] = useState(() => new Set())
+  useEffect(() => {
+    let live = true
+    const read = () => listOfflineThumbs().then(s => { if (live) setIds(s) })
+    read()
+    const off = onOfflineDocsChange(read)
+    return () => { live = false; off() }
+  }, [])
+  return ids
 }
 
 // The trips kept on this device (utils/offlineTrips.js), kept current. null until read.

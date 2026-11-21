@@ -176,6 +176,21 @@ try {
   expect(docTile?.name === 'arrival-card.png' && docTile.img > 0 && docTile.actions === 2 && /Only you/.test(docTile.meta), `a document is a tile with its preview, who sees it and its buttons (${JSON.stringify(docTile)})`)
   takeErrors()
 
+  console.log('Previews kept offline')
+  const keptKeys = () => evaluate(`caches.open('splitty-offline-docs').then(c => c.keys()).then(k => k.map(r => new URL(r.url).pathname))`)
+  let keys = []
+  for (let i = 0; i < 40; i++) { keys = await keptKeys(); if (keys.includes('/offline-docs/thumbs/a1') && keys.includes('/offline-docs/thumbs/d1')) break; await sleep(250) }
+  expect(keys.includes('/offline-docs/thumbs/a1') && keys.includes('/offline-docs/thumbs/d1'), `the kept trip's previews are on the device (${keys.filter(k => k.includes('thumbs')).join(', ') || 'none'})`)
+  const storedLinks = await evaluate(`new Promise(res => { const r = indexedDB.open('splitty-offline'); r.onsuccess = () => { try { const q = r.result.transaction('trips').objectStore('trips').get('t1'); q.onsuccess = () => res(JSON.stringify(q.result || {}).includes('thumbUrl')); q.onerror = () => res(null) } catch { res(null) } }; r.onerror = () => res(null) })`)
+  expect(storedLinks === false, 'the kept trip holds no expiring preview links')
+  await send('Network.enable')
+  await send('Network.emulateNetworkConditions', { offline: true, latency: 0, downloadThroughput: -1, uploadThroughput: -1 })
+  await navigate(`${server.url}/trips/t1/items/i1`); await settle(); await sleep(800)
+  const offlineTiles = await evaluate(`[...document.querySelectorAll('.file-tile')].map(t => { const i = t.querySelector('img'); return { src: i ? new URL(i.src).pathname : null, w: i?.naturalWidth || 0 } })`)
+  expect(offlineTiles[0]?.src === '/offline-docs/thumbs/a1' && offlineTiles[0].w > 0, `offline, a tile shows its kept preview (${JSON.stringify(offlineTiles)})`)
+  await send('Network.emulateNetworkConditions', { offline: false, latency: 0, downloadThroughput: -1, uploadThroughput: -1 })
+  takeErrors()
+
   console.log('Version on the profile page')
   await navigate(`${server.url}/profile`); await settle()
   const version = await evaluate(`document.querySelector('.profile-version')?.textContent || ''`)

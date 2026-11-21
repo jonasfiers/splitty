@@ -4,8 +4,8 @@ import { FileTiles, FileTile, AddFileButtons, uploadFile, uploadError, usePrevie
 import client from '../../api/client'
 import { isStandalone } from '../../utils/standalone.js'
 import { formatBytes } from '../../utils/trip.js'
-import { keepOffline, removeOffline, syncTrip, offlineSupported, offlineSrc } from '../../utils/offlineDocs.js'
-import { useOfflineDocs, useOfflineTrips } from '../../utils/useOfflineDocs.js'
+import { keepOffline, removeOffline, syncTrip, offlineSupported, offlineSrc, offlineThumbSrc } from '../../utils/offlineDocs.js'
+import { useOfflineDocs, useOfflineTrips, useOfflineThumbs } from '../../utils/useOfflineDocs.js'
 import { keepTripsEnabled, getOfflineTrip, asOf } from '../../utils/offlineTrips.js'
 import { useOffline, isOffline, isNetworkError, onReconnect } from '../../utils/connection.js'
 import './TripDocuments.css'
@@ -45,6 +45,7 @@ export default function TripDocuments({ tripId, tripTitle, heading = true }) {
   const readOnly = noConnection || !!offlineAsOf
   // Previews for documents without one, drawn here and sent (components/FileTiles).
   const preview = usePreviews(documents, { enabled: !readOnly })
+  const keptThumbs = useOfflineThumbs() // previews kept with the trip's offline copy
 
   const offline = useOfflineDocs()
   const kept = useMemo(() => new Set((offline ?? []).map(d => d.id)), [offline])
@@ -207,12 +208,12 @@ export default function TripDocuments({ tripId, tripTitle, heading = true }) {
           {documents.map(doc => {
             const viewer = `/trips/${tripId}/documents/${doc.id}`
             const here = kept.has(doc.id)
-            // Offline: what is on this device opens in Splitty's viewer, its
-            // picture from that copy; the rest is listed dim and can't open.
+            // Offline: what is on this device opens in Splitty's viewer; every
+            // tile its kept preview; the rest is listed dim and can't open.
             if (readOnly) return (
               <FileTile
                 key={doc.id} caption name={doc.filename} type={doc.mimeType} dim={!here}
-                src={here && doc.mimeType?.startsWith('image/') ? offlineSrc(doc.id) : null}
+                src={keptThumbs.has(doc.id) ? offlineThumbSrc(doc.id) : here && doc.mimeType?.startsWith('image/') ? offlineSrc(doc.id) : null}
                 href={here ? viewer : undefined}
                 onOpen={here ? event => { event.preventDefault(); navigate(viewer) } : undefined}
                 meta={here ? who(doc) : <>{who(doc)} · Not on this device</>}

@@ -6,6 +6,9 @@
 // and the Content Security Policy needs nothing new.
 //
 //   /offline-docs/<id>         the file
+//   /offline-docs/thumbs/<id>  its small preview (2026-11-21), for every file
+//                              of a kept trip, also those not kept themselves,
+//                              so every tile shows its picture offline
 //   /offline-docs/index.json   [{ id, filename, mimeType, size, tripId, tripTitle, savedAt,
 //                                 kind: 'document' | 'attachment', itemId, itemTitle,
 //                                 auto: fetched by itself (else kept by hand) }]
@@ -26,6 +29,8 @@ const INDEX = '/offline-docs/index.json'
 const CHANGED = 'splitty-offline-docs-changed'
 
 export const offlineSrc = id => `/offline-docs/${id}`
+export const offlineThumbSrc = id => `/offline-docs/thumbs/${id}`
+const THUMBS = '/offline-docs/thumbs/'
 export const offlineSupported = () => typeof caches !== 'undefined' && 'serviceWorker' in navigator
 
 const open = () => caches.open(CACHE)
@@ -82,10 +87,20 @@ export async function keepOffline(file, trip, meta = {}) {
   changed()
 }
 
+// The ids whose preview is kept on this device.
+export async function listOfflineThumbs() {
+  if (!offlineSupported()) return new Set()
+  try {
+    const keys = await (await open()).keys()
+    return new Set(keys.map(r => new URL(r.url).pathname).filter(p => p.startsWith(THUMBS)).map(p => p.slice(THUMBS.length)))
+  } catch { return new Set() }
+}
+
+// The file and its preview go together.
 export async function removeOffline(ids) {
   if (!offlineSupported() || !ids.length) return
   await withIndex(async (list, cache) => {
-    await Promise.all(ids.map(id => cache.delete(offlineSrc(id))))
+    await Promise.all(ids.flatMap(id => [cache.delete(offlineSrc(id)), cache.delete(offlineThumbSrc(id))]))
     return list.filter(d => !ids.includes(d.id))
   })
   changed()
@@ -126,6 +141,14 @@ export function syncFiles(trips, stillWanted = () => true) {
     const kept = await listOffline()
     const gone = kept.filter(d => !allowed.has(d.id)).map(d => d.id)
     if (gone.length) await removeOffline(gone)
+    // Previews of files no longer in a kept trip (or no longer visible).
+    const thumbs = await listOfflineThumbs()
+    const staleThumbs = [...thumbs].filter(id => !allowed.has(id))
+    if (staleThumbs.length) {
+      const cache = await open()
+      await Promise.all(staleThumbs.map(id => cache.delete(offlineThumbSrc(id))))
+      changed()
+    }
     // Titles that changed since.
     if (kept.some(d => { const a = allowed.get(d.id); return a && (a.trip.title !== d.tripTitle || (a.meta.itemTitle ?? null) !== (d.itemTitle ?? null)) })) {
       await withIndex(async l => l.map(d => {
@@ -136,6 +159,20 @@ export function syncFiles(trips, stillWanted = () => true) {
     }
     // The phone's data saver: nothing new is fetched (removing still is).
     if (navigator.connection?.saveData) return
+    // Previews first: a few tens of KB each, for every file of the kept trips.
+    let newThumbs = false
+    for (const { file } of allowed.values()) {
+      if (!file.thumbUrl || thumbs.has(file.id)) continue
+      if (!stillWanted() || navigator.onLine === false) return
+      try {
+        const res = await fetch(`/api${file.thumbUrl}`, { signal: AbortSignal.timeout(30000) })
+        if (!res.ok) continue
+        const blob = await res.blob()
+        await (await open()).put(offlineThumbSrc(file.id), new Response(blob, { headers: { 'Content-Type': 'image/jpeg' } }))
+        newThumbs = true
+      } catch { /* next round */ }
+    }
+    if (newThumbs) changed()
     const have = new Set(kept.map(d => d.id))
     for (const { file, trip, meta } of allowed.values()) {
       if (!meta.auto || have.has(file.id)) continue

@@ -23,11 +23,11 @@ import { categoryFor } from '../utils/tripKinds.js'
 import { KINDS, TRANSPORT_MODES, itemIcon, kindVars, dayOf, timeOf, formatDay, formatDuration, daysBetween, mapsLink, linkTarget, formatBytes, DEFAULT_CHECK_IN, DEFAULT_CHECK_OUT } from '../utils/trip.js'
 import { swrOne } from '../utils/cache.js'
 import { getOfflineItem, asOf } from '../utils/offlineTrips.js'
-import { useOfflineDocs } from '../utils/useOfflineDocs.js'
+import { useOfflineDocs, useOfflineThumbs } from '../utils/useOfflineDocs.js'
 import { useOffline, isOffline, isNetworkError, onReconnect } from '../utils/connection.js'
 import Icon from '../components/Icon/Icon.jsx'
 import { FileTiles, FileTile, AddFileButtons, uploadFile, uploadError, usePreviews } from '../components/FileTiles/FileTiles.jsx'
-import { offlineSrc } from '../utils/offlineDocs.js'
+import { offlineSrc, offlineThumbSrc } from '../utils/offlineDocs.js'
 import { openKeyboardNow } from '../utils/keyboard.js'
 
 const START_LABEL = { transport: 'Departure', stay: 'Check-in', activity: 'Starts' }
@@ -125,6 +125,7 @@ export default function TripItemDetailPage() {
   const onDevice = useMemo(() => new Set((keptFiles ?? []).map(f => f.id)), [keptFiles])
   // Previews for files without one, drawn here and sent (components/FileTiles).
   const preview = usePreviews(item?.attachments, { enabled: !readOnly })
+  const keptThumbs = useOfflineThumbs() // previews kept with the trip's offline copy
 
   // Opening it: the last state at once if its file links still work (4 min,
   // utils/cache.js), then fresh; the refreshes below ask the server only.
@@ -369,11 +370,11 @@ export default function TripItemDetailPage() {
                 const viewer = `/trips/${tripId}/items/${itemId}/files/${a.id}`
                 const here = onDevice.has(a.id)
                 // Offline: only what is on this device opens (Splitty's
-                // viewer), its picture from that copy; the rest is listed dim.
+                // viewer); every tile its kept preview; the rest is listed dim.
                 if (readOnly) return (
                   <FileTile
                     key={a.id} caption name={a.filename} type={a.mimeType} dim={!here}
-                    src={here && a.mimeType?.startsWith('image/') ? offlineSrc(a.id) : null}
+                    src={keptThumbs.has(a.id) ? offlineThumbSrc(a.id) : here && a.mimeType?.startsWith('image/') ? offlineSrc(a.id) : null}
                     href={here ? viewer : undefined}
                     onOpen={here ? event => { event.preventDefault(); navigate(viewer) } : undefined}
                     meta={here ? `${formatBytes(a.size)} · on this device` : 'Not on this device'}

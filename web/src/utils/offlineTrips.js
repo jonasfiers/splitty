@@ -174,11 +174,11 @@ export function syncOfflineTrips({ force = false } = {}) {
         const keys = trips.getAllKeys()
         keys.onsuccess = () => {
           for (const k of keys.result) if (!keep.has(k)) trips.delete(k)
-          // The file links in it expire in minutes: not kept (files open from
-          // the device's copy, utils/offlineDocs.js).
+          // The file links in it expire in minutes: not kept (files and
+          // their previews open from the device's copy, utils/offlineDocs.js).
           for (const t of data.trips) {
-            const items = t.items.map(i => ({ ...i, attachments: i.attachments.map(({ url, ...a }) => a) }))
-            const documents = (t.documents ?? []).map(({ url, ...d }) => d)
+            const items = t.items.map(i => ({ ...i, attachments: i.attachments.map(({ url, thumbUrl, ...a }) => a) }))
+            const documents = (t.documents ?? []).map(({ url, thumbUrl, ...d }) => d)
             trips.put({ id: t.trip.id, savedAt, trip: t.trip, places: t.places, items, documents })
           }
         }

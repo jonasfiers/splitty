@@ -19,6 +19,7 @@ const expense = {
   receipts: [{ id: 'r1', filename: 'supermarket-bill.jpg', mimeType: 'image/jpeg', size: 182000, uploadedBy: 'Ann', url: '/trips/files/r1?sig=smoke', thumbUrl: '/trips/files/r1/thumb?sig=smoke' }],
 }
 const shares = [{ userId: 'u1', user: USER, amount: 12.5 }, { userId: 'u2', user: OTHER, amount: 12.5 }]
+const DOCUMENT = { id: 'd1', filename: 'arrival-card.png', mimeType: 'image/png', size: 5282, shared: false, mine: true, ownerName: 'Smoke Tester', url: '/trips/files/d1?sig=smoke', thumbUrl: '/trips/files/d1/thumb?sig=smoke' }
 const trip = { id: 't1', title: 'Taiwan', startDate: day(-2), endDate: day(10), icon: 'country:TW', groupId: 'g1', group }
 const items = [
   { id: 'i1', tripId: 't1', kind: 'activity', title: 'Taipei 101 observatory', start: `${day(1)}T10:00`, end: `${day(1)}T12:00`, expenses: [], tickets: [],
@@ -52,10 +53,11 @@ const ROUTES = [
   [/^\/currencies/, () => ({ currencies: [{ iso: 'EUR', name: 'Euro', symbol: '€' }, { iso: 'TWD', name: 'New Taiwan dollar', symbol: 'NT$' }] })],
   [/^\/categories\/trip-kinds/, () => ({ kinds: [] })],
   [/^\/categories/, () => ({ categories: [] })],
-  [/^\/trips\/offline/, () => ({ trips: [] })],
+  // The trip kept offline, with its files and their previews (utils/offlineTrips.js, offlineDocs.js).
+  [/^\/trips\/offline/, () => ({ trips: [{ trip, places: [], items, documents: [DOCUMENT] }] })],
   [/^\/trips$/, () => ({ trips: [trip], groups: [group] })],
   [/^\/trips\/t1$/, () => ({ trip, items, places: [], documents: [] })],
-  [/^\/trips\/t1\/documents$/, () => ({ documents: [{ id: 'd1', filename: 'arrival-card.png', mimeType: 'image/png', size: 5282, shared: false, mine: true, ownerName: 'Smoke Tester', url: '/trips/files/d1?sig=smoke', thumbUrl: '/trips/files/d1/thumb?sig=smoke' }] })],
+  [/^\/trips\/t1\/documents$/, () => ({ documents: [DOCUMENT] })],
   [/^\/trips\/t1\/(documents|photos|albums|follow-links|routes)/, () => ({ documents: [], photos: [], albums: [], links: [], routes: [], places: [] })],
   [/^\/trips\/items\/i\d$/, m => ({ item: items.find(i => m.input.endsWith(i.id)) })],
   [/^\/activity/, () => ({ activities: [], groups: [group], trips: [trip] })],
