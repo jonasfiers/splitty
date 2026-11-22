@@ -785,7 +785,7 @@ body {
 /* ══════════════════════════════════════════
    SHEET / MODAL
 ══════════════════════════════════════════ */
-.sheet-overlay {
+.sheet-overlay, .sheet-ghost {
   position: fixed;
   inset: 0;
   background: rgba(0,0,0,.45);
@@ -849,7 +849,7 @@ body {
 }
 
 @media (min-width: 768px) {
-  .sheet-overlay { align-items: center; }
+  .sheet-overlay, .sheet-ghost { align-items: center; }
   .sheet {
     max-width: 440px;
     border-radius: var(--r-xl);
@@ -858,6 +858,32 @@ body {
   .sheet-body { padding: 4px 28px 32px; }
   .sheet-handle { display: none; }
   .sheet.sheet-search { height: min(640px, calc(100dvh - 48px)); }
+}
+
+/* Opening and closing (Sheet.jsx: the closing one is a .sheet-ghost copy).
+   A bottom sheet slides up from below, fast then settling, over a fading
+   backdrop; a centred dialog fades in with a slight grow. A sheet dragged
+   down (SheetHandle) is already off screen when its ghost appears: the ghost
+   keeps that position and only the backdrop fades. */
+.sheet-overlay { animation: sheet-fade-in 240ms ease-out; }
+.sheet-overlay > .sheet { animation: sheet-up 260ms cubic-bezier(.2, .8, .2, 1); }
+.sheet-ghost { pointer-events: none; animation: sheet-fade-out 220ms ease-in forwards; }
+.sheet-ghost > .sheet { animation: sheet-down 220ms cubic-bezier(.4, 0, 1, 1) forwards; }
+@keyframes sheet-fade-in { from { opacity: 0; } }
+@keyframes sheet-fade-out { to { opacity: 0; } }
+@keyframes sheet-up { from { transform: translateY(100%); } }
+@keyframes sheet-down { to { transform: translateY(100%); } }
+@keyframes sheet-pop-in { from { opacity: 0; transform: scale(.96); } }
+@keyframes sheet-pop-out { to { opacity: 0; transform: scale(.96); } }
+@media (min-width: 768px) {
+  .sheet-overlay { animation-duration: 160ms; }
+  .sheet-overlay > .sheet { animation: sheet-pop-in 160ms ease-out; }
+  .sheet-ghost { animation-duration: 140ms; }
+  .sheet-ghost > .sheet { animation: sheet-pop-out 140ms ease-in forwards; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sheet-overlay > .sheet { animation: none; }
+  .sheet-overlay { animation-duration: 120ms; }
 }
 
 /* ══════════════════════════════════════════

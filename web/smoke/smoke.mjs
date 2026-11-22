@@ -216,6 +216,14 @@ try {
     placeMeta = await evaluate(`[...document.querySelectorAll('.place-sheet .place-row-meta')].map(e => e.textContent).filter(t => t.includes('·'))`)
   }
   expect(placeMeta.includes('Station · Taipei, Taiwan'), `results appear without pressing Enter, with their kind and town (${JSON.stringify(placeMeta)})`)
+  const opening = await evaluate(`getComputedStyle(document.querySelector('.sheet-overlay > .sheet')).animationName`)
+  expect(opening === 'sheet-up', `the sheet slides up as it opens (${opening})`)
+  await evaluate(`window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))`)
+  await sleep(60)
+  const closing = await evaluate(`({ ghost: document.querySelectorAll('.sheet-ghost').length, open: document.querySelectorAll('.sheet-overlay').length })`)
+  expect(closing.ghost === 1 && closing.open === 0, `closing leaves only an animating copy (${JSON.stringify(closing)})`)
+  await sleep(400)
+  expect(await evaluate(`document.querySelectorAll('.sheet-ghost').length`) === 0, 'and the copy is gone after the animation')
   takeErrors()
 
   console.log('Version on the profile page')

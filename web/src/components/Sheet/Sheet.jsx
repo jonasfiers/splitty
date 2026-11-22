@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from 'react'
+import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import SheetHandle, { useSheetDrag } from './SheetHandle.jsx'
 
 // The app's one pop-up. CSS decides its shape: a bottom sheet with a grip on
@@ -14,6 +14,28 @@ import SheetHandle, { useSheetDrag } from './SheetHandle.jsx'
 // `search`: a search sheet (a search at the top, results under it): tall from
 // the start, the search and the actions stay put, and only the child with
 // className "sheet-scroll" scrolls (index.css, .sheet-search).
+//
+// It slides up as it opens (a centred dialog fades in) and away as it closes,
+// however it is closed: the forms using it simply stop rendering it, so on
+// unmount a copy of it (a "ghost", inert) is left in its place for the closing
+// animation, then removed (leaveGhost). Not with reduced motion.
+const GHOST_MS = 220
+
+function leaveGhost(el) {
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return
+  const ghost = el.cloneNode(true)
+  // What was typed is a property, not an attribute: copied over by hand.
+  const from = el.querySelectorAll('input, textarea, select')
+  ghost.querySelectorAll('input, textarea, select').forEach((field, i) => { field.value = from[i]?.value ?? field.value })
+  // Not a sheet any more: other sheets, Escape and Expandable look for .sheet-overlay.
+  ghost.className = 'sheet-ghost'
+  ghost.setAttribute('aria-hidden', 'true')
+  ghost.inert = true
+  ghost.querySelectorAll('[id]').forEach(n => n.removeAttribute('id'))
+  document.body.appendChild(ghost)
+  setTimeout(() => ghost.remove(), GHOST_MS)
+}
+
 export default function Sheet({ title, onClose, className = '', zIndex, search = false, children }) {
   const titleId = useId()
   const drag = useSheetDrag(onClose)
@@ -24,6 +46,13 @@ export default function Sheet({ title, onClose, className = '', zIndex, search =
   const overlay = useRef(null)
   const close = useRef(onClose)
   close.current = onClose
+
+  // On a real unmount the sheet has left the page by the next microtask;
+  // React's development double mount leaves it there, and gets no ghost.
+  useLayoutEffect(() => {
+    const el = overlay.current
+    return () => queueMicrotask(() => { if (el && !el.isConnected) leaveGhost(el) })
+  }, [])
 
   useEffect(() => {
     const onKey = e => {
