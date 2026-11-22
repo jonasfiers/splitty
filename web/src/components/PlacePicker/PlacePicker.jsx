@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import client from '../../api/client'
 import Sheet from '../Sheet/Sheet.jsx'
@@ -11,14 +11,18 @@ import SearchField from '../SearchField/SearchField.jsx'
 //
 // In the form it is a button showing the place; tapping it opens a tall sheet
 // with the search field at the top (never under the keyboard) and the list
-// under it: the trip's places, filtered as you type, then "Search the map"
-// (or Enter). The map search is never sent while typing: Nominatim's usage
-// policy forbids autocomplete (api/geocodeService.js).
+// under it: the trip's places, filtered as you type, then places on the map,
+// searched as you type (Photon, after a short pause; api/geocodeService.js),
+// near the trip's places first. When that search is down, Enter searches
+// Nominatim instead, which must never be searched while typing.
 //
 // id:        for a <Field> label; goes on the button
 // title:     the sheet's title (the field's label)
 // suggested: the id of a trip place to offer first (where the last journey
 //            ended), with `suggestedNote` as its reason
+// near:      {lat, lon} to rank map results around; by default the middle of
+//            the trip's places
+// transit:   stations and stops first (the route finder)
 // The address without the place's own name in front of it: map search
 // answers often start with it ("Brussels-Midi, Galerie M, …"), and the name is
 // already the line above.
@@ -29,14 +33,33 @@ const addressOnly = (name, address) => {
   return rest || address
 }
 
-function PlacePicker({ value, onChange, places = [], placeholder = 'Search a place or address…', id, title = 'Place', suggested, suggestedNote }) {
+// The icon for a kind of place found on the map (`type` from the API).
+const TYPE_ICONS = {
+  station: 'train-front', tram: 'tram-front', bus: 'bus', airport: 'plane', ferry: 'ship',
+  stay: 'hotel', camp: 'tent', food: 'utensils', cafe: 'coffee', water: 'waves-horizontal',
+  beach: 'umbrella', mountain: 'mountain', town: 'building', area: 'map', address: 'house', street: 'route',
+}
+const TYPING_PAUSE_MS = 300
+
+// The middle of the places that are on the map, or null.
+function middleOf(places) {
+  const located = places.filter(p => p.lat != null && p.lon != null)
+  if (!located.length) return null
+  const sum = located.reduce((a, p) => ({ lat: a.lat + p.lat, lon: a.lon + p.lon }), { lat: 0, lon: 0 })
+  return { lat: sum.lat / located.length, lon: sum.lon / located.length }
+}
+
+function PlacePicker({ value, onChange, places = [], placeholder = 'Search a place or address…', id, title = 'Place', suggested, suggestedNote, near, transit = false }) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [results, setResults] = useState(null) // map results for `searchedFor`
   const [searchedFor, setSearchedFor] = useState('')
   const [searching, setSearching] = useState(false)
   const [error, setError] = useState('')
+  const [typingFailed, setTypingFailed] = useState(false) // then Enter searches the fallback
   const buttonRef = useRef(null)
+  const latest = useRef('') // the query the newest search was sent for
+  const middle = useMemo(() => near ?? middleOf(places), [near, places])
 
   const close = () => {
     setOpen(false)
@@ -44,6 +67,8 @@ function PlacePicker({ value, onChange, places = [], placeholder = 'Search a pla
     setResults(null)
     setSearchedFor('')
     setError('')
+    setTypingFailed(false)
+    latest.current = ''
     buttonRef.current?.focus()
   }
 
@@ -52,22 +77,35 @@ function PlacePicker({ value, onChange, places = [], placeholder = 'Search a pla
     close()
   }
 
-  const search = async () => {
-    const q = query.trim()
-    if (q.length < 3 || searching) return
+  // An answer that arrives after a newer search was sent is dropped.
+  const search = async (q, typing) => {
+    if (q.length < 3) return
+    latest.current = q
     setSearching(true)
     setError('')
     try {
-      const { data } = await client.get('/trips/geocode', { params: { q } })
+      const params = { q, ...(typing && { typing: 1 }), ...(transit && { transit: 1 }), ...(middle && { near: `${middle.lat.toFixed(3)},${middle.lon.toFixed(3)}` }) }
+      const { data } = await client.get('/trips/geocode', { params })
+      if (latest.current !== q) return
       setResults(data.results || [])
       setSearchedFor(q)
+      setTypingFailed(false)
     } catch (err) {
-      setResults(null)
-      setError(err?.response?.data?.error || 'Place search is not available right now.')
+      if (latest.current !== q) return
+      if (typing) setTypingFailed(true)
+      else setError(err?.response?.data?.error || 'Place search is not available right now.')
     } finally {
-      setSearching(false)
+      if (latest.current === q) setSearching(false)
     }
   }
+
+  // Searched once typing pauses.
+  const typed = query.trim()
+  useEffect(() => {
+    if (!open || typed.length < 3 || typed === latest.current) return
+    const timer = setTimeout(() => search(typed, true), TYPING_PAUSE_MS)
+    return () => clearTimeout(timer)
+  }, [typed, open]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const existing = value?.id ? places.find(p => p.id === value.id) : null
   const shown = value ? (existing ?? value) : null
@@ -77,7 +115,8 @@ function PlacePicker({ value, onChange, places = [], placeholder = 'Search a pla
   const matches = places
     .filter(p => !ql || p.name.toLowerCase().includes(ql) || (p.address || '').toLowerCase().includes(ql))
     .sort((a, b) => (b.id === suggested) - (a.id === suggested))
-  const searchedCurrent = results && searchedFor === q
+  // The last answer stays up while the next one loads, unless it no longer fits what is typed.
+  const shownResults = results && q.length >= 3 && q.toLowerCase().startsWith(searchedFor.toLowerCase().slice(0, 3)) ? results : null
 
   return (
     <>
@@ -109,7 +148,7 @@ function PlacePicker({ value, onChange, places = [], placeholder = 'Search a pla
             value={query}
             onChange={e => { setQuery(e.target.value); setError('') }}
             // Enter searches the map.
-            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); search() } }}
+            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); if (q !== searchedFor) search(q, !typingFailed) } }}
             placeholder={placeholder}
             aria-label={`${title}: search`}
             enterKeyHint="search"
@@ -138,29 +177,24 @@ function PlacePicker({ value, onChange, places = [], placeholder = 'Search a pla
 
             {q && <>
               {matches.length > 0 && <div className="place-list-sep" />}
-              {searchedCurrent ? (
-                <>
-                  <div className="place-list-label">On the map</div>
-                  {results.map((r, i) => (
-                    <button type="button" key={i} className="place-row" onClick={() => choose(r)}>
-                      <span className="place-row-icon" aria-hidden="true"><Icon name="map-pin" /></span>
-                      <span className="place-row-text">
-                        <span className="place-row-name">{r.name}</span>
-                        <span className="place-row-meta">{addressOnly(r.name, r.address)}</span>
-                      </span>
-                    </button>
-                  ))}
-                  {results.length === 0 && <p className="place-list-hint">Nothing on the map for “{searchedFor}”.</p>}
-                </>
-              ) : (
-                <button type="button" className="place-row place-row-action" onClick={search} disabled={searching || q.length < 3}>
-                  <span className="place-row-icon" aria-hidden="true"><Icon name="search" /></span>
-                  <span className="place-row-text">
-                    <span className="place-row-name">{searching ? 'Searching the map…' : `Search the map for “${q}”`}</span>
-                    {q.length < 3 && <span className="place-row-meta">Type at least 3 letters</span>}
-                  </span>
-                </button>
-              )}
+              {q.length < 3 ? (
+                <p className="place-list-hint">Type at least 3 letters to search the map.</p>
+              ) : <>
+                <div className="place-list-label">
+                  On the map{searching && <span className="place-list-busy" role="status"> · Searching…</span>}
+                </div>
+                {shownResults?.map((r, i) => (
+                  <button type="button" key={`${r.lat},${r.lon},${i}`} className="place-row" onClick={() => choose({ name: r.name, address: r.address, lat: r.lat, lon: r.lon })}>
+                    <span className="place-row-icon" aria-hidden="true"><Icon name={TYPE_ICONS[r.type] ?? 'map-pin'} /></span>
+                    <span className="place-row-text">
+                      <span className="place-row-name">{r.name}</span>
+                      <span className="place-row-meta">{[r.label, r.area || addressOnly(r.name, r.address)].filter(Boolean).join(' · ')}</span>
+                    </span>
+                  </button>
+                ))}
+                {shownResults?.length === 0 && searchedFor === q && !searching && <p className="place-list-hint">Nothing on the map for “{searchedFor}”.</p>}
+                {typingFailed && !searching && <p className="place-list-hint">Searching while typing is not available right now. Press Enter to search.</p>}
+              </>}
               {error && <p className="place-list-hint error-text">{error}</p>}
               <button type="button" className="place-row" onClick={() => choose({ name: q, address: '', lat: null, lon: null })}>
                 <span className="place-row-icon" aria-hidden="true"><Icon name="pencil" /></span>

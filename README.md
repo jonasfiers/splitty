@@ -43,7 +43,7 @@ The itinerary is the items ordered by `start`; the map is the trip's places that
 
 Times are local wall-clock strings, as printed on the ticket, with no timezone. That is a deliberate limit: it is always right to read, and only wrong to *sort* on a day that crosses timezones.
 
-Uploaded tickets live on disk, outside the API's directory (`UPLOAD_DIR`); the graph holds an `Attachment` node with the name, type and size. Place search uses OpenStreetMap's Nominatim, proxied and rate-limited by the API, and map tiles come from OpenStreetMap.
+Uploaded tickets live on disk, outside the API's directory (`UPLOAD_DIR`); the graph holds an `Attachment` node with the name, type and size. Place search uses Komoot's public Photon as you type (OpenStreetMap data, results near the trip first), with OpenStreetMap's Nominatim as the fallback for explicit searches, both proxied and rate-limited by the API; and map tiles come from OpenStreetMap.
 
 "Find a route" searches public-transport connections through [Transitous](https://transitous.org/), a community-run MOTIS instance built on the open timetables operators publish, so coverage differs by region and kind of transport. Transitous answers in UTC; the API turns a search time into UTC with the timezone at the place's coordinates (`@photostructure/tz-lookup`, offline) and gives every leg back on the wall clock of its own stops, so the legs of a chosen connection become ordinary transport items, added in one transaction. Searches are cached, sent one at a time and rate-limited per user, with a User-Agent naming `APP_URL` and `CONTACT_EMAIL`, as Transitous's usage policy asks.
 

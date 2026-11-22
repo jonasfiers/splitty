@@ -266,7 +266,7 @@ root lockfile is ever missing, the script falls back to `npm install
 
 ## Route planner contact address
 
-The route planner identifies itself to Transitous as `Splitty/<api version> (<APP_URL>; <CONTACT_EMAIL>)`, as its usage policy asks. `CONTACT_EMAIL` is optional and read from `/etc/splitty-api.env` like the rest; set it (the technical address) so the volunteers running Transitous can reach someone if Splitty misbehaves. Beyond that the API only needs outgoing HTTPS to `api.transitous.org`; it already reaches Nominatim for place search, which also supplies English station names.
+The route planner identifies itself to Transitous as `Splitty/<api version> (<APP_URL>; <CONTACT_EMAIL>)`, as its usage policy asks. `CONTACT_EMAIL` is optional and read from `/etc/splitty-api.env` like the rest; set it (the technical address) so the volunteers running Transitous can reach someone if Splitty misbehaves. Beyond that the API only needs outgoing HTTPS to `api.transitous.org`; it already reaches `photon.komoot.io` for place search as you type and Nominatim as its fallback, which also supplies English station names.
 
 ## Trip attachments need three things outside the repo
 

@@ -201,6 +201,23 @@ try {
   expect(exp && exp.amt, `the expense row keeps its amount (${JSON.stringify(exp)})`)
   takeErrors()
 
+  console.log('Place search as you type')
+  await navigate(`${server.url}/trips/t1/items/new`); await settle()
+  expect(await evaluate(`(() => { const b = document.querySelector('.place-trigger'); b?.click(); return !!b })()`), 'a place field opens its picker')
+  await sleep(400)
+  await evaluate(`(() => {
+    const input = document.querySelector('.place-sheet input')
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, 'taipei ma')
+    input.dispatchEvent(new Event('input', { bubbles: true }))
+  })()`)
+  let placeMeta = []
+  for (let i = 0; i < 20 && !placeMeta.length; i++) {
+    await sleep(200)
+    placeMeta = await evaluate(`[...document.querySelectorAll('.place-sheet .place-row-meta')].map(e => e.textContent).filter(t => t.includes('·'))`)
+  }
+  expect(placeMeta.includes('Station · Taipei, Taiwan'), `results appear without pressing Enter, with their kind and town (${JSON.stringify(placeMeta)})`)
+  takeErrors()
+
   console.log('Version on the profile page')
   await navigate(`${server.url}/profile`); await settle()
   const version = await evaluate(`document.querySelector('.profile-version')?.textContent || ''`)

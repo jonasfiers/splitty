@@ -52,17 +52,165 @@ async function throttled(key, load) {
     return value;
 }
 
-async function search(rawQuery) {
-    const query = rawQuery.trim().replace(/\s+/g, ' ');
+// Nominatim's search: only for a search asked for explicitly (Enter), when
+// Photon is not answering.
+async function searchNominatim(query) {
     return throttled(`search:${query.toLowerCase()}`, async () => {
         const data = await fetchJson({ q: query, limit: '5', addressdetails: '0' });
         return data.map(r => ({
             name: r.name || r.display_name.split(',')[0],
             address: r.display_name,
+            area: '',
+            type: 'place',
+            label: '',
             lat: Number(r.lat),
             lon: Number(r.lon),
         }));
     });
+}
+
+// ── Place search as you type: Photon ──
+//
+// Komoot's public Photon (OpenStreetMap data, as Nominatim) is made for
+// search-as-you-type: partial words, results near a point first. Its terms ask
+// for fair use and promise nothing, so it has its own small queue and cache,
+// and Nominatim stays as the fallback for explicit searches.
+const PHOTON = 'https://photon.komoot.io/api/';
+const PHOTON_INTERVAL_MS = 200;
+const PHOTON_MAX_WAITING = 6;
+const PHOTON_ZOOM = 9; // how far "near" reaches: about a region
+let photonQueue = Promise.resolve();
+let photonLast = 0;
+let photonWaiting = 0;
+
+// What kind of place an OpenStreetMap object is, as the picker shows it:
+// a `type` the app picks an icon by, and a label. Unknown kinds are a plain
+// place labelled by their tag ("Museum", "Viewpoint").
+const KINDS = [
+    [['railway', 'station'], 'station', 'Station'], [['railway', 'halt'], 'station', 'Station'],
+    [['building', 'train_station'], 'station', 'Station'], [['public_transport', 'station'], 'station', 'Station'],
+    [['building', 'transportation'], 'station', 'Station'],
+    [['railway', 'stop'], 'station', 'Platform'], [['railway', 'tram_stop'], 'tram', 'Tram stop'],
+    [['railway', 'subway_entrance'], 'station', 'Metro entrance'],
+    [['highway', 'bus_stop'], 'bus', 'Bus stop'], [['amenity', 'bus_station'], 'bus', 'Bus station'],
+    [['public_transport', 'stop_position'], 'bus', 'Stop'], [['public_transport', 'platform'], 'bus', 'Stop'],
+    [['aeroway', 'aerodrome'], 'airport', 'Airport'], [['aeroway', 'terminal'], 'airport', 'Airport terminal'],
+    [['amenity', 'ferry_terminal'], 'ferry', 'Ferry terminal'],
+    [['tourism', 'hotel'], 'stay', 'Hotel'], [['tourism', 'hostel'], 'stay', 'Hostel'],
+    [['tourism', 'guest_house'], 'stay', 'Guest house'], [['tourism', 'motel'], 'stay', 'Motel'],
+    [['tourism', 'apartment'], 'stay', 'Apartment'], [['tourism', 'camp_site'], 'camp', 'Campsite'],
+    [['amenity', 'restaurant'], 'food', 'Restaurant'], [['amenity', 'cafe'], 'cafe', 'Café'],
+    [['natural', 'water'], 'water', 'Water'], [['water', 'lake'], 'water', 'Lake'], [['water', 'reservoir'], 'water', 'Lake'],
+    [['landuse', 'reservoir'], 'water', 'Lake'], [['natural', 'beach'], 'beach', 'Beach'],
+    [['natural', 'peak'], 'mountain', 'Mountain'], [['natural', 'volcano'], 'mountain', 'Volcano'],
+    [['place', 'city'], 'town', 'City'], [['place', 'town'], 'town', 'Town'], [['place', 'village'], 'town', 'Village'],
+    [['place', 'hamlet'], 'town', 'Village'], [['place', 'suburb'], 'town', 'District'],
+    [['place', 'neighbourhood'], 'town', 'Neighbourhood'], [['place', 'quarter'], 'town', 'District'],
+    [['place', 'county'], 'area', 'Region'], [['place', 'state'], 'area', 'Region'], [['place', 'country'], 'area', 'Country'],
+    [['place', 'house'], 'address', 'Address'], [['building', 'house'], 'address', 'Address'],
+    [['building', 'residential'], 'address', 'Address'], [['building', 'apartments'], 'address', 'Address'],
+];
+const TRANSIT_TYPES = new Set(['station', 'tram', 'bus', 'airport', 'ferry']);
+const humanise = v => (v && v !== 'yes' ? v.charAt(0).toUpperCase() + v.slice(1).replace(/_/g, ' ') : '');
+
+function kindOf(key, value, objectType) {
+    const hit = KINDS.find(([[k, v]]) => k === key && v === value);
+    if (hit) return { type: hit[1], label: hit[2] };
+    if (key === 'highway') return { type: 'street', label: objectType === 'street' ? 'Street' : humanise(value) };
+    if (key === 'building' && value === 'yes') return { type: 'address', label: 'Address' };
+    if (key === 'boundary') return { type: 'area', label: 'Area' };
+    return { type: 'place', label: humanise(value) };
+}
+
+const unique = parts => parts.filter((p, i) => p && parts.indexOf(p) === i);
+// Without parts only in a local script ("台灣省") when English ones are left,
+// as the app is in English; all of them when nothing else is.
+const readable = parts => (parts.some(isLatin) ? parts.filter(isLatin) : parts);
+
+// A Photon feature as the picker shows it and a place stores it.
+function fromPhoton(feature) {
+    const p = feature.properties || {};
+    const [lon, lat] = feature.geometry?.coordinates || [];
+    const { type, label } = kindOf(p.osm_key, p.osm_value, p.type);
+    const street = [p.street, p.housenumber].filter(Boolean).join(' ');
+    const town = [p.city, p.town, p.village, p.district, p.county].find(t => t && isLatin(t))
+        || p.city || p.town || p.village || p.district || p.county || '';
+    const name = p.name || street || town || p.state || p.country || '';
+    // "Taipei, Taiwan": where it is, without the place's own name.
+    const area = readable(unique([town, p.country]).filter(x => x !== name)).join(', ');
+    const address = readable(unique([street !== name && street, [p.postcode, town].filter(Boolean).join(' '), p.state, p.country])
+        .filter(x => x && x !== name)).join(', ');
+    return { name, address, area, type, label, lat: Number(lat), lon: Number(lon) };
+}
+
+// One place is often mapped several times: a station, its building and each
+// platform (the same name within a kilometre: big stations are big), or a
+// street or path in pieces (the same name in the same town). Shown once.
+function dedupe(results) {
+    const kept = [];
+    const transit = r => TRANSIT_TYPES.has(r.type);
+    for (const r of results) {
+        const same = kept.some(k => {
+            if (k.name.toLowerCase() !== r.name.toLowerCase()) return false;
+            if (transit(k) && transit(r)) return metresBetween(k, r) < 1000;
+            if (k.type !== r.type) return false;
+            return k.type === 'street' ? k.area === r.area : metresBetween(k, r) < 400;
+        });
+        if (!same) kept.push(r);
+    }
+    return kept;
+}
+
+async function searchPhoton(query, near) {
+    const nearKey = near ? `${near.lat.toFixed(1)},${near.lon.toFixed(1)}` : '';
+    const key = `photon:${query.toLowerCase()}|${nearKey}`;
+    if (cache.has(key)) return cache.get(key);
+    if (photonWaiting >= PHOTON_MAX_WAITING) throw Object.assign(new Error('Photon queue is full'), { busy: true });
+    photonWaiting++;
+    const load = async () => {
+        const wait = photonLast + PHOTON_INTERVAL_MS - Date.now();
+        if (wait > 0) await new Promise(resolve => setTimeout(resolve, wait));
+        photonLast = Date.now();
+        const params = { q: query, limit: '12', lang: 'en' };
+        if (near) Object.assign(params, { lat: String(near.lat), lon: String(near.lon), zoom: String(PHOTON_ZOOM) });
+        const res = await fetch(`${PHOTON}?${new URLSearchParams(params)}`, {
+            headers: { 'User-Agent': userAgent() },
+            signal: AbortSignal.timeout(5000),
+        });
+        if (!res.ok) throw new Error(`Photon error: ${res.status}`);
+        const data = await res.json();
+        return dedupe((data.features || []).map(fromPhoton).filter(r => r.name && Number.isFinite(r.lat) && Number.isFinite(r.lon)));
+    };
+    const result = photonQueue.then(load);
+    photonQueue = result.catch(() => {});
+    let value;
+    try {
+        value = await result;
+    } finally {
+        photonWaiting--;
+    }
+    if (cache.size >= CACHE_MAX) cache.delete(cache.keys().next().value);
+    cache.set(key, value);
+    return value;
+}
+
+// Places matching `rawQuery`, best first, at most 8. `near` ({lat, lon}, the
+// trip's area) ranks places close to it higher without hiding the rest;
+// `transit` puts stations and stops first (the route finder). `typing` marks
+// a search sent while typing: those never fall back to Nominatim, whose
+// policy forbids autocomplete; they fail instead, and Enter searches it.
+async function search(rawQuery, { near = null, transit = false, typing = false } = {}) {
+    const query = rawQuery.trim().replace(/\s+/g, ' ');
+    let results;
+    try {
+        results = await searchPhoton(query, near);
+    } catch (error) {
+        if (typing) throw error;
+        console.warn(`Photon failed, falling back to Nominatim: ${error.message}`);
+        results = await searchNominatim(query);
+    }
+    if (transit) results = [...results].sort((a, b) => TRANSIT_TYPES.has(b.type) - TRANSIT_TYPES.has(a.type));
+    return results.slice(0, 8);
 }
 
 // ── English names for stations ──
@@ -189,4 +337,4 @@ async function englishStationByName(name, near) {
     });
 }
 
-module.exports = { search, englishStopName, englishStationByName, isLatin, metresBetween, townAt, addressAt };
+module.exports = { search, fromPhoton, dedupe, englishStopName, englishStationByName, isLatin, metresBetween, townAt, addressAt };

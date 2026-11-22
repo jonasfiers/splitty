@@ -61,6 +61,11 @@ const ROUTES = [
   // The trip kept offline, with its files and their previews (utils/offlineTrips.js, offlineDocs.js).
   [/^\/trips\/offline/, () => ({ trips: [{ trip, places: [], items, documents: [DOCUMENT] }] })],
   [/^\/trips$/, () => ({ trips: [trip], groups: [group] })],
+  // Place search (api/geocodeService.js): what a search as you type answers.
+  [/^\/trips\/geocode$/, () => ({ success: true, results: [
+    { name: 'Taipei Main Station', address: 'Zhongxiao West Road 49, Taipei, Taiwan', area: 'Taipei, Taiwan', type: 'station', label: 'Station', lat: 25.0478, lon: 121.5171 },
+    { name: 'Sun Moon Lake', address: 'Yuchi Township, Taiwan', area: 'Yuchi Township, Taiwan', type: 'water', label: 'Lake', lat: 23.8655, lon: 120.9155 },
+  ] })],
   [/^\/trips\/t1$/, () => ({ trip, items, places: [], documents: [] })],
   [/^\/trips\/t1\/documents$/, () => ({ documents: [DOCUMENT] })],
   [/^\/trips\/t1\/(documents|photos|albums|follow-links|routes)/, () => ({ documents: [], photos: [], albums: [], links: [], routes: [], places: [] })],

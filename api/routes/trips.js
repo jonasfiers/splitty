@@ -117,9 +117,12 @@ function parseItem(kind, body) {
 
 
 // Nominatim is a shared, donated service; keep one user from hammering it.
+// Searches go out as the user types (a pause between keystrokes), so a few
+// per place picked. Counted per user: they are all logged in.
 const geocodeLimiter = rateLimit({
     windowMs: 60 * 1000,
-    limit: 20,
+    limit: 60,
+    keyGenerator: req => req.user.id,
     message: { error: 'Too many place searches, please wait a moment.' },
     standardHeaders: 'draft-7',
     legacyHeaders: false,
@@ -350,7 +353,16 @@ router.get('/geocode', geocodeLimiter, async (req, res) => {
     try {
         const q = text(req.query.q, 200);
         if (q.length < 3) return res.status(400).json({ error: 'Type at least 3 characters to search.' });
-        res.json({ success: true, results: await geocodeService.search(q) });
+        // `near`: the trip's area, to rank places there first. `transit`: the
+        // route finder, stations first. `typing`: sent while typing (no
+        // Nominatim fallback, its policy forbids autocomplete).
+        const near = LAT_LON.exec(text(req.query.near, 40));
+        const options = {
+            near: near ? { lat: Number(near[1]), lon: Number(near[2]) } : null,
+            transit: req.query.transit === '1',
+            typing: req.query.typing === '1',
+        };
+        res.json({ success: true, results: await geocodeService.search(q, options) });
     } catch (error) {
         if (error.busy) return res.status(503).json({ error: 'Place search is busy. Try again in a few seconds.' });
         console.error(error);
