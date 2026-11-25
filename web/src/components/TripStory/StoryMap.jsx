@@ -12,8 +12,9 @@ import { iconSvg } from '../../utils/icons.js'
 //
 // `scene`: { pins: [{ place, icon, kind, current }], drawn: [leg], leg (being
 // travelled, or null), animate (draw it now rather than show it done),
-// focus: [{ lat, lon }] (what to frame) }. A leg: { id, from, to, icon }.
-// `insetRef.current`: { top, bottom }, px kept free for the panels over the
+// focus: [{ lat, lon }] (what to frame), photo: { lat, lon, src } (where the
+// photo on show was taken, drawn as its thumbnail) }. A leg: { id, from, to, icon }.
+// `insetRef.current`: { top, bottom, left, right }, px kept free for what lies over the
 // map; measured by the slideshow before this map frames (a layout effect).
 
 const FLY_S = 1.3
@@ -33,11 +34,11 @@ const ease = t => (t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2)
 // box of a few km around it.
 function frame(map, focus, inset, animate) {
   if (!focus.length) return
-  const { top = 0, bottom = 0 } = inset || {}
+  const { top = 0, bottom = 0, left = 0, right = 0 } = inset || {}
   const bounds = focus.length === 1
     ? L.latLng(focus[0].lat, focus[0].lon).toBounds(2500)
     : L.latLngBounds(focus.map(p => [p.lat, p.lon]))
-  const opts = { paddingTopLeft: [40, 40 + top], paddingBottomRight: [40, 40 + bottom], maxZoom: focus.length === 1 ? 14 : 13 }
+  const opts = { paddingTopLeft: [40 + left, 40 + top], paddingBottomRight: [40 + right, 40 + bottom], maxZoom: focus.length === 1 ? 14 : 13 }
   if (animate) map.flyToBounds(bounds, { ...opts, duration: FLY_S })
   else map.fitBounds(bounds, { ...opts, animate: false })
 }
@@ -79,6 +80,15 @@ export default function StoryMap({ scene, insetRef }) {
     for (const leg of scene.drawn) L.polyline(arcBetween(map, leg.from, leg.to), { className: 'story-line', weight: 3, interactive: false }).addTo(lines)
     pins.clearLayers()
     for (const pin of scene.pins) L.marker([pin.place.lat, pin.place.lon], { icon: pinIcon(pin), interactive: false, zIndexOffset: pin.current ? 500 : 0 }).addTo(pins)
+    if (scene.photo) {
+      const img = document.createElement('img')
+      img.src = scene.photo.src
+      img.alt = ''
+      const shot = document.createElement('div')
+      shot.className = 'story-shot'
+      shot.append(img)
+      L.marker([scene.photo.lat, scene.photo.lon], { icon: L.divIcon({ className: '', html: shot, iconSize: [48, 48], iconAnchor: [24, 24] }), interactive: false, zIndexOffset: 2000 }).addTo(pins)
+    }
 
     const { leg } = scene
     if (!leg) {

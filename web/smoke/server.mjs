@@ -45,7 +45,7 @@ const FOLLOW_ENDED = {
     { id: 'p1', name: 'Taipei Main Station', lat: 25.0478, lon: 121.5171 },
     { id: 'p2', name: 'Hualien', lat: 24.0, lon: 121.6, approximate: true },
   ],
-  photos: ['ph1', 'ph2'].map((id, n) => ({ id, album: 'al1', at: `${day(n - 3)}T12:00`, ratio: 1.5, thumb: `/follow/smokefinished0000000000/photos/al1/${id}/thumbnail`, preview: `/follow/smokefinished0000000000/photos/al1/${id}/preview` })),
+  photos: ['ph1', 'ph2'].map((id, n) => ({ id, album: 'al1', at: `${day(n - 3)}T12:00`, ratio: 1.5, lat: 24.5 - n * 0.4, lon: 121.7, thumb: `/follow/smokefinished0000000000/photos/al1/${id}/thumbnail`, preview: `/follow/smokefinished0000000000/photos/al1/${id}/preview` })),
   kinds: [],
 }
 

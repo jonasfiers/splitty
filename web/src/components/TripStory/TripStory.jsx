@@ -1,6 +1,6 @@
 import { useState, useEffect, useLayoutEffect, useMemo, useCallback, useRef } from 'react'
 import Icon from '../Icon/Icon.jsx'
-import { photoSrc } from '../TripPhotos/TripPhotos.jsx'
+import { photoSrc, PhotoViewer } from '../TripPhotos/TripPhotos.jsx'
 import { formatDay, formatDateRange, daysBetween, dayOf, timeOf, itemIcon, describe } from '../../utils/trip.js'
 import { tripIcon } from '../../utils/icons.js'
 import StoryMap, { LEG_MS } from './StoryMap.jsx'
@@ -10,7 +10,8 @@ import './TripStory.css'
 // once the trip has ended. One map stays under every slide and travels with
 // the trip, stop by stop: each journey is drawn from where it starts to where
 // it ends, each place (an activity, the town of a stay) is flown in to, and
-// the photos taken there follow, full screen. A title card opens it; the end
+// the photos taken there follow as cards over the map, which shows where each
+// was taken (and opens it full screen on request). A title card opens it; the end
 // card shows the whole route. Swipe, tap the sides or use the arrow keys; Play
 // moves on by itself until someone touches it. Everything shown is what the
 // follow view already gives (api/followService.js).
@@ -68,7 +69,8 @@ export function buildSteps({ items, places, photos }) {
 }
 
 // What the map shows at a step: the journeys travelled so far, the places
-// reached (the current one marked), the journey under way, what to frame.
+// reached (the current one marked), the journey under way, where a photo was
+// taken, what to frame.
 function sceneOf({ steps, segs }, at, animate) {
   const s = steps[at]
   const upto = s.kind === 'title' ? 0 : s.kind === 'end' ? segs.length - 1 : s.segIndex ?? segs.length - 1
@@ -88,12 +90,18 @@ function sceneOf({ steps, segs }, at, animate) {
   }
   if (current) for (const p of current.places) { const pin = pins.get(p.id); if (pin) pins.set(p.id, { ...pin, current: true }) }
   const everywhere = segs.flatMap(g => g.places)
+  // A photo with a location: shown where it was taken, framed with its stop.
+  const shot = s.kind === 'photo' && s.photo.lat != null && s.photo.lon != null
+    ? { lat: s.photo.lat, lon: s.photo.lon, src: photoSrc(s.photo.thumb) }
+    : null
+  const focus = s.kind === 'end' ? everywhere : current ? current.places : (segs[0]?.places ?? everywhere)
   return {
     pins: [...pins.values()],
     drawn: s.kind === 'title' ? [] : shown.filter(g => g.kind === 'leg' && g !== under).map(legOf),
     leg: under ? legOf(under) : null,
-    animate: animate && (s.kind === 'leg' || s.kind === 'stop'),
-    focus: s.kind === 'end' ? everywhere : current ? current.places : (segs[0]?.places ?? everywhere),
+    animate: animate && s.kind !== 'title' && s.kind !== 'end',
+    photo: shot,
+    focus: shot ? [...(current ? focus : []), shot] : focus,
   }
 }
 
@@ -117,15 +125,23 @@ export default function TripStory({ view, onAllDays, home }) {
 
   // The panels over the map are measured before the map frames (its effect
   // runs after this one), so it keeps what they cover free.
+  // A photo's card lies along the bottom, or on the right of a wide screen
+  // (TripStory.css, the same aspect ratio).
   const top = useRef(null)
   const bottom = useRef(null)
-  const insetRef = useRef({ top: 0, bottom: 0 })
+  const card = useRef(null)
+  const insetRef = useRef({ top: 0, bottom: 0, left: 0, right: 0 })
   useLayoutEffect(() => {
+    const wide = window.matchMedia('(min-aspect-ratio: 5/4)').matches
     insetRef.current = {
-      top: top.current ? top.current.offsetHeight + 72 : 0,
-      bottom: bottom.current ? bottom.current.offsetHeight + 48 : 0,
+      top: top.current ? top.current.offsetHeight + 72 : 56,
+      bottom: bottom.current ? bottom.current.offsetHeight + 48 : card.current && !wide ? card.current.offsetHeight + 16 : 0,
+      left: 0,
+      right: card.current && wide ? card.current.offsetWidth + 24 : 0,
     }
   }, [at])
+  // A photo opened full screen (the trip page's viewer); the slideshow waits.
+  const [full, setFull] = useState(null)
 
   // Play: on to the next step after a while; a video moves on when it ends.
   useEffect(() => {
@@ -136,6 +152,7 @@ export default function TripStory({ view, onAllDays, home }) {
 
   useEffect(() => {
     const key = e => {
+      if (full) return // the viewer has the keys
       if (e.key === 'ArrowRight' || e.key === 'PageDown') go(1)
       else if (e.key === 'ArrowLeft' || e.key === 'PageUp') go(-1)
       else if (e.key === ' ' && e.target === document.body) { e.preventDefault(); setPlaying(p => !p) }
@@ -143,7 +160,7 @@ export default function TripStory({ view, onAllDays, home }) {
     }
     window.addEventListener('keydown', key)
     return () => window.removeEventListener('keydown', key)
-  }, [go, onAllDays])
+  }, [go, onAllDays, full])
 
   // The next two photos load while this step shows.
   useEffect(() => {
@@ -209,14 +226,21 @@ export default function TripStory({ view, onAllDays, home }) {
         )}
 
         {step.kind === 'photo' && (
-          <figure className="story-photo">
-            <img className="story-backdrop" src={photoSrc(step.photo.thumb)} alt="" aria-hidden="true" />
-            {step.photo.play ? (
-              <video src={photoSrc(step.photo.play)} poster={photoSrc(step.photo.preview)} controls autoPlay muted playsInline
-                onEnded={() => { if (playing) go(1, false) }} />
-            ) : (
-              <img src={photoSrc(step.photo.preview)} alt="" />
-            )}
+          // Sized from the photo's own shape, so it can be measured before it loads.
+          <figure className="story-card" ref={card} style={{ '--r': step.photo.ratio || 1.5 }}>
+            <div className="story-card-frame">
+              {step.photo.play ? (
+                <video src={photoSrc(step.photo.play)} poster={photoSrc(step.photo.preview)} controls autoPlay muted playsInline
+                  onEnded={() => { if (playing) go(1, false) }} />
+              ) : (
+                <img src={photoSrc(step.photo.preview)} alt="" />
+              )}
+              {!step.photo.play && (
+                <button type="button" className="story-card-full" onClick={() => { setPlaying(false); setFull(step.photo) }} aria-label="Full screen">
+                  <Icon name="maximize" />
+                </button>
+              )}
+            </div>
             <figcaption>{[step.seg && titleOf(step.seg), when(step.photo.at)].filter(Boolean).join(' · ')}</figcaption>
           </figure>
         )}
@@ -247,6 +271,7 @@ export default function TripStory({ view, onAllDays, home }) {
           </button>
         )}
       </div>
+      {full && <PhotoViewer photos={[full]} index={0} onClose={() => setFull(null)} />}
       {at > 0 && <button type="button" className="story-nav prev" onClick={() => go(-1)} aria-label="Previous"><Icon name="chevron-left" /></button>}
       {at < last && <button type="button" className="story-nav next" onClick={() => go(1)} aria-label="Next"><Icon name="chevron-right" /></button>}
     </div>

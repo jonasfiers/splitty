@@ -15,7 +15,7 @@ import {
   Percent, Shield, HeartPulse, Pill, Stethoscope, GraduationCap, Briefcase, Calendar, WashingMachine,
   Users, User, Heart, Rainbow, Star, Flag, Globe, Tag, Folder, Box,
   ArrowLeftRight, Handshake, Check, Image as ImageIcon, Paperclip, Search, Lock, CircleQuestionMark, Pencil, X, LogIn, LogOut,
-  Play, Pause, List, RotateCcw, ChevronLeft, ChevronRight, Images,
+  Play, Pause, List, RotateCcw, Maximize2, ChevronLeft, ChevronRight, Images,
 } from 'lucide'
 
 // The icons people pick for categories (IconPicker), by
@@ -198,6 +198,7 @@ const UI = {
   pause: Pause,
   list: List,
   'rotate-ccw': RotateCcw,
+  maximize: Maximize2,
   'chevron-left': ChevronLeft,
   'chevron-right': ChevronRight,
   images: Images,
