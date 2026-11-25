@@ -32,6 +32,7 @@ const ease = t => (t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2)
 
 // Where the map should look: the places, clear of the panels; one place as a
 // box of a few km around it.
+// `animate`: true flies there, 'glide' moves there briefly (scrubbing), false jumps.
 function frame(map, focus, inset, animate, speed = 1) {
   if (!focus.length) return
   const { top = 0, bottom = 0, left = 0, right = 0 } = inset || {}
@@ -39,7 +40,8 @@ function frame(map, focus, inset, animate, speed = 1) {
     ? L.latLng(focus[0].lat, focus[0].lon).toBounds(2500)
     : L.latLngBounds(focus.map(p => [p.lat, p.lon]))
   const opts = { paddingTopLeft: [40 + left, 40 + top], paddingBottomRight: [40 + right, 40 + bottom], maxZoom: focus.length === 1 ? 14 : 13 }
-  if (animate) map.flyToBounds(bounds, { ...opts, duration: FLY_S / speed })
+  if (animate === 'glide') map.fitBounds(bounds, { ...opts, animate: true, duration: 0.35 })
+  else if (animate) map.flyToBounds(bounds, { ...opts, duration: FLY_S / speed })
   else map.fitBounds(bounds, { ...opts, animate: false })
 }
 
@@ -94,7 +96,7 @@ export default function StoryMap({ scene, insetRef, speedRef }) {
 
     const { leg } = scene
     if (!leg) {
-      frame(map, scene.focus, insetRef.current, !still && scene.animate, speed)
+      frame(map, scene.focus, insetRef.current, still ? false : scene.glide ? 'glide' : scene.animate, speed)
     } else if (still || !scene.animate) {
       L.polyline(arcBetween(map, leg.from, leg.to), { className: 'story-line', weight: 3, interactive: false }).addTo(moving)
       frame(map, scene.focus, insetRef.current, false)

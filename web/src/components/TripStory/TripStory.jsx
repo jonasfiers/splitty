@@ -83,10 +83,20 @@ export function buildSteps({ items, places, photos }) {
   return { steps, segs }
 }
 
+// The places of segment k and what came before it since the day before: the
+// stretch just travelled, never what is still to come.
+function around(segs, k) {
+  if (!segs.length) return []
+  const upto = Math.min(k, segs.length - 1)
+  const day = dayOf(segs[upto].at)
+  return segs.slice(0, upto + 1).filter(g => daysBetween(dayOf(g.at), day) <= 1).flatMap(g => g.places)
+}
+
 // What the map shows at a step: the journeys travelled so far, the places
 // reached (the current one marked), the journey under way, where a photo was
-// taken, what to frame. `overview` (while scrubbing): the whole trip framed,
-// so the route grows and shrinks under a still camera.
+// taken, what to frame. `overview` (while scrubbing): a loose frame of the
+// stretch just travelled (since the day before), which glides along; so
+// the long flights home don't shrink the rest of the trip to a dot.
 function sceneOf({ steps, segs }, at, animate, overview = false) {
   const s = steps[at]
   const upto = s.kind === 'title' ? 0 : s.kind === 'end' ? segs.length - 1 : s.segIndex ?? segs.length - 1
@@ -117,7 +127,8 @@ function sceneOf({ steps, segs }, at, animate, overview = false) {
     leg: under ? legOf(under) : null,
     animate: animate && s.kind !== 'title' && s.kind !== 'end',
     photo: shot,
-    focus: overview ? everywhere : shot ? [...(current ? focus : []), shot] : focus,
+    focus: overview ? (s.kind === 'end' ? everywhere : [...around(segs, s.segIndex ?? 0), ...(shot ? [shot] : [])]) : shot ? [...(current ? focus : []), shot] : focus,
+    glide: overview,
   }
 }
 
@@ -310,7 +321,7 @@ export default function TripStory({ view, onAllDays, home }) {
           </button>
           <div className="story-scrub">
             {scrubbing && (
-              <span className="story-scrub-label" style={{ left: `${(scrub / last) * 100}%` }}>
+              <span className="story-scrub-label" style={{ left: `clamp(80px, ${(scrub / last) * 100}%, calc(100% - 80px))` }}>
                 {steps[scrub].kind === 'photo' && <img src={photoSrc(steps[scrub].photo.thumb)} alt="" />}
                 <span>{labelOf(steps[scrub])}</span>
               </span>
