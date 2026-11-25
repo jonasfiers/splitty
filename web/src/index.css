@@ -2698,9 +2698,6 @@ html .leaflet-container { font-family: var(--font-body); } /* "html": Leaflet's 
 .follow-map { margin: 16px 0 24px; }
 .follow-map .trip-map { height: 360px; }
 .follow-foot { margin-top: 32px; font-size: var(--fs-sm); color: var(--text-3); }
-.follow-explain { margin-bottom: 14px; }
-.follow-check { display: flex; gap: 10px; align-items: flex-start; margin: 4px 0 12px; font-size: var(--fs-base); color: var(--text); }
-.follow-check input { margin-top: 4px; }
 .privacy-page { height: 100vh; height: 100dvh; overflow-y: auto; background: var(--bg); }
 .privacy {
   max-width: 720px;
@@ -3347,7 +3344,32 @@ html[data-emoji="openmoji"] {
 /* Follow page of a finished trip: the summary, and the way back to the slideshow. */
 .follow-summary { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; color: var(--text-2); }
 .follow-summary .btn { display: inline-flex; align-items: center; gap: 6px; }
-/* Changing a follow link (FollowSheet): its photos and whether it is kept. */
-.follow-edit { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
-.follow-edit select, .follow-photos select { max-width: 100%; }
-.follow-edit .follow-check { margin: 0; }
+
+/* A trip's follow links (FollowLinks, on TripFollowPage): a card per link with
+   its settings in view, and one to make another. */
+.follow-links { display: flex; flex-direction: column; gap: 14px; max-width: 680px; }
+.follow-intro { margin: 0; color: var(--text-2); font-size: var(--fs-base); }
+.follow-link { display: flex; flex-direction: column; gap: 12px; padding: 16px; }
+.follow-link h2 { margin: 0; font-size: var(--fs-lg, 1.1rem); }
+.follow-link .field-note { margin: -6px 0 0; }
+.follow-link-head { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.follow-link-head > .icon { flex: none; color: var(--accent-text); }
+.follow-link-name { display: flex; flex-direction: column; min-width: 0; }
+.follow-link-name strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.follow-link-name span { font-size: var(--fs-sm); color: var(--text-3); }
+.follow-link-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.follow-link-remove { color: var(--red); margin-left: auto; }
+.follow-settings { display: flex; flex-direction: column; gap: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+.follow-setting { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.follow-setting-text { display: flex; flex-direction: column; gap: 2px; flex: 1 1 220px; min-width: 0; }
+.follow-setting-text span { font-size: var(--fs-sm); color: var(--text-3); }
+.follow-new .btn-primary { align-self: flex-start; }
+/* A choice of a few (Photos: All / Favourites / None). */
+.seg { display: inline-flex; padding: 3px; gap: 2px; border-radius: var(--r-pill, 999px); background: var(--surface-2); border: 1px solid var(--border); }
+.seg button {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 12px;
+  border: none; border-radius: var(--r-pill, 999px); background: transparent; color: var(--text-2);
+  font: inherit; font-size: var(--fs-sm); cursor: pointer;
+}
+.seg button[aria-pressed="true"] { background: var(--surface); color: var(--text); font-weight: 600; box-shadow: var(--shadow-sm, 0 1px 3px rgba(0, 0, 0, .12)); cursor: default; }
+.seg-n { font-size: var(--fs-xs, .75rem); color: var(--text-3); font-variant-numeric: tabular-nums; }

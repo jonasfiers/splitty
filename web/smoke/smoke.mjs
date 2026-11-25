@@ -25,7 +25,7 @@ const DIST = path.resolve(process.argv[2] || path.join(HERE, '../dist'))
 const PAGES = [
   '/groups', '/groups/g1', '/groups/g1/expenses/e1', '/groups/g1/expenses/new', '/groups/g1/expenses/e1/edit',
   '/trips', '/trips/t1', '/trips/t1/items/new', '/trips/t1/items/i1', '/trips/t1/items/i1/edit',
-  '/trips/t1/route', '/trips/t1/documents', '/activity', '/insights', '/friends', '/profile', '/share',
+  '/trips/t1/route', '/trips/t1/documents', '/trips/t1/follow', '/activity', '/insights', '/friends', '/profile', '/share',
   '/privacy', '/offline-documents',
 ]
 const LOGGED_OUT = ['/login', '/register', '/forgot-password']
@@ -230,6 +230,20 @@ try {
   expect(closing.ghost === 1 && closing.open === 0, `closing leaves only an animating copy (${JSON.stringify(closing)})`)
   await sleep(400)
   expect(await evaluate(`document.querySelectorAll('.sheet-ghost').length`) === 0, 'and the copy is gone after the animation')
+  takeErrors()
+
+  console.log('Follow links on their own page')
+  await navigate(`${server.url}/trips/t1`); await settle()
+  expect(await evaluate(`[...document.querySelectorAll('.trip-chip')].some(c => c.getAttribute('href') === '/trips/t1/follow' && c.textContent.includes('Follow links'))`), 'the trip has a Follow links chip')
+  await navigate(`${server.url}/trips/t1/follow`); await settle()
+  await sleep(300); await screenshot('follow-links')
+  const page = await evaluate(`({
+    links: document.querySelectorAll('.follow-link:not(.follow-new)').length,
+    photos: document.querySelector('.follow-link .seg button[aria-pressed="true"]')?.textContent,
+    look: document.querySelector('.follow-link [role="switch"]')?.getAttribute('aria-checked'),
+    make: !!document.querySelector('.follow-new .btn-primary'),
+  })`)
+  expect(page.links === 1 && page.photos === 'Favourites9' && page.look === 'true' && page.make, `each link a card with its settings in view, and one to make another (${JSON.stringify(page)})`)
   takeErrors()
 
   console.log('Follow link of a finished trip: the slideshow')

@@ -86,6 +86,11 @@ const ROUTES = [
   ] })],
   [/^\/trips\/t1$/, () => ({ trip, items, places: [], documents: [] })],
   [/^\/trips\/t1\/documents$/, () => ({ documents: [DOCUMENT] })],
+  // Follow links (FollowLinks): one kept link with favourites, and the photo counts.
+  [/^\/trips\/t1\/follow-links$/, () => ({
+    links: [{ token: 'smoketoken000000000000', url: 'https://follow.example.test/smoketoken000000000000', photos: 'favourites', keep: true, expiresOn: null, views: 3, lastViewedOn: new Date(Date.now() - 3600000).toISOString(), by: 'Smoke Tester' }],
+    photoCounts: { all: 40, favourites: 9 },
+  })],
   [/^\/trips\/t1\/(documents|photos|albums|follow-links|routes)/, () => ({ documents: [], photos: [], albums: [], links: [], routes: [], places: [] })],
   [/^\/trips\/items\/i\d$/, m => ({ item: items.find(i => m.input.endsWith(i.id)) })],
   [/^\/activity/, () => ({ activities: [], groups: [group], trips: [trip] })],
