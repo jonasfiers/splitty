@@ -85,8 +85,9 @@ export function buildSteps({ items, places, photos }) {
 
 // What the map shows at a step: the journeys travelled so far, the places
 // reached (the current one marked), the journey under way, where a photo was
-// taken, what to frame.
-function sceneOf({ steps, segs }, at, animate) {
+// taken, what to frame. `overview` (while scrubbing): the whole trip framed,
+// so the route grows and shrinks under a still camera.
+function sceneOf({ steps, segs }, at, animate, overview = false) {
   const s = steps[at]
   const upto = s.kind === 'title' ? 0 : s.kind === 'end' ? segs.length - 1 : s.segIndex ?? segs.length - 1
   const shown = segs.slice(0, upto + 1)
@@ -116,7 +117,7 @@ function sceneOf({ steps, segs }, at, animate) {
     leg: under ? legOf(under) : null,
     animate: animate && s.kind !== 'title' && s.kind !== 'end',
     photo: shot,
-    focus: shot ? [...(current ? focus : []), shot] : focus,
+    focus: overview ? everywhere : shot ? [...(current ? focus : []), shot] : focus,
   }
 }
 
@@ -143,7 +144,11 @@ export default function TripStory({ view, onAllDays, home }) {
   const step = steps[at]
   const { trip, sharer, summary } = view
   const placeName = useCallback(id => view.places.find(p => p.id === id)?.name, [view.places])
-  const scene = useMemo(() => sceneOf(built, at, pos.forward), [built, at, pos.forward])
+  const scrubbing = scrub != null
+  const scene = useMemo(
+    () => (scrubbing ? sceneOf(built, scrub, false, true) : sceneOf(built, at, pos.forward)),
+    [built, at, pos.forward, scrubbing, scrub],
+  )
 
   // The panels over the map are measured before the map frames (its effect
   // runs after this one), so it keeps what they cover free.
@@ -155,13 +160,15 @@ export default function TripStory({ view, onAllDays, home }) {
   const insetRef = useRef({ top: 0, bottom: 0, left: 0, right: 0 })
   useLayoutEffect(() => {
     const wide = window.matchMedia('(min-aspect-ratio: 5/4)').matches
+    // Scrubbing: only the bar and its label (with a photo's thumbnail) lie over the map.
+    if (scrubbing) { insetRef.current = { top: 56, bottom: 190, left: 0, right: 0 }; return }
     insetRef.current = {
       top: top.current ? top.current.offsetHeight + 72 : 56,
       bottom: bottom.current ? bottom.current.offsetHeight + 72 : card.current && !wide ? card.current.offsetHeight + 62 : 40,
       left: 0,
       right: card.current && wide ? card.current.offsetWidth + 24 : 0,
     }
-  }, [at])
+  }, [at, scrubbing])
   // A photo opened full screen (the trip page's viewer); the slideshow waits.
   const [full, setFull] = useState(null)
 
@@ -223,7 +230,7 @@ export default function TripStory({ view, onAllDays, home }) {
   const where = described && !titleOf(step.seg).includes(described) ? described : ''
 
   return (
-    <div className="story" role="region" aria-roledescription="slideshow" aria-label={`${trip.title}, as a slideshow`}
+    <div className={`story${scrubbing ? ' scrubbing' : ''}`} role="region" aria-roledescription="slideshow" aria-label={`${trip.title}, as a slideshow`}
       onPointerDown={onPointerDown} onPointerUp={onPointerUp}>
       <StoryMap scene={scene} insetRef={insetRef} speedRef={speedRef} />
 
@@ -302,7 +309,12 @@ export default function TripStory({ view, onAllDays, home }) {
             {speed === 0.5 ? '½' : speed}×
           </button>
           <div className="story-scrub">
-            {scrub != null && <span className="story-scrub-label" style={{ left: `${(scrub / last) * 100}%` }}>{labelOf(steps[scrub])}</span>}
+            {scrubbing && (
+              <span className="story-scrub-label" style={{ left: `${(scrub / last) * 100}%` }}>
+                {steps[scrub].kind === 'photo' && <img src={photoSrc(steps[scrub].photo.thumb)} alt="" />}
+                <span>{labelOf(steps[scrub])}</span>
+              </span>
+            )}
             <input
               type="range" min={0} max={last} step={1} value={scrub ?? at}
               aria-label="Where in the trip" aria-valuetext={labelOf(steps[scrub ?? at])}
