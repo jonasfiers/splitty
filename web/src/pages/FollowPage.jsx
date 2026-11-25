@@ -8,7 +8,7 @@ import { photosByDay, DayPhotos, PhotoViewer } from '../components/TripPhotos/Tr
 import { buildTimeline, formatDay } from '../utils/trip.js'
 import { setTripKinds } from '../utils/tripKinds.js'
 import { tripIcon } from '../utils/icons.js'
-import TripStory, { summaryLine } from '../components/TripStory/TripStory.jsx'
+import TripStory, { summaryLine, ViewSwitch } from '../components/TripStory/TripStory.jsx'
 
 // Splitty itself: on follow.<domain> that is splitty.<domain>.
 const appHome = () => (window.location.hostname.startsWith('follow.') ? `https://${window.location.hostname.replace(/^follow\./, 'splitty.')}/` : '/login')
@@ -102,10 +102,10 @@ export default function FollowPage() {
             : `Since ${formatDay(trip.startDate)} · day ${days.length}`}
         </p>
         {view.lookBack && (
-          <p className="follow-summary">
-            {summaryLine(view.summary)}
-            <button type="button" className="btn btn-ghost btn-sm" onClick={showStory}><Icon name="play" /> Slideshow</button>
-          </p>
+          <>
+            <p className="follow-summary">{summaryLine(view.summary)}</p>
+            <ViewSwitch current="days" onJourney={showStory} />
+          </>
         )}
 
         {!view.started && <p>{sharer}’s trip hasn’t started yet. Check back once it has: each day appears here as it comes.</p>}

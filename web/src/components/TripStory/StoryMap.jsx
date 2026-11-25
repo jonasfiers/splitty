@@ -32,18 +32,19 @@ const ease = t => (t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2)
 
 // Where the map should look: the places, clear of the panels; one place as a
 // box of a few km around it.
-function frame(map, focus, inset, animate) {
+function frame(map, focus, inset, animate, speed = 1) {
   if (!focus.length) return
   const { top = 0, bottom = 0, left = 0, right = 0 } = inset || {}
   const bounds = focus.length === 1
     ? L.latLng(focus[0].lat, focus[0].lon).toBounds(2500)
     : L.latLngBounds(focus.map(p => [p.lat, p.lon]))
   const opts = { paddingTopLeft: [40 + left, 40 + top], paddingBottomRight: [40 + right, 40 + bottom], maxZoom: focus.length === 1 ? 14 : 13 }
-  if (animate) map.flyToBounds(bounds, { ...opts, duration: FLY_S })
+  if (animate) map.flyToBounds(bounds, { ...opts, duration: FLY_S / speed })
   else map.fitBounds(bounds, { ...opts, animate: false })
 }
 
-export default function StoryMap({ scene, insetRef }) {
+// `speedRef.current`: 1, 2 or 0.5; the flying and drawing take that much less (more) time.
+export default function StoryMap({ scene, insetRef, speedRef }) {
   const el = useRef(null)
   const mapRef = useRef(null)
   const layers = useRef(null)
@@ -71,6 +72,7 @@ export default function StoryMap({ scene, insetRef }) {
     if (!map) return
     const { lines, pins, moving } = layers.current
     const still = reduced()
+    const speed = speedRef.current || 1
     let cancelled = false
     const timers = []
     map.stop()
@@ -92,13 +94,13 @@ export default function StoryMap({ scene, insetRef }) {
 
     const { leg } = scene
     if (!leg) {
-      frame(map, scene.focus, insetRef.current, !still && scene.animate)
+      frame(map, scene.focus, insetRef.current, !still && scene.animate, speed)
     } else if (still || !scene.animate) {
       L.polyline(arcBetween(map, leg.from, leg.to), { className: 'story-line', weight: 3, interactive: false }).addTo(moving)
       frame(map, scene.focus, insetRef.current, false)
     } else {
       // Out to both ends, then the journey drawn from its start.
-      frame(map, scene.focus, insetRef.current, true)
+      frame(map, scene.focus, insetRef.current, true, speed)
       const curve = arcBetween(map, leg.from, leg.to)
       const line = L.polyline([curve[0]], { className: 'story-line', weight: 3, interactive: false }).addTo(moving)
       const head = L.marker(curve[0], { icon: headIcon(leg.icon), interactive: false, zIndexOffset: 1000 }).addTo(moving)
@@ -106,7 +108,7 @@ export default function StoryMap({ scene, insetRef }) {
         const t0 = performance.now()
         const step = now => {
           if (cancelled) return
-          const t = ease(Math.min(1, (now - t0) / DRAW_MS))
+          const t = ease(Math.min(1, (now - t0) / (DRAW_MS / speed)))
           const at = t * (curve.length - 1), i = Math.floor(at), f = at - i
           const a = curve[i], b = curve[Math.min(i + 1, curve.length - 1)]
           const tip = L.latLng(a.lat + (b.lat - a.lat) * f, a.lng + (b.lng - a.lng) * f)
@@ -116,10 +118,10 @@ export default function StoryMap({ scene, insetRef }) {
           else head.remove()
         }
         requestAnimationFrame(step)
-      }, FLY_S * 1000 + 100))
+      }, (FLY_S * 1000) / speed + 100))
     }
     return () => { cancelled = true; timers.forEach(clearTimeout) }
-  }, [scene, insetRef])
+  }, [scene, insetRef, speedRef])
 
   return <div ref={el} className="story-map-canvas" />
 }

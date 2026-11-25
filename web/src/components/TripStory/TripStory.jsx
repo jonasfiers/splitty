@@ -19,6 +19,21 @@ import './TripStory.css'
 const STOP_MS = 3500
 const PHOTO_MS = 5000
 
+// The two ways to see a trip that has been: Journey (this slideshow) and Day
+// by day (the follow page's list), always offered as a pair.
+export function ViewSwitch({ current, onJourney, onDays, dark = false }) {
+  return (
+    <div className={`view-switch${dark ? ' dark' : ''}`} role="group" aria-label="How to see the trip">
+      <button type="button" aria-pressed={current === 'journey'} onClick={current === 'journey' ? undefined : onJourney}>
+        <Icon name="play" /> Journey
+      </button>
+      <button type="button" aria-pressed={current === 'days'} onClick={current === 'days' ? undefined : onDays}>
+        <Icon name="list" /> Day by day
+      </button>
+    </div>
+  )
+}
+
 const plural = (n, word) => `${n.toLocaleString('en')} ${word}${n !== 1 ? 's' : ''}`
 // "16 days · 9 towns · 3,100 km · 412 photos"
 export const summaryLine = s => (s
@@ -117,7 +132,14 @@ export default function TripStory({ view, onAllDays, home }) {
     if (byHand) setPlaying(false)
     setPos(p => ({ at: Math.min(Math.max(p.at + by, 0), last), forward: by === 1 }))
   }, [last])
-  const jump = to => setPos({ at: to, forward: to === 1 })
+  const jump = (to, forward = to === 1) => setPos({ at: to, forward })
+  // Play's speed (the bottom bar): 1×, 2×, ½×; the map's flying and drawing follow.
+  const [speed, setSpeed] = useState(1)
+  const speedRef = useRef(speed)
+  speedRef.current = speed
+  const nextSpeed = () => setSpeed(v => (v === 1 ? 2 : v === 2 ? 0.5 : 1))
+  // Scrubbing: where the bar would land while it is dragged; it jumps there on release.
+  const [scrub, setScrub] = useState(null)
   const step = steps[at]
   const { trip, sharer, summary } = view
   const placeName = useCallback(id => view.places.find(p => p.id === id)?.name, [view.places])
@@ -135,7 +157,7 @@ export default function TripStory({ view, onAllDays, home }) {
     const wide = window.matchMedia('(min-aspect-ratio: 5/4)').matches
     insetRef.current = {
       top: top.current ? top.current.offsetHeight + 72 : 56,
-      bottom: bottom.current ? bottom.current.offsetHeight + 48 : card.current && !wide ? card.current.offsetHeight + 16 : 0,
+      bottom: bottom.current ? bottom.current.offsetHeight + 72 : card.current && !wide ? card.current.offsetHeight + 62 : 40,
       left: 0,
       right: card.current && wide ? card.current.offsetWidth + 24 : 0,
     }
@@ -146,13 +168,13 @@ export default function TripStory({ view, onAllDays, home }) {
   // Play: on to the next step after a while; a video moves on when it ends.
   useEffect(() => {
     if (!playing || at >= last || step.photo?.play) return
-    const t = setTimeout(() => go(1, false), step.kind === 'leg' ? LEG_MS : step.kind === 'stop' ? STOP_MS : PHOTO_MS)
+    const t = setTimeout(() => go(1, false), (step.kind === 'leg' ? LEG_MS : step.kind === 'stop' ? STOP_MS : PHOTO_MS) / speed)
     return () => clearTimeout(t)
-  }, [playing, at, last, step, go])
+  }, [playing, at, last, step, go, speed])
 
   useEffect(() => {
     const key = e => {
-      if (full) return // the viewer has the keys
+      if (full || e.target.closest?.('input')) return // the viewer, or the scrub bar, has the keys
       if (e.key === 'ArrowRight' || e.key === 'PageDown') go(1)
       else if (e.key === 'ArrowLeft' || e.key === 'PageUp') go(-1)
       else if (e.key === ' ' && e.target === document.body) { e.preventDefault(); setPlaying(p => !p) }
@@ -173,7 +195,7 @@ export default function TripStory({ view, onAllDays, home }) {
   // A swipe moves one step; a tap on the left third goes back, elsewhere on.
   const down = useRef(null)
   const onPointerDown = e => {
-    down.current = e.target.closest('button, a, video') ? null : { x: e.clientX, y: e.clientY }
+    down.current = e.target.closest('button, a, video, input, .story-controls') ? null : { x: e.clientX, y: e.clientY }
   }
   const onPointerUp = e => {
     const s = down.current
@@ -186,10 +208,15 @@ export default function TripStory({ view, onAllDays, home }) {
 
   const play = () => { if (at === 0 || at === last) jump(1); setPlaying(true) }
   const cover = view.photos[0]
+  // How long Play takes, roughly.
+  const minutes = Math.max(1, Math.round(steps.reduce((ms, s) => ms + (s.kind === 'leg' ? LEG_MS : s.kind === 'stop' ? STOP_MS : s.kind === 'photo' ? PHOTO_MS : 0), 0) / 60000))
   // "Day 4 · Thu 12 Nov · 14:30"
   const when = moment => [
     `Day ${daysBetween(trip.startDate, dayOf(moment)) + 1}`, formatDay(dayOf(moment)), timeOf(moment),
   ].filter(Boolean).join(' · ')
+  // For the scrub bar: "Day 4 · Taroko Gorge".
+  const labelOf = s => (s.kind === 'title' ? 'Start' : s.kind === 'end' ? 'The whole route'
+    : `Day ${daysBetween(trip.startDate, dayOf(s.photo?.at || s.seg.item.start)) + 1} · ${s.seg ? titleOf(s.seg) : 'Photo'}`)
   const titleOf = seg => (seg.kind === 'stop' ? seg.items.map(i => i.title).join(' · ') : seg.item.title)
   // Where, unless the title says it already ("Stay in Hualien").
   const described = step.seg && (step.kind === 'leg' || step.kind === 'stop') ? describe(step.seg.item, placeName) : ''
@@ -198,7 +225,7 @@ export default function TripStory({ view, onAllDays, home }) {
   return (
     <div className="story" role="region" aria-roledescription="slideshow" aria-label={`${trip.title}, as a slideshow`}
       onPointerDown={onPointerDown} onPointerUp={onPointerUp}>
-      <StoryMap scene={scene} insetRef={insetRef} />
+      <StoryMap scene={scene} insetRef={insetRef} speedRef={speedRef} />
 
       <div className="story-stage" key={step.key}>
         {step.kind === 'title' && (
@@ -210,9 +237,15 @@ export default function TripStory({ view, onAllDays, home }) {
               {/* While still on (a kept link), the end is not given away. */}
               <p>{trip.endDate ? formatDateRange(trip.startDate, trip.endDate) : `Since ${formatDay(trip.startDate)}`}</p>
               <p className="story-summary">{summaryLine(summary)}</p>
-              <div className="story-actions">
-                <button type="button" className="btn btn-primary" onClick={play}><Icon name="play" /> Play</button>
-                <button type="button" className="btn story-ghost" onClick={onAllDays}>See all days</button>
+              <div className="story-choices">
+                <button type="button" className="story-choice primary" onClick={play}>
+                  <span className="story-choice-name"><Icon name="play" /> Watch the journey</span>
+                  <span>The route on a map, stop by stop, with the photos · about {minutes} min</span>
+                </button>
+                <button type="button" className="story-choice" onClick={onAllDays}>
+                  <span className="story-choice-name"><Icon name="list" /> Day by day</span>
+                  <span>Every day with its times and places, at your own pace</span>
+                </button>
               </div>
             </div>
           </div>
@@ -255,7 +288,7 @@ export default function TripStory({ view, onAllDays, home }) {
             <div className="story-panel story-panel-bottom" ref={bottom}>
               <div className="story-actions">
                 <button type="button" className="btn btn-primary" onClick={() => { setPlaying(false); jump(0) }}><Icon name="rotate-ccw" /> Watch again</button>
-                <button type="button" className="btn btn-ghost" onClick={onAllDays}>See all days</button>
+                <button type="button" className="btn btn-ghost" onClick={onAllDays}><Icon name="list" /> Day by day</button>
               </div>
               <p className="story-foot">Shared with <a href={home}>Splitty</a></p>
             </div>
@@ -263,9 +296,26 @@ export default function TripStory({ view, onAllDays, home }) {
         )}
       </div>
 
-      <div className="story-progress" aria-hidden="true"><span style={{ width: `${(at / last) * 100}%` }} /></div>
+      {step.kind !== 'title' && (
+        <div className="story-controls">
+          <button type="button" className="story-speed" onClick={nextSpeed} aria-label={`Speed ${speed}×, change`}>
+            {speed === 0.5 ? '½' : speed}×
+          </button>
+          <div className="story-scrub">
+            {scrub != null && <span className="story-scrub-label" style={{ left: `${(scrub / last) * 100}%` }}>{labelOf(steps[scrub])}</span>}
+            <input
+              type="range" min={0} max={last} step={1} value={scrub ?? at}
+              aria-label="Where in the trip" aria-valuetext={labelOf(steps[scrub ?? at])}
+              onChange={e => setScrub(Number(e.target.value))}
+              onPointerUp={() => { if (scrub != null) { jump(scrub, false); setScrub(null) } }}
+              onKeyUp={() => { if (scrub != null) { jump(scrub, false); setScrub(null) } }}
+              onBlur={() => setScrub(null)}
+            />
+          </div>
+        </div>
+      )}
       <div className="story-top">
-        <button type="button" className="story-btn" onClick={onAllDays}><Icon name="list" /> All days</button>
+        {step.kind === 'title' ? <span /> : <ViewSwitch current="journey" onDays={onAllDays} dark />}
         {step.kind !== 'title' && step.kind !== 'end' && (
           <button type="button" className="story-btn" onClick={() => (playing ? setPlaying(false) : play())} aria-label={playing ? 'Pause' : 'Play'}>
             <Icon name={playing ? 'pause' : 'play'} />
