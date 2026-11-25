@@ -254,8 +254,8 @@ try {
   expect(endMap > 150, `ends on the whole route, with the map drawn (${endMap}px)`)
   await evaluate(`[...document.querySelectorAll('.story-end button')].find(b => b.textContent.includes('See all days')).click()`)
   await sleep(300)
-  const list = await evaluate(`({ hash: location.hash, first: document.querySelector('.trip-day')?.id, kicker: document.querySelector('.follow-kicker')?.textContent })`)
-  expect(list.hash === '#days' && list.first === `day-${FIRST_DAY}` && !list.kicker.startsWith('Follow'), `"See all days" lists the days from the first (${JSON.stringify(list)})`)
+  const list = await evaluate(`({ hash: location.hash, first: document.querySelector('.trip-day')?.id, kicker: document.querySelector('.follow-kicker')?.textContent, marked: document.querySelectorAll('.trip-day.today, .entry-list .past').length })`)
+  expect(list.hash === '#days' && list.first === `day-${FIRST_DAY}` && !list.kicker.startsWith('Follow') && list.marked === 0, `"See all days" lists the days from the first, none greyed or marked today (${JSON.stringify(list)})`)
   takeErrors()
 
   console.log('Version on the profile page')

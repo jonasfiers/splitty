@@ -85,7 +85,8 @@ export default function FollowPage() {
   const days = view.started
     ? buildTimeline({ startDate: trip.startDate, endDate: trip.endDate || today }, items).filter(d => d.day <= today && d.day >= trip.startDate)
     : []
-  // While on: the newest day first. Once ended: from the first day, as a story.
+  // While on: the newest day first, past days greyed. Once ended: from the
+  // first day, as a story, nothing greyed or marked as today.
   if (!view.ended) days.reverse()
   const dayPhotos = photosByDay(photos)
   const located = places.some(p => p.lat != null)
@@ -122,12 +123,12 @@ export default function FollowPage() {
         )}
 
         {days.map(d => (
-          <section key={d.day} id={`day-${d.day}`} className={`trip-day${d.day === today ? ' today' : ''}`}>
+          <section key={d.day} id={`day-${d.day}`} className={`trip-day${d.day === today && !view.ended ? ' today' : ''}`}>
             <DayHead trip={trip} day={d} />
             {d.entries.length > 0 ? (
               <div className="list list-tight entry-list">
                 {d.entries.map(entry => (
-                  <EntryRow key={`${entry.item.id}-${entry.phase}`} entry={entry} state={d.day < today ? 'past' : null} placeName={placeName} className={`follow-item-${entry.item.id}${flash === entry.item.id ? ' flash' : ''}`} />
+                  <EntryRow key={`${entry.item.id}-${entry.phase}`} entry={entry} state={d.day < today && !view.ended ? 'past' : null} placeName={placeName} className={`follow-item-${entry.item.id}${flash === entry.item.id ? ' flash' : ''}`} />
                 ))}
               </div>
             ) : <div className="trip-day-empty">{d.sleepingAt.length ? 'A day around town' : 'Nothing planned'}</div>}
