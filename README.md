@@ -54,6 +54,7 @@ Uploaded tickets live on disk, outside the API's directory (`UPLOAD_DIR`); the g
 - Balance transfers between groups
 - Trips planned per group: transport, stays and activities on a day-by-day timeline and a map, with booking details and attached tickets, each able to create the expense that pays for it
 - Public-transport route search for trips (Transitous), adding a chosen connection's trains and buses as items
+- Follow links: a public view of a trip up to today, and once it has ended a slideshow that travels the route on a map with the trip's photos (all, Immich favourites, or none per link)
 - Passkey (WebAuthn) and password login
 - Push notifications for group activity
 - Installable PWA with an offline-friendly service worker

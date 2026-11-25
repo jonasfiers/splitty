@@ -398,6 +398,10 @@ Browsers report what was blocked to `/api/csp-report`; the API logs each kind on
 secrets; its mail goes to a local sink and it has no push subscriptions or passkeys.
 Use it to look at a change on a working Splitty before it goes to `main`.
 
+`FOLLOW_TODAY=YYYY-MM-DD` in QA's `/etc/splitty-api.env` makes follow pages act as if today
+is that day (to try a finished trip's slideshow before it ends; the API logs a warning at
+start). Never set it in production.
+
 ## Expense kind labels (one-off migration)
 
 Settlements and balance transfers used to be `:Expense` nodes told apart by
