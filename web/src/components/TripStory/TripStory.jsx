@@ -168,6 +168,7 @@ export default function TripStory({ view, onAllDays, home }) {
   const top = useRef(null)
   const bottom = useRef(null)
   const card = useRef(null)
+  const credit = useRef(null) // where the map's credit goes (the bottom bar)
   const insetRef = useRef({ top: 0, bottom: 0, left: 0, right: 0 })
   useLayoutEffect(() => {
     const wide = window.matchMedia('(min-aspect-ratio: 5/4)').matches
@@ -175,7 +176,7 @@ export default function TripStory({ view, onAllDays, home }) {
     if (scrubbing) { insetRef.current = { top: 56, bottom: 190, left: 0, right: 0 }; return }
     insetRef.current = {
       top: top.current ? top.current.offsetHeight + 72 : 56,
-      bottom: bottom.current ? bottom.current.offsetHeight + 72 : card.current && !wide ? card.current.offsetHeight + 62 : 40,
+      bottom: bottom.current ? bottom.current.offsetHeight + 72 : card.current && !wide ? card.current.offsetHeight + 48 : 40,
       left: 0,
       right: card.current && wide ? card.current.offsetWidth + 24 : 0,
     }
@@ -244,7 +245,7 @@ export default function TripStory({ view, onAllDays, home }) {
   return (
     <div className={`story${scrubbing ? ' scrubbing' : ''}`} role="region" aria-roledescription="slideshow" aria-label={`${trip.title}, as a slideshow`}
       onPointerDown={onPointerDown} onPointerUp={onPointerUp}>
-      <StoryMap scene={scene} insetRef={insetRef} speedRef={speedRef} />
+      <StoryMap scene={scene} insetRef={insetRef} speedRef={speedRef} creditRef={credit} />
 
       <div className="story-stage" key={step.key}>
         {step.kind === 'title' && (
@@ -315,8 +316,9 @@ export default function TripStory({ view, onAllDays, home }) {
         )}
       </div>
 
-      {step.kind !== 'title' && (
-        <div className="story-controls">
+      {/* Kept in place on the title card too (hidden there): the map's credit lives in it. */}
+      <div className={`story-controls${step.kind === 'title' ? ' hidden' : ''}`}>
+        {step.kind !== 'title' && <>
           <select className="story-speed" value={speed} onChange={e => setSpeed(Number(e.target.value))} aria-label="Speed">
             {SPEEDS.map(v => <option key={v} value={v}>{v === 0.5 ? '½' : v}×</option>)}
           </select>
@@ -336,8 +338,9 @@ export default function TripStory({ view, onAllDays, home }) {
               onBlur={() => setScrub(null)}
             />
           </div>
-        </div>
-      )}
+        </>}
+        <div className="story-credit" ref={credit} />
+      </div>
       <div className="story-top">
         {step.kind === 'title' ? <span /> : <ViewSwitch current="journey" onDays={onAllDays} dark />}
         {step.kind !== 'title' && step.kind !== 'end' && (

@@ -10,9 +10,7 @@
 /* The map: not to be panned (a swipe moves the slideshow), so its own
    controls are gone; the attribution stays. */
 .story-map-canvas { position: absolute; inset: 0; z-index: 0; background: var(--bg-2, #1b1916); }
-.story-map-canvas .leaflet-control-attribution { font-size: 10px; }
-/* Clear of the bottom bar (.story-controls). */
-.story-map-canvas .leaflet-bottom { bottom: calc(40px + env(safe-area-inset-bottom)); }
+
 .story-line { stroke: var(--accent, #e8a33d); stroke-linecap: round; fill: none; }
 .trip-pin.story-pin-current { transform: scale(1.25); box-shadow: 0 0 0 4px color-mix(in srgb, var(--pin-line) 30%, transparent), var(--shadow-md); }
 .story-head {
@@ -87,8 +85,8 @@
    measure it before it loads. The map shows where it was taken (.story-shot). */
 .story-card {
   position: absolute; left: 50%; transform: translateX(-50%);
-  bottom: calc(62px + env(safe-area-inset-bottom));
-  width: min(calc(100% - 24px), calc(50dvh * var(--r)));
+  bottom: calc(48px + env(safe-area-inset-bottom));
+  width: min(calc(100% - 24px), calc(52dvh * var(--r)));
   margin: 0; padding: 8px 8px 10px; border-radius: 16px;
   background: color-mix(in srgb, var(--bg) 92%, transparent); color: var(--text);
   backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
@@ -180,6 +178,14 @@
 }
 .story-speed option { color: #1b1916; background: #fff; }
 .story-scrub { position: relative; flex: 1; display: flex; align-items: center; }
+.story-controls.hidden { display: none; }
+/* The map's credit (moved here by StoryMap), small and muted at the end of the bar. */
+.story-credit { flex: none; max-width: 34%; text-align: right; }
+.story-credit .leaflet-control-attribution {
+  margin: 0; padding: 0; background: none; box-shadow: none;
+  font-size: 10px; line-height: 1.3; color: rgba(255, 255, 255, .6);
+}
+.story-credit .leaflet-control-attribution a { color: inherit; text-decoration: underline; text-decoration-color: rgba(255, 255, 255, .3); }
 .story-scrub input { width: 100%; height: 32px; margin: 0; accent-color: var(--accent, #e8a33d); cursor: pointer; }
 .story-scrub-label {
   position: absolute; bottom: 58px; transform: translateX(-50%);

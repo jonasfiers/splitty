@@ -46,7 +46,9 @@ function frame(map, focus, inset, animate, speed = 1) {
 }
 
 // `speedRef.current`: 1, 2 or 0.5; the flying and drawing take that much less (more) time.
-export default function StoryMap({ scene, insetRef, speedRef }) {
+// `creditRef.current`: an element (the slideshow's bottom bar) the map's
+// credit (OpenStreetMap, Protomaps) is moved into, out of the map's corner.
+export default function StoryMap({ scene, insetRef, speedRef, creditRef }) {
   const el = useRef(null)
   const mapRef = useRef(null)
   const layers = useRef(null)
@@ -58,7 +60,10 @@ export default function StoryMap({ scene, insetRef, speedRef }) {
       ...mapOptions(), zoomControl: false, dragging: false, scrollWheelZoom: false, doubleClickZoom: false,
       touchZoom: false, boxZoom: false, keyboard: false, zoomSnap: 0.25,
     })
-    map.attributionControl.setPosition('bottomleft')
+    // Leaflet keeps it up to date wherever it is (Protomaps, or the raster
+    // tiles' credit when the map falls back); no "Leaflet" prefix, for room.
+    map.attributionControl.setPrefix(false)
+    if (creditRef?.current) creditRef.current.append(map.attributionControl.getContainer())
     const removeBasemap = addBasemap(map)
     layers.current = { lines: L.layerGroup().addTo(map), pins: L.layerGroup().addTo(map), moving: L.layerGroup().addTo(map) }
     mapRef.current = map
@@ -67,7 +72,7 @@ export default function StoryMap({ scene, insetRef, speedRef }) {
     const refit = () => frame(map, sceneRef.current.focus, insetRef.current, false)
     map.on('resize', refit)
     return () => { map.off('resize', refit); removeBasemap(); map.remove(); mapRef.current = null }
-  }, [insetRef])
+  }, [insetRef, creditRef])
 
   useEffect(() => {
     const map = mapRef.current
