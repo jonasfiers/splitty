@@ -78,12 +78,8 @@ const metresBetween = (a, b) => {
 
 // `forFollowers` (the public follow page): no "Navigate here", and a stay
 // still going on shows when it began, not its (hidden) end.
-function TripMap({ places, items, onOpenItem, highlight = null, onHover = () => {}, today = null, photos = [], onOpenPhotos = null, forFollowers = false, inset = null }) {
+function TripMap({ places, items, onOpenItem, highlight = null, onHover = () => {}, today = null, photos = [], onOpenPhotos = null, forFollowers = false }) {
   const el = useRef(null)
-  // Room kept free when framing, { top, bottom } in px: what lies over the map
-  // there (the slideshow's panels, TripStory).
-  const insetRef = useRef(inset)
-  insetRef.current = inset
   const pins = useRef(new Map())   // placeId -> { marker, itemIds }
   const lines = useRef(new Map())  // itemId -> { line, arrows (layer group) }
   const highlightRef = useRef(highlight)
@@ -238,13 +234,9 @@ function TripMap({ places, items, onOpenItem, highlight = null, onHover = () => 
 
     const fit = list => {
       // Nothing placed yet: the world, waiting for the first pin.
-      const { top = 0, bottom = 0 } = insetRef.current || {}
-      const room = { paddingTopLeft: [36, 36 + top], paddingBottomRight: [36, 36 + bottom], maxZoom: 14 }
       if (!list.length) map.setView([30, 10], 2)
-      else if (list.length === 1 && !top && !bottom) map.setView([list[0].lat, list[0].lon], 13)
-      // One place clear of what lies over the map: a box of ~3 km around it.
-      else if (list.length === 1) map.fitBounds(L.latLng(list[0].lat, list[0].lon).toBounds(3000), { ...room, maxZoom: 13 })
-      else map.fitBounds(L.latLngBounds(list.map(p => [p.lat, p.lon])), room)
+      else if (list.length === 1) map.setView([list[0].lat, list[0].lon], 13)
+      else map.fitBounds(L.latLngBounds(list.map(p => [p.lat, p.lon])), { padding: [36, 36], maxZoom: 14 })
     }
     const todays = today ? located.filter(p => placesOn(items, today).has(p.id)) : []
     // Only worth a choice when today is a smaller view than the whole trip.
@@ -323,9 +315,6 @@ function TripMap({ places, items, onOpenItem, highlight = null, onHover = () => 
 
   // An empty map is still a map: the places come with the first items.
   const empty = !places.some(p => p.lat != null && p.lon != null)
-  // Framed again when what lies over it changes size.
-  useEffect(() => { frameRef.current() }, [inset?.top, inset?.bottom])
-
   return (
     <div className="trip-map-wrap">
       <div ref={el} className="trip-map" />

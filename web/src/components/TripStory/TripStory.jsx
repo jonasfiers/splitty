@@ -1,23 +1,22 @@
-import { useState, useEffect, useMemo, useCallback, useRef, lazy, Suspense } from 'react'
+import { useState, useEffect, useLayoutEffect, useMemo, useCallback, useRef } from 'react'
 import Icon from '../Icon/Icon.jsx'
-import Loading from '../Loading.jsx'
-import { EntryRow } from '../TripDay/TripDay.jsx'
-import { photosByDay, photoSrc } from '../TripPhotos/TripPhotos.jsx'
-import { buildTimeline, formatDay, formatDateRange, daysBetween, timeOf } from '../../utils/trip.js'
+import { photoSrc } from '../TripPhotos/TripPhotos.jsx'
+import { formatDay, formatDateRange, daysBetween, dayOf, timeOf, itemIcon, describe } from '../../utils/trip.js'
 import { tripIcon } from '../../utils/icons.js'
+import StoryMap, { LEG_MS } from './StoryMap.jsx'
 import './TripStory.css'
 
-const TripMap = lazy(() => import('../TripMap/TripMap.jsx'))
-
 // A finished trip as a slideshow (2026-11-25), what a follow link opens on
-// once the trip has ended: a title card, then day by day a card with the
-// day's map and what happened, followed by that day's photos full screen, and
-// an end card with the whole route. Swipe, tap the sides or use the arrow
-// keys; Play moves on by itself until someone touches it. Everything shown is
-// what the follow view already gives (api/followService.js).
+// once the trip has ended. One map stays under every slide and travels with
+// the trip, stop by stop: each journey is drawn from where it starts to where
+// it ends, each place (an activity, the town of a stay) is flown in to, and
+// the photos taken there follow, full screen. A title card opens it; the end
+// card shows the whole route. Swipe, tap the sides or use the arrow keys; Play
+// moves on by itself until someone touches it. Everything shown is what the
+// follow view already gives (api/followService.js).
 
+const STOP_MS = 3500
 const PHOTO_MS = 5000
-const DAY_MS = 6000
 
 const plural = (n, word) => `${n.toLocaleString('en')} ${word}${n !== 1 ? 's' : ''}`
 // "16 days · 9 towns · 3,100 km · 412 photos"
@@ -26,91 +25,114 @@ export const summaryLine = s => (s
       .filter(Boolean).join(' · ')
   : '')
 
-// Where a day was spent: the town slept in that night ("Stay in Hualien").
-const townOf = day => day.sleepingAt.map(s => s.title.replace(/^Stay in /, '')).find(t => t && t !== 'Stay') || ''
+// In trip order; a start without a time sorts as the timeline draws it (a stay
+// from mid-afternoon, anything else from the start of its day).
+const sortKey = item => (timeOf(item.start) ? item.start : `${dayOf(item.start)}T${item.kind === 'stay' ? '15:00' : '00:00'}`)
 
-// What a day's map shows: its own entries and where it ended, nothing else.
-function dayMap(day, places) {
-  const items = [...new Map([...day.entries.map(e => e.item), ...day.sleepingAt].map(i => [i.id, i])).values()]
-  const ids = new Set(items.flatMap(i => [i.placeId, i.fromPlaceId, i.toPlaceId]).filter(Boolean))
-  return { items, places: places.filter(p => ids.has(p.id) && p.lat != null) }
-}
-
-// Days with nothing to show (no journey, no photos) are skipped.
-export function buildSlides({ trip, items, places, photos }) {
-  const byDay = photosByDay(photos)
-  const slides = [{ kind: 'title', key: 'title' }]
-  for (const d of buildTimeline({ startDate: trip.startDate, endDate: trip.endDate }, items)) {
-    if (d.outsideTrip) continue
-    const dayPhotos = byDay[d.day] || []
-    const moved = d.entries.some(e => e.item.kind === 'transport')
-    if (!moved && !dayPhotos.length) continue
-    const base = { d, n: daysBetween(trip.startDate, d.day) + 1, town: townOf(d) }
-    slides.push({ kind: 'day', key: `day-${d.day}`, ...base, map: dayMap(d, places) })
-    for (const photo of dayPhotos) slides.push({ kind: 'photo', key: `photo-${photo.album}-${photo.id}`, ...base, photo })
+// The trip as stops: a journey between two places on the map (a leg), or a
+// place (one or more activities or a stay there in a row). Each photo goes
+// with the stop or journey under way when it was taken.
+export function buildSteps({ items, places, photos }) {
+  const byId = new Map(places.filter(p => p.lat != null && p.lon != null).map(p => [p.id, p]))
+  const segs = []
+  for (const item of items.filter(i => dayOf(i.start)).sort((a, b) => sortKey(a).localeCompare(sortKey(b)))) {
+    const at = sortKey(item)
+    if (item.kind === 'transport') {
+      const from = byId.get(item.fromPlaceId), to = byId.get(item.toPlaceId)
+      if (from && to && from.id !== to.id) segs.push({ kind: 'leg', item, at, from, to, places: [from, to] })
+      continue
+    }
+    const place = byId.get(item.placeId)
+    if (!place) continue
+    const prev = segs[segs.length - 1]
+    if (prev?.kind === 'stop' && prev.place.id === place.id) { prev.items.push(item); continue }
+    segs.push({ kind: 'stop', item, items: [item], at, place, places: [place] })
   }
-  slides.push({ kind: 'end', key: 'end' })
-  return slides
+  const shots = segs.map(() => [])
+  const loose = []
+  let k = 0
+  for (const p of photos) {
+    if (!p.at) continue
+    while (k + 1 < segs.length && segs[k + 1].at <= p.at) k++
+    if (segs.length) shots[k].push(p)
+    else loose.push(p)
+  }
+  const steps = [{ kind: 'title', key: 'title' }]
+  segs.forEach((seg, i) => {
+    steps.push({ kind: seg.kind, key: `${seg.kind}-${seg.item.id}`, seg, segIndex: i })
+    for (const photo of shots[i]) steps.push({ kind: 'photo', key: `photo-${photo.album}-${photo.id}`, seg, segIndex: i, photo })
+  })
+  for (const photo of loose) steps.push({ kind: 'photo', key: `photo-${photo.album}-${photo.id}`, photo })
+  steps.push({ kind: 'end', key: 'end' })
+  return { steps, segs }
 }
 
-const noop = () => {}
-
-// The height of an element, kept up to date.
-function useHeight() {
-  const [el, setEl] = useState(null)
-  const [h, setH] = useState(0)
-  useEffect(() => {
-    if (!el) return
-    const ro = new ResizeObserver(() => setH(el.offsetHeight))
-    ro.observe(el)
-    return () => ro.disconnect()
-  }, [el])
-  return [setEl, h]
-}
-
-// A full-screen map with panels over its top and bottom; the map frames its
-// places in the space between them. Not to be panned: a swipe over it moves
-// the slideshow instead.
-function MapSlide({ places, items, top, bottom, className = '' }) {
-  const [topRef, topH] = useHeight()
-  const [bottomRef, bottomH] = useHeight()
-  // The panels' own room plus their distance from the screen's edges.
-  const inset = useMemo(() => ({ top: topH ? topH + 72 : 0, bottom: bottomH ? bottomH + 24 : 0 }), [topH, bottomH])
-  return (
-    <div className={`story-mapslide ${className}`}>
-      {places.length > 0 && (
-        <div className="story-map">
-          <Suspense fallback={<Loading />}>
-            <TripMap places={places} items={items} onOpenItem={noop} forFollowers inset={inset} />
-          </Suspense>
-        </div>
-      )}
-      {top && <div className="story-panel story-panel-top" ref={topRef}>{top}</div>}
-      {bottom && <div className="story-panel story-panel-bottom" ref={bottomRef}>{bottom}</div>}
-    </div>
-  )
+// What the map shows at a step: the journeys travelled so far, the places
+// reached (the current one marked), the journey under way, what to frame.
+function sceneOf({ steps, segs }, at, animate) {
+  const s = steps[at]
+  const upto = s.kind === 'title' ? 0 : s.kind === 'end' ? segs.length - 1 : s.segIndex ?? segs.length - 1
+  const shown = segs.slice(0, upto + 1)
+  const current = s.kind === 'end' || s.kind === 'title' ? null : s.seg
+  const legOf = seg => ({ id: seg.item.id, from: seg.from, to: seg.to, icon: itemIcon(seg.item) })
+  const under = s.kind === 'leg' ? s.seg : null
+  const pins = new Map()
+  for (const g of shown) {
+    if (s.kind === 'title') break
+    if (g.kind === 'leg') {
+      for (const p of [g.from, g.to]) if (!pins.has(p.id)) pins.set(p.id, { place: p, icon: 'map-pin', kind: '' })
+    } else {
+      const stay = g.items.find(i => i.kind === 'stay')
+      pins.set(g.place.id, { place: g.place, icon: itemIcon(stay || g.item), kind: stay ? 'stay' : g.item.kind })
+    }
+  }
+  if (current) for (const p of current.places) { const pin = pins.get(p.id); if (pin) pins.set(p.id, { ...pin, current: true }) }
+  const everywhere = segs.flatMap(g => g.places)
+  return {
+    pins: [...pins.values()],
+    drawn: s.kind === 'title' ? [] : shown.filter(g => g.kind === 'leg' && g !== under).map(legOf),
+    leg: under ? legOf(under) : null,
+    animate: animate && (s.kind === 'leg' || s.kind === 'stop'),
+    focus: s.kind === 'end' ? everywhere : current ? current.places : (segs[0]?.places ?? everywhere),
+  }
 }
 
 export default function TripStory({ view, onAllDays, home }) {
-  const slides = useMemo(() => buildSlides(view), [view])
-  const [at, setAt] = useState(0)
+  const built = useMemo(() => buildSteps(view), [view])
+  const { steps } = built
+  // `forward`: arrived by one step on, so the map travels there.
+  const [pos, setPos] = useState({ at: 0, forward: false })
+  const { at } = pos
   const [playing, setPlaying] = useState(false)
-  const last = slides.length - 1
-  // Moving by hand stops Play.
+  const last = steps.length - 1
   const go = useCallback((by, byHand = true) => {
     if (byHand) setPlaying(false)
-    setAt(i => Math.min(Math.max(i + by, 0), last))
+    setPos(p => ({ at: Math.min(Math.max(p.at + by, 0), last), forward: by === 1 }))
   }, [last])
-  const slide = slides[at]
+  const jump = to => setPos({ at: to, forward: to === 1 })
+  const step = steps[at]
   const { trip, sharer, summary } = view
   const placeName = useCallback(id => view.places.find(p => p.id === id)?.name, [view.places])
+  const scene = useMemo(() => sceneOf(built, at, pos.forward), [built, at, pos.forward])
 
-  // Play: on to the next slide after a while; a video moves on when it ends.
+  // The panels over the map are measured before the map frames (its effect
+  // runs after this one), so it keeps what they cover free.
+  const top = useRef(null)
+  const bottom = useRef(null)
+  const insetRef = useRef({ top: 0, bottom: 0 })
+  useLayoutEffect(() => {
+    insetRef.current = {
+      top: top.current ? top.current.offsetHeight + 72 : 0,
+      bottom: bottom.current ? bottom.current.offsetHeight + 48 : 0,
+    }
+  }, [at])
+
+  // Play: on to the next step after a while; a video moves on when it ends.
   useEffect(() => {
-    if (!playing || at >= last || slide.photo?.play) return
-    const t = setTimeout(() => go(1, false), slide.kind === 'day' ? DAY_MS : PHOTO_MS)
+    if (!playing || at >= last || step.photo?.play) return
+    const t = setTimeout(() => go(1, false), step.kind === 'leg' ? LEG_MS : step.kind === 'stop' ? STOP_MS : PHOTO_MS)
     return () => clearTimeout(t)
-  }, [playing, at, last, slide, go])
+  }, [playing, at, last, step, go])
 
   useEffect(() => {
     const key = e => {
@@ -123,15 +145,15 @@ export default function TripStory({ view, onAllDays, home }) {
     return () => window.removeEventListener('keydown', key)
   }, [go, onAllDays])
 
-  // The next two photos load while this one shows.
+  // The next two photos load while this step shows.
   useEffect(() => {
     for (const n of [at + 1, at + 2]) {
-      const s = slides[n]
+      const s = steps[n]
       if (s?.kind === 'photo' && !s.photo.play) new Image().src = photoSrc(s.photo.preview)
     }
-  }, [at, slides])
+  }, [at, steps])
 
-  // A swipe moves one slide; a tap on the left third goes back, elsewhere on.
+  // A swipe moves one step; a tap on the left third goes back, elsewhere on.
   const down = useRef(null)
   const onPointerDown = e => {
     down.current = e.target.closest('button, a, video') ? null : { x: e.clientX, y: e.clientY }
@@ -145,26 +167,24 @@ export default function TripStory({ view, onAllDays, home }) {
     else if (Math.abs(dx) < 10 && Math.abs(dy) < 10) go(e.clientX < window.innerWidth / 3 ? -1 : 1)
   }
 
-  const play = () => { setAt(i => (i === 0 || i === last ? 1 : i)); setPlaying(true) }
-  const located = view.places.filter(p => p.lat != null)
+  const play = () => { if (at === 0 || at === last) jump(1); setPlaying(true) }
   const cover = view.photos[0]
-  const caption = s => [`Day ${s.n}`, formatDay(s.d.day), s.town].filter(Boolean).join(' · ')
+  // "Day 4 · Thu 12 Nov · 14:30"
+  const when = moment => [
+    `Day ${daysBetween(trip.startDate, dayOf(moment)) + 1}`, formatDay(dayOf(moment)), timeOf(moment),
+  ].filter(Boolean).join(' · ')
+  const titleOf = seg => (seg.kind === 'stop' ? seg.items.map(i => i.title).join(' · ') : seg.item.title)
+  // Where, unless the title says it already ("Stay in Hualien").
+  const described = step.seg && (step.kind === 'leg' || step.kind === 'stop') ? describe(step.seg.item, placeName) : ''
+  const where = described && !titleOf(step.seg).includes(described) ? described : ''
 
   return (
     <div className="story" role="region" aria-roledescription="slideshow" aria-label={`${trip.title}, as a slideshow`}
       onPointerDown={onPointerDown} onPointerUp={onPointerUp}>
-      <div className="story-progress" aria-hidden="true"><span style={{ width: `${(at / last) * 100}%` }} /></div>
-      <div className="story-top">
-        <button type="button" className="story-btn" onClick={onAllDays}><Icon name="list" /> All days</button>
-        {(slide.kind === 'day' || slide.kind === 'photo') && (
-          <button type="button" className="story-btn" onClick={() => (playing ? setPlaying(false) : play())} aria-label={playing ? 'Pause' : 'Play'}>
-            <Icon name={playing ? 'pause' : 'play'} />
-          </button>
-        )}
-      </div>
+      <StoryMap scene={scene} insetRef={insetRef} />
 
-      <div className="story-stage" key={slide.key}>
-        {slide.kind === 'title' && (
+      <div className="story-stage" key={step.key}>
+        {step.kind === 'title' && (
           <div className="story-title">
             {cover && <img className="story-cover" src={photoSrc(cover.preview)} alt="" />}
             <div className="story-title-text">
@@ -180,64 +200,53 @@ export default function TripStory({ view, onAllDays, home }) {
           </div>
         )}
 
-        {slide.kind === 'day' && (
-          <MapSlide
-            className="story-day"
-            places={slide.map.places}
-            items={slide.map.items}
-            top={(
-              <div className="story-day-head">
-                <span className="story-day-n">Day {slide.n}</span>
-                <span>{[formatDay(slide.d.day), slide.town].filter(Boolean).join(' · ')}</span>
-              </div>
-            )}
-            bottom={slide.d.entries.length > 0 && (
-              <div className="list list-tight entry-list story-entries">
-                {slide.d.entries.map(entry => (
-                  <EntryRow key={`${entry.item.id}-${entry.phase}`} entry={entry} placeName={placeName} />
-                ))}
-              </div>
-            )}
-          />
+        {(step.kind === 'leg' || step.kind === 'stop') && (
+          <div className="story-panel story-panel-top" ref={top}>
+            <p className="story-when">{when(step.seg.item.start)}</p>
+            <p className="story-what"><Icon name={itemIcon(step.seg.item)} /> {titleOf(step.seg)}</p>
+            {where && <p className="story-where">{where}</p>}
+          </div>
         )}
 
-        {slide.kind === 'photo' && (
+        {step.kind === 'photo' && (
           <figure className="story-photo">
-            <img className="story-backdrop" src={photoSrc(slide.photo.thumb)} alt="" aria-hidden="true" />
-            {slide.photo.play ? (
-              <video src={photoSrc(slide.photo.play)} poster={photoSrc(slide.photo.preview)} controls autoPlay muted playsInline
+            <img className="story-backdrop" src={photoSrc(step.photo.thumb)} alt="" aria-hidden="true" />
+            {step.photo.play ? (
+              <video src={photoSrc(step.photo.play)} poster={photoSrc(step.photo.preview)} controls autoPlay muted playsInline
                 onEnded={() => { if (playing) go(1, false) }} />
             ) : (
-              <img src={photoSrc(slide.photo.preview)} alt="" />
+              <img src={photoSrc(step.photo.preview)} alt="" />
             )}
-            <figcaption>{caption(slide)}{timeOf(slide.photo.at) && ` · ${timeOf(slide.photo.at)}`}</figcaption>
+            <figcaption>{[step.seg && titleOf(step.seg), when(step.photo.at)].filter(Boolean).join(' · ')}</figcaption>
           </figure>
         )}
 
-        {slide.kind === 'end' && (
-          <MapSlide
-            className="story-end"
-            places={located}
-            items={view.items}
-            top={(
-              <>
-                <h2><Icon name={tripIcon(trip)} /> {trip.title}</h2>
-                <p className="story-summary">{summaryLine(summary)}</p>
-              </>
-            )}
-            bottom={(
-              <>
-                <div className="story-actions">
-                  <button type="button" className="btn btn-primary" onClick={() => { setPlaying(false); setAt(0) }}><Icon name="rotate-ccw" /> Watch again</button>
-                  <button type="button" className="btn btn-ghost" onClick={onAllDays}>See all days</button>
-                </div>
-                <p className="story-foot">Shared with <a href={home}>Splitty</a></p>
-              </>
-            )}
-          />
+        {step.kind === 'end' && (
+          <>
+            <div className="story-panel story-panel-top" ref={top}>
+              <h2><Icon name={tripIcon(trip)} /> {trip.title}</h2>
+              <p className="story-where">{summaryLine(summary)}</p>
+            </div>
+            <div className="story-panel story-panel-bottom" ref={bottom}>
+              <div className="story-actions">
+                <button type="button" className="btn btn-primary" onClick={() => { setPlaying(false); jump(0) }}><Icon name="rotate-ccw" /> Watch again</button>
+                <button type="button" className="btn btn-ghost" onClick={onAllDays}>See all days</button>
+              </div>
+              <p className="story-foot">Shared with <a href={home}>Splitty</a></p>
+            </div>
+          </>
         )}
       </div>
 
+      <div className="story-progress" aria-hidden="true"><span style={{ width: `${(at / last) * 100}%` }} /></div>
+      <div className="story-top">
+        <button type="button" className="story-btn" onClick={onAllDays}><Icon name="list" /> All days</button>
+        {step.kind !== 'title' && step.kind !== 'end' && (
+          <button type="button" className="story-btn" onClick={() => (playing ? setPlaying(false) : play())} aria-label={playing ? 'Pause' : 'Play'}>
+            <Icon name={playing ? 'pause' : 'play'} />
+          </button>
+        )}
+      </div>
       {at > 0 && <button type="button" className="story-nav prev" onClick={() => go(-1)} aria-label="Previous"><Icon name="chevron-left" /></button>}
       {at < last && <button type="button" className="story-nav next" onClick={() => go(1)} aria-label="Next"><Icon name="chevron-right" /></button>}
     </div>
