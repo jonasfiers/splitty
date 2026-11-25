@@ -64,7 +64,7 @@
    slideshow. */
 .story-map { position: relative; height: 260px; flex: none; border-radius: 12px; overflow: hidden; }
 .story-map::after { content: ''; position: absolute; inset: 0; z-index: 1000; }
-.story-map .trip-map { height: 100%; }
+.story-map .trip-map-wrap, .story-map .trip-map { height: 100%; }
 .story-map .leaflet-control-container { display: none; }
 
 /* A photo: as large as fits, on a blurred copy of itself. */
