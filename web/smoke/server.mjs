@@ -31,6 +31,24 @@ const items = [
   { id: 'i2', tripId: 't1', kind: 'transport', mode: 'flight', title: 'TPE → AMS', start: `${day(10)}T23:30`, attachments: [], expenses: [], tickets: [] },
 ]
 
+// A follow link of a trip that has ended (api/followService.js): opens as
+// the slideshow (TripStory). Two days with a photo each, one with a journey.
+const FOLLOW_ENDED = {
+  token: 'smokefinished0000000000', sharer: 'Smoke', today: day(0), started: true, ended: true,
+  summary: { days: 3, towns: 1, km: 120, photos: 2 },
+  trip: { title: 'Taiwan', icon: 'country:TW', startDate: day(-4), endDate: day(-2) },
+  items: [
+    { id: 'f1', kind: 'transport', mode: 'train', title: 'Train to Hualien', start: `${day(-3)}T09:00`, end: `${day(-3)}T11:00`, fromPlaceId: 'p1', toPlaceId: 'p2' },
+    { id: 'f2', kind: 'stay', title: 'Stay in Hualien', start: `${day(-3)}T15:00`, end: `${day(-2)}T11:00`, placeId: 'p2' },
+  ],
+  places: [
+    { id: 'p1', name: 'Taipei Main Station', lat: 25.0478, lon: 121.5171 },
+    { id: 'p2', name: 'Hualien', lat: 24.0, lon: 121.6, approximate: true },
+  ],
+  photos: ['ph1', 'ph2'].map((id, n) => ({ id, album: 'al1', at: `${day(n - 3)}T12:00`, ratio: 1.5, thumb: `/follow/smokefinished0000000000/photos/al1/${id}/thumbnail`, preview: `/follow/smokefinished0000000000/photos/al1/${id}/preview` })),
+  kinds: [],
+}
+
 // The Content-Security-Policy production's nginx sends (CT101
 // snippets/splitty-security-headers.conf), so the app is tested under it:
 // something it refuses (a blob: image, say) fails here too. Keep in step.
@@ -76,6 +94,7 @@ const ROUTES = [
   [/^\/auth\/passkey\/list/, () => ({ passkeys: [] })],
   [/^\/(dash\/)?profile/, () => ({ profile: { ...USER, emailVerified: true } })],
   [/^\/push/, () => ({})],
+  [/^\/follow\/smokefinished0000000000$/, () => FOLLOW_ENDED],
 ]
 
 export function startServer({ root, port = 5190 }) {
@@ -92,7 +111,7 @@ export function startServer({ root, port = 5190 }) {
       req.on('data', c => chunks.push(c)).on('end', () => {
         const json = (o, s = 200) => { res.writeHead(s, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(o)) }
         // A signed file link (thumbnails): any image will do.
-        if (req.method === 'GET' && api.startsWith('/trips/files/')) {
+        if (req.method === 'GET' && (api.startsWith('/trips/files/') || /^\/follow\/[^/]+\/photos\//.test(api))) {
           res.writeHead(200, { 'Content-Type': 'image/png' })
           return res.end(fs.readFileSync(new URL('./ticket.png', import.meta.url)))
         }

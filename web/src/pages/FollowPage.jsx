@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, lazy, Suspense } from 'react'
+import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react'
 import { useParams } from 'react-router'
 import Loading from '../components/Loading.jsx'
 import Icon from '../components/Icon/Icon.jsx'
@@ -8,6 +8,7 @@ import { photosByDay, DayPhotos, PhotoViewer } from '../components/TripPhotos/Tr
 import { buildTimeline, formatDay } from '../utils/trip.js'
 import { setTripKinds } from '../utils/tripKinds.js'
 import { tripIcon } from '../utils/icons.js'
+import TripStory, { summaryLine } from '../components/TripStory/TripStory.jsx'
 
 // Splitty itself: on follow.<domain> that is splitty.<domain>.
 const appHome = () => (window.location.hostname.startsWith('follow.') ? `https://${window.location.hostname.replace(/^follow\./, 'splitty.')}/` : '/login')
@@ -17,12 +18,27 @@ const TripMap = lazy(() => import('../components/TripMap/TripMap.jsx'))
 // Public, no login: "Follow Jonas's trip" (api/followService.js). The server
 // has already left out everything private (later days, hotels' names and
 // exact places, bookings, money, other members), so this page only lays out
-// what it gets: the newest day first, the map, and the photos.
+// what it gets: the newest day first, the map, and the photos. Once the trip
+// has ended it opens as a slideshow (TripStory); "All days" (#days) is this
+// list, then from the first day on.
 export default function FollowPage() {
   const { token } = useParams()
   const [view, setView] = useState(null)
   const [failed, setFailed] = useState(null)
   const [viewer, setViewer] = useState(null)
+  // The list instead of the slideshow: #days, so Back returns to the slideshow.
+  const [listed, setListed] = useState(() => window.location.hash === '#days')
+  useEffect(() => {
+    const changed = () => setListed(window.location.hash === '#days')
+    window.addEventListener('hashchange', changed)
+    return () => window.removeEventListener('hashchange', changed)
+  }, [])
+  const fromStory = useRef(false)
+  const showDays = useCallback(() => { fromStory.current = true; window.location.hash = 'days' }, [])
+  const showStory = useCallback(() => {
+    if (fromStory.current) window.history.back() // the hashchange shows it
+    else { window.history.replaceState(null, '', window.location.pathname + window.location.search); setListed(false) }
+  }, [])
   const openPhotos = useCallback((list, index) => setViewer({ list, index }), [])
   // A pin's item: the page scrolls to its day and the entry lights up a moment
   // (the map has left full screen first).
@@ -47,7 +63,7 @@ export default function FollowPage() {
   }, [token])
 
   useEffect(() => {
-    if (view) document.title = `${view.sharer}'s trip · ${view.trip.title}`
+    if (view) document.title = view.ended ? `${view.trip.title} · ${view.sharer}'s trip` : `${view.sharer}'s trip · ${view.trip.title}`
   }, [view])
 
   if (failed) {
@@ -62,24 +78,34 @@ export default function FollowPage() {
   }
   if (!view) return <div className="privacy-page"><Loading /></div>
 
+  if (view.ended && !listed) return <TripStory view={view} onAllDays={showDays} home={appHome()} />
+
   const { trip, items, places, photos, today, sharer } = view
   const placeName = id => places.find(p => p.id === id)?.name
   const days = view.started
-    ? buildTimeline({ startDate: trip.startDate, endDate: trip.endDate || today }, items).filter(d => d.day <= today && d.day >= trip.startDate).reverse()
+    ? buildTimeline({ startDate: trip.startDate, endDate: trip.endDate || today }, items).filter(d => d.day <= today && d.day >= trip.startDate)
     : []
+  // While on: the newest day first. Once ended: from the first day, as a story.
+  if (!view.ended) days.reverse()
   const dayPhotos = photosByDay(photos)
   const located = places.some(p => p.lat != null)
 
   return (
     <div className="privacy-page">
       <article className="privacy follow">
-        <p className="follow-kicker">Follow {sharer}’s trip</p>
+        <p className="follow-kicker">{view.ended ? `${sharer}’s trip` : `Follow ${sharer}’s trip`}</p>
         <h1><Icon name={tripIcon(trip)} /> {trip.title}</h1>
         <p className="privacy-updated">
           {!view.started ? 'Not started yet'
             : trip.endDate ? `${formatDay(trip.startDate)} – ${formatDay(trip.endDate)}`
             : `Since ${formatDay(trip.startDate)} · day ${days.length}`}
         </p>
+        {view.ended && (
+          <p className="follow-summary">
+            {summaryLine(view.summary)}
+            <button type="button" className="btn btn-ghost btn-sm" onClick={showStory}><Icon name="play" /> Slideshow</button>
+          </p>
+        )}
 
         {!view.started && <p>{sharer}’s trip hasn’t started yet. Check back once it has: each day appears here as it comes.</p>}
 
@@ -110,7 +136,9 @@ export default function FollowPage() {
         ))}
 
         <p className="follow-foot">
-          Shared with <a href={appHome()}>Splitty</a>. Only past days and today are shown; where {sharer} stays is shown by town only.
+          Shared with <a href={appHome()}>Splitty</a>. {view.ended
+            ? `Where ${sharer} stayed is shown by town only.`
+            : `Only past days and today are shown; where ${sharer} stays is shown by town only.`}
         </p>
       </article>
       {viewer && <PhotoViewer photos={viewer.list} index={viewer.index} onClose={() => setViewer(null)} />}

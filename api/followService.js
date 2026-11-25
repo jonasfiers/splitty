@@ -14,12 +14,16 @@
 // - Titles, times and places of the rest; never booking references, notes,
 //   links, files, documents, flight numbers, money or who else is going.
 // - The sharer's first name ("Follow Jonas's trip").
-// - Photos of the trip's linked Immich albums, up to today, if the link has
-//   them switched on.
+// - Photos of the trip's linked Immich albums, up to today, as the link says:
+//   all, only the ones starred in Immich (favourites), or none.
+// - Once the trip has ended (2026-11-25), the page opens as a slideshow and
+//   the view adds a summary (days, towns, distance, photos).
 //
-//   (:FollowLink {token, photos, createdOn})-[:FOLLOWS]->(:Trip), -[:CREATED_BY]->(:User)
+//   (:FollowLink {token, photos: 'all'|'favourites'|'none', keep, createdOn})-[:FOLLOWS]->(:Trip),
+//   -[:CREATED_BY]->(:User). Links made before 2026-11-25 have photos true/false.
 //
-// A link works until it is removed, or 30 days after the trip ends.
+// A link works until it is removed, or 30 days after the trip ends, unless it
+// is kept ("keep working after the trip", for sharing the trip afterwards).
 
 const crypto = require('crypto');
 const driver = require('./neo4j');
@@ -27,12 +31,18 @@ const tripPhotos = require('./tripPhotos');
 const { townAt } = require('./geocodeService');
 const { zoneAt } = require('./timeZone');
 const { categoryServiceNeo4j } = require('./crudService');
+const { photoMode, pickPhotos, summarize } = require('./followRules');
 
 const EXPIRES_AFTER_DAYS = 30;
 const MAX_LINKS = 5; // per trip
 const KIND_LABELS = { Transport: 'transport', Stay: 'stay', Activity: 'activity' };
 const TRIP_ACCESS = '(:User {id: $userId})-[:MEMBER_OF]->(:Group)<-[:PLANNED_IN]-(t:Trip {id: $tripId})';
 const TOKEN = /^[A-Za-z0-9_-]{20,64}$/;
+
+// Only for trying a finished trip on QA before it ends: FOLLOW_TODAY=YYYY-MM-DD
+// in QA's env file. Never set in production.
+const TODAY_OVERRIDE = /^\d{4}-\d{2}-\d{2}$/.test(process.env.FOLLOW_TODAY || '') ? process.env.FOLLOW_TODAY : null;
+if (TODAY_OVERRIDE) console.warn(`[follow] FOLLOW_TODAY=${TODAY_OVERRIDE}: follow pages act as if today is that day (QA only)`);
 
 const dayOf = m => (m ? String(m).slice(0, 10) : '');
 const addDays = (day, n) => new Date(Date.parse(`${day}T00:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10);
@@ -54,20 +64,34 @@ async function listLinks(tripId, userId) {
         `MATCH ${TRIP_ACCESS}
          OPTIONAL MATCH (l:FollowLink)-[:FOLLOWS]->(t)
          OPTIONAL MATCH (l)-[:CREATED_BY]->(u:User)
-         RETURN t.id AS tripId, l, u.name AS by ORDER BY l.createdOn`,
+         RETURN t.id AS tripId, t.endDate AS endDate, l, u.name AS by ORDER BY l.createdOn`,
         { tripId, userId }
     );
     if (records.length === 0) return null;
     return records.filter(r => r.get('l')).map(r => {
         const l = r.get('l').properties;
+        const end = r.get('endDate');
         return {
-            token: l.token, url: followUrl(l.token), photos: !!l.photos, createdOn: l.createdOn?.toString(), by: r.get('by'),
+            token: l.token, url: followUrl(l.token), photos: photoMode(l.photos), keep: !!l.keep,
+            // The day it stops working, if it does.
+            expiresOn: !l.keep && end ? addDays(end, EXPIRES_AFTER_DAYS) : null,
+            createdOn: l.createdOn?.toString(), by: r.get('by'),
             views: Number(l.views ?? 0), lastViewedOn: l.lastViewedOn?.toString() ?? null,
         };
     });
 }
 
-async function createLink(tripId, userId, { photos = true } = {}) {
+// How many photos a link would show: all of the trip's albums, and how many of
+// them are starred (read afresh, which also updates what the links show). Null when there are no albums or Immich can't be reached.
+async function photoCounts(tripId, userId) {
+    if (!tripPhotos.enabled()) return null;
+    // Fresh: stars just added in Immich count, and the links show them at once.
+    const found = await tripPhotos.tripPhotos(tripId, userId, { fresh: true }).catch(() => null);
+    if (!found?.albums.length) return null;
+    return { all: found.photos.length, favourites: found.photos.filter(p => p.favourite).length };
+}
+
+async function createLink(tripId, userId, { photos = 'all', keep = false } = {}) {
     const links = await listLinks(tripId, userId);
     if (!links) return null;
     if (links.length >= MAX_LINKS) throw Object.assign(new Error(`A trip can have at most ${MAX_LINKS} follow links.`), { status: 400 });
@@ -75,11 +99,27 @@ async function createLink(tripId, userId, { photos = true } = {}) {
     await driver.executeQuery(
         `MATCH ${TRIP_ACCESS}
          MATCH (u:User {id: $userId})
-         CREATE (l:FollowLink {token: $token, photos: $photos, createdOn: datetime()})-[:FOLLOWS]->(t)
+         CREATE (l:FollowLink {token: $token, photos: $photos, keep: $keep, createdOn: datetime()})-[:FOLLOWS]->(t)
          CREATE (l)-[:CREATED_BY]->(u)`,
-        { tripId, userId, token, photos: !!photos }
+        { tripId, userId, token, photos: photoMode(photos), keep: !!keep }
     );
-    return { token, url: followUrl(token), photos: !!photos };
+    return { token, url: followUrl(token), photos: photoMode(photos), keep: !!keep };
+}
+
+// Change what a link shows (photos) or whether it outlives the trip (keep).
+// The same address keeps working, so people who have it see the change.
+async function updateLink(tripId, userId, token, { photos, keep } = {}) {
+    const set = {};
+    if (photos !== undefined) set.photos = photoMode(photos);
+    if (keep !== undefined) set.keep = !!keep;
+    const { records } = await driver.executeQuery(
+        `MATCH ${TRIP_ACCESS}
+         MATCH (l:FollowLink {token: $token})-[:FOLLOWS]->(t)
+         SET l += $set RETURN 1 AS ok`,
+        { tripId, userId, token, set }
+    );
+    views.delete(token);
+    return records.length > 0;
 }
 
 async function removeLink(tripId, userId, token) {
@@ -124,13 +164,13 @@ async function resolve(token) {
     const { records } = await driver.executeQuery(
         `MATCH (l:FollowLink {token: $token})-[:FOLLOWS]->(t:Trip)
          OPTIONAL MATCH (l)-[:CREATED_BY]->(u:User)
-         RETURN t, l.photos AS photos, u.name AS by`,
+         RETURN t, l.photos AS photos, l.keep AS keep, u.name AS by`,
         { token }
     );
     if (!records.length) return null;
     const t = records[0].get('t').properties;
-    if (t.endDate && addDays(t.endDate, EXPIRES_AFTER_DAYS) < todayIn('UTC')) return null;
-    return { tripId: t.id, trip: t, photos: !!records[0].get('photos'), sharer: firstName(records[0].get('by')) };
+    if (!records[0].get('keep') && t.endDate && addDays(t.endDate, EXPIRES_AFTER_DAYS) < (TODAY_OVERRIDE || todayIn('UTC'))) return null;
+    return { tripId: t.id, trip: t, photos: photoMode(records[0].get('photos')), sharer: firstName(records[0].get('by')) };
 }
 
 async function loadPlan(tripId) {
@@ -196,8 +236,9 @@ async function buildView(token) {
     const { items, places } = await loadPlan(link.tripId);
 
     const zones = [...new Set(places.map(p => zoneAt(p.lat ?? null, p.lon ?? null)).filter(Boolean))];
-    const today = (zones.length ? zones : ['Europe/Brussels']).map(todayIn).sort()[0];
+    const today = TODAY_OVERRIDE || (zones.length ? zones : ['Europe/Brussels']).map(todayIn).sort()[0];
     const started = trip.startDate <= today;
+    const ended = started && !!trip.endDate && trip.endDate < today;
 
     // Up to today: what has started by the end of today.
     const shownItems = started ? items.filter(i => dayOf(i.start) && dayOf(i.start) <= today) : [];
@@ -205,6 +246,7 @@ async function buildView(token) {
     const placeById = new Map(places.map(p => [p.id, p]));
 
     const outItems = [];
+    const towns = [];
     for (const i of shownItems) {
         const ends = dayOf(i.end);
         const item = { id: i.id, kind: i.kind, mode: i.kind === 'transport' ? i.mode : null, title: i.title, start: i.start, end: i.end,
@@ -218,6 +260,7 @@ async function buildView(token) {
         if (i.kind === 'stay') {
             const town = await townOf(placeById.get(i.placeId) ?? {});
             item.title = town ? `Stay in ${town}` : 'Stay';
+            if (town) towns.push(town);
         }
         outItems.push(item);
     }
@@ -236,15 +279,14 @@ async function buildView(token) {
     }
 
     let photos = [];
-    if (link.photos && started && tripPhotos.enabled()) {
+    if (link.photos !== 'none' && started && tripPhotos.enabled()) {
+        const all = [];
         for (const album of await tripPhotos.albumsOfTripUnchecked(link.tripId)) {
             try {
-                for (const p of await tripPhotos.photosOf(album)) {
-                    if (p.at && dayOf(p.at) <= today) photos.push({ ...p, album: album.id });
-                }
+                for (const p of await tripPhotos.photosOf(album)) all.push({ ...p, album: album.id });
             } catch { /* a broken album just has no photos here */ }
         }
-        photos.sort((a, b) => a.at.localeCompare(b.at));
+        photos = pickPhotos(all, link.photos, today);
     }
 
     let kindColours = {};
@@ -255,6 +297,9 @@ async function buildView(token) {
         sharer: link.sharer,
         today,
         started,
+        ended,
+        // Journeys still under way stay out: their distance hints where to.
+        summary: summarize({ startDate: trip.startDate, endDate: trip.endDate, today, items: shownItems.filter(i => !(dayOf(i.end) > today)), placeById, towns, photoCount: photos.length }),
         trip: {
             title: trip.title,
             icon: trip.icon || '',
@@ -278,4 +323,6 @@ async function photoAllowed(token, albumId, assetId) {
     return tripPhotos.albumForThumbnail(albumId);
 }
 
-module.exports = { listLinks, createLink, removeLink, publicView, photoAllowed, followUrl, followOrigin, countView };
+module.exports = {
+    listLinks, photoCounts, createLink, updateLink, removeLink, publicView, photoAllowed, followUrl, followOrigin, countView,
+};

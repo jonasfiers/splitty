@@ -92,6 +92,8 @@ async function fetchPhotos(album) {
                 lon: Number.isFinite(lon) ? lon : null,
                 ratio: Number(col.ratio?.[i]) || 1,
                 video: col.isImage ? !col.isImage[i] : false,
+                // Starred in Immich: a follow link can show only these.
+                favourite: !!col.isFavorite?.[i],
             });
         }
     }
@@ -110,8 +112,10 @@ async function fingerprint(album) {
 // within seconds, while an unchanged album costs one small request.
 const FRESH_MS = 30_000;
 const cache = new Map(); // album node id -> { at, print, photos } | { at, error }
-async function photosOf(album) {
-    const hit = cache.get(album.id);
+// `fresh` reads it again regardless: starring a photo in Immich does not
+// change the album's state, so the follow sheet asks for this when it opens.
+async function photosOf(album, { fresh = false } = {}) {
+    const hit = fresh ? null : cache.get(album.id);
     if (hit && Date.now() - hit.at < (hit.error ? 60_000 : FRESH_MS)) {
         if (hit.error) throw hit.error;
         return hit.photos;
@@ -150,13 +154,13 @@ async function albumsOfTrip(tripId, userId) {
 }
 
 // The trip's albums and their photos, for a member. Null without access.
-async function tripPhotos(tripId, userId) {
+async function tripPhotos(tripId, userId, { fresh = false } = {}) {
     const albums = await albumsOfTrip(tripId, userId);
     if (!albums) return null;
     const out = { albums: [], photos: [] };
     for (const a of albums) {
         try {
-            const photos = await photosOf(a);
+            const photos = await photosOf(a, { fresh });
             out.albums.push({ id: a.id, name: a.name, addedBy: a.addedBy, count: photos.length });
             for (const p of photos) out.photos.push({ ...p, album: a.id });
         } catch (err) {

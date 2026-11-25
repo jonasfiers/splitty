@@ -51,16 +51,19 @@ router.get('/:token/meta', async (req, res) => {
                 ? (name(last.fromPlaceId) ? `on the way from ${name(last.fromPlaceId)}` : 'on the way')
                 : (name(last.toPlaceId || last.placeId) ? `in ${name(last.toPlaceId || last.placeId)}` : '');
         }
+        const s = view.summary;
+        const plural = (n, word) => `${n.toLocaleString('en')} ${word}${n !== 1 ? 's' : ''}`;
         const description = !view.started
             ? 'The trip hasn’t started yet. Each day appears here as it comes.'
             : view.trip.endDate
-                ? `${daysBetween(view.trip.startDate, view.trip.endDate) + 1} days, with ${view.photos.length} photo${view.photos.length !== 1 ? 's' : ''}.`
+                ? [plural(s.days, 'day'), s.towns > 1 && plural(s.towns, 'town'), s.km >= 100 && `${s.km.toLocaleString('en')} km`, s.photos && plural(s.photos, 'photo')].filter(Boolean).join(' · ')
                 : [`Day ${daysBetween(view.trip.startDate, view.today) + 1}`, where && `now ${where}`].filter(Boolean).join(' · ');
-        const photo = view.photos[view.photos.length - 1];
+        // A finished trip: its first photo, as the slideshow opens on it.
+        const photo = view.ended ? view.photos[0] : view.photos[view.photos.length - 1];
         const image = photo
             ? `${base}/api/follow/${view.token}/photos/${photo.album}/${photo.id}/preview`
             : `${base}/cat-icon-512.png`;
-        const title = `Follow ${view.sharer}’s trip: ${view.trip.title}`;
+        const title = view.ended ? `${view.sharer}’s trip: ${view.trip.title}` : `Follow ${view.sharer}’s trip: ${view.trip.title}`;
         res.send([
             `<meta property="og:type" content="website">`,
             `<meta property="og:site_name" content="Splitty">`,

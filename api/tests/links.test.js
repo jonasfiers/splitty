@@ -140,3 +140,36 @@ test('a revoked follow link stops at once; made-up ones never work', async () =>
         assert.equal((await client(null).get(`/follow/${encodeURIComponent(fake)}`)).status, 404, fake);
     }
 });
+
+test('a finished trip: the page says so, with a summary; its links stop 30 days later unless kept', async () => {
+    const ago = n => new Date(Date.now() - n * 86400000).toISOString().slice(0, 10);
+    const recent = await ann.api.post('/trips', { groupId: g, title: 'Porto', startDate: ago(6), endDate: ago(2) });
+    const old = await ann.api.post('/trips', { groupId: g, title: 'Madeira', startDate: ago(50), endDate: ago(40) });
+
+    // Ended two days ago: works, and says it has ended.
+    const r = (await ann.api.post(`/trips/${recent.body.id}/follow-links`, {})).body.link;
+    assert.equal(r.photos, 'all', 'photos default to all');
+    const view = (await client(null).get(`/follow/${r.token}`)).body;
+    assert.equal(view.ended, true);
+    assert.equal(view.trip.endDate, ago(2));
+    assert.equal(view.summary.days, 5);
+    const meta = (await client(null).get(`/follow/${r.token}/meta`)).body;
+    assert.match(meta, /og:title" content="Ann’s trip: Porto"/, 'no "Follow" once it has ended');
+    assert.match(meta, /5 days/);
+
+    // Ended 40 days ago: gone, until a member keeps it.
+    const o = (await ann.api.post(`/trips/${old.body.id}/follow-links`, { photos: 'favourites' })).body.link;
+    assert.equal((await client(null).get(`/follow/${o.token}`)).status, 404);
+    let [listed] = (await ann.api.get(`/trips/${old.body.id}/follow-links`)).body.links;
+    assert.deepEqual([listed.photos, listed.keep, listed.expiresOn], ['favourites', false, ago(10)]);
+    assert.equal((await dan.api.patch(`/trips/${old.body.id}/follow-links/${o.token}`, { keep: true })).status, 404, 'outsiders can not');
+    assert.equal((await bob.api.patch(`/trips/${old.body.id}/follow-links/${o.token}`, { photos: 'some' })).status, 400);
+    assert.equal((await bob.api.patch(`/trips/${old.body.id}/follow-links/${o.token}`, { keep: true, photos: 'none' })).status, 200, 'any member can');
+    [listed] = (await ann.api.get(`/trips/${old.body.id}/follow-links`)).body.links;
+    assert.deepEqual([listed.photos, listed.keep, listed.expiresOn], ['none', true, null]);
+    const kept = await client(null).get(`/follow/${o.token}`);
+    assert.equal(kept.status, 200, 'kept: works again at once');
+    assert.equal(kept.body.ended, true);
+    assert.equal((await bob.api.patch(`/trips/${old.body.id}/follow-links/${o.token}`, { keep: false })).status, 200);
+    assert.equal((await client(null).get(`/follow/${o.token}`)).status, 404, 'and stops again when no longer kept');
+});

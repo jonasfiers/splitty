@@ -319,12 +319,15 @@ router.get('/:id/follow-links', async (req, res) => {
     try {
         const links = await followService.listLinks(req.params.id, req.user.id);
         if (!links) return res.status(404).json({ error: 'Trip not found' });
-        res.json({ links });
+        // How many photos "all" and "favourites" would show, for the sheet.
+        res.json({ links, photoCounts: await followService.photoCounts(req.params.id, req.user.id) });
     } catch (err) { console.error('[follow] list:', err); res.status(500).json({ error: 'Failed to load the links.' }); }
 });
 router.post('/:id/follow-links', async (req, res) => {
     try {
-        const link = await followService.createLink(req.params.id, req.user.id, { photos: req.body?.photos !== false });
+        // photos: 'all' | 'favourites' | 'none' (true/false from older apps).
+        const photos = req.body?.photos === undefined ? 'all' : req.body.photos;
+        const link = await followService.createLink(req.params.id, req.user.id, { photos, keep: req.body?.keep === true });
         if (!link) return res.status(404).json({ error: 'Trip not found' });
         console.log(`[follow] link created for trip ${req.params.id} by ${req.user.id}`);
         res.status(201).json({ link });
@@ -332,6 +335,16 @@ router.post('/:id/follow-links', async (req, res) => {
         if (err.status) return res.status(err.status).json({ error: err.message });
         console.error('[follow] create:', err); res.status(500).json({ error: 'Failed to create the link.' });
     }
+});
+router.patch('/:id/follow-links/:token', async (req, res) => {
+    try {
+        const { photos, keep } = req.body || {};
+        if (photos !== undefined && ![true, false, 'all', 'favourites', 'none'].includes(photos)) return res.status(400).json({ error: 'photos must be all, favourites or none.' });
+        if (keep !== undefined && typeof keep !== 'boolean') return res.status(400).json({ error: 'keep must be true or false.' });
+        if (!(await followService.updateLink(req.params.id, req.user.id, req.params.token, { photos, keep }))) return res.status(404).json({ error: 'Link not found' });
+        console.log(`[follow] link changed on trip ${req.params.id} by ${req.user.id}`);
+        res.json({ success: true });
+    } catch (err) { console.error('[follow] change:', err); res.status(500).json({ error: 'Failed to change the link.' }); }
 });
 router.delete('/:id/follow-links/:token', async (req, res) => {
     try {

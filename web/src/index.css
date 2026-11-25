@@ -3343,3 +3343,11 @@ html[data-emoji="openmoji"] {
 @media (prefers-reduced-motion: reduce) {
   .entry-row.flash { animation: none; outline: 2px solid var(--accent); outline-offset: -2px; }
 }
+
+/* Follow page of a finished trip: the summary, and the way back to the slideshow. */
+.follow-summary { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; color: var(--text-2); }
+.follow-summary .btn { display: inline-flex; align-items: center; gap: 6px; }
+/* Changing a follow link (FollowSheet): its photos and whether it is kept. */
+.follow-edit { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+.follow-edit select, .follow-photos select { max-width: 100%; }
+.follow-edit .follow-check { margin: 0; }

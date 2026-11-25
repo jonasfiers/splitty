@@ -118,6 +118,7 @@ function client(token, { ip = randomIp() } = {}) {
         get: url => call('GET', url),
         post: (url, body) => call('POST', url, body ?? {}),
         put: (url, body) => call('PUT', url, body ?? {}),
+        patch: (url, body) => call('PATCH', url, body ?? {}),
         del: (url, body) => call('DELETE', url, body),
     };
 }
