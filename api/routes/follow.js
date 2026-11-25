@@ -59,11 +59,11 @@ router.get('/:token/meta', async (req, res) => {
                 ? [plural(s.days, 'day'), s.towns > 1 && plural(s.towns, 'town'), s.km >= 100 && `${s.km.toLocaleString('en')} km`, s.photos && plural(s.photos, 'photo')].filter(Boolean).join(' · ')
                 : [`Day ${daysBetween(view.trip.startDate, view.today) + 1}`, where && `now ${where}`].filter(Boolean).join(' · ');
         // A finished trip: its first photo, as the slideshow opens on it.
-        const photo = view.ended ? view.photos[0] : view.photos[view.photos.length - 1];
+        const photo = view.lookBack ? view.photos[0] : view.photos[view.photos.length - 1];
         const image = photo
             ? `${base}/api/follow/${view.token}/photos/${photo.album}/${photo.id}/preview`
             : `${base}/cat-icon-512.png`;
-        const title = view.ended ? `${view.sharer}’s trip: ${view.trip.title}` : `Follow ${view.sharer}’s trip: ${view.trip.title}`;
+        const title = view.lookBack ? `${view.sharer}’s trip: ${view.trip.title}` : `Follow ${view.sharer}’s trip: ${view.trip.title}`;
         res.send([
             `<meta property="og:type" content="website">`,
             `<meta property="og:site_name" content="Splitty">`,

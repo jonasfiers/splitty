@@ -29,7 +29,7 @@ const photoOptions = counts => [
   ['favourites', `Favourites only${counts ? ` (${counts.favourites})` : ''}: starred in Immich`],
   ['none', 'No photos'],
 ]
-const until = l => (l.keep ? 'kept after the trip'
+const until = l => (l.keep ? 'slideshow, kept after the trip'
   : l.expiresOn ? `until ${new Date(`${l.expiresOn}T00:00:00Z`).toLocaleDateString(undefined, { day: 'numeric', month: 'short', timeZone: 'UTC' })}`
   : 'until 30 days after the trip')
 
@@ -107,7 +107,7 @@ export default function FollowSheet({ tripId, tripTitle, hasPhotos, onClose }) {
         A link anyone can open without signing in. It shows the trip up to today: what you did, where, and when.
         Hotels show by town only. Booking references, ticket codes, notes, files, money and who else is going are never shown.
         It stops working 30 days after the trip, unless you keep it, or when you remove it.
-        Once the trip has ended, it opens as a slideshow.
+        Once the trip has ended it opens as a slideshow; a kept link does so at once.
       </p>
       {links === null ? null : links.length > 0 && (
         <ul className="album-list">
@@ -126,7 +126,7 @@ export default function FollowSheet({ tripId, tripTitle, hasPhotos, onClose }) {
                     )}
                     <label className="follow-check">
                       <input type="checkbox" checked={l.keep} onChange={e => change(l, { keep: e.target.checked })} />
-                      Keep working after the trip
+                      Look back: a slideshow, and keep working after the trip
                     </label>
                   </span>
                 )}
@@ -149,7 +149,7 @@ export default function FollowSheet({ tripId, tripTitle, hasPhotos, onClose }) {
       )}
       <label className="follow-check">
         <input type="checkbox" checked={keep} onChange={e => setKeep(e.target.checked)} />
-        Keep working after the trip (to share it afterwards)
+        Look back: a slideshow, and keep working after the trip (to share it afterwards)
       </label>
       {error && <p className="error">{error}</p>}
       <SheetActions>

@@ -151,6 +151,7 @@ test('a finished trip: the page says so, with a summary; its links stop 30 days 
     assert.equal(r.photos, 'all', 'photos default to all');
     const view = (await client(null).get(`/follow/${r.token}`)).body;
     assert.equal(view.ended, true);
+    assert.equal(view.lookBack, true, 'an ended trip looks back');
     assert.equal(view.trip.endDate, ago(2));
     assert.equal(view.summary.days, 5);
     const meta = (await client(null).get(`/follow/${r.token}/meta`)).body;
@@ -172,4 +173,12 @@ test('a finished trip: the page says so, with a summary; its links stop 30 days 
     assert.equal(kept.body.ended, true);
     assert.equal((await bob.api.patch(`/trips/${old.body.id}/follow-links/${o.token}`, { keep: false })).status, 200);
     assert.equal((await client(null).get(`/follow/${o.token}`)).status, 404, 'and stops again when no longer kept');
+
+    // Kept while the trip is on: looks back at once, still only up to today, the end not given away.
+    const on = (await ann.api.post(`/trips/${tripId}/follow-links`, { keep: true })).body.link;
+    const plain = (await ann.api.post(`/trips/${tripId}/follow-links`, {})).body.link;
+    const keptOn = (await client(null).get(`/follow/${on.token}`)).body;
+    assert.deepEqual([keptOn.ended, keptOn.lookBack, keptOn.trip.endDate], [false, true, null]);
+    assert.equal((await client(null).get(`/follow/${plain.token}`)).body.lookBack, false, 'an ordinary link follows along');
+    assert.match((await client(null).get(`/follow/${on.token}/meta`)).body, /og:title" content="Ann’s trip: Lisbon"/);
 });

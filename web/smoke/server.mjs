@@ -34,7 +34,7 @@ const items = [
 // A follow link of a trip that has ended (api/followService.js): opens as
 // the slideshow (TripStory). Two days with a photo each, one with a journey.
 const FOLLOW_ENDED = {
-  token: 'smokefinished0000000000', sharer: 'Smoke', today: day(0), started: true, ended: true,
+  token: 'smokefinished0000000000', sharer: 'Smoke', today: day(0), started: true, ended: true, lookBack: true,
   summary: { days: 3, towns: 1, km: 120, photos: 2 },
   trip: { title: 'Taiwan', icon: 'country:TW', startDate: day(-4), endDate: day(-2) },
   items: [

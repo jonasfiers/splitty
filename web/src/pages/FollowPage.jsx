@@ -19,7 +19,7 @@ const TripMap = lazy(() => import('../components/TripMap/TripMap.jsx'))
 // has already left out everything private (later days, hotels' names and
 // exact places, bookings, money, other members), so this page only lays out
 // what it gets: the newest day first, the map, and the photos. Once the trip
-// has ended it opens as a slideshow (TripStory); "All days" (#days) is this
+// has ended, or at once for a link kept to look back, it opens as a slideshow (TripStory); "All days" (#days) is this
 // list, then from the first day on.
 export default function FollowPage() {
   const { token } = useParams()
@@ -63,7 +63,7 @@ export default function FollowPage() {
   }, [token])
 
   useEffect(() => {
-    if (view) document.title = view.ended ? `${view.trip.title} · ${view.sharer}'s trip` : `${view.sharer}'s trip · ${view.trip.title}`
+    if (view) document.title = view.lookBack ? `${view.trip.title} · ${view.sharer}'s trip` : `${view.sharer}'s trip · ${view.trip.title}`
   }, [view])
 
   if (failed) {
@@ -78,7 +78,7 @@ export default function FollowPage() {
   }
   if (!view) return <div className="privacy-page"><Loading /></div>
 
-  if (view.ended && !listed) return <TripStory view={view} onAllDays={showDays} home={appHome()} />
+  if (view.lookBack && !listed) return <TripStory view={view} onAllDays={showDays} home={appHome()} />
 
   const { trip, items, places, photos, today, sharer } = view
   const placeName = id => places.find(p => p.id === id)?.name
@@ -87,21 +87,21 @@ export default function FollowPage() {
     : []
   // While on: the newest day first, past days greyed. Once ended: from the
   // first day, as a story, nothing greyed or marked as today.
-  if (!view.ended) days.reverse()
+  if (!view.lookBack) days.reverse()
   const dayPhotos = photosByDay(photos)
   const located = places.some(p => p.lat != null)
 
   return (
     <div className="privacy-page">
       <article className="privacy follow">
-        <p className="follow-kicker">{view.ended ? `${sharer}’s trip` : `Follow ${sharer}’s trip`}</p>
+        <p className="follow-kicker">{view.lookBack ? `${sharer}’s trip` : `Follow ${sharer}’s trip`}</p>
         <h1><Icon name={tripIcon(trip)} /> {trip.title}</h1>
         <p className="privacy-updated">
           {!view.started ? 'Not started yet'
             : trip.endDate ? `${formatDay(trip.startDate)} – ${formatDay(trip.endDate)}`
             : `Since ${formatDay(trip.startDate)} · day ${days.length}`}
         </p>
-        {view.ended && (
+        {view.lookBack && (
           <p className="follow-summary">
             {summaryLine(view.summary)}
             <button type="button" className="btn btn-ghost btn-sm" onClick={showStory}><Icon name="play" /> Slideshow</button>
@@ -123,12 +123,12 @@ export default function FollowPage() {
         )}
 
         {days.map(d => (
-          <section key={d.day} id={`day-${d.day}`} className={`trip-day${d.day === today && !view.ended ? ' today' : ''}`}>
+          <section key={d.day} id={`day-${d.day}`} className={`trip-day${d.day === today && !view.lookBack ? ' today' : ''}`}>
             <DayHead trip={trip} day={d} />
             {d.entries.length > 0 ? (
               <div className="list list-tight entry-list">
                 {d.entries.map(entry => (
-                  <EntryRow key={`${entry.item.id}-${entry.phase}`} entry={entry} state={d.day < today && !view.ended ? 'past' : null} placeName={placeName} className={`follow-item-${entry.item.id}${flash === entry.item.id ? ' flash' : ''}`} />
+                  <EntryRow key={`${entry.item.id}-${entry.phase}`} entry={entry} state={d.day < today && !view.lookBack ? 'past' : null} placeName={placeName} className={`follow-item-${entry.item.id}${flash === entry.item.id ? ' flash' : ''}`} />
                 ))}
               </div>
             ) : <div className="trip-day-empty">{d.sleepingAt.length ? 'A day around town' : 'Nothing planned'}</div>}
@@ -137,7 +137,7 @@ export default function FollowPage() {
         ))}
 
         <p className="follow-foot">
-          Shared with <a href={appHome()}>Splitty</a>. {view.ended
+          Shared with <a href={appHome()}>Splitty</a>. {view.lookBack
             ? `Where ${sharer} stayed is shown by town only.`
             : `Only past days and today are shown; where ${sharer} stays is shown by town only.`}
         </p>

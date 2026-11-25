@@ -207,7 +207,8 @@ export default function TripStory({ view, onAllDays, home }) {
             <div className="story-title-text">
               <p className="story-kicker">{sharer}’s trip</p>
               <h1><Icon name={tripIcon(trip)} /> {trip.title}</h1>
-              <p>{formatDateRange(trip.startDate, trip.endDate)}</p>
+              {/* While still on (a kept link), the end is not given away. */}
+              <p>{trip.endDate ? formatDateRange(trip.startDate, trip.endDate) : `Since ${formatDay(trip.startDate)}`}</p>
               <p className="story-summary">{summaryLine(summary)}</p>
               <div className="story-actions">
                 <button type="button" className="btn btn-primary" onClick={play}><Icon name="play" /> Play</button>

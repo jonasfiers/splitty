@@ -16,8 +16,9 @@
 // - The sharer's first name ("Follow Jonas's trip").
 // - Photos of the trip's linked Immich albums, up to today, as the link says:
 //   all, only the ones starred in Immich (favourites), or none.
-// - Once the trip has ended (2026-11-25), the page opens as a slideshow and
-//   the view adds a summary (days, towns, distance, photos).
+// - Once the trip has ended (2026-11-25), or at once for a kept link, the page
+//   looks back: it opens as a slideshow, with a summary (days, towns, distance,
+//   photos). A kept link before the end still shows only up to today.
 //
 //   (:FollowLink {token, photos: 'all'|'favourites'|'none', keep, createdOn})-[:FOLLOWS]->(:Trip),
 //   -[:CREATED_BY]->(:User). Links made before 2026-11-25 have photos true/false.
@@ -170,7 +171,7 @@ async function resolve(token) {
     if (!records.length) return null;
     const t = records[0].get('t').properties;
     if (!records[0].get('keep') && t.endDate && addDays(t.endDate, EXPIRES_AFTER_DAYS) < (TODAY_OVERRIDE || todayIn('UTC'))) return null;
-    return { tripId: t.id, trip: t, photos: photoMode(records[0].get('photos')), sharer: firstName(records[0].get('by')) };
+    return { tripId: t.id, trip: t, photos: photoMode(records[0].get('photos')), keep: !!records[0].get('keep'), sharer: firstName(records[0].get('by')) };
 }
 
 async function loadPlan(tripId) {
@@ -298,6 +299,8 @@ async function buildView(token) {
         today,
         started,
         ended,
+        // Looking back (the slideshow): once ended, or at once when kept.
+        lookBack: started && (ended || link.keep),
         // Journeys still under way stay out: their distance hints where to.
         summary: summarize({ startDate: trip.startDate, endDate: trip.endDate, today, items: shownItems.filter(i => !(dayOf(i.end) > today)), placeById, towns, photoCount: photos.length }),
         trip: {
