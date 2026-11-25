@@ -256,8 +256,13 @@ try {
   await sleep(2000); await screenshot('story-stop')
   const stop = await evaluate(`({ what: document.querySelector('.story-panel-top .story-what')?.textContent || '', pins: document.querySelectorAll('.story-map-canvas .trip-pin').length, current: document.querySelectorAll('.story-pin-current').length })`)
   expect(stop.what.includes('Stay in Hualien') && stop.pins === 2 && stop.current === 1, `then the next place, flown in to and marked (${JSON.stringify(stop)})`)
-  const speed = await evaluate(`(() => { const b = document.querySelector('.story-speed'); b.click(); return new Promise(r => setTimeout(() => r(b.textContent), 50)) })()`)
-  expect(speed === '2×', `the speed button goes to 2× (${speed})`)
+  const speeds = await evaluate(`(() => {
+    const sel = document.querySelector('.story-speed')
+    Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set.call(sel, '5')
+    sel.dispatchEvent(new Event('change', { bubbles: true }))
+    return new Promise(r => setTimeout(() => r({ options: [...sel.options].map(o => o.textContent).join(' '), now: sel.selectedOptions[0].textContent }), 50))
+  })()`)
+  expect(speeds.options === '½× 1× 1.5× 2× 3× 5×' && speeds.now === '5×', `the speed goes from ½× to 5× (${JSON.stringify(speeds)})`)
   // Scrubbing: drag to the last step (the label says where), let go: there.
   const scrubbed = await evaluate(`(async () => {
     const input = document.querySelector('.story-scrub input')

@@ -16,6 +16,7 @@ import './TripStory.css'
 // moves on by itself until someone touches it. Everything shown is what the
 // follow view already gives (api/followService.js).
 
+const SPEEDS = [0.5, 1, 1.5, 2, 3, 5]
 const STOP_MS = 3500
 const PHOTO_MS = 5000
 
@@ -145,11 +146,10 @@ export default function TripStory({ view, onAllDays, home }) {
     setPos(p => ({ at: Math.min(Math.max(p.at + by, 0), last), forward: by === 1 }))
   }, [last])
   const jump = (to, forward = to === 1) => setPos({ at: to, forward })
-  // Play's speed (the bottom bar): 1×, 2×, ½×; the map's flying and drawing follow.
+  // Play's speed (the bottom bar, ½× to 5×); the map's flying and drawing follow.
   const [speed, setSpeed] = useState(1)
   const speedRef = useRef(speed)
   speedRef.current = speed
-  const nextSpeed = () => setSpeed(v => (v === 1 ? 2 : v === 2 ? 0.5 : 1))
   // Scrubbing: where the bar would land while it is dragged; it jumps there on release.
   const [scrub, setScrub] = useState(null)
   const step = steps[at]
@@ -193,7 +193,7 @@ export default function TripStory({ view, onAllDays, home }) {
 
   useEffect(() => {
     const key = e => {
-      if (full || e.target.closest?.('input')) return // the viewer, or the scrub bar, has the keys
+      if (full || e.target.closest?.('input, select')) return // the viewer, the scrub bar or the speed has the keys
       if (e.key === 'ArrowRight' || e.key === 'PageDown') go(1)
       else if (e.key === 'ArrowLeft' || e.key === 'PageUp') go(-1)
       else if (e.key === ' ' && e.target === document.body) { e.preventDefault(); setPlaying(p => !p) }
@@ -214,7 +214,7 @@ export default function TripStory({ view, onAllDays, home }) {
   // A swipe moves one step; a tap on the left third goes back, elsewhere on.
   const down = useRef(null)
   const onPointerDown = e => {
-    down.current = e.target.closest('button, a, video, input, .story-controls') ? null : { x: e.clientX, y: e.clientY }
+    down.current = e.target.closest('button, a, video, input, select, .story-controls') ? null : { x: e.clientX, y: e.clientY }
   }
   const onPointerUp = e => {
     const s = down.current
@@ -317,9 +317,9 @@ export default function TripStory({ view, onAllDays, home }) {
 
       {step.kind !== 'title' && (
         <div className="story-controls">
-          <button type="button" className="story-speed" onClick={nextSpeed} aria-label={`Speed ${speed}×, change`}>
-            {speed === 0.5 ? '½' : speed}×
-          </button>
+          <select className="story-speed" value={speed} onChange={e => setSpeed(Number(e.target.value))} aria-label="Speed">
+            {SPEEDS.map(v => <option key={v} value={v}>{v === 0.5 ? '½' : v}×</option>)}
+          </select>
           <div className="story-scrub">
             {scrubbing && (
               <span className="story-scrub-label" style={{ left: `clamp(80px, ${(scrub / last) * 100}%, calc(100% - 80px))` }}>
