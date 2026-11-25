@@ -227,7 +227,8 @@ export default function TripStory({ view, onAllDays, home }) {
   }
 
   const play = () => { if (at === 0 || at === last) jump(1); setPlaying(true) }
-  const cover = view.photos[0]
+  // The album's cover chosen in Immich, else the first photo.
+  const cover = view.cover || view.photos[0]
   // How long Play takes, roughly.
   const minutes = Math.max(1, Math.round(steps.reduce((ms, s) => ms + (s.kind === 'leg' ? LEG_MS : s.kind === 'stop' ? STOP_MS : s.kind === 'photo' ? PHOTO_MS : 0), 0) / 60000))
   // "Day 4 · Thu 12 Nov · 14:30"

@@ -44,3 +44,17 @@ test('summary: days, towns slept in, journeys in km, photos', () => {
     // While on: the days so far.
     assert.equal(summarize({ startDate: '2026-11-10', endDate: '2026-11-25', today: '2026-11-12', items: [], placeById, towns: [], photoCount: 0 }).days, 3);
 });
+
+test('cover: the first album cover chosen in Immich, up to today, even with favourites only; none without photos', () => {
+    const { pickCover } = require('../followRules');
+    const albums = [
+        { cover: null, photos: [{ id: 'x', at: '2026-11-10T10:00' }] }, // no cover set
+        { cover: 'late', photos: [{ id: 'late', at: '2026-11-30T10:00' }] }, // after today
+        { cover: 'b', photos: [{ id: 'a', at: '2026-11-10T10:00' }, { id: 'b', at: '2026-11-11T10:00', favourite: false }] },
+    ];
+    const cover = pickCover(albums, 'favourites', '2026-11-20');
+    assert.equal(cover.id, 'b');
+    assert.ok(!('favourite' in cover));
+    assert.equal(pickCover(albums, 'none', '2026-11-20'), null);
+    assert.equal(pickCover([albums[0]], 'all', '2026-11-20'), null, 'no cover: the page uses the first photo');
+});

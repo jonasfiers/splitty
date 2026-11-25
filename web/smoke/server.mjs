@@ -48,6 +48,8 @@ const FOLLOW_ENDED = {
   photos: ['ph1', 'ph2'].map((id, n) => ({ id, album: 'al1', at: `${day(n - 3)}T12:00`, ratio: 1.5, lat: 24.5 - n * 0.4, lon: 121.7, thumb: `/follow/smokefinished0000000000/photos/al1/${id}/thumbnail`, preview: `/follow/smokefinished0000000000/photos/al1/${id}/preview` })),
   kinds: [],
 }
+// The album's cover in Immich: the second photo, not the first.
+FOLLOW_ENDED.cover = FOLLOW_ENDED.photos[1]
 
 // The Content-Security-Policy production's nginx sends (CT101
 // snippets/splitty-security-headers.conf), so the app is tested under it:

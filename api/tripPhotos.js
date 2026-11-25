@@ -101,10 +101,10 @@ async function fetchPhotos(album) {
 }
 
 // The album's state in one cheap request (~50 ms): its change time and photo
-// count. Adding or removing a photo changes it.
+// count (adding or removing a photo changes it), and its cover photo.
 async function fingerprint(album) {
     const link = await immich('/shared-links/me', album);
-    return `${link.album?.updatedAt ?? ''}|${link.album?.assetCount ?? ''}`;
+    return { print: `${link.album?.updatedAt ?? ''}|${link.album?.assetCount ?? ''}`, cover: link.album?.albumThumbnailAssetId ?? null };
 }
 
 // The album's photos, re-read only when Immich says it changed: checked at
@@ -121,13 +121,14 @@ async function photosOf(album, { fresh = false } = {}) {
         return hit.photos;
     }
     try {
-        const print = await fingerprint(album);
+        const { print, cover } = await fingerprint(album);
         if (hit?.photos && hit.print === print && Date.now() - hit.at < CACHE_TTL_MS * 12) {
             hit.at = Date.now();
+            hit.cover = cover;
             return hit.photos;
         }
         const photos = await fetchPhotos(album);
-        cache.set(album.id, { at: Date.now(), print, photos });
+        cache.set(album.id, { at: Date.now(), print, photos, cover });
         return photos;
     } catch (err) {
         // A broken link is remembered for a minute, not retried on every load.
@@ -135,6 +136,9 @@ async function photosOf(album, { fresh = false } = {}) {
         throw err;
     }
 }
+
+// The album's cover photo in Immich (its id), as last read by photosOf.
+const coverOf = album => cache.get(album.id)?.cover ?? null;
 
 const albumProps = r => {
     const a = r.get('a').properties;
@@ -266,4 +270,4 @@ async function albumsOfTripUnchecked(tripId) {
     return records.map(albumProps);
 }
 
-module.exports = { enabled, PhotoError, tripPhotos, addAlbum, removeAlbum, albumForThumbnail, thumbnail, streamVideo, albumsOfTripUnchecked, photosOf };
+module.exports = { enabled, PhotoError, tripPhotos, addAlbum, removeAlbum, albumForThumbnail, thumbnail, streamVideo, albumsOfTripUnchecked, photosOf, coverOf };

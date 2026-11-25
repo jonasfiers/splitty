@@ -32,7 +32,7 @@ const tripPhotos = require('./tripPhotos');
 const { townAt } = require('./geocodeService');
 const { zoneAt } = require('./timeZone');
 const { categoryServiceNeo4j } = require('./crudService');
-const { photoMode, pickPhotos, summarize } = require('./followRules');
+const { photoMode, pickPhotos, pickCover, summarize } = require('./followRules');
 
 const EXPIRES_AFTER_DAYS = 30;
 const MAX_LINKS = 5; // per trip
@@ -280,14 +280,19 @@ async function buildView(token) {
     }
 
     let photos = [];
+    let cover = null;
     if (link.photos !== 'none' && started && tripPhotos.enabled()) {
         const all = [];
+        const albums = [];
         for (const album of await tripPhotos.albumsOfTripUnchecked(link.tripId)) {
             try {
-                for (const p of await tripPhotos.photosOf(album)) all.push({ ...p, album: album.id });
+                const list = (await tripPhotos.photosOf(album)).map(p => ({ ...p, album: album.id }));
+                all.push(...list);
+                albums.push({ cover: tripPhotos.coverOf(album), photos: list });
             } catch { /* a broken album just has no photos here */ }
         }
         photos = pickPhotos(all, link.photos, today);
+        cover = pickCover(albums, link.photos, today);
     }
 
     let kindColours = {};
@@ -313,6 +318,7 @@ async function buildView(token) {
         items: outItems,
         places: outPlaces,
         photos,
+        cover, // the album's cover photo, or null
         kinds: kindColours,
     };
 }
@@ -322,7 +328,8 @@ async function buildView(token) {
 async function photoAllowed(token, albumId, assetId) {
     const view = await publicView(token);
     if (!view) return null;
-    if (!view.photos.some(p => p.album === albumId && p.id === assetId)) return null;
+    const shown = p => p && p.album === albumId && p.id === assetId;
+    if (!view.photos.some(shown) && !shown(view.cover)) return null;
     return tripPhotos.albumForThumbnail(albumId);
 }
 

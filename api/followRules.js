@@ -40,4 +40,20 @@ function summarize({ startDate, endDate, today, items, placeById, towns, photoCo
     return { days, towns: new Set(towns).size, km: Math.round(distance / 10) * 10, photos: photoCount };
 }
 
-module.exports = { PHOTO_MODES, photoMode, pickPhotos, summarize };
+// The trip's cover: the cover photo chosen in Immich for the first album that
+// has one, up to today; shown even when the link has only favourites (it was
+// picked on purpose), never when it has no photos. Null: none (the page then
+// uses the first photo). `albums`: [{ cover (asset id), photos }] in order.
+function pickCover(albums, mode, today) {
+    if (mode === 'none') return null;
+    for (const { cover, photos } of albums) {
+        const p = cover && photos.find(x => x.id === cover);
+        if (p && p.at && dayOf(p.at) <= today) {
+            const { favourite, ...shown } = p; // eslint-disable-line no-unused-vars
+            return shown;
+        }
+    }
+    return null;
+}
+
+module.exports = { PHOTO_MODES, photoMode, pickPhotos, pickCover, summarize };

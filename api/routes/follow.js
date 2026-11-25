@@ -16,15 +16,13 @@ router.get('/:token', async (req, res) => {
         followService.countView(token, req.headers['x-real-ip'] || req.ip, String(req.headers['user-agent'] || ''))
             .catch(err => console.error('[follow] count:', err.message));
         res.set('Cache-Control', 'no-store');
-        res.json({
-            ...view,
-            photos: view.photos.map(p => ({
-                at: p.at, lat: p.lat, lon: p.lon, ratio: p.ratio, video: p.video, id: p.id, album: p.album,
-                thumb: `/follow/${token}/photos/${p.album}/${p.id}/thumbnail`,
-                preview: `/follow/${token}/photos/${p.album}/${p.id}/preview`,
-                ...(p.video ? { play: `/follow/${token}/photos/${p.album}/${p.id}/video` } : {}),
-            })),
+        const shape = p => ({
+            at: p.at, lat: p.lat, lon: p.lon, ratio: p.ratio, video: p.video, id: p.id, album: p.album,
+            thumb: `/follow/${token}/photos/${p.album}/${p.id}/thumbnail`,
+            preview: `/follow/${token}/photos/${p.album}/${p.id}/preview`,
+            ...(p.video ? { play: `/follow/${token}/photos/${p.album}/${p.id}/video` } : {}),
         });
+        res.json({ ...view, photos: view.photos.map(shape), cover: view.cover ? shape(view.cover) : null });
     } catch (err) {
         console.error('[follow] view:', err);
         res.status(500).json({ error: 'Something went wrong.' });
@@ -58,8 +56,8 @@ router.get('/:token/meta', async (req, res) => {
             : view.trip.endDate
                 ? [plural(s.days, 'day'), s.towns > 1 && plural(s.towns, 'town'), s.km >= 100 && `${s.km.toLocaleString('en')} km`, s.photos && plural(s.photos, 'photo')].filter(Boolean).join(' · ')
                 : [`Day ${daysBetween(view.trip.startDate, view.today) + 1}`, where && `now ${where}`].filter(Boolean).join(' · ');
-        // A finished trip: its first photo, as the slideshow opens on it.
-        const photo = view.lookBack ? view.photos[0] : view.photos[view.photos.length - 1];
+        // Looking back: the album's cover (else the first photo), as the slideshow opens on it.
+        const photo = view.lookBack ? (view.cover || view.photos[0]) : view.photos[view.photos.length - 1];
         const image = photo
             ? `${base}/api/follow/${view.token}/photos/${photo.album}/${photo.id}/preview`
             : `${base}/cat-icon-512.png`;
