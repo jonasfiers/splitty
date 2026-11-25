@@ -10,7 +10,7 @@
 //   npm run build -w web && node web/smoke/smoke.mjs [dist-dir]
 //
 // Exit 0 when all pass. deploy.sh runs it before publishing the web build.
-import { cpSync, mkdtempSync, rmSync, appendFileSync, readFileSync } from 'fs'
+import { cpSync, mkdtempSync, rmSync, appendFileSync, readFileSync, writeFileSync } from 'fs'
 import { tmpdir } from 'os'
 import { execSync } from 'child_process'
 import path from 'path'
@@ -49,6 +49,12 @@ browser.on(m => {
   if (m.method === 'Runtime.consoleAPICalled' && m.params.type === 'error') errors.push(m.params.args.map(a => a.value ?? a.description ?? '').join(' ').slice(0, 300))
   if (m.method === 'Log.entryAdded' && m.params.entry.level === 'error') errors.push(m.params.entry.text.slice(0, 300))
 })
+// SMOKE_SHOTS=<dir>: screenshots of chosen moments, to look at a layout.
+const screenshot = async name => {
+  if (!process.env.SMOKE_SHOTS) return
+  const { data } = await send('Page.captureScreenshot', { format: 'png' })
+  writeFileSync(path.join(process.env.SMOKE_SHOTS, `${name}.png`), Buffer.from(data, 'base64'))
+}
 const takeErrors = () => errors.splice(0).filter(e => !IGNORE.some(re => re.test(e)))
 
 // Waits until the page has drawn more than a loading spinner.
@@ -234,6 +240,7 @@ try {
   await evaluate(`[...document.querySelectorAll('.story-actions button')].find(b => b.textContent.includes('Play')).click()`)
   await sleep(300)
   const dayCard = await evaluate(`({ n: document.querySelector('.story-day-n')?.textContent, map: document.querySelector('.story-day .story-map .trip-map')?.offsetHeight > 150, rows: document.querySelectorAll('.story-day .entry-list > *').length })`)
+  await sleep(800); await screenshot('story-day')
   expect(dayCard.n === 'Day 2' && dayCard.map && dayCard.rows > 0, `Play opens the first day with a journey, its map drawn and entries (${JSON.stringify(dayCard)})`)
   await evaluate(`window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' }))`)
   await sleep(300)
@@ -243,6 +250,7 @@ try {
   await sleep(300)
   await sleep(500)
   const endMap = await evaluate(`document.querySelector('.story-end .story-map .trip-map')?.offsetHeight || 0`)
+  await sleep(500); await screenshot('story-end')
   expect(endMap > 150, `ends on the whole route, with the map drawn (${endMap}px)`)
   await evaluate(`[...document.querySelectorAll('.story-end button')].find(b => b.textContent.includes('See all days')).click()`)
   await sleep(300)

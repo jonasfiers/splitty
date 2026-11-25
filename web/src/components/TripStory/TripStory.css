@@ -48,24 +48,34 @@
 .story-ghost { background: rgba(255, 255, 255, .14); color: #fff; border: none; }
 .story-ghost:hover { background: rgba(255, 255, 255, .24); }
 
-/* Day card: which day, where, its map and what happened. */
-.story-day {
-  width: min(560px, calc(100% - 32px)); max-height: calc(100% - 120px);
-  display: flex; flex-direction: column; gap: 12px;
-  padding: 16px; border-radius: 16px;
-  background: var(--bg); color: var(--text);
-  overflow: hidden;
+/* Day and end cards: the map fills the screen; the panels lie over its top
+   and bottom (MapSlide), in the app's theme so entries look as elsewhere. */
+.story-mapslide { position: absolute; inset: 0; }
+.story-map { position: absolute; inset: 0; }
+/* A map to look at, not to pan: the cover over it lets a swipe move the
+   slideshow. */
+.story-map::after { content: ''; position: absolute; inset: 0; z-index: 1000; }
+.story-map .trip-map-wrap, .story-map .trip-map { height: 100%; }
+.story-map .trip-map { border: none; border-radius: 0; }
+.story-map .leaflet-control-container, .story-map .trip-map-controls { display: none; }
+.story-panel {
+  position: absolute; left: 50%; transform: translateX(-50%); z-index: 2;
+  width: min(560px, calc(100% - 24px));
+  padding: 12px 16px; border-radius: 16px;
+  background: color-mix(in srgb, var(--bg) 90%, transparent); color: var(--text);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, .25);
 }
+.story-panel-top { top: calc(60px + env(safe-area-inset-top)); }
+.story-panel-bottom { bottom: calc(16px + env(safe-area-inset-bottom)); max-height: 38%; display: flex; flex-direction: column; }
 .story-day-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; font-size: var(--fs-base); color: var(--text-2); }
 .story-day-n { font-size: 1.6rem; font-weight: 700; color: var(--text); }
 .story-entries { overflow-y: auto; min-height: 0; }
-
-/* A map to look at, not to pan: the cover over it lets a swipe move the
-   slideshow. */
-.story-map { position: relative; height: 260px; flex: none; border-radius: 12px; overflow: hidden; }
-.story-map::after { content: ''; position: absolute; inset: 0; z-index: 1000; }
-.story-map .trip-map-wrap, .story-map .trip-map { height: 100%; }
-.story-map .leaflet-control-container { display: none; }
+.story-end h2 { margin: 0; font-size: 1.6rem; color: var(--text); }
+.story-end .story-summary { margin: 4px 0 0; color: var(--text-2); opacity: 1; }
+.story-end .story-actions { margin-top: 0; }
+.story-foot { margin: 10px 0 0; font-size: var(--fs-sm); color: var(--text-3); }
+.story-foot a { color: inherit; }
 
 /* A photo: as large as fits, on a blurred copy of itself. */
 .story-photo { position: absolute; inset: 0; margin: 0; display: flex; align-items: center; justify-content: center; }
@@ -81,17 +91,6 @@
   pointer-events: none;
 }
 
-/* End card: the whole route and the totals. */
-.story-end {
-  width: min(720px, calc(100% - 32px));
-  display: flex; flex-direction: column; gap: 8px;
-  padding-bottom: env(safe-area-inset-bottom);
-}
-.story-end h2 { margin: 0; color: #fff; font-size: 1.8rem; }
-.story-end .story-map { height: min(46vh, 420px); margin-top: 8px; }
-.story-foot { margin-top: 12px; font-size: var(--fs-sm); opacity: .75; }
-.story-foot a { color: inherit; }
-
 /* Arrows where there is a mouse; a phone swipes or taps the sides. */
 .story-nav {
   position: absolute; top: 50%; margin-top: -24px; z-index: 3;
@@ -103,10 +102,6 @@
 .story-nav.next { right: 12px; }
 @media (hover: hover) and (pointer: fine) {
   .story-nav { display: flex; }
-}
-
-@media (min-width: 768px) {
-  .story-map { height: 320px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

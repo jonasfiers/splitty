@@ -55,13 +55,38 @@ export function buildSlides({ trip, items, places, photos }) {
 
 const noop = () => {}
 
-// The map, not to be panned: a swipe over it moves the slideshow instead.
-function StillMap({ places, items }) {
+// The height of an element, kept up to date.
+function useHeight() {
+  const [el, setEl] = useState(null)
+  const [h, setH] = useState(0)
+  useEffect(() => {
+    if (!el) return
+    const ro = new ResizeObserver(() => setH(el.offsetHeight))
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [el])
+  return [setEl, h]
+}
+
+// A full-screen map with panels over its top and bottom; the map frames its
+// places in the space between them. Not to be panned: a swipe over it moves
+// the slideshow instead.
+function MapSlide({ places, items, top, bottom, className = '' }) {
+  const [topRef, topH] = useHeight()
+  const [bottomRef, bottomH] = useHeight()
+  // The panels' own room plus their distance from the screen's edges.
+  const inset = useMemo(() => ({ top: topH ? topH + 72 : 0, bottom: bottomH ? bottomH + 24 : 0 }), [topH, bottomH])
   return (
-    <div className="story-map">
-      <Suspense fallback={<Loading />}>
-        <TripMap places={places} items={items} onOpenItem={noop} forFollowers />
-      </Suspense>
+    <div className={`story-mapslide ${className}`}>
+      {places.length > 0 && (
+        <div className="story-map">
+          <Suspense fallback={<Loading />}>
+            <TripMap places={places} items={items} onOpenItem={noop} forFollowers inset={inset} />
+          </Suspense>
+        </div>
+      )}
+      {top && <div className="story-panel story-panel-top" ref={topRef}>{top}</div>}
+      {bottom && <div className="story-panel story-panel-bottom" ref={bottomRef}>{bottom}</div>}
     </div>
   )
 }
@@ -156,20 +181,24 @@ export default function TripStory({ view, onAllDays, home }) {
         )}
 
         {slide.kind === 'day' && (
-          <div className="story-day">
-            <div className="story-day-head">
-              <span className="story-day-n">Day {slide.n}</span>
-              <span>{[formatDay(slide.d.day), slide.town].filter(Boolean).join(' · ')}</span>
-            </div>
-            {slide.map.places.length > 0 && <StillMap places={slide.map.places} items={slide.map.items} />}
-            {slide.d.entries.length > 0 && (
+          <MapSlide
+            className="story-day"
+            places={slide.map.places}
+            items={slide.map.items}
+            top={(
+              <div className="story-day-head">
+                <span className="story-day-n">Day {slide.n}</span>
+                <span>{[formatDay(slide.d.day), slide.town].filter(Boolean).join(' · ')}</span>
+              </div>
+            )}
+            bottom={slide.d.entries.length > 0 && (
               <div className="list list-tight entry-list story-entries">
                 {slide.d.entries.map(entry => (
-                  <EntryRow key={`${entry.item.id}-${entry.phase}`} entry={entry} state="past" placeName={placeName} />
+                  <EntryRow key={`${entry.item.id}-${entry.phase}`} entry={entry} placeName={placeName} />
                 ))}
               </div>
             )}
-          </div>
+          />
         )}
 
         {slide.kind === 'photo' && (
@@ -186,16 +215,26 @@ export default function TripStory({ view, onAllDays, home }) {
         )}
 
         {slide.kind === 'end' && (
-          <div className="story-end">
-            <h2><Icon name={tripIcon(trip)} /> {trip.title}</h2>
-            <p className="story-summary">{summaryLine(summary)}</p>
-            {located.length > 0 && <StillMap places={located} items={view.items} />}
-            <div className="story-actions">
-              <button type="button" className="btn btn-primary" onClick={() => { setPlaying(false); setAt(0) }}><Icon name="rotate-ccw" /> Watch again</button>
-              <button type="button" className="btn story-ghost" onClick={onAllDays}>See all days</button>
-            </div>
-            <p className="story-foot">Shared with <a href={home}>Splitty</a></p>
-          </div>
+          <MapSlide
+            className="story-end"
+            places={located}
+            items={view.items}
+            top={(
+              <>
+                <h2><Icon name={tripIcon(trip)} /> {trip.title}</h2>
+                <p className="story-summary">{summaryLine(summary)}</p>
+              </>
+            )}
+            bottom={(
+              <>
+                <div className="story-actions">
+                  <button type="button" className="btn btn-primary" onClick={() => { setPlaying(false); setAt(0) }}><Icon name="rotate-ccw" /> Watch again</button>
+                  <button type="button" className="btn btn-ghost" onClick={onAllDays}>See all days</button>
+                </div>
+                <p className="story-foot">Shared with <a href={home}>Splitty</a></p>
+              </>
+            )}
+          />
         )}
       </div>
 
