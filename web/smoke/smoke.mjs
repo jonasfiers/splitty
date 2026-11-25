@@ -264,7 +264,7 @@ try {
     const set = v => { Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, v); input.dispatchEvent(new Event('input', { bubbles: true })) }
     set(2) // the photo taken on the train
     await new Promise(r => setTimeout(r, 400))
-    window.__preview = { scrubbing: !!document.querySelector('.story.scrubbing'), thumb: !!document.querySelector('.story-scrub-label img'), shot: !!document.querySelector('.story-shot'), lines: document.querySelectorAll('.story-map-canvas path.story-line').length }
+    window.__preview = { scrubbing: !!document.querySelector('.story.scrubbing'), cardHidden: !document.querySelector('.story-card') || getComputedStyle(document.querySelector('.story-stage')).visibility === 'hidden', thumb: !!document.querySelector('.story-scrub-label img'), shot: !!document.querySelector('.story-shot'), lines: document.querySelectorAll('.story-map-canvas path.story-line').length }
     Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, input.max)
     input.dispatchEvent(new Event('input', { bubbles: true }))
     await new Promise(r => setTimeout(r, 50))
@@ -274,7 +274,7 @@ try {
     return { label, end: !!document.querySelector('.story-panel-bottom') }
   })()`)
   const preview = await evaluate(`window.__preview`)
-  expect(preview.scrubbing && preview.thumb && preview.shot && preview.lines === 1, `while dragging, the map previews where the bar is (${JSON.stringify(preview)})`)
+  expect(preview.scrubbing && preview.cardHidden && preview.thumb && preview.shot && preview.lines === 1, `while dragging, the map previews where the bar is (${JSON.stringify(preview)})`)
   expect(scrubbed.label === 'The whole route' && scrubbed.end, `the scrub bar shows where it lands and jumps there (${JSON.stringify(scrubbed)})`)
   await sleep(500); await screenshot('story-end')
   const end = await evaluate(`({ title: document.querySelector('.story-panel-top h2')?.textContent || '', lines: document.querySelectorAll('.story-map-canvas path.story-line').length })`)

@@ -184,11 +184,12 @@ export default function TripStory({ view, onAllDays, home }) {
   const [full, setFull] = useState(null)
 
   // Play: on to the next step after a while; a video moves on when it ends.
+  // It waits while the bar is dragged, and goes on from where it is let go.
   useEffect(() => {
-    if (!playing || at >= last || step.photo?.play) return
+    if (!playing || scrubbing || at >= last || step.photo?.play) return
     const t = setTimeout(() => go(1, false), (step.kind === 'leg' ? LEG_MS : step.kind === 'stop' ? STOP_MS : PHOTO_MS) / speed)
     return () => clearTimeout(t)
-  }, [playing, at, last, step, go, speed])
+  }, [playing, scrubbing, at, last, step, go, speed])
 
   useEffect(() => {
     const key = e => {
